@@ -11,7 +11,7 @@ import type { Ctl } from "./App";
 import { josa } from "../game/josa";
 import { godOf, power } from "../game/faith";
 import { Bar, FragIcon, GameScreen, HeroHeader, LogView } from "./components";
-import { SCENE_ART } from "./art";
+import { ROOM_ICON, SCENE_ART } from "./art";
 
 function fmtTime(turns: number): string {
   const h = Math.max(0, turns) / 2;
@@ -245,6 +245,7 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
           const danger = (nb.known || nb.visited) && !nb.resolved && ["combat", "trap", "boss"].includes(nb.type);
           return (
             <button key={id} className={`btn path${danger ? " risky" : ""}`} disabled={busy} onClick={() => go({ t: "move", room: id })}>
+              <RoomIcon type={nb.visited || nb.known ? (nb.respawned && !nb.resolved ? "combat" : nb.type) : null} />
               {label} {note && <span className="dim small">· {note}</span>}
             </button>
           );
@@ -254,7 +255,12 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
   );
 }
 
-/** 방 그래프 지도: 입구에서의 거리로 가로 배치. 가 본 방과 그 이웃만 그린다 */
+/** 갈림길 버튼 앞 방 아이콘. 모르는 방은 빈 자리(물음표 글자로 이미 읽힌다) */
+function RoomIcon({ type }: { type: string | null }) {
+  const a = type ? ROOM_ICON[type] : null;
+  return <span className="room-icon">{a && <img src={a.src} width={a.w} height={a.h} alt="" />}</span>;
+}
+
 /** 지도 칸 배경: 섹터 장소 그림을 2배로 깔고 어둡게 눌러 지도 점·선이 먼저 읽히게 한다 */
 function mapBackdrop(dg: DungeonState): CSSProperties | undefined {
   const a = SCENE_ART[`dungeon${dg.sector}`];
@@ -267,6 +273,7 @@ function mapBackdrop(dg: DungeonState): CSSProperties | undefined {
   };
 }
 
+/** 방 그래프 지도: 입구에서의 거리로 가로 배치. 가 본 방과 그 이웃만 그린다 */
 function FloorMap({ dg }: { dg: DungeonState }) {
   const visible = new Set<number>();
   for (const r of dg.rooms) {

@@ -98,6 +98,10 @@ button {
 .btn.ghost { background: transparent; text-align: center; }
 .btn.small { padding: 7px 11px; font-size: 13px; }
 .btn.path.risky { border-left: 3px solid var(--danger); }
+/* 갈림길 버튼: 왼쪽에 방 아이콘(1배, 40px 칸 가운데) */
+.btn.path { display: flex; align-items: center; gap: 10px; }
+.room-icon { flex: none; width: 34px; height: 40px; display: flex; align-items: center; justify-content: center; margin: -6px 0; }
+.room-icon img { image-rendering: pixelated; display: block; }
 .link { background: none; border: none; color: var(--dim); cursor: pointer; padding: 4px 8px 4px 0; font-size: 16px; }
 
 .chip {

@@ -349,3 +349,28 @@ No people, no text, no logo, no UI, no frame or border. Square 1:1 image.
 ```
 
 결과(2026-10-13): 1차 채택(512, 200격자) → 179×160 `(10,10)~(189,170)` = `public/scene-title.png`(`focus: 0.65`로 좁은 화면에서도 미궁 구멍을 남김). 타이틀 화면에서 2배로 깔고 그 위 왼쪽 아래에 모험가 소년 스프라이트를 2배로 세운다(`.title-art`)
+
+## 022 — 방 종류 아이콘 10종 (기준 이미지 첨부)
+
+```
+Match the exact art style, outline, palette and pixel scale of the attached reference image.
+
+A sheet of ten small pixel art map icons for a dungeon crawler, classic 16-bit RPG style, arranged in a neat grid of two rows of five, evenly spaced with clear magenta gaps between them, all the same size, each icon a simple bold silhouette readable at a tiny size.
+Top row, left to right:
+1. entrance: a stone archway with a faint gold light inside;
+2. empty room: a plain cracked stone floor tile;
+3. enemy presence: a pair of glaring red eyes (#c0564d) in darkness;
+4. trap: a rusty open bear trap with jagged teeth;
+5. treasure: a small iron-banded wooden chest with a dull gold lock (#cf9a44).
+Bottom row, left to right:
+6. record: a rolled, torn parchment scroll;
+7. shrine: a small stone altar with a single candle flame;
+8. stairs: stone steps descending into darkness;
+9. boss: a large cracked monster skull with a dull red glow in the eye sockets;
+10. portal: a swirling oval gate of dull violet light (#9a7bc0), drawn with flat pixel shades.
+Muted earthy palette: dark browns, stone greys, bone; accent colors only as noted.
+Crisp hard pixel edges, 1-pixel dark outline, no anti-aliasing, no blur, no gradients, no noisy dithering, no soft glow.
+Solid flat magenta background (#FF00FF). No text, no numbers, no frame or border. Square 1:1 image.
+```
+
+결과(2026-10-13): 1차 채택. 아이콘 시트인데도 **200격자**(2.56px)였다 — 100격자로 복원하면 뭉개진다. 경계가 마젠타와 섞여 있어 투명과 맞닿은 마젠타 계열 픽셀을 3겹 걷어내고, 남은 진한 마젠타만 추가로 지움(차원문 보라는 r−g가 작아 보존). 빈 줄·칸으로 10개로 나눠 `public/room-*.png`(약 30도트). 지도 점(지름 10~14px)에 넣기엔 커서 **갈림길 버튼 왼쪽**에 1배로 쓴다(`RoomIcon`, 모르는 방은 빈칸, 다시 생긴 기척은 적 아이콘)
