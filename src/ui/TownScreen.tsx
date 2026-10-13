@@ -2,7 +2,7 @@ import { useState } from "react";
 import { BAL, STAT_KEYS, STAT_LABEL, TRAININGS } from "../game/data";
 import { GEAR, SLOTS, gearEffect, targetSlot } from "../game/gear";
 import { CLASSES } from "../game/classes";
-import { canTrain, needsHeart, nextSkill, shopPrice, trainCost } from "../game/town";
+import { canTrain, gateOf, nextSkill, shopPrice, trainCost } from "../game/town";
 import type { GameState } from "../game/types";
 import { SKILLS } from "../game/skills";
 import { FRAGMENTS, fragStatText } from "../game/fragments";
@@ -123,8 +123,8 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
                       <div className="accent small">{gearEffect(g.id)}</div>
                       {!owned && cur && <div className="dim small">지금: {GEAR[cur].name} (교체하면 넘긴다)</div>}
                     </div>
-                    <button className="btn small" disabled={owned || s.gold < g.price!} onClick={() => dispatch({ t: "buyGear", id: g.id })}>
-                      {owned ? "착용 중" : `${g.price}G`}
+                    <button className="btn small" disabled={owned || s.gold < g.price! || (g.rank ?? 0) > s.rank} onClick={() => dispatch({ t: "buyGear", id: g.id })}>
+                      {owned ? "착용 중" : (g.rank ?? 0) > s.rank ? `등급 ${g.rank} 필요` : `${g.price}G`}
                     </button>
                   </div>
                 );
@@ -221,10 +221,11 @@ function trainSub(s: GameState): string {
   if (s.hero.level >= BAL.maxLevel) return "최대 레벨";
   if (s.month < BAL.firstTrainMonth) return "첫 달에는 훈련을 받을 수 없다 — 미궁에서 살아 돌아오면 교관이 받아 준다";
   const base = `직업교관 · ${trainCost(s)}G · 레벨 ${s.hero.level} → ${s.hero.level + 1}`;
-  if (needsHeart(s)) {
-    if (s.inventory.heart <= 0) return `${BAL.heartName}이 필요하다 — 1섹터 3층 보스가 지니고 있다`;
-    if (s.gold < trainCost(s)) return `돈이 모자라다 (${trainCost(s)}G + ${BAL.heartName})`;
-    return `${base} + ${BAL.heartName}`;
+  const gate = gateOf(s);
+  if (gate) {
+    if (s.inventory[gate.item] <= 0) return `${josa(gate.name, "이")} 필요하다 — ${gate.sector}섹터 3층 보스가 지니고 있다(처음 쓰러뜨릴 때 한 번만 나온다)`;
+    if (s.gold < trainCost(s)) return `돈이 모자라다 (${trainCost(s)}G + ${gate.name})`;
+    return `${base} + ${gate.name}`;
   }
   return canTrain(s) ? base : `돈이 모자라다 (${trainCost(s)}G)`;
 }

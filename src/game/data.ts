@@ -35,6 +35,10 @@ export const BAL = {
   heartName: "거대 쥐의 마석 심장",
   /** 층마다 희귀 개체가 나올 확률 */
   rareChance: 0.008,
+  /** 층마다 정예 희귀 개체(하피 여왕 등)가 나올 확률 — 마석 희귀 개체보다 조금 높게 */
+  eliteChance: 0.012,
+  /** 2섹터부터 낮·밤이 바뀌는 간격(턴, 12시간) */
+  dayNightTurns: 24,
   /** 2·3층 함정방이 꺼진 바닥일 확률 */
   pitChance: 0.3,
   /** 리젠: 이 턴(8시간)마다 비운 전투방이 respawnChance 확률로 다시 채워진다. 리젠 몬스터 마석은 respawnManaMult배 */
@@ -77,6 +81,25 @@ export interface MonsterDef {
   wound?: Partial<Record<"head" | "body" | "main" | "offhand" | "feet", number>>;
   /** 단단하다: 때리면 낮은 확률로 자기 손을 다친다 */
   hard?: boolean;
+  /** 무리의 우두머리: 함께 있는 같은 무리(packOf)의 명중 +packBuff */
+  packBuff?: number;
+  packOf?: string;
+  /** 공중: 근접 명중 −2(마력탄은 영향 없음) */
+  flying?: boolean;
+  /** 비명·울음: 명중했을 때 혼란 확률 */
+  scream?: number;
+  /** 함성: 명중했을 때 공포 확률 */
+  fearHit?: number;
+  /** 돌진: 전투 첫 공격 피해 2배 */
+  charge?: boolean;
+  /** 밤에 명중 +1 */
+  nocturnal?: boolean;
+  /** 낮에만 나온다(밤에는 조우에서 빠진다) */
+  dayOnly?: boolean;
+  /** 진군 명령: 3라운드마다 아군 명중 +2(최대 +2) */
+  rally?: boolean;
+  /** 정예 희귀 개체: 마석 보너스·도주 없이 고유 보상을 준다 */
+  elite?: boolean;
   /** 사람(이단심문관 등): 도감·편린 없음 */
   human?: boolean;
   /** 희귀 개체: 마석이 층 배율 없이 그대로 들어오고, 몇 라운드 뒤 달아난다 */
@@ -96,6 +119,18 @@ export const MONSTERS: Record<string, MonsterDef> = {
   crystalskel: { id: "crystalskel", name: "마석 갑옷 스켈레톤", wound: { head: 3, body: 1, main: 1, offhand: 1, feet: 1 }, hard: true, hp: 16, ac: 16, atk: 4, dice: [1, 6], mana: 220, attackText: "마석 박힌 검을 내리쳤다", rare: true, escapeAfter: 4, note: "갑옷이 통째로 마석이다. 오래 머물지 않고 어둠 속으로 사라진다." },
   // 현상수배된 이단을 쫓는 성당의 사냥꾼. 1섹터 보스 무리와 맞먹는다. 사람이라 마석·편린은 없다
   inquisitor: { id: "inquisitor", name: "이단심문관", wound: { head: 3, body: 2, main: 1, offhand: 1, feet: 1 }, hp: 30, ac: 14, atk: 5, dice: [1, 8], mana: 0, human: true, attackText: "성인의 이름을 외치며 철퇴를 내리쳤다", note: "성당이 보낸 이단 사냥꾼. 이단을 따라 미궁 안까지 들어온다." },
+  // ── 2섹터: 잊힌 전쟁터의 초원 ──
+  wolf: { id: "wolf", name: "들늑대", wound: { main: 3, offhand: 2, feet: 3, body: 1 }, hp: 9, ac: 13, atk: 3, dice: [1, 6], mana: 14, nocturnal: true, attackText: "이빨을 박아 넣었다", note: "풀숲에서 무리 지어 다닌다. 밤이 되면 더 사나워진다." },
+  alphawolf: { id: "alphawolf", name: "우두머리 늑대", wound: { main: 2, offhand: 2, feet: 3, body: 2 }, hp: 16, ac: 14, atk: 4, dice: [1, 8], mana: 26, nocturnal: true, packBuff: 1, packOf: "wolf", attackText: "목덜미를 노리고 덮쳤다", note: "무리를 이끈다. 곁에 있는 늑대들이 더 정확해진다." },
+  crow: { id: "crow", name: "까마귀", wound: { head: 4, body: 1, main: 1, offhand: 1, feet: 1 }, hp: 5, ac: 12, atk: 3, dice: [1, 3], mana: 3, attackText: "눈을 노리고 쪼았다", note: "전쟁터의 시체를 먹고 자랐다. 4~6마리씩 떼로 몰려와 눈을 노린다." },
+  harpy: { id: "harpy", name: "하피", wound: { head: 2, body: 1, main: 1, offhand: 1, feet: 1 }, hp: 12, ac: 14, atk: 3, dice: [1, 6], mana: 18, flying: true, scream: 0.1, dayOnly: true, attackText: "발톱으로 할퀴었다", note: "하늘에서 내려꽂힌다. 칼이 잘 닿지 않고, 비명은 머리를 어지럽힌다. 밤에는 둥지로 돌아간다." },
+  warhorse: { id: "warhorse", name: "유령 군마", wound: { feet: 4, body: 2, main: 1, offhand: 1, head: 1 }, hp: 18, ac: 13, atk: 5, dice: [1, 8], mana: 30, charge: true, attackText: "말굽으로 짓밟았다", note: "주인을 잃고도 전장을 달린다. 첫 돌진이 가장 무섭다." },
+  wraith: { id: "wraith", name: "망령 병사", wound: { head: 3, body: 2, main: 1, offhand: 1, feet: 1 }, hard: true, hp: 14, ac: 14, atk: 4, dice: [1, 8], mana: 24, fearHit: 0.1, attackText: "녹슨 창을 찔러 넣었다", note: "끝나지 않은 전쟁을 아직 싸우고 있다. 함성이 등골을 얼린다." },
+  goldwolf: { id: "goldwolf", name: "금빛 털 늑대", wound: { main: 3, feet: 3, body: 1 }, hp: 14, ac: 16, atk: 3, dice: [1, 4], mana: 420, rare: true, escapeAfter: 3, attackText: "번쩍이는 이빨로 물었다", note: "털 한 올 한 올이 마석 가루로 빛난다. 겁이 많다." },
+  manaharpy: { id: "manaharpy", name: "마석 깃털 하피", wound: { head: 2, body: 1 }, hp: 16, ac: 16, atk: 3, dice: [1, 4], mana: 460, rare: true, escapeAfter: 3, flying: true, attackText: "마석 깃털을 흩뿌렸다", note: "깃털이 마석이다. 금세 하늘로 달아난다." },
+  manawraith: { id: "manawraith", name: "마석 갑주 망령", wound: { head: 3, body: 2 }, hard: true, hp: 22, ac: 17, atk: 4, dice: [1, 6], mana: 500, rare: true, escapeAfter: 4, attackText: "마석 갑주로 들이받았다", note: "갑주가 통째로 마석이다. 오래 머물지 않는다." },
+  harpyqueen: { id: "harpyqueen", name: "하피 여왕", wound: { head: 3, body: 2, main: 1, offhand: 1, feet: 1 }, hp: 28, ac: 15, atk: 5, dice: [1, 8], mana: 40, flying: true, scream: 0.25, elite: true, attackText: "날카로운 발톱을 내리꽂았다", note: "하피들의 여왕. 비명이 머릿속을 헤집는다. 깃털 망토를 두르고 있다." },
+  general: { id: "general", name: "끝나지 않은 전쟁의 장군", wound: { head: 2, body: 3, main: 2, offhand: 2, feet: 2 }, hard: true, hp: 28, ac: 15, atk: 4, dice: [1, 8], mana: 120, charge: true, rally: true, fearHit: 0.2, attackText: "유령 군마 위에서 장검을 내리쳤다", note: "유령 군마를 탄 망령 장군. 3라운드마다 진군 명령을 내린다." },
   boss: { id: "boss", name: "거대한 돌연변이 쥐", wound: { head: 2, body: 2, main: 2, offhand: 2, feet: 2 }, hp: 18, ac: 13, atk: 4, dice: [1, 8], mana: 60, attackText: "거대한 이빨로 물어뜯었다" },
 };
 
@@ -131,6 +166,53 @@ export const TRAP_AMBUSH: { chance: number; size: [number, number] }[] = [
   { chance: 0.15, size: [1, 1] },
 ];
 export const RARE_BY_FLOOR = ["", "goldrat", "jewelgoblin", "crystalskel"];
+
+/** 섹터별 조우표(1섹터 = ENCOUNTERS) */
+export const SECTOR_ENCOUNTERS: Record<number, Record<number, { item: string[]; w: number }[]>> = {
+  1: ENCOUNTERS,
+  2: {
+    1: [
+      { item: ["wolf"], w: 3 },
+      { item: ["wolf", "wolf"], w: 2 },
+      { item: ["crow", "crow", "crow", "crow"], w: 2 },
+    ],
+    2: [
+      { item: ["wolf", "wolf"], w: 3 },
+      { item: ["alphawolf", "wolf"], w: 2 },
+      { item: ["harpy"], w: 2 },
+      { item: ["harpy", "harpy"], w: 1 },
+      { item: ["warhorse"], w: 2 },
+    ],
+    3: [
+      { item: ["wraith", "wraith"], w: 2 },
+      { item: ["wraith"], w: 3 },
+      { item: ["warhorse", "wraith"], w: 2 },
+      { item: ["crow", "crow", "crow", "crow", "crow", "crow"], w: 2 },
+      { item: ["alphawolf", "wolf", "wolf"], w: 1 },
+    ],
+  },
+};
+/** 섹터별 마석 희귀 개체(층마다 BAL.rareChance) */
+export const SECTOR_RARES: Record<number, string[]> = { 1: RARE_BY_FLOOR, 2: ["", "goldwolf", "manaharpy", "manawraith"] };
+/** 섹터별 정예 희귀 개체(마석 대신 고유 보상) */
+export const SECTOR_ELITES: Record<number, { id: string; escort: string[]; floors: number[]; reward: string }> = {
+  2: { id: "harpyqueen", escort: ["harpy", "harpy"], floors: [2, 3], reward: "queencloak" },
+};
+/** 섹터별 보스 무리 */
+export function bossGroup(sector: number, r: { int: (a: number, b: number) => number }): string[] {
+  if (sector === 2) return ["general", "wraith", "wraith"];
+  return ["boss", ...Array(r.int(2, 3)).fill("rat")];
+}
+/** 섹터별 보스 증표(처음 쓰러뜨릴 때 한 번만) — 이 레벨에서 다음 레벨로 가는 훈련의 대가 */
+export const TROPHIES: { sector: number; item: "heart" | "banner"; name: string; gateLevel: number }[] = [
+  { sector: 1, item: "heart", name: "거대 쥐의 마석 심장", gateLevel: 3 },
+  { sector: 2, item: "banner", name: "장군의 녹슨 휘장", gateLevel: 6 },
+];
+/** 야영 중 기습하는 무리 */
+export function campAmbush(sector: number, floor: number): string[] {
+  if (sector === 2) return floor >= 2 ? ["wolf", "wolf"] : ["wolf"];
+  return floor >= 2 ? ["rat", "rat"] : ["rat"];
+}
 
 export const FIELD_ENCOUNTERS: { item: string[]; w: number }[] = [
   { item: ["rat"], w: 3 },
@@ -218,6 +300,7 @@ export const ROOM_FLAVOR: Record<string, string[]> = {
   stairs: ["아래로 이어지는 계단이 보인다."],
   boss: ["거대한 그림자가 포탈 앞을 막고 있다. 쥐 떼가 그 주위를 맴돈다."],
   portal: ["보랏빛으로 일렁이는 차원문이 있다. 너머에서 낯선 바람이 분다."],
+  relic: ["녹슨 무기가 잔뜩 묻혀 있다."],
 };
 
 export const RECORDS = [
@@ -243,3 +326,37 @@ export const FEED = {
     "아무도 당신을 눈여겨보지 않는다.",
   ],
 };
+
+/** 섹터별 방 묘사(없는 키는 ROOM_FLAVOR) */
+export const SECTOR_FLAVOR: Record<number, Partial<Record<string, string[]>>> = {
+  2: {
+    arrival: ["차원문을 빠져나오자 하늘이 있다. 끝없는 풀밭 위로 바람이 지나간다.", "풀이 허리까지 자란 구릉이다. 멀리서 까마귀가 운다."],
+    empty: [
+      "바람에 눕는 풀밭. 아무것도 없다.",
+      "무너진 초소의 돌담이 반쯤 풀에 묻혀 있다.",
+      "작은 개울이 흐른다. 물이 차갑다.",
+      "부러진 창이 땅에 꽂힌 채 녹슬어 있다.",
+      "풀숲에 짐승이 쉬었다 간 자국이 있다.",
+      "하늘이 너무 넓어서 오히려 숨이 막힌다.",
+    ],
+    combat: ["풀숲이 흔들린다. 바람이 아니다.", "낮게 으르렁거리는 소리가 사방에서 좁혀 온다.", "바람에 실려 오던 함성이 갑자기 가까워졌다."],
+    trap: ["풀 사이로 녹슨 쇠붙이가 언뜻 보인다.", "땅이 이상하게 무르다. 무언가 묻혀 있다."],
+    pit: ["오래된 참호 위를 풀이 덮었다. 발밑이 비어 있다.", "땅이 꺼진 자국이 길게 이어진다. 옛 참호다."],
+    treasure: ["쓰러진 군마의 안장 주머니가 그대로 남아 있다.", "무너진 막사 안에 녹슨 상자가 있다."],
+    record: ["바위에 누군가 칼끝으로 긁어 쓴 글이 있다.", "찢어진 군기 안쪽에 빼곡한 글씨가 남아 있다."],
+    shrine: ["창과 방패를 쌓아 만든 제단. 전쟁의 신에게 바친 것이다.", "피로 얼룩진 돌기둥 앞에 녹슨 투구가 놓여 있다."],
+    relic: ["녹슨 무기와 찢어진 깃발이 풀 속에 잔뜩 묻혀 있다.", "옛 전투가 끝난 그 자리 그대로다. 뼈와 갑옷이 뒤엉켜 있다."],
+    stairs: ["구릉 아래로 이어지는 비탈길이 보인다."],
+    boss: ["말 탄 그림자가 차원문 앞을 막고 섰다. 망령 병사들이 그 곁에 줄을 맞춘다."],
+    portal: ["풀밭 한가운데, 하늘이 찢어진 듯 차원문이 일렁인다."],
+  },
+};
+
+/** 2섹터 기록물: 신들의 전쟁 */
+export const WAR_RECORDS = [
+  "\"우리는 짝을 잃은 신을 위해 싸웠다. 아무도 이기지 못했다.\"",
+  "\"전쟁의 신은 승리를 주지 않는다. 다만 싸울 이유를 준다.\"",
+  "\"유일한 자가 문을 닫기 전에, 우리 신들은 이 들판을 건너 달아났다.\"",
+  "\"장군은 아직도 진군 명령을 기다린다. 명령을 내릴 이는 이미 없다.\"",
+  "\"셉터가 있는 한 문은 열리지 않는다. 그것이 우리가 지킨 전부다.\"",
+];

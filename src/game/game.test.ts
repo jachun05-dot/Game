@@ -230,7 +230,7 @@ describe("레벨 4 관문", () => {
     let got = 0;
     for (let seed = 1; seed <= 300 && !got; seed++) {
       const s = playBot(seed, 20000);
-      if (s.log.some((l) => l.text.includes("마석 심장을 꺼냈다"))) got++;
+      if (s.log.some((l) => l.text.includes("마석 심장을 얻었다"))) got++;
     }
     expect(got).toBeGreaterThan(0);
   });
@@ -662,5 +662,90 @@ describe("새 세 신", () => {
     dg.pending = { kind: "trap" };
     apply(s, { t: "pending", choice: "jump" });
     expect(s.dungeon!.floor).toBe(3);
+  });
+});
+
+describe("2섹터", () => {
+  const atPortal = (seed = 12) => {
+    const s = newRun(seed);
+    apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    s.week = 3;
+    s.phase = "week-result";
+    apply(s, { t: "closeWeek" });
+    const dg = s.dungeon!;
+    dg.floor = 3;
+    dg.rooms = generateFloor(new Rng({ s: seed }), 3, 1);
+    dg.current = dg.rooms.find((r) => r.type === "portal")!.id;
+    dg.pending = { kind: "portal" };
+    return s;
+  };
+  it("1섹터 차원문으로 들어가면 2섹터 1층에서 남은 시간이 두 배가 된다", () => {
+    const s = atPortal();
+    s.dungeon!.turnsLeft = 150;
+    apply(s, { t: "pending", choice: "enter" });
+    expect(s.rank).toBe(1);
+    expect(s.dungeon!.sector).toBe(2);
+    expect(s.dungeon!.floor).toBe(1);
+    expect(s.dungeon!.turnsLeft).toBeGreaterThanOrEqual(290);
+  });
+  it("돌아가기를 골라도 1섹터 클리어는 인정된다", () => {
+    const s = atPortal();
+    apply(s, { t: "pending", choice: "return" });
+    expect(s.rank).toBe(1);
+    expect(s.phase).toBe("settlement");
+  });
+  it("2섹터 층에는 2섹터 몬스터만 나오고, 전쟁의 흔적이 있으며, 고블린 매복은 없다", () => {
+    const s2 = new Set(["wolf", "alphawolf", "crow", "harpy", "warhorse", "wraith", "goldwolf", "manaharpy", "manawraith", "harpyqueen", "general"]);
+    let relic = 0;
+    for (let seed = 1; seed <= 200; seed++) for (const f of [1, 2, 3]) {
+      const rooms = generateFloor(new Rng({ s: seed }), f, 2);
+      for (const r of rooms) {
+        for (const m of r.encounter ?? []) expect(s2.has(m)).toBe(true);
+        expect(r.ambush).toBeUndefined();
+      }
+      if (rooms.some((r) => r.type === "relic")) relic++;
+    }
+    expect(relic).toBeGreaterThan(300); // 빈 방이 남을 때만 들어간다
+  });
+  it("하피 여왕은 마석 희귀 개체보다 조금 더 자주(2·3층) 나온다", () => {
+    let floors = 0, queen = 0;
+    for (let seed = 1; seed <= 8000; seed++) for (const f of [2, 3]) {
+      floors++;
+      if (generateFloor(new Rng({ s: seed * 5 + f }), f, 2).some((r) => r.encounter?.[0] === "harpyqueen")) queen++;
+    }
+    expect(queen / floors).toBeGreaterThan(0.007);
+    expect(queen / floors).toBeLessThan(0.018);
+  });
+  it("보스 증표는 처음 한 번만 나오고, 레벨 6→7은 장군의 휘장이 있어야 한다", () => {
+    const s = newRun(13);
+    apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    s.week = 3;
+    s.phase = "week-result";
+    apply(s, { t: "closeWeek" });
+    for (let k = 0; k < 2; k++) {
+      const dg = s.dungeon!;
+      dg.floor = 3;
+      dg.rooms = generateFloor(new Rng({ s: 40 + k }), 3, 1);
+      const boss = dg.rooms.find((r) => r.type === "boss")!;
+      dg.current = boss.id;
+      s.hero.level = 9;
+      s.hero.hp = 999;
+      s.combat = null;
+      (s as GameState).phase = "dungeon";
+      startCombat(s, "dungeon", makeEnemies(s, ["boss"]));
+      s.dungeon!.pending = null;
+    }
+    expect(s.inventory.heart).toBe(1);
+    const t = newRun(14);
+    apply(t, { t: "create", name: "x", candidate: 0, faith: null });
+    t.month = 5;
+    t.hero.level = 6;
+    t.gold = 999;
+    apply(t, { t: "train", training: "sword", free: ["str", "con"] });
+    expect(t.hero.level).toBe(6);
+    t.inventory.banner = 1;
+    apply(t, { t: "train", training: "sword", free: ["str", "con"] });
+    expect(t.hero.level).toBe(7);
+    expect(t.inventory.banner).toBe(0);
   });
 });

@@ -53,6 +53,10 @@ export interface CombatState {
   used: Record<string, number>;
   /** 이번 전투에서 남은 편린(몬스터 id) */
   frags: string[];
+  /** 진군 명령으로 쌓인 아군 명중 보너스 */
+  rally?: number;
+  /** 돌진을 이미 쓴 적 uid */
+  charged?: number[];
   /** 연속으로 맞은 횟수(분노) */
   streak?: number;
   /** 이번 전투에서 HP 20% 이하 공포 판정을 했다 */
@@ -86,7 +90,9 @@ export type RoomType =
   | "shrine"
   | "stairs"
   | "boss"
-  | "portal";
+  | "portal"
+  /** 2섹터: 전쟁의 흔적(조사하면 낡은 장비·망령·기록물) */
+  | "relic";
 
 export interface Room {
   id: number;
@@ -119,6 +125,7 @@ export type Pending =
   | { kind: "treasure" }
   | { kind: "record" }
   | { kind: "shrine" }
+  | { kind: "relic" }
   | { kind: "stairs" }
   | { kind: "portal" }
   | { kind: "gear"; item: string }
@@ -140,6 +147,8 @@ export interface DungeonState {
   /** 포만감 0 상태로 지난 턴 수 */
   starvingTurns: number;
   deepestFloor: number;
+  /** 이 섹터에 들어온 뒤 흐른 턴(낮·밤 계산) */
+  clock?: number;
   /** 리젠 판정까지 쌓인 턴 */
   respawnClock?: number;
 }
@@ -209,7 +218,9 @@ export interface GameState {
   week: number;
   gold: number;
   /** heart: 1섹터 보스가 남기는 "거대 쥐의 마석 심장"(레벨 3→4 훈련 대가) */
-  inventory: { food: number; potion: number; scroll: number; heart: number; bandage: number; herb: number };
+  inventory: { food: number; potion: number; scroll: number; heart: number; banner: number; bandage: number; herb: number };
+  /** 이미 얻은 보스 증표(섹터마다 한 번만 나온다) */
+  trophies: string[];
   /** 착용 장비(슬롯 → gear.ts의 GEAR id) */
   gear: Partial<Record<SlotKey, string>>;
   /** 배운 기술 id */

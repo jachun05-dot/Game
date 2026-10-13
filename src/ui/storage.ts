@@ -36,6 +36,8 @@ function fixRun(s: GameState | null): GameState | null {
   s.prosthetic ??= {};
   s.disease ??= 0;
   s.mind ??= {};
+  s.inventory.banner ??= 0;
+  s.trophies ??= s.inventory.heart > 0 || s.hero.level > 3 ? ["heart"] : [];
   s.inventory.bandage ??= 0;
   s.inventory.herb ??= 0;
   s.faithsKnown ??= s.hero.faith ? [s.hero.faith] : [];

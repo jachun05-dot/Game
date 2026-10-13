@@ -1,5 +1,6 @@
 import { gearBonus } from "./gear";
 import { fragSkills } from "./fragments";
+import { mindResist } from "./mind";
 import { faithHungerMult } from "./faith";
 import type { GameState } from "./types";
 
@@ -147,6 +148,31 @@ export const SKILLS: Record<string, SkillDef> = {
     trigger: { on: "targetBelow", pct: 50 }, effect: { type: "strike", hit: 0, dmg: 0, dmgMult: 1.5, autoHit: true }, uses: 2,
   },
 };
+
+// 편린 능력(2섹터)
+Object.assign(SKILLS, {
+  fragPack: { id: "fragPack", name: "무리의 감각", kind: "passive", desc: "명중 +1", passive: { hit: 1 } },
+  fragWing: { id: "fragWing", name: "날개 바람", kind: "passive", desc: "도주 판정 +4", passive: { flee: 4 } },
+  fragCharge: {
+    id: "fragCharge", name: "돌진", kind: "active", desc: "전투 시작 시 첫 공격 피해 ×1.5",
+    trigger: { on: "start" }, effect: { type: "strike", hit: 0, dmg: 0, dmgMult: 1.5 }, uses: 1,
+  },
+  fragDeadNerve: { id: "fragDeadNerve", name: "죽은 자의 담력", kind: "passive", desc: "공포에 걸리지 않는다" },
+  fragGoldHunter: { id: "fragGoldHunter", name: "황금 사냥꾼", kind: "passive", desc: "치명타 확률 +5%, 명중 +1", passive: { crit: 5, hit: 1 } },
+  fragManaFeather: { id: "fragManaFeather", name: "마석 깃털", kind: "passive", desc: "AC +1, 도주 +3, 감각 판정 +2", passive: { ac: 1, flee: 3, perception: 2 } },
+  fragManaArmor: { id: "fragManaArmor", name: "마석 갑주", kind: "passive", desc: "AC +2, 최대 HP +6", passive: { ac: 2, hp: 6 } },
+  fragQueenScream: {
+    id: "fragQueenScream", name: "여왕의 비명", kind: "active", desc: "적이 2마리 이상이면 전투 시작 시 모든 적이 1라운드 동안 행동 불가",
+    trigger: { on: "start", minEnemies: 2 }, effect: { type: "stunAll", rounds: 1 }, uses: 1,
+  },
+  fragVanguard: {
+    id: "fragVanguard", name: "선봉의 일격", kind: "active", desc: "전투 시작 시 첫 공격 명중 +4, 피해 +4",
+    trigger: { on: "start" }, effect: { type: "strike", hit: 4, dmg: 4 }, uses: 1,
+  },
+} satisfies Record<string, SkillDef>);
+
+// "죽은 자의 담력": 공포 면역
+mindResist.push((s, k) => (k === "fear" && fragSkills(s).includes("fragDeadNerve") ? 0 : 1));
 
 /** 배운 기술 + 흡수한 편린의 능력 */
 export function allSkills(s: GameState): string[] {

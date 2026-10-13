@@ -61,9 +61,13 @@ function say(s: GameState, text: string, kind: "hurt" | "system" | "story" | "sk
   s.logCount += 1;
 }
 
+/** 장비·편린 등이 등록하는 저항(걸릴 확률 배율) */
+export const mindResist: ((s: GameState, k: MindKey) => number)[] = [];
+
 /** 확률 p로 상태이상을 건다(이미 걸려 있으면 그대로). 걸린 사실은 알리지 않는다 */
 export function afflict(s: GameState, k: MindKey, p: number, hint: string): boolean {
-  if (has(s, k) || !rng(s).chance(p * faithMindMult(s))) return false;
+  const res = mindResist.reduce((m, f) => m * f(s, k), 1);
+  if (has(s, k) || res <= 0 || !rng(s).chance(p * faithMindMult(s) * res)) return false;
   s.mind[k] = { known: false };
   say(s, hint, "story"); // 무엇이 걸렸는지는 말하지 않는 분위기 문장
   return true;

@@ -30,6 +30,18 @@ export const FRAGMENTS: Record<string, FragmentDef> = {
   goldrat: { id: "goldrat", name: "마석 먹은 쥐의 편린", tier: 3, chance: 0.03, stats: { luk: 4, dex: 2 }, skill: "fragGoldNose", flavor: "금빛으로 번들거린다. 마석 냄새가 코끝에 걸린다." },
   jewelgoblin: { id: "jewelgoblin", name: "보석 박힌 고블린의 편린", tier: 3, chance: 0.03, stats: { dex: 4, luk: 2 }, skill: "fragJewelStab", flavor: "보석 조각이 박힌 듯 반짝인다. 손이 먼저 움직인다." },
   crystalskel: { id: "crystalskel", name: "마석 갑옷 스켈레톤의 편린", tier: 3, chance: 0.03, stats: { con: 4, str: 3 }, skill: "fragCrystalBone", flavor: "투명한 결정이 뼈를 따라 자라난다." },
+  // 2섹터
+  wolf: { id: "wolf", name: "들늑대의 편린", tier: 1, chance: 0.02, stats: { dex: 2, str: 1 }, flavor: "풀 냄새가 나는 회색 빛. 다리가 가벼워진다." },
+  alphawolf: { id: "alphawolf", name: "우두머리 늑대의 편린", tier: 2, chance: 0.015, stats: { str: 2, con: 2 }, skill: "fragPack", flavor: "무리를 이끄는 눈빛이 옮아 온다." },
+  crow: { id: "crow", name: "까마귀의 편린", tier: 1, chance: 0.03, stats: { per: 2 }, flavor: "검은 깃털 한 장 같은 빛. 눈이 밝아진다." },
+  harpy: { id: "harpy", name: "하피의 편린", tier: 2, chance: 0.02, stats: { dex: 3 }, skill: "fragWing", flavor: "바람이 손끝에 감긴다." },
+  warhorse: { id: "warhorse", name: "유령 군마의 편린", tier: 2, chance: 0.015, stats: { con: 3, str: 2 }, skill: "fragCharge", flavor: "말굽 소리가 심장 박동에 섞인다." },
+  wraith: { id: "wraith", name: "망령 병사의 편린", tier: 2, chance: 0.015, stats: { con: 4 }, skill: "fragDeadNerve", flavor: "차갑고 무겁다. 두려움이 무엇이었는지 잊는다." },
+  goldwolf: { id: "goldwolf", name: "금빛 털 늑대의 편린", tier: 3, chance: 0.03, stats: { luk: 4, dex: 3 }, skill: "fragGoldHunter", flavor: "금빛 털이 피부 아래에서 반짝인다." },
+  manaharpy: { id: "manaharpy", name: "마석 깃털 하피의 편린", tier: 3, chance: 0.03, stats: { dex: 4, per: 2 }, skill: "fragManaFeather", flavor: "깃털처럼 가볍고 마석처럼 단단하다." },
+  manawraith: { id: "manawraith", name: "마석 갑주 망령의 편린", tier: 3, chance: 0.03, stats: { con: 5, str: 3 }, skill: "fragManaArmor", flavor: "뼈 위로 마석 갑주가 자라난다." },
+  harpyqueen: { id: "harpyqueen", name: "하피 여왕의 편린", tier: 3, chance: 0.03, stats: { dex: 5, luk: 2 }, skill: "fragQueenScream", flavor: "목구멍 깊은 곳에 비명이 깃든다." },
+  general: { id: "general", name: "끝나지 않은 전쟁의 장군의 편린", tier: 4, chance: 0.03, stats: { str: 5, con: 5 }, skill: "fragVanguard", flavor: "아직 끝나지 않은 전쟁이 핏속에서 울린다." },
   boss: { id: "boss", name: "거대한 돌연변이 쥐의 편린", tier: 4, chance: 0.03, stats: { str: 4, con: 4, dex: 1 }, skill: "fragFrenzy", flavor: "붉게 고동친다. 이빨이 근질거린다." },
 };
 

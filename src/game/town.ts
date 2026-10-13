@@ -1,5 +1,5 @@
 import { josa } from "./josa";
-import { BAL, FEED, FIELD_ENCOUNTERS, NAMES, RIVAL_NEWS, RIVALS, RUMORS, STAT_KEYS, STAT_LABEL, TRAININGS } from "./data";
+import { BAL, TROPHIES, FEED, FIELD_ENCOUNTERS, NAMES, RIVAL_NEWS, RIVALS, RUMORS, STAT_KEYS, STAT_LABEL, TRAININGS } from "./data";
 import { addStat, check, emptyStats, kill, log, maxHp, rngOf, taxDue, topBehavior, yearOf } from "./core";
 import { FRAGMENTS, emptyCodex, fragSlots } from "./fragments";
 import { MIND_KEYS, fadeAfterDungeon } from "./mind";
@@ -23,7 +23,8 @@ export function newRun(seed: number): GameState {
     month: 1,
     week: 1,
     gold: BAL.startGold,
-    inventory: { food: 0, potion: 0, scroll: 0, heart: 0, bandage: 0, herb: 0 },
+    inventory: { food: 0, potion: 0, scroll: 0, heart: 0, banner: 0, bandage: 0, herb: 0 },
+    trophies: [],
     gear: {},
     skills: [],
     fragments: [],
@@ -133,8 +134,13 @@ export function trainCost(s: GameState): number {
 }
 
 /** 레벨 3→4 훈련은 1섹터 보스의 마석 심장이 있어야 한다 */
+/** 이 레벨에서 다음 레벨로 가는 훈련에 필요한 보스 증표(3→4 마석 심장, 6→7 장군의 휘장) */
+export function gateOf(s: GameState): (typeof TROPHIES)[number] | null {
+  return TROPHIES.find((t) => t.gateLevel === s.hero.level) ?? null;
+}
+
 export function needsHeart(s: GameState): boolean {
-  return s.hero.level === BAL.heartGateLevel;
+  return gateOf(s) !== null;
 }
 
 /** 시작 소모품을 글로 */
@@ -148,7 +154,8 @@ export function kitItems(items: { food: number; potion: number; scroll: number }
 
 export function canTrain(s: GameState): boolean {
   if (s.phase !== "town" || s.heretic || s.month < BAL.firstTrainMonth || s.hero.level >= BAL.maxLevel || s.gold < trainCost(s)) return false;
-  return !needsHeart(s) || s.inventory.heart > 0;
+  const g = gateOf(s);
+  return !g || s.inventory[g.item] > 0;
 }
 
 function feedLines(r: Rng, good: boolean): string[] {
@@ -176,8 +183,9 @@ export function train(s: GameState, trainingId: string, free: [StatKey, StatKey]
   if (!t || !canTrainAt(s, t.id)) return;
   const cost = trainCost(s);
   s.gold -= cost;
-  const paidHeart = needsHeart(s);
-  if (paidHeart) s.inventory.heart -= 1;
+  const gate = gateOf(s);
+  const paidHeart = !!gate;
+  if (gate) s.inventory[gate.item] -= 1;
   const delta: Partial<Stats> = {};
   const bump = (k: StatKey) => {
     addStat(s, k, 1);
@@ -199,7 +207,7 @@ export function train(s: GameState, trainingId: string, free: [StatKey, StatKey]
     `${t.name} — ${t.desc}. (${cost}G)`,
     `고정: ${t.stats.map((k) => STAT_LABEL[k]).join(", ")} / 자유: ${free.map((k) => STAT_LABEL[k]).join(", ")} / ${noBehavior ? "몸이 기억한 것(무작위)" : "몸이 기억한 것"}: ${behaviorPicks.map((k) => STAT_LABEL[k]).join(", ")}`,
   ];
-  if (paidHeart) lines.unshift(`교관이 ${BAL.heartName}을 받아 들고 고개를 끄덕였다. "이제야 진짜 훈련을 시작할 수 있겠군."`);
+  if (paidHeart) lines.unshift(`교관이 ${josa(gate!.name, "을")} 받아 들고 고개를 끄덕였다. "${gate!.item === "heart" ? "이제야 진짜 훈련을 시작할 수 있겠군." : "차원문 너머에서 살아 돌아왔군. 다음 단계로 가자."}"`);
   if (!learned) lines.push("이 훈련에서 더 배울 기술은 없다. (히든 트레이닝은 준비 중)");
   if (fragSlots(s.hero.level) > fragSlots(from)) lines.push(`몸에 편린을 담을 자리가 하나 더 생겼다. (편린 칸 ${fragSlots(s.hero.level)})`);
   finishWeek(s, { title: "훈련", lines, statDelta: delta, levelUp: { from, to: s.hero.level }, learned: learned ?? undefined, goldDelta: -cost }, true);
@@ -350,7 +358,7 @@ export function buy(s: GameState, item: keyof typeof BAL.prices): void {
 
 export function buyGear(s: GameState, id: string): void {
   const g = GEAR[id];
-  if (s.phase !== "town" || s.heretic || !g || g.price === undefined || s.gold < g.price) return;
+  if (s.phase !== "town" || s.heretic || !g || g.price === undefined || s.gold < g.price || (g.rank ?? 0) > s.rank) return;
   if (Object.values(s.gear).includes(id) && g.slot !== "ring") return;
   s.gold -= g.price;
   pray(s, "greed", -Math.ceil(g.price / 20));

@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import { maxHp } from "../game/core";
-import { ROOM_LABEL, ROOM_SHORT, currentRoom } from "../game/dungeon";
+import { ROOM_LABEL, ROOM_SHORT, currentRoom, isNight } from "../game/dungeon";
 import type { PendingChoice } from "../game/dungeon";
 import type { DungeonState } from "../game/types";
 import { BAL } from "../game/data";
@@ -26,7 +26,7 @@ export function DungeonScreen({ ctl }: { ctl: Ctl }) {
   return (
     <GameScreen
       ctl={ctl}
-      title={`${dg.sector}섹터 ${dg.floor}층 · 미궁`}
+      title={`${dg.sector}섹터 ${dg.floor}층 · ${dg.sector >= 2 ? (isNight(s) ? "밤" : "낮") : "미궁"}`}
       header={
         <>
           <HeroHeader s={s} onOpen={() => ctl.setSheet(true)} extra={<span>마석 {dg.mana}G</span>} />
@@ -78,7 +78,12 @@ const PENDING_OPTIONS: Record<string, { choice: PendingChoice; label: string; pr
   ],
   portal: [
     { choice: "enter", label: "차원문으로 들어간다", primary: true },
+    { choice: "return", label: "여기까지 — 마석을 챙겨 돌아간다" },
     { choice: "stay", label: "아직은 아니다" },
+  ],
+  relic: [
+    { choice: "search", label: "녹슨 무기 더미를 뒤진다 (1시간)", primary: true },
+    { choice: "leave", label: "죽은 자들의 물건은 건드리지 않는다" },
   ],
 };
 
@@ -174,6 +179,9 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
     return (
       <>
         <p className="dock-title">{ROOM_LABEL[room.type]} — 어떻게 할까?</p>
+        {dg.pending.kind === "portal" && dg.sector === 1 && (
+          <p className="dim small">들어가면 2섹터 — 잊힌 전쟁터의 초원. 남은 시간이 두 배가 된다({fmtTime(dg.turnsLeft)} → {fmtTime(dg.turnsLeft * 2)}). 돌아가도 1섹터 클리어는 인정된다.</p>
+        )}
         {dg.pending.kind === "shrine" && (
           <p className="dim small">
             {s.hero.faith ? `섬기는 신: ${s.hero.faith} (신앙심 ${Math.floor(s.piety)}) — 기도하면 신앙심 +5.` : "섬기는 신이 없다."}

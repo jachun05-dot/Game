@@ -1,5 +1,5 @@
 import { josa } from "./josa";
-import { BAL, ENCOUNTERS, MANA_FLOOR_MULT, MIN_COMBAT_ROOMS, MONSTERS, RARE_BY_FLOOR, RECORDS, ROOM_FLAVOR, TRAP_AMBUSH } from "./data";
+import { BAL, MANA_FLOOR_MULT, MIN_COMBAT_ROOMS, MONSTERS, RECORDS, ROOM_FLAVOR, SECTOR_ELITES, SECTOR_ENCOUNTERS, SECTOR_FLAVOR, SECTOR_RARES, TRAP_AMBUSH, TROPHIES, WAR_RECORDS, bossGroup, campAmbush } from "./data";
 import { check, isDead, kill, log, maxHp, note, remember, rngOf, smod } from "./core";
 import { FRAGMENTS, fragKnown, fragSlots, fragStatText } from "./fragments";
 import { INJ, bleedPerMove, canPeek, moveMult, wound } from "./injury";
@@ -27,15 +27,16 @@ export const ROOM_LABEL: Record<RoomType, string> = {
   stairs: "계단",
   boss: "보스",
   portal: "차원문",
+  relic: "전쟁의 흔적",
 };
 
 /** 지도 노드 위 짧은 라벨 */
 export const ROOM_SHORT: Record<RoomType, string> = {
   entrance: "입구", empty: "빈방", combat: "적", trap: "함정", treasure: "보물",
-  record: "기록", shrine: "성소", stairs: "계단", boss: "보스", portal: "문",
+  record: "기록", shrine: "성소", stairs: "계단", boss: "보스", portal: "문", relic: "흔적",
 };
 
-export function generateFloor(r: Rng, floor: number): Room[] {
+export function generateFloor(r: Rng, floor: number, sector = 1): Room[] {
   const rooms: Room[] = [];
   const add = (type: RoomType, depth: number): Room => {
     const room: Room = { id: rooms.length, type, edges: [], depth, visited: false, known: false, resolved: false, flavor: r.int(0, 99) };
@@ -91,12 +92,14 @@ export function generateFloor(r: Rng, floor: number): Room[] {
   take("combat", Math.max(MIN_COMBAT_ROOMS[floor], Math.round(free.length * 0.25)));
   take("trap", 1 + floor); // 함정: 층이 깊을수록 증가
   take("record", r.int(1, 2), isDeadEnd);
+  if (sector >= 2) take("relic", r.int(1, 2)); // 전쟁의 흔적
   if (r.chance(0.35)) take("shrine", 1);
 
-  const amb = TRAP_AMBUSH[floor];
+  // 고블린 매복은 1섹터에만(2섹터에는 고블린이 없다)
+  const amb = sector === 1 ? TRAP_AMBUSH[floor] : { chance: 0, size: [0, 0] as [number, number] };
   for (const room of rooms) {
-    if (room.type === "combat") room.encounter = r.weighted(ENCOUNTERS[floor]);
-    if (room.type === "boss") room.encounter = ["boss", ...Array(r.int(2, 3)).fill("rat")];
+    if (room.type === "combat") room.encounter = r.weighted(SECTOR_ENCOUNTERS[sector][floor]);
+    if (room.type === "boss") room.encounter = bossGroup(sector, r);
     if (room.type === "trap" && r.chance(amb.chance)) room.ambush = Array(r.int(amb.size[0], amb.size[1])).fill("goblin");
   }
   // 2·3층에는 꺼진 바닥(떨어지면 아래층으로, 3층은 깊은 틈)
@@ -104,7 +107,13 @@ export function generateFloor(r: Rng, floor: number): Room[] {
   // 희귀 개체: 전투방 하나를 차지한다
   if (r.chance(BAL.rareChance)) {
     const combatRooms = rooms.filter((x) => x.type === "combat");
-    if (combatRooms.length) r.pick(combatRooms).encounter = [RARE_BY_FLOOR[floor]];
+    if (combatRooms.length) r.pick(combatRooms).encounter = [SECTOR_RARES[sector][floor]];
+  }
+  // 정예 희귀 개체(하피 여왕 등): 마석 희귀 개체와 따로, 조금 더 자주
+  const elite = SECTOR_ELITES[sector];
+  if (elite && elite.floors.includes(floor) && r.chance(BAL.eliteChance)) {
+    const combatRooms = rooms.filter((x) => x.type === "combat" && !x.encounter?.some((m) => MONSTERS[m].rare));
+    if (combatRooms.length) r.pick(combatRooms).encounter = [elite.id, ...elite.escort];
   }
   return rooms;
 }
@@ -117,7 +126,8 @@ export function enterDungeon(s: GameState): void {
   s.dungeon = {
     sector: 1,
     floor: 1,
-    rooms: generateFloor(r, 1),
+    rooms: generateFloor(r, 1, 1),
+    clock: 0,
     current: 0,
     prev: null,
     turnsLeft: BAL.weekTurns,
@@ -145,6 +155,9 @@ export function passTime(s: GameState, turns: number): void {
   const dg = s.dungeon;
   if (!dg || isDead(s)) return;
   dg.turnsLeft -= turns;
+  const wasNight = isNight(s);
+  dg.clock = (dg.clock ?? 0) + turns;
+  if (dg.sector >= 2 && isNight(s) !== wasNight) log(s, isNight(s) ? "해가 졌다. 풀숲 너머에서 늑대 울음이 번진다. (밤)" : "동이 튼다. 바람이 풀을 눕힌다. (낮)", "system");
   const h = s.hero;
   const wasFed = h.satiety > 0;
   h.satiety = Math.max(0, h.satiety - turns * 0.5 * hungerMult(s));
@@ -179,7 +192,7 @@ function respawn(s: GameState): void {
     room.resolved = false;
     room.respawned = true;
     room.remaining = undefined;
-    room.encounter = r.weighted(ENCOUNTERS[dg.floor]);
+    room.encounter = r.weighted(SECTOR_ENCOUNTERS[dg.sector][dg.floor]);
     any = true;
   }
   if (any) log(s, "멀리서 무언가 기어 나오는 소리가 들린다. 비워 둔 방에 새로운 기척이 생겼다.", "system");
@@ -245,9 +258,16 @@ export function moveTo(s: GameState, id: number): void {
   arrive(s, false);
 }
 
-function flavor(room: Room, key: string): string {
-  const list = ROOM_FLAVOR[key];
+function flavor(s: GameState, room: Room, key: string): string {
+  const list = (s.dungeon && SECTOR_FLAVOR[s.dungeon.sector]?.[key]) || ROOM_FLAVOR[key];
   return list[room.flavor % list.length];
+}
+
+/** 2섹터부터 낮·밤이 있다(12시간마다 바뀜) */
+export function isNight(s: GameState): boolean {
+  const dg = s.dungeon;
+  if (!dg || dg.sector < 2) return false;
+  return Math.floor((dg.clock ?? 0) / BAL.dayNightTurns) % 2 === 1;
 }
 
 /** 방에 도착했을 때의 처리 */
@@ -258,11 +278,11 @@ function arrive(s: GameState, firstOfFloor: boolean): void {
   room.visited = true;
 
   if (room.type === "entrance") {
-    if (firstVisit) log(s, flavor(room, dg.floor === 1 && firstOfFloor ? "entrance" : "arrival"), "story");
+    if (firstVisit) log(s, flavor(s, room, dg.floor === 1 && firstOfFloor ? "entrance" : "arrival"), "story");
     room.known = true;
   } else if (room.type === "stairs" || room.type === "portal") {
     room.known = true;
-    log(s, flavor(room, room.type), "story");
+    log(s, flavor(s, room, room.type), "story");
     dg.pending = { kind: room.type };
   } else if (room.resolved) {
     log(s, `이미 지나온 곳이다. (${ROOM_LABEL[room.type]})`);
@@ -271,13 +291,20 @@ function arrive(s: GameState, firstOfFloor: boolean): void {
       case "empty":
         room.known = true;
         room.resolved = true;
-        log(s, flavor(room, "empty"), "story");
+        log(s, flavor(s, room, "empty"), "story");
         break;
       case "combat":
       case "boss": {
         room.known = true;
-        log(s, room.respawned ? "비워 두었던 방에 다시 무언가 자리를 잡았다." : flavor(room, room.type), "story");
-        const enemies = room.remaining ?? makeEnemies(s, room.encounter ?? ["rat"]);
+        log(s, room.respawned ? "비워 두었던 방에 다시 무언가 자리를 잡았다." : flavor(s, room, room.type), "story");
+        // 하피는 낮에만 나온다
+        let ids = room.encounter ?? ["rat"];
+        if (isNight(s) && !room.remaining) {
+          const day = ids.filter((m) => !MONSTERS[m].dayOnly);
+          if (day.length < ids.length) log(s, "밤이라 하피들은 둥지로 돌아가고 없다.", "system");
+          ids = day.length ? day : ["wolf"];
+        }
+        const enemies = room.remaining ?? makeEnemies(s, ids);
         room.remaining = undefined;
         startCombat(s, "dungeon", enemies);
         return;
@@ -289,8 +316,9 @@ function arrive(s: GameState, firstOfFloor: boolean): void {
       case "treasure":
       case "record":
       case "shrine":
+      case "relic":
         room.known = true;
-        log(s, flavor(room, room.type), "story");
+        log(s, flavor(s, room, room.type), "story");
         dg.pending = { kind: room.type };
         break;
     }
@@ -305,7 +333,7 @@ function peek(s: GameState): void {
   for (const id of currentRoom(s).edges) {
     const nb = dg.rooms[id];
     if (nb.known) continue;
-    if (check(s, "per", BAL.peekDc, faithPeek(s)).ok) {
+    if (check(s, "per", BAL.peekDc, faithPeek(s) - (isNight(s) ? 2 : 0)).ok) {
       nb.known = true;
       note(s, "per");
       log(s, `앞쪽 통로 너머의 낌새를 읽었다 — ${ROOM_LABEL[nb.type]}.`, "system");
@@ -326,7 +354,7 @@ function arriveTrap(s: GameState, room: Room): boolean {
   room.known = true;
   if (c.ok) {
     note(s, "per");
-    log(s, `${flavor(room, room.trapKind === "pit" ? "pit" : "trap")} ${room.trapKind === "pit" ? "꺼진 바닥" : "함정"}을 알아챘다! (감각 ${c.total} vs ${BAL.trapDetectDc})`, "system");
+    log(s, `${flavor(s, room, room.trapKind === "pit" ? "pit" : "trap")} ${room.trapKind === "pit" ? "꺼진 바닥" : "함정"}을 알아챘다! (감각 ${c.total} vs ${BAL.trapDetectDc})`, "system");
     spotAmbush(s, room);
     dg.pending = { kind: "trap" };
     return false;
@@ -366,7 +394,7 @@ function fall(s: GameState): boolean {
   }
   dg.floor += 1;
   dg.deepestFloor = Math.max(dg.deepestFloor, dg.floor);
-  dg.rooms = generateFloor(r, dg.floor);
+  dg.rooms = generateFloor(r, dg.floor, dg.sector);
   dg.current = 0;
   dg.prev = null;
   log(s, `— ${dg.floor}층에 떨어졌다. 올라갈 길은 없다.`, "system");
@@ -391,15 +419,15 @@ function springTrap(s: GameState, room: Room): boolean {
   } else {
     const dmg = rngOf(s).dice(1, 6);
     s.hero.hp -= dmg;
-    log(s, `가시함정을 밟았다! ${dmg} 피해 (민첩 ${c.total} vs ${BAL.trapDodgeDc})`, "hurt");
+    log(s, `${d(s).sector >= 2 ? "녹슨 곰덫" : "가시함정"}을 밟았다! ${dmg} 피해 (민첩 ${c.total} vs ${BAL.trapDodgeDc})`, "hurt");
     if (s.hero.hp <= 0) {
       s.hero.hp = 0;
-      kill(s, "trap", "가시함정에 목숨을 잃었다");
+      kill(s, "trap", d(s).sector >= 2 ? "녹슨 곰덫에 걸려 목숨을 잃었다" : "가시함정에 목숨을 잃었다");
       return false;
     }
     note(s, "con");
     hurt = true;
-    if (rngOf(s).chance(INJ.spikeFeet)) wound(s, "feet", "가시가 발등을 꿰뚫었다");
+    if (rngOf(s).chance(d(s).sector >= 2 ? 0.6 : INJ.spikeFeet)) wound(s, "feet", d(s).sector >= 2 ? "녹슨 곰덫이 발목을 물었다" : "가시가 발등을 꿰뚫었다");
   }
   pray(s, "trap", 3); // 재앙을 맞고도 살아남았다
   if (!room.ambush) return false;
@@ -419,6 +447,9 @@ export type PendingChoice =
   | "descend" | "stay"
   /** 심연의 신 ★1: 꺼진 바닥으로 뛰어내리기 */
   | "jump"
+  /** 차원문: 돌아가기 / 전쟁의 흔적: 조사 */
+  | "return"
+  | "search"
   | "enter"
   | "equip"
   /** 성소: 해금된 n번째 신으로 개종 */
@@ -455,7 +486,7 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
     pray(s, "abyss", 5);
     dg.floor += 1;
     dg.deepestFloor = Math.max(dg.deepestFloor, dg.floor);
-    dg.rooms = generateFloor(r, dg.floor);
+    dg.rooms = generateFloor(r, dg.floor, dg.sector);
     dg.current = 0;
     dg.prev = null;
     log(s, `— ${dg.floor}층에 내려섰다.`, "system");
@@ -553,6 +584,31 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
     return;
   }
 
+  if (kind === "relic") {
+    room.resolved = true;
+    if (choice !== "search") {
+      log(s, "죽은 자들의 물건에는 손대지 않기로 했다.");
+      return;
+    }
+    passTime(s, 2);
+    const roll = r.float();
+    if (roll < 0.4) {
+      log(s, "녹슨 무기 더미를 뒤지다 아직 쓸 만한 것을 찾았다.", "good");
+      offerGear(s, rollLoot(s));
+    } else if (roll < 0.7) {
+      log(s, "갑옷 더미가 덜그럭거리며 일어선다 — 잠든 망령을 깨웠다!", "hurt");
+      startCombat(s, "dungeon", makeEnemies(s, ["wraith"]));
+    } else {
+      s.recordsRead += 1;
+      note(s, "int");
+      pray(s, "song", 4);
+      pray(s, "oblivion", -5);
+      log(s, WAR_RECORDS[(room.flavor + s.recordsRead) % WAR_RECORDS.length], "story");
+      log(s, `(찢어진 군기에 적힌 기록 — 읽은 기록물 ${s.recordsRead}개)`, "system");
+    }
+    return;
+  }
+
   if (kind === "record") {
     room.resolved = true;
     if (choice === "read") {
@@ -589,7 +645,8 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
         cure(s, calm);
       }
       if (god(s)) {
-        addPiety(s, 5);
+        // 2섹터의 제단은 전쟁의 신 것: 전쟁의 신 신도는 기도 효과 두 배
+        addPiety(s, dg.sector >= 2 && god(s) === "war" ? 10 : 5);
         log(s, `${s.hero.faith}의 기척이 가까이 느껴진다. (신앙심 ${s.piety})`, "story");
       }
     } else if (choice.startsWith("convert")) {
@@ -609,7 +666,7 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
     }
     dg.floor += 1;
     dg.deepestFloor = Math.max(dg.deepestFloor, dg.floor);
-    dg.rooms = generateFloor(r, dg.floor);
+    dg.rooms = generateFloor(r, dg.floor, dg.sector);
     dg.current = 0;
     dg.prev = null;
     passTime(s, 1);
@@ -626,11 +683,29 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
       log(s, "아직은 차원문을 넘지 않기로 했다.");
       return;
     }
+    const first = s.rank < dg.sector;
     s.rank = Math.max(s.rank, dg.sector); // 등급 = 클리어한 섹터 수(같은 섹터를 다시 넘어도 오르지 않음)
     remember(s, `${dg.sector}섹터의 차원문에 도달했다.`);
-    log(s, "차원문에 손을 뻗자 빛이 몸을 감싼다 — 1섹터 클리어!", "good");
-    log(s, "(2섹터는 다음 업데이트 예정 — 이번 달 탐험은 여기까지)", "system");
-    leaveDungeon(s, { cleared: true, forced: false });
+    if (first) log(s, `차원문에 닿았다 — ${dg.sector}섹터 클리어! (등급 ${s.rank})`, "good");
+    if (choice === "return" || dg.sector >= 2) {
+      if (dg.sector >= 2) log(s, "(3섹터는 다음 업데이트 예정 — 이번 달 탐험은 여기까지)", "system");
+      else log(s, "차원문의 빛을 등지고, 마석을 챙겨 돌아가기로 했다.", "system");
+      leaveDungeon(s, { cleared: true, forced: false });
+      return;
+    }
+    // 차원문 너머: 다음 섹터. 남은 시간은 2배가 된다(섹터마다 시간 흐름이 다르다)
+    const before = dg.turnsLeft;
+    dg.sector += 1;
+    dg.floor = 1;
+    dg.deepestFloor = 1;
+    dg.turnsLeft = before * 2;
+    dg.clock = 0;
+    dg.rooms = generateFloor(r, 1, dg.sector);
+    dg.current = 0;
+    dg.prev = null;
+    remember(s, `${dg.sector}섹터 — 잊힌 전쟁터의 초원에 발을 디뎠다.`);
+    log(s, `차원문을 넘었다. — ${dg.sector}섹터, 잊힌 전쟁터의 초원. (남은 시간 ${Math.round(before / 2)}시간 → ${before}시간)`, "story");
+    arrive(s, true);
   }
 }
 
@@ -638,9 +713,11 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
 function rollLoot(s: GameState): string {
   const r = rngOf(s);
   const floor = s.dungeon?.floor ?? 1;
+  const sector = s.dungeon?.sector ?? 1;
+  // 그 섹터까지의 장비가 나오고, 지금 섹터의 장비가 더 잘 나온다
   const pool = Object.values(GEAR)
-    .filter((g) => (g.loot ?? 0) > 0)
-    .map((g) => ({ item: g.id, w: (g.loot ?? 0) + (floor >= 2 && (g.loot ?? 0) <= 2 ? 1 : 0) }));
+    .filter((g) => (g.loot ?? 0) > 0 && (g.sector ?? 1) <= sector)
+    .map((g) => ({ item: g.id, w: (g.loot ?? 0) + (floor >= 2 && (g.loot ?? 0) <= 2 ? 1 : 0) + (sector > 1 && (g.sector ?? 1) === sector ? 3 : 0) }));
   return r.weighted(pool);
 }
 
@@ -732,12 +809,32 @@ export function afterDungeonCombat(s: GameState, outcome: "win" | "fled", c: Com
       log(s, `쓰러진 적에게서 마석(${loot}G 어치)을 챙겼다.`, "good");
     }
     offerFrag(s, c.frags);
+    // 정예 희귀 개체(하피 여왕): 고유 보상
+    const elite = SECTOR_ELITES[dg.sector];
+    if (elite && c.enemies.some((e) => e.defId === elite.id && !e.fled)) {
+      remember(s, `${josa(MONSTERS[elite.id].name, "을")} 쓰러뜨렸다.`);
+      log(s, `${josa(MONSTERS[elite.id].name, "이")} 쓰러지며 두르고 있던 것이 땅에 떨어진다.`, "good");
+      offerGear(s, elite.reward);
+    }
     if (room.type === "boss") {
-      remember(s, "거대한 돌연변이 쥐를 쓰러뜨렸다.");
-      log(s, "보스가 쓰러지자 포탈의 빛이 한층 밝아진다.", "story");
-      s.inventory.heart += 1;
-      log(s, `보스의 가슴에서 ${BAL.heartName}을 꺼냈다. 직업교관이 레벨 4 훈련의 대가로 요구하는 물건이다.`, "good");
-      log(s, "쥐의 둥지에서 무언가 반짝인다.", "system");
+      const bossId = room.encounter?.[0] ?? "boss";
+      remember(s, `${josa(MONSTERS[bossId].name, "을")} 쓰러뜨렸다.`);
+      log(s, "보스가 쓰러지자 차원문의 빛이 한층 밝아진다.", "story");
+      // 보스 증표는 섹터마다 처음 한 번만
+      const t = TROPHIES.find((x) => x.sector === dg.sector);
+      if (t && !s.trophies.includes(t.item)) {
+        s.trophies.push(t.item);
+        s.inventory[t.item] += 1;
+        log(s, `${josa(t.name, "을")} 얻었다. 직업교관이 레벨 ${t.gateLevel + 1} 훈련의 대가로 요구하는 물건이다.`, "good");
+      } else if (t) {
+        log(s, `이번에는 ${t.name} 같은 것은 남지 않았다.`, "system");
+      }
+      if (dg.sector >= 2) {
+        s.recordsRead += 1;
+        log(s, WAR_RECORDS[(s.recordsRead + room.flavor) % WAR_RECORDS.length], "story");
+        log(s, `(장군의 안장 주머니에서 나온 기록 — 읽은 기록물 ${s.recordsRead}개)`, "system");
+      }
+      log(s, "보스가 지키던 자리에서 무언가 반짝인다.", "system");
       offerGear(s, rollLoot(s));
       return;
     }
@@ -772,9 +869,9 @@ export function camp(s: GameState): void {
   const heal = 4 + Math.max(0, smod(s, "con")) + (power(s, "song", 2) ? 3 : 0);
   s.hero.hp = Math.min(maxHp(s), s.hero.hp + heal);
   log(s, `피로가 풀렸다. HP +${heal}`, "good");
-  if (r.chance(0.15)) {
+  if (r.chance(isNight(s) ? 0.3 : 0.15)) {
     log(s, "잠결에 무언가 다가오는 소리!", "hurt");
-    const ids = dg.floor >= 2 ? ["rat", "rat"] : ["rat"];
+    const ids = campAmbush(dg.sector, dg.floor);
     startCombat(s, "dungeon", makeEnemies(s, ids));
     return;
   }

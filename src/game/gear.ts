@@ -1,5 +1,6 @@
 import type { GameState, StatKey } from "./types";
 import { mainLost, slotWorks } from "./injury";
+import { MIND_NAME, mindResist, type MindKey } from "./mind";
 
 // 장비(DESIGN 10절): 슬롯 9개. 장비는 파워 스케일링이 아니라 생존 최소 기준선이고,
 // 미궁에서 주운 장비는 착용해야만 가지고 나올 수 있다(DESIGN 6절).
@@ -49,6 +50,12 @@ export interface GearDef {
   price?: number;
   /** 보물상자에서 나오는 가중치(0이면 안 나옴) */
   loot?: number;
+  /** 이 섹터부터 보물상자에서 나온다(기본 1) */
+  sector?: number;
+  /** 대장간에서 사려면 필요한 등급(클리어한 섹터 수) */
+  rank?: number;
+  /** 정신 상태이상 저항: 걸릴 확률 배율(0이면 면역) */
+  mindRes?: Partial<Record<MindKey, number>>;
   flavor: string;
 }
 
@@ -82,6 +89,17 @@ export const GEAR: Record<string, GearDef> = {
   rustring: { id: "rustring", name: "녹슨 반지", slot: "ring", bonus: { hit: 1 }, loot: 3, flavor: "손가락에 꼭 맞는다." },
   luckring: { id: "luckring", name: "행운의 반지", slot: "ring", bonus: { crit: 4 }, loot: 2, flavor: "주사위 눈이 새겨져 있다." },
   vigorring: { id: "vigorring", name: "활력의 반지", slot: "ring", bonus: { hp: 4 }, loot: 2, flavor: "끼면 손끝이 따뜻해진다." },
+  // ── 2섹터(잊힌 전쟁터의 초원) ──
+  wraithspear: { id: "wraithspear", name: "망령의 녹슨 창", slot: "main", bonus: { hit: 1 }, weapon: { dice: [1, 10], stat: "str", verb: "녹슨 창을 꽂아" }, loot: 2, sector: 2, flavor: "끝나지 않은 전쟁의 창. 아직도 찌를 곳을 찾는다." },
+  warbanner: { id: "warbanner", name: "녹슨 군기 방패", slot: "offhand", bonus: { ac: 2 }, mindRes: { fear: 0.5 }, loot: 2, sector: 2, flavor: "찢어진 군기를 덧댄 방패. 들고 있으면 겁이 덜 난다." },
+  harpycharm: { id: "harpycharm", name: "하피 깃털 부적", slot: "neck", bonus: { perception: 1 }, mindRes: { confusion: 0.5 }, loot: 2, sector: 2, flavor: "비명을 견딘 깃털. 머릿속을 맑게 붙잡아 준다." },
+  horseshoe: { id: "horseshoe", name: "군마의 편자 장화", slot: "feet", bonus: { ac: 1, flee: 3 }, loot: 2, sector: 2, flavor: "유령 군마의 편자를 박았다. 발이 가볍다." },
+  battlering: { id: "battlering", name: "전장의 반지", slot: "ring", bonus: { hit: 2 }, loot: 2, sector: 2, flavor: "손가락뼈에 끼워진 채 발견됐다." },
+  wolfhide: { id: "wolfhide", name: "늑대 가죽 갑옷", slot: "body", bonus: { ac: 3 }, price: 150, rank: 1, loot: 1, sector: 2, flavor: "들늑대 가죽을 겹겹이 덧댔다. 차원문 너머에서 들여온 물건." },
+  steelsword: { id: "steelsword", name: "강철 장검", slot: "main", bonus: {}, weapon: { dice: [1, 10], stat: "str", verb: "강철 장검을 내리쳐" }, price: 160, rank: 1, flavor: "등급을 올린 모험가에게만 파는 칼." },
+  steelshield: { id: "steelshield", name: "강철 방패", slot: "offhand", bonus: { ac: 2 }, price: 110, rank: 1, flavor: "가볍고 단단하다." },
+  oakstaff: { id: "oakstaff", name: "마력이 깃든 지팡이", slot: "main", bonus: { hit: 1 }, weapon: { dice: [1, 8], stat: "int", verb: "짙은 마력탄을 날려" }, price: 150, rank: 1, flavor: "차원문 너머의 나무로 깎았다." },
+  queencloak: { id: "queencloak", name: "하피 여왕의 깃털 망토", slot: "neck", bonus: { ac: 1, flee: 4 }, mindRes: { confusion: 0 }, flavor: "여왕의 비명을 막아 낸 깃털. 두르면 어떤 소리도 머리를 흔들지 못한다." },
 };
 
 const BONUS_LABEL: Record<keyof GearBonus, string> = {
@@ -89,9 +107,17 @@ const BONUS_LABEL: Record<keyof GearBonus, string> = {
 };
 const STAT_NAME: Record<StatKey, string> = { str: "힘", dex: "민첩", con: "체력", int: "지능", per: "감각", luk: "행운" };
 
+// 장비의 정신 상태이상 저항을 mind.ts에 알려 준다(순환 참조를 피하려고 등록 방식)
+mindResist.push((s, k) => {
+  let m = 1;
+  for (const [slot, id] of Object.entries(s.gear)) if (id && slotWorks(s, slot)) m *= GEAR[id]?.mindRes?.[k] ?? 1;
+  return m;
+});
+
 export function gearEffect(id: string): string {
   const g = GEAR[id];
   const parts: string[] = [];
+  for (const [k, v] of Object.entries(g.mindRes ?? {}) as [MindKey, number][]) parts.push(v === 0 ? `${MIND_NAME[k]} 면역` : `${MIND_NAME[k]} 저항`);
   if (g.weapon) parts.push(`피해 ${g.weapon.dice[0]}d${g.weapon.dice[1]} · ${STAT_NAME[g.weapon.stat]} 기반`);
   for (const [k, v] of Object.entries(g.bonus) as [keyof GearBonus, number][]) {
     if (v) parts.push(`${BONUS_LABEL[k]} ${v > 0 ? "+" : ""}${v}`);

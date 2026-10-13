@@ -115,6 +115,7 @@ export function CharacterSheet({ ctl }: { ctl: Ctl }) {
               말린 고기 {s.inventory.food} · 치료 물약 {s.inventory.potion} · 귀환 주문서 {s.inventory.scroll} · 붕대 {s.inventory.bandage} · 약초 탕약 {s.inventory.herb}
               {s.dungeon ? ` · 마석 ${s.dungeon.mana}G 어치` : ""}
               {s.inventory.heart > 0 ? ` · ${BAL.heartName} ${s.inventory.heart}` : ""}
+              {s.inventory.banner > 0 ? ` · 장군의 녹슨 휘장 ${s.inventory.banner}` : ""}
             </p>
             <p className="dim small">읽은 기록물 {s.recordsRead}개</p>
           </Card>

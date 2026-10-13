@@ -10,7 +10,7 @@ import { GEAR, weaponOf } from "./gear";
 
 const GEAR_IS_WEAPON = (id: string) => !!GEAR[id]?.weapon;
 import type { CombatState, Enemy, GameState } from "./types";
-import { afterDungeonCombat, passTime } from "./dungeon";
+import { afterDungeonCombat, isNight, passTime } from "./dungeon";
 import { afterFieldCombat } from "./town";
 
 // 자동 전투(2026-10-13 변경): 플레이어는 공격을 고르지 않는다. 라운드마다
@@ -119,6 +119,12 @@ export function startCombat(s: GameState, context: CombatState["context"], enemi
     c.round += 1;
     if (c.guard && --c.guard.rounds <= 0) c.guard = null;
     if (c.cow) c.cow -= 1;
+    // 진군 명령: 3라운드마다 아군 명중 +2(최대 +2)
+    const commander = alive(c).find((x) => MONSTERS[x.defId].rally);
+    if (commander && c.round % 3 === 0 && (c.rally ?? 0) < 2) {
+      c.rally = (c.rally ?? 0) + 2;
+      log(s, `${josa(MONSTERS[commander.defId].name, "이")} 진군 명령을 내린다! (아군 명중 +${c.rally})`, "hurt");
+    }
     if (context === "dungeon") {
       passTime(s, 1);
       if (isDead(s)) return;
@@ -147,6 +153,17 @@ function castSpell(s: GameState, c: CombatState, dice: [number, number], all: bo
       log(s, `${josa(def.name, "을")} 쓰러뜨렸다.`, "good");
     }
   }
+}
+
+/** 적의 명중 보정: 무리의 우두머리, 밤의 늑대, 진군 명령 */
+function enemyHitBonus(s: GameState, c: CombatState, e: Enemy): number {
+  const def = MONSTERS[e.defId];
+  let b = 0;
+  const leader = alive(c).find((x) => x !== e && MONSTERS[x.defId].packOf === e.defId);
+  if (leader) b += MONSTERS[leader.defId].packBuff ?? 0;
+  if (def.nocturnal && isNight(s)) b += 1;
+  if (!def.rally && c.rally) b += c.rally;
+  return b;
 }
 
 /** 역병의 신 ★2: 병든 적은 라운드마다 1d3 */
@@ -182,6 +199,11 @@ function gainLoot(s: GameState, c: CombatState, defId: string): void {
   if (def.rare) c.bonus += def.mana;
   else c.loot += def.mana;
   s.codex.kills[defId] = (s.codex.kills[defId] ?? 0) + 1;
+  // 초원의 짐승은 고기를 남긴다(늑대·군마)
+  if (["wolf", "alphawolf", "warhorse"].includes(defId) && rngOf(s).chance(0.25)) {
+    s.inventory.food += 1;
+    log(s, `${josa(def.name, "을")} 손질해 말린 고기 1개를 만들었다. (말린 고기 ${s.inventory.food})`, "good");
+  }
   if (["rat", "goldrat", "boss"].includes(defId)) pray(s, "plague", 1);
   if (c.context === "dungeon" && (s.dungeon?.floor ?? 1) >= 2) pray(s, "abyss", s.dungeon!.floor - 1);
   // 편린은 미궁 안에서만 맺힌다
@@ -288,7 +310,7 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
   const w = weaponOf(s);
   const statMod = smod(s, w.stat);
   const roll = r.die(20);
-  const bonus = statMod + BAL.proficiency + passive(s, "hit") + st.hit + rollPenalty(s) + faithHit(s, alive(c).length) + injuryHit(s);
+  const bonus = statMod + BAL.proficiency + passive(s, "hit") + st.hit + rollPenalty(s) + faithHit(s, alive(c).length) + injuryHit(s) + (def.flying && w.stat !== "int" ? -2 : 0);
   if (!st.autoHit && roll === 1) {
     log(s, `손이 미끄러졌다! (주사위 1)`, "miss");
     return;
@@ -387,7 +409,8 @@ function enemyPhase(s: GameState, c: CombatState): void {
       continue;
     }
     const roll = r.die(20);
-    if (!c.frenzy && (roll === 1 || (roll !== 20 && roll + def.atk - (c.cow ? 2 : 0) < ac))) {
+    const atk = def.atk + enemyHitBonus(s, c, e);
+    if (!c.frenzy && (roll === 1 || (roll !== 20 && roll + atk - (c.cow ? 2 : 0) < ac))) {
       note(s, "dex");
       log(s, `${def.name}의 공격을 피했다.`, "miss");
       c.streak = 0;
@@ -395,12 +418,19 @@ function enemyPhase(s: GameState, c: CombatState): void {
     }
     const crit = roll === 20 || !!c.frenzy; // 발작 중에는 방어를 잊는다
     c.streak = (c.streak ?? 0) + 1;
-    const dmg = Math.max(1, r.dice(def.dice[0] * (crit ? 2 : 1), def.dice[1]));
+    let dmg = Math.max(1, r.dice(def.dice[0] * (crit ? 2 : 1), def.dice[1]));
+    // 돌진: 전투 첫 공격 피해 2배
+    const charge = def.charge && !(c.charged ?? []).includes(e.uid);
+    if (def.charge) (c.charged ??= []).push(e.uid);
+    if (charge) dmg *= 2;
     s.hero.hp -= dmg;
-    log(s, `${josa(def.name, "이")} ${def.attackText}! ${dmg} 피해${crit ? " (치명타!)" : ""}`, "hurt");
+    log(s, `${josa(def.name, "이")} ${charge ? "돌진해 " : ""}${def.attackText}! ${dmg} 피해${crit ? " (치명타!)" : ""}`, "hurt");
     if (s.hero.hp > 0) {
       hitInjury(s, def.id, dmg, crit);
       if (isDead(s)) return;
+      // 비명(혼란)·함성(공포)
+      if (def.scream) afflict(s, "confusion", def.scream, `${def.name}의 비명이 머릿속을 긁고 지나간다.`);
+      if (def.fearHit) afflict(s, "fear", def.fearHit, `${def.name}의 함성이 등골을 얼린다.`);
       // 분노(연속으로 맞음), 공포(HP 20% 이하)
       if (c.streak >= MIND.rageStreakHits) afflict(s, "rage", MIND.rageStreak, "이를 악물었다. 머리끝까지 피가 몰린다.");
       if (!c.fearRolled && s.hero.hp <= maxHp(s) * 0.2) {

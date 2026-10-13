@@ -42,10 +42,12 @@ function townAction(s: GameState): Action {
   const minds = Object.values(s.mind).filter((m) => m?.known).length;
   if ((PARTS.some((p) => s.injuries[p] === 2) || (s.disease > 0 && !keepSick) || minds >= 2) && s.gold >= INJ.innCost) return { t: "activity", a: "inn" };
   // 미궁 준비물(고기 4, 물약 4) 살 돈은 항상 남겨 둔다
-  const supply = Math.max(0, 4 - s.inventory.food) * shopPrice(s, "food") + Math.max(0, 4 - s.inventory.potion) * shopPrice(s, "potion");
+  // 2섹터까지 갈 생각이면(1섹터 클리어 + 레벨 4) 고기를 더 챙긴다
+  const foodNeed = s.rank >= 1 && s.hero.level >= 4 ? 9 : 4;
+  const supply = Math.max(0, foodNeed - s.inventory.food) * shopPrice(s, "food") + Math.max(0, 4 - s.inventory.potion) * shopPrice(s, "potion");
   const spare = s.gold - supply;
   if (s.week === 3) {
-    if (s.inventory.food < 4 && s.gold >= shopPrice(s, "food")) return { t: "buy", item: "food" };
+    if (s.inventory.food < foodNeed && s.gold >= shopPrice(s, "food")) return { t: "buy", item: "food" };
     if (s.inventory.potion < 4 && s.gold >= shopPrice(s, "potion")) return { t: "buy", item: "potion" };
   }
   // 1) 훈련 2) 몸통·방패 3) 여유가 되면 물약을 더
@@ -68,10 +70,19 @@ function townAction(s: GameState): Action {
   return { t: "activity", a: "rumor" };
 }
 
+/** 이미 클리어한 1섹터를 2섹터로 가려고 다시 지날 때는 서둘러 지나간다 */
+function goalOf(s: GameState): "explore" | "rush" | "farm" {
+  const dg = s.dungeon;
+  if (dg && dg.sector === 1 && s.rank >= 1 && s.hero.level >= 4) return "rush";
+  // 2섹터는 시간이 빠듯하다: 남은 시간이 4일 아래로 떨어지면 서두른다
+  if (dg && dg.sector >= 2 && (s.autoGoal ?? "explore") === "explore") return "rush";
+  return s.autoGoal ?? "explore";
+}
+
 function dungeonAction(s: GameState): Action | null {
   const dg = s.dungeon!;
   const hp = s.hero.hp / maxHp(s);
-  const goal = s.autoGoal ?? "explore";
+  const goal = goalOf(s);
   if (dg.pending) {
     switch (dg.pending.kind) {
       case "trap":
@@ -85,7 +96,13 @@ function dungeonAction(s: GameState): Action | null {
       case "shrine": return { t: "pending", choice: goal === "rush" && hp >= 0.8 ? "leave" : "pray" };
       case "stairs":
         return { t: "pending", choice: wantDescend(s) ? "descend" : "stay" };
-      case "portal": return { t: "pending", choice: "enter" };
+      case "portal": {
+        // 1섹터 차원문: 2섹터를 감당할 만하면 넘어가고, 아니면 마석을 들고 돌아간다
+        if (dg.sector >= 2) return { t: "pending", choice: "enter" };
+        const ready = s.hero.level >= 4 && s.inventory.potion >= 3 && hp >= 0.6 && dg.turnsLeft >= 96;
+        return { t: "pending", choice: ready ? "enter" : "return" };
+      }
+      case "relic": return { t: "pending", choice: hp >= 0.6 ? "search" : "leave" };
       case "frag": {
         // 빈 칸이면 흡수, 꽉 찼으면 가장 약한 편린보다 나을 때만 바꾼다
         if (s.fragments.length < fragSlots(s.hero.level)) return { t: "pending", choice: "absorb" };
@@ -120,6 +137,11 @@ function dungeonAction(s: GameState): Action | null {
 
 /** 이 레벨에서 내려가도 될 만한 층 */
 function comfortFloor(s: GameState): number {
+  // 2섹터: 3층은 레벨 6 + 물약 3개 + AC 15 이상, 2층은 레벨 5부터
+  if ((s.dungeon?.sector ?? 1) >= 2) {
+    if (s.hero.level >= 6 && s.inventory.potion >= 3 && heroAc(s) >= 15) return 3;
+    return s.hero.level >= 5 ? 2 : 1;
+  }
   // 3층은 레벨 3 + 물약 2개 + AC 13 이상일 때만(잘 준비된 상태)
   if (s.hero.level >= 3 && s.inventory.potion >= 2 && heroAc(s) >= 13) return 3;
   return s.hero.level >= 2 ? 2 : 1;
@@ -133,9 +155,9 @@ function floorLimit(s: GameState): number {
 /** 이 층에 아직 할 일이 남았는지(목표 기준) */
 function floorDone(s: GameState): boolean {
   const dg = s.dungeon!;
-  if (s.autoGoal === "rush") return true;
+  if (goalOf(s) === "rush") return true;
   // 리젠된 방은 "남은 일"로 치지 않는다(아니면 파밍이 영영 내려가지 않는다)
-  if (s.autoGoal === "farm") return !dg.rooms.some((r) => !r.visited || (!r.resolved && !r.respawned && ["combat", "treasure"].includes(r.type)));
+  if (goalOf(s) === "farm") return !dg.rooms.some((r) => !r.visited || (!r.resolved && !r.respawned && ["combat", "treasure"].includes(r.type)));
   return dg.rooms.every((r) => r.visited || ["stairs", "portal", "boss"].includes(r.type));
 }
 
@@ -143,7 +165,7 @@ function wantDescend(s: GameState): boolean {
   const dg = s.dungeon!;
   const hp = s.hero.hp / maxHp(s);
   if (dg.floor >= floorLimit(s)) return false;
-  if (s.autoGoal === "rush") return hp >= 0.5;
+  if (goalOf(s) === "rush") return hp >= 0.5;
   return hp >= 0.6 && floorDone(s);
 }
 
@@ -154,7 +176,7 @@ function nextStep(s: GameState): number | null {
   const { prev, order } = bfs(dg.rooms, start);
   const seen = (id: number) => dg.rooms[id].known || dg.rooms[id].visited;
   const first = (pred: (id: number) => boolean) => order.find((id) => id !== start && pred(id)) ?? null;
-  const goal = s.autoGoal ?? "explore";
+  const goal = goalOf(s);
   const exitOk = dg.floor < floorLimit(s) || dg.rooms.some((r) => r.type === "portal");
   const exitRoom = () => first((id) => ["stairs", "portal"].includes(dg.rooms[id].type) && seen(id));
   const boss = () => first((id) => (dg.rooms[id].type === "boss" && !dg.rooms[id].resolved && seen(id)) || (dg.rooms[id].type === "portal" && seen(id)));
