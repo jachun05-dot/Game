@@ -11,7 +11,7 @@ import { SKILLS } from "../game/skills";
 import type { AutoGoal, GameState } from "../game/types";
 import type { Ctl, Speed } from "./App";
 import { CharacterSheet } from "./CharacterSheet";
-import { CLASS_ART, FRAG_ICON, MONSTER_ART, SCENE_ART } from "./art";
+import { CLASS_ART, FRAG_ICON, GEAR_ICON, MONSTER_ART, SCENE_ART } from "./art";
 
 export function Shell({ children, wide }: { children: ReactNode; wide?: boolean }) {
   return <main className={`shell${wide ? " wide" : ""}`}>{children}</main>;
@@ -424,5 +424,15 @@ export function SceneBanner({ id, className, children }: { id: string; className
     >
       {children}
     </div>
+  );
+}
+
+/** 장비 아이콘 칸(32×32 안 가운데, 큰 아이콘은 scale로). 아이콘이 없거나 빈 칸이면 빈 자리만 지킨다 */
+export function GearIcon({ id, scale = 1 }: { id?: string | null; scale?: number }) {
+  const a = id ? GEAR_ICON[id] : null;
+  return (
+    <span className="gear-icon" style={scale !== 1 ? { width: 32 * scale, height: 32 * scale } : undefined}>
+      {a && <img src={a.src} width={a.w * scale} height={a.h * scale} alt="" />}
+    </span>
   );
 }

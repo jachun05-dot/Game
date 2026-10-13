@@ -77,3 +77,14 @@ export const ROOM_ICON: Record<string, SpriteArt> = {
   boss: { src: "./room-boss.png", w: 30, h: 35 },
   portal: { src: "./room-portal.png", w: 26, h: 33 },
 };
+
+// 장비 아이콘(원래 도트 크기, 목록 1배 · 장비 발견 카드 2배). 아이콘이 없는 장비는 글자만 나온다
+export const GEAR_ICON: Record<string, SpriteArt> = {
+  bonewand: { src: "./gear-bonewand.png", w: 26, h: 30 },
+  dagger: { src: "./gear-dagger.png", w: 19, h: 20 },
+  ironshield: { src: "./gear-ironshield.png", w: 28, h: 28 },
+  longsword: { src: "./gear-longsword.png", w: 31, h: 31 },
+  shield: { src: "./gear-shield.png", w: 26, h: 26 },
+  shortsword: { src: "./gear-shortsword.png", w: 22, h: 22 },
+  staff: { src: "./gear-staff.png", w: 26, h: 27 },
+};

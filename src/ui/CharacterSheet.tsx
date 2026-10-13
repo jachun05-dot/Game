@@ -4,7 +4,7 @@ import { CLASSES } from "../game/classes";
 import { heroAc, maxHp, smod, stat } from "../game/core";
 import { passive } from "../game/skills";
 import type { Ctl } from "./App";
-import { Card, FaithCard, InjuryCard, FragList, SkillList, StatGrid, TacticsBar, fmtMod } from "./components";
+import { Card, FaithCard, GearIcon, InjuryCard, FragList, SkillList, StatGrid, TacticsBar, fmtMod } from "./components";
 import { CLASS_ART } from "./art";
 
 /** 캐릭터 화면: 장비 9슬롯, 공격·방어 계산 내역, 능력치, 기술, 소지품 */
@@ -21,9 +21,9 @@ export function CharacterSheet({ ctl }: { ctl: Ctl }) {
   const dmgBonus = strMod + passive(s, "dmg");
   const crit = 5 + smod(s, "luk") + passive(s, "crit");
 
-  const slotItem = (key: keyof typeof s.gear): { name: string; effect: string } | null => {
+  const slotItem = (key: keyof typeof s.gear): { id: string; name: string; effect: string } | null => {
     const id = s.gear[key];
-    return id ? { name: GEAR[id].name, effect: gearEffect(id) } : null;
+    return id ? { id, name: GEAR[id].name, effect: gearEffect(id) } : null;
   };
 
   return (
@@ -47,11 +47,12 @@ export function CharacterSheet({ ctl }: { ctl: Ctl }) {
 
         <div className="sheet-body">
           <Card title="장비">
-            <ul className="equip">
+            <ul className="equip gear">
               {SLOTS.map((sl) => {
                 const it = slotItem(sl.key);
                 return (
                   <li key={sl.key} className={it ? "" : "empty"}>
+                    <GearIcon id={it?.id} />
                     <span className="slot">{sl.name}</span>
                     <span className="item">{it ? it.name : "비어 있음"}</span>
                     <span className="effect">{it?.effect ?? ""}</span>

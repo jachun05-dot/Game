@@ -10,7 +10,7 @@ import { SKILLS } from "../game/skills";
 import type { Ctl } from "./App";
 import { josa } from "../game/josa";
 import { godOf, power } from "../game/faith";
-import { Bar, FragIcon, GameScreen, HeroHeader, LogView } from "./components";
+import { Bar, FragIcon, GameScreen, GearIcon, HeroHeader, LogView } from "./components";
 import { ROOM_ICON, SCENE_ART } from "./art";
 
 function fmtTime(turns: number): string {
@@ -95,7 +95,8 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
     return (
       <>
         <p className="dock-title">장비를 발견했다</p>
-        <div className="loot-card">
+        <div className="loot-card has-gear">
+          <GearIcon id={id} scale={2} />
           <b>{g.name}</b>
           <span className="accent small">{gearEffect(id)}</span>
           <span className="dim small">{g.flavor}</span>

@@ -11,7 +11,7 @@ import type { StatKey } from "../game/types";
 import type { Ctl } from "./App";
 import { josa } from "../game/josa";
 import { INJ, LIMBS, PART_NAME, anyInjury } from "../game/injury";
-import { Card, GameScreen, GearList, HeroHeader, LogView, FaithCard, InjuryCard, FragList, SceneBanner, SkillList, StatGrid, TacticsBar } from "./components";
+import { Card, GameScreen, GearIcon, GearList, HeroHeader, LogView, FaithCard, InjuryCard, FragList, SceneBanner, SkillList, StatGrid, TacticsBar } from "./components";
 
 const ITEM_INFO = {
   food: { name: "말린 고기", desc: "포만감 +40" },
@@ -118,7 +118,8 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
                 const cur = s.gear[slot];
                 return (
                   <div key={g.id} className="shop-row">
-                    <div>
+                    <GearIcon id={g.id} />
+                    <div className="grow">
                       <b>{g.name}</b> <span className="dim small">{SLOTS.find((x) => x.key === slot)!.name}</span>
                       <div className="accent small">{gearEffect(g.id)}</div>
                       {!owned && cur && <div className="dim small">지금: {GEAR[cur].name} (교체하면 넘긴다)</div>}
