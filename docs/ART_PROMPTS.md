@@ -94,3 +94,18 @@ Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, 
 ```
 
 결과(2026-10-13): 1차 생성본 채택 → `assets/monsters/goblin.png`(63×69, 웅크려서 소년 가슴 높이) = `public/mon-goblin.png`. 왼손 손가락 사이 마젠타 3픽셀을 투명 처리
+
+## 006 — 스켈레톤 병사 (기준 이미지 첨부)
+
+```
+Match the exact art style, outline, palette and pixel scale of the attached reference image.
+
+Pixel art game sprite of a single creature, front-facing 3/4 view facing left, classic 16-bit RPG style, same world scale as the reference boy (an adult-sized skeleton, a head taller than him).
+A skeleton soldier from a grim dark-fantasy labyrinth: yellowed, cracked old bones, empty dark eye sockets with no glow, remnants of a rotten leather jerkin and a dented rusty iron half-helm. It holds a crude sword carved from a large bone, raised in a stiff guard stance.
+Muted earthy palette of about 14 colors: bone ivory and dirty yellow, dark browns, rusty iron grey.
+Crisp hard pixel edges, 1-pixel dark outline, no anti-aliasing, no blur, no gradients, no noisy dithering.
+Full body, centered, feet visible, small margin around it.
+Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, no frame or border. Square 1:1 image.
+```
+
+결과(2026-10-13): 1차 생성본 채택 → `assets/monsters/skeleton.png`(62×83) = `public/mon-skeleton.png`. 후처리 수정 없음. 단, 몸 높이가 약 75도트로 소년(90)보다 작게 나왔다(요청은 "한 머리 더 큼"). 다시 뽑으면 "the skeleton's skull is clearly higher than the reference boy's head; fill about 95% of the image height"를 넣는다
