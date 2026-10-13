@@ -13,9 +13,9 @@ export const BAL = {
   minHpPerLevel: 2,
   /** 숙련 보너스(공격 굴림). DESIGN에는 없는 임시 보정 — 레벨1이 1층 단독 몬스터를 감당하게 하는 용도 */
   proficiency: 2,
-  trainCostPerLevel: 10,
+  trainCostPerLevel: 5,
   maxLevel: 16,
-  taxBase: 30,
+  taxBase: 20,
   /** 해가 바뀔 때마다 오르는 세금(1년차 30, 2년차 70, 3년차 110 …) */
   taxPerYear: 40,
   weekTurns: 336,
@@ -27,7 +27,7 @@ export const BAL = {
   trapDodgeDc: 12,
   trapDisarmDc: 13,
   fleeDcBase: 10,
-  prices: { food: 5, potion: 10, scroll: 45, bandage: 15, herb: 15 },
+  prices: { food: 5, potion: 6, scroll: 45, bandage: 10, herb: 10 },
   /** 치료 물약 회복량 = 2d4 + 이 값 */
   potionBase: 6,
   /** 이 레벨에서 다음 레벨로 가는 훈련은 보스 증표가 있어야 받을 수 있다 */
@@ -48,7 +48,7 @@ export const BAL = {
 } as const;
 
 /** 층이 깊을수록 마석 가치가 오른다 */
-export const MANA_FLOOR_MULT = [0, 1, 1.5, 2];
+export const MANA_FLOOR_MULT = [0, 1.8, 3, 3.8];
 
 export const STAT_KEYS: StatKey[] = ["str", "dex", "con", "int", "per", "luk"];
 

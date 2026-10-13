@@ -41,12 +41,12 @@ function townAction(s: GameState): Action {
   // 눈치챈 정신 상태이상이 둘 이상이면(조합이 터질 수 있으니) 여관에서 쉰다
   const minds = Object.values(s.mind).filter((m) => m?.known).length;
   if ((PARTS.some((p) => s.injuries[p] === 2) || (s.disease > 0 && !keepSick) || minds >= 2) && s.gold >= INJ.innCost) return { t: "activity", a: "inn" };
-  // 미궁 준비물(고기 4, 물약 2) 살 돈은 항상 남겨 둔다
-  const supply = Math.max(0, 4 - s.inventory.food) * shopPrice(s, "food") + Math.max(0, 2 - s.inventory.potion) * shopPrice(s, "potion");
+  // 미궁 준비물(고기 4, 물약 4) 살 돈은 항상 남겨 둔다
+  const supply = Math.max(0, 4 - s.inventory.food) * shopPrice(s, "food") + Math.max(0, 4 - s.inventory.potion) * shopPrice(s, "potion");
   const spare = s.gold - supply;
   if (s.week === 3) {
     if (s.inventory.food < 4 && s.gold >= shopPrice(s, "food")) return { t: "buy", item: "food" };
-    if (s.inventory.potion < 2 && s.gold >= shopPrice(s, "potion")) return { t: "buy", item: "potion" };
+    if (s.inventory.potion < 4 && s.gold >= shopPrice(s, "potion")) return { t: "buy", item: "potion" };
   }
   // 1) 훈련 2) 몸통·방패 3) 여유가 되면 물약을 더
   if (canTrain(s) && spare >= trainCost(s)) {
@@ -57,7 +57,13 @@ function townAction(s: GameState): Action {
   }
   if (!s.gear.body && spare >= GEAR.leather.price!) return { t: "buyGear", id: "leather" };
   if (!s.gear.offhand && spare >= GEAR.shield.price!) return { t: "buyGear", id: "shield" };
-  if (s.week === 3 && s.inventory.potion < 4 && spare >= shopPrice(s, "potion") + 20) return { t: "buy", item: "potion" };
+  // 돈이 넉넉하면(여윳돈 30G 이상 남길 때) 나머지 방어구도 산다
+  for (const id of ["cap", "belt", "boots"]) {
+    const g = GEAR[id];
+    if (!s.gear[g.slot as "head" | "waist" | "feet"] && spare >= g.price! + 30) return { t: "buyGear", id };
+  }
+  if (s.week === 3 && s.inventory.bandage < 1 && spare >= shopPrice(s, "bandage") + 10) return { t: "buy", item: "bandage" };
+  if (s.week === 3 && s.inventory.potion < 6 && spare >= shopPrice(s, "potion") + 20) return { t: "buy", item: "potion" };
   if (s.hero.level >= 2 && s.week !== 3) return { t: "activity", a: "field" };
   return { t: "activity", a: "rumor" };
 }

@@ -53,10 +53,10 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     name: "전사",
     motive: "강해지기 위해 미궁에 왔다.",
     desc: "장검과 가죽 갑옷으로 시작한다. 검술·보법·생존 훈련과 전용 '전장 훈련'을 받는다.",
-    hp: -7,
+    hp: -6,
     hpPerLevel: 2,
     start: { main: "longsword", body: "leather" },
-    items: { food: 3, potion: 1, scroll: 0 },
+    items: { food: 3, potion: 2, scroll: 0 },
     trainings: ["sword", "footwork", "endure", "warfare"],
     archetypes: [
       { name: "타고난 장사", favor: ["str", "con"] },
@@ -74,7 +74,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     hp: -2,
     hpPerLevel: 0,
     start: { main: "staff", body: "robe" },
-    items: { food: 3, potion: 2, scroll: 0 },
+    items: { food: 3, potion: 3, scroll: 0 },
     trainings: ["scout", "study", "arcane"],
     archetypes: [
       { name: "책벌레", favor: ["int", "per"] },
