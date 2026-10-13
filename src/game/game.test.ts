@@ -785,4 +785,22 @@ describe("퍼징 회귀", () => {
     expect(maxHp(s)).toBe(sickMax - 4);
     expect(s.hero.hp).toBe(maxHp(s));
   });
+  it("2섹터 차원문에서 돌아오면 정산에 2섹터로 적히고, 다시 넘을 때는 등급이 올랐다고 하지 않는다", () => {
+    const s = newRun(24);
+    apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    s.week = 3;
+    s.phase = "week-result";
+    apply(s, { t: "closeWeek" });
+    const dg = s.dungeon!;
+    dg.sector = 2;
+    dg.floor = 3;
+    dg.rooms = generateFloor(new Rng({ s: 24 }), 3, 2);
+    dg.current = dg.rooms.find((r) => r.type === "portal")!.id;
+    dg.pending = { kind: "portal" };
+    s.rank = 2;
+    apply(s, { t: "pending", choice: "return" });
+    expect(s.settlement!.sector).toBe(2);
+    expect(s.settlement!.lines[0]).toContain("2섹터");
+    expect(s.settlement!.lines.some((l) => l.includes("등급이 올랐다"))).toBe(false);
+  });
 });

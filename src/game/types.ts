@@ -179,6 +179,8 @@ export interface Settlement {
   goldAfter: number;
   paid: boolean;
   cleared: boolean;
+  /** 차원문에 닿은 섹터(cleared일 때) */
+  sector?: number;
   forced: boolean;
   lines: string[];
 }

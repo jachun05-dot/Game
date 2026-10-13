@@ -400,9 +400,9 @@ export function closeWeek(s: GameState): "town" | "dungeon" {
   return "town";
 }
 
-export function beginSettlement(s: GameState, o: { mana: number; cleared: boolean; forced: boolean; deepest: number }): void {
+export function beginSettlement(s: GameState, o: { mana: number; cleared: boolean; forced: boolean; deepest: number; sector?: number; rankUp?: boolean }): void {
   const lines: string[] = [];
-  lines.push(o.cleared ? "1섹터의 차원문에 도달하고 돌아왔다." : o.forced ? "시간이 다 되어 마을로 끌려 나왔다." : "귀환 주문서로 돌아왔다.");
+  lines.push(o.cleared ? `${o.sector ?? 1}섹터의 차원문에 도달하고 돌아왔다.` : o.forced ? "시간이 다 되어 마을로 끌려 나왔다." : "귀환 주문서로 돌아왔다.");
   lines.push(`가장 깊이 내려간 곳: ${o.deepest}층`);
   // 환전: 탐욕의 신 보정, 현상수배 중이면 밀수꾼에게 반값
   let gold = Math.round(o.mana * faithManaMult(s));
@@ -411,7 +411,7 @@ export function beginSettlement(s: GameState, o: { mana: number; cleared: boolea
   if (gold > 0) lines.push(s.heretic ? `관공서에 갈 수 없어 마석을 외곽의 밀수꾼에게 ${gold}G에 넘겼다.` : `마석을 관공서에서 ${gold}G로 환전했다.`);
   else lines.push("가지고 나온 마석이 없다.");
   pray(s, "greed", Math.min(15, Math.floor(gold / 10)));
-  if (o.cleared) lines.push(`등급이 올랐다 — 클리어한 섹터 ${s.rank}개.`);
+  if (o.cleared && o.rankUp) lines.push(`등급이 올랐다 — 클리어한 섹터 ${s.rank}개.`);
   faithMonthEnd(s, lines);
   fadeAfterDungeon(s, lines);
   // 경상은 미궁 밖으로 나오면 체력 판정으로 저절로 낫는다
@@ -437,7 +437,7 @@ export function beginSettlement(s: GameState, o: { mana: number; cleared: boolea
   const paid = debt || s.gold >= tax;
   const inquisition = !s.heretic && tier(s) > 0 && rngOf(s).chance(FAITH_BAL.inquisitionPerTier * tier(s));
   if (inquisition) lines.push("성당의 사제가 당신을 오래 바라본다. 옛 신의 냄새를 맡은 것이다 — 이단 심문에 불려 간다.");
-  s.settlement = { month: s.month, manaSold: gold, tax, goldAfter: paid && !debt ? s.gold - tax : s.gold, paid, cleared: o.cleared, forced: o.forced, lines, inquisition, debt };
+  s.settlement = { month: s.month, manaSold: gold, tax, goldAfter: paid && !debt ? s.gold - tax : s.gold, paid, cleared: o.cleared, sector: o.sector, forced: o.forced, lines, inquisition, debt };
   s.phase = "settlement";
   s.hero.satiety = 100;
   s.hero.fatigue = 0;

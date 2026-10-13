@@ -102,7 +102,7 @@ export function TitleScreen({ run, meta, onNew, onContinue, onGraveyard, onCodex
         </button>
         {msg && <p className="small">{msg}</p>}
       </Card>
-      <p className="dim small center">프로토타입 v0.1 · 1섹터(3층)까지 · 아동 사망·처형 등 무거운 장면이 나옵니다</p>
+      <p className="dim small center">프로토타입 v0.1 · 2섹터까지 · 아동 사망·처형 등 무거운 장면이 나옵니다</p>
     </Shell>
   );
 }

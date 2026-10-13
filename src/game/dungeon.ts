@@ -690,7 +690,7 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
     if (choice === "return" || dg.sector >= 2) {
       if (dg.sector >= 2) log(s, "(3섹터는 다음 업데이트 예정 — 이번 달 탐험은 여기까지)", "system");
       else log(s, "차원문의 빛을 등지고, 마석을 챙겨 돌아가기로 했다.", "system");
-      leaveDungeon(s, { cleared: true, forced: false });
+      leaveDungeon(s, { cleared: true, forced: false, rankUp: first });
       return;
     }
     // 차원문 너머: 다음 섹터. 남은 시간은 2배가 된다(섹터마다 시간 흐름이 다르다)
@@ -907,13 +907,14 @@ export function useScroll(s: GameState): void {
   leaveDungeon(s, { cleared: false, forced: false });
 }
 
-function leaveDungeon(s: GameState, opts: { cleared: boolean; forced: boolean }): void {
+function leaveDungeon(s: GameState, opts: { cleared: boolean; forced: boolean; rankUp?: boolean }): void {
   const dg = d(s);
+  const sector = dg.sector;
   const mana = dg.mana;
   const deepest = dg.deepestFloor;
   s.dungeon = null;
   s.hero.hp = Math.max(1, s.hero.hp);
-  beginSettlement(s, { mana, cleared: opts.cleared, forced: opts.forced, deepest });
+  beginSettlement(s, { mana, cleared: opts.cleared, forced: opts.forced, deepest, sector, rankUp: !!opts.rankUp });
 }
 
 export function monsterName(id: string): string {

@@ -10,7 +10,14 @@ import { GEAR } from "../src/game/gear";
 import { maxHp } from "../src/game/core";
 import { fragSlots } from "../src/game/fragments";
 import type { ClassId } from "../src/game/classes";
+import { generateFloor } from "../src/game/dungeon";
+import { MONSTERS } from "../src/game/data";
+import { FRAGMENTS } from "../src/game/fragments";
+import { Rng } from "../src/game/rng";
 import type { AutoGoal, GameState, StatKey } from "../src/game/types";
+
+// SCEN=s2(2섹터에서 시작) | heretic(현상수배 상태) | hurt(부상·질병·정신) | strong(고레벨·편린·증표) | mix(판마다 무작위)
+const SCEN = process.env.SCEN ?? "";
 
 const N = Number(process.argv[2] ?? 300);
 const RAND = Number(process.argv[3] ?? 0.3);
@@ -121,9 +128,63 @@ function invariants(s: GameState): string[] {
     case "dead": if (!s.tomb) e.push("죽었는데 묘비 없음"); break;
     case "town": if (s.combat && s.combat.context !== "field") e.push("마을인데 미궁 전투"); if (s.dungeon) e.push("마을인데 dungeon 남아 있음"); break;
   }
-  if (s.combat) for (const en of s.combat.enemies) if (!Number.isFinite(en.hp)) e.push(`적 HP ${en.hp}`);
+  if (s.combat) for (const en of s.combat.enemies) {
+    if (!Number.isFinite(en.hp)) e.push(`적 HP ${en.hp}`);
+    const m = MONSTERS[en.defId];
+    if (!m) e.push(`없는 몬스터 ${en.defId}`);
+    else if (m.human && (en.defId !== "inquisitor" || !s.heretic)) e.push(`미궁에 사람 ${en.defId}`);
+  }
+  for (const id of s.fragments) if (!FRAGMENTS[id]) e.push(`없는 편린 ${id}`);
+  if (s.dungeon) {
+    const dg = s.dungeon;
+    if (dg.floor < 1 || dg.floor > 3 || dg.sector < 1 || dg.sector > 2) e.push(`층·섹터 범위 ${dg.sector}-${dg.floor}`);
+    for (const room of dg.rooms) {
+      for (const nb of room.edges) if (!dg.rooms[nb]?.edges.includes(room.id)) e.push("한쪽 통로");
+      for (const id of room.encounter ?? []) if (!MONSTERS[id] || MONSTERS[id].human) e.push(`방 구성 이상 ${id}`);
+    }
+  }
+  if (s.heretic && s.phase === "town" && s.week <= 3) { /* 마을 기능 잠김은 행동 쪽에서 검사 */ }
   if (s.phase !== "dungeon" && s.phase !== "dead" && s.combat?.context === "dungeon") e.push("미궁 밖인데 미궁 전투");
   return e;
+}
+
+function setup(s: GameState, scen: string) {
+  const r = new Rng({ s: s.seed + 99 });
+  if (scen === "strong" || scen === "s2") {
+    s.hero.level = scen === "s2" ? 6 : 5;
+    s.rank = 1;
+    s.month = 4;
+    s.trophies = ["heart"];
+    for (const k of STAT_KEYS) s.hero.stats[k] += 6;
+    s.inventory.potion += 5;
+    s.inventory.food += 6;
+    s.gold = 400;
+    const ids = Object.keys(FRAGMENTS);
+    s.fragments = [pick(ids), pick(ids)];
+    s.hero.hp = maxHp(s);
+  }
+  if (scen === "s2") {
+    // 미궁으로 바로 들어가 2섹터 1층에 세운다
+    s.week = 3;
+    s.phase = "week-result";
+    apply(s, { t: "closeWeek" });
+    const dg = s.dungeon!;
+    dg.sector = 2;
+    dg.floor = 1;
+    dg.rooms = generateFloor(r, 1, 2);
+    dg.current = 0;
+    dg.prev = null;
+    dg.turnsLeft = 300;
+  }
+  if (scen === "heretic" && s.hero.faith) s.heretic = true;
+  if (scen === "hurt") {
+    for (const p of PARTS) if (p !== "head" && p !== "body") s.injuries[p] = r.int(0, 3);
+    s.injuries.head = r.int(0, 2);
+    s.injuries.body = r.int(0, 2);
+    s.disease = r.int(0, 2);
+    s.mind = { fear: { known: false }, despair: { known: r.chance(0.5) } };
+    s.hero.hp = Math.min(s.hero.hp, maxHp(s));
+  }
 }
 
 /** 진행 지표: 이게 오래 안 바뀌면 멈춘 것 */
@@ -147,6 +208,9 @@ for (let i = 0; i < N; i++) {
     apply(s, { t: "pickClass", cls });
     apply(s, { t: "autoGoal", goal });
     apply(s, { t: "create", name: "퍼즈", candidate: 0, faith });
+    const scen = SCEN === "mix" ? pick(["", "s2", "heretic", "hurt", "strong"]) : SCEN;
+    setup(s, scen);
+    let prevLevel = s.hero.level, prevRank = s.rank;
     for (; step < MAX_ACTIONS && s.phase !== "dead" && s.month <= 24; step++) {
       let a: Action | null;
       if (rnd() < RAND) a = randomAction(s);
@@ -162,7 +226,12 @@ for (let i = 0; i < N; i++) {
         report({ kind: "예외", msg: String((err as Error).stack?.split("\n").slice(0, 3).join(" | ")), ...ctx, step, action: JSON.stringify(a), phase: before });
         break;
       }
-      for (const m of invariants(s)) report({ kind: "불변식", msg: m.replace(/-?\d+(\.\d+)?/g, "#") + ` ← ${a.t}${a.t === "pending" ? ":" + a.choice : ""}`, ...ctx, step, action: JSON.stringify(a) + ` (${m})`, phase: before });
+      const extra: string[] = [];
+      if (s.hero.level < prevLevel) extra.push(`레벨 역행 ${prevLevel}→${s.hero.level}`);
+      if (s.rank < prevRank) extra.push(`등급 역행`);
+      if (a.t === "train" && s.month < BAL.firstTrainMonth && s.hero.level > prevLevel) extra.push("첫 달 훈련으로 레벨업");
+      prevLevel = s.hero.level; prevRank = s.rank;
+      for (const m of [...invariants(s), ...extra]) report({ kind: "불변식", msg: m.replace(/-?\d+(\.\d+)?/g, "#") + ` ← ${a.t}${a.t === "pending" ? ":" + a.choice : ""}`, ...ctx, step, action: JSON.stringify(a) + ` (${m})`, phase: before });
       const k = progressKey(s);
       if (k === last) same++;
       else { same = 0; last = k; }

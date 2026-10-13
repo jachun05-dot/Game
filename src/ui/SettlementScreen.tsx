@@ -28,7 +28,7 @@ export function SettlementScreen({ ctl }: { ctl: Ctl }) {
       }
       dockClass="dock-cta"
     >
-      <Card title={st.cleared ? "1섹터 클리어!" : "귀환"} className="result">
+      <Card title={st.cleared ? `${st.sector ?? 1}섹터 클리어!` : "귀환"} className="result">
         {st.lines.map((l, i) => (
           <p key={i}>{l}</p>
         ))}
