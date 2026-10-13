@@ -196,7 +196,7 @@ Solid flat magenta background (#FF00FF). No ground shadow, no text, no numbers, 
 
 ## 장소 그림 공통 규칙
 
-배경이 있는 장면이라 마젠타를 쓰지 않는다. Gemini는 1024×1024에 **200격자**(도트 5.12px)로 그려 주므로 `python3 tools/sprite.py 입력 출력 --grid 200 --keep-watermark`로 복원한다(장면에는 마젠타가 없고, 워터마크 모서리를 지우면 구멍이 나므로 남긴다). 복원본 전체는 `assets/scenes/*_full.png`에 보관하고, 가운데를 **179×80 띠**로 잘라 `public/scene-*.png`로 쓴다(워터마크는 잘리는 아래 모서리에 있어 자연히 빠진다). 화면에서는 2배(358×160), 좁은 화면에서는 가운데 기준으로 양옆이 잘린다(`SceneBanner`, `SCENE_ART`). 장면 속 인물은 원경이라 캐릭터 스프라이트의 절반쯤(약 50도트) 크기로 나온다 — 장면끼리만 맞추면 된다. 프롬프트에 "중요한 요소는 가운데 60% 높이 안에"를 넣는다.
+배경이 있는 장면이라 마젠타를 쓰지 않는다. Gemini는 장면을 **200격자**로 그려 준다(1024 이미지면 도트 5.12px, 512 이미지면 2.56px). 그래서 `python3 tools/sprite.py 입력 출력 --grid 200 --keep-watermark`로 복원한다(장면에는 마젠타가 없고, 워터마크 모서리를 지우면 구멍이 나므로 남긴다). 복원본 전체는 `assets/scenes/*_full.png`에 보관하고, 가운데를 **179×80 띠**로 잘라 `public/scene-*.png`로 쓴다(워터마크는 잘리는 아래 모서리에 있어 자연히 빠진다). 화면에서는 2배(358×160), 좁은 화면에서는 가운데 기준으로 양옆이 잘린다(`SceneBanner`, `SCENE_ART`). 장면 속 인물은 원경이라 캐릭터 스프라이트의 절반쯤(약 50도트) 크기로 나온다 — 장면끼리만 맞추면 된다. 프롬프트에 "중요한 요소는 가운데 60% 높이 안에"를 넣는다.
 
 ## 012 — 훈련장 (기준 이미지 첨부)
 
@@ -212,3 +212,18 @@ No text, no UI, no frame or border. Square 1:1 image.
 ```
 
 결과(2026-10-13): 1차 생성본 채택 → `assets/scenes/training_full.png`(200×200) → 띠 `(14,46)~(193,126)` = `public/scene-training.png`(179×80). 훈련 카드(`TrainingPanel`) 맨 위에 건다
+
+## 013 — 술집 (기준 이미지 + 훈련장 첨부)
+
+```
+Match the exact art style, outline, palette and pixel scale of the attached images; the second image (a training yard) shows the scene scale and level of detail to follow.
+
+Pixel art game location illustration, classic 16-bit RPG style, wide view of a small interior, slightly elevated 3/4 view.
+A cramped, smoky tavern on a remote island fief in a grim dark-fantasy world, where adventurers trade rumors: low timber beams, a long scarred wooden counter with a tired bald barkeep wiping a mug, a few rough tables with hunched patrons in hoods whispering, a notice board crowded with torn paper notices and a wanted poster, a small hearth fire giving dim warm light, candle stubs on the tables.
+Muted earthy palette of about 20 colors: dark browns, smoky grey, faded ochre; warm dull gold light (#cf9a44) only from the hearth and candles.
+Crisp hard pixel edges, 1-pixel dark outlines, no anti-aliasing, no blur, no gradients, no noisy dithering.
+Keep the barkeep, counter and notice board within the middle 60% of the height so it reads when cropped to a wide horizontal strip.
+No readable text on the notices, no UI, no frame or border. Square 1:1 image.
+```
+
+결과(2026-10-13): 1차 생성본 채택(512 이미지, 200격자) → `assets/scenes/tavern_full.png` → 띠 `(12,62)~(191,142)` = `public/scene-tavern.png`. 주간 결과 카드(제목 "탐문")에 건다. 결과 카드 제목 → 장면은 `WEEK_SCENE`(훈련 → 훈련장도 같이). 이 이미지에서 `tools/sprite.py`가 도트 3px 이하일 때 빈 칸을 읽는 버그가 드러나 고침(기존 결과는 픽셀 단위로 그대로)

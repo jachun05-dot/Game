@@ -2,7 +2,8 @@ import { useState } from "react";
 import { STAT_KEYS, STAT_LABEL } from "../game/data";
 import { SKILLS } from "../game/skills";
 import type { Ctl } from "./App";
-import { Card, GameScreen, HeroHeader } from "./components";
+import { Card, GameScreen, HeroHeader, SceneBanner } from "./components";
+import { WEEK_SCENE } from "./art";
 
 export function WeekResultScreen({ ctl }: { ctl: Ctl }) {
   const { s, dispatch } = ctl;
@@ -24,6 +25,7 @@ export function WeekResultScreen({ ctl }: { ctl: Ctl }) {
       dockClass="dock-cta"
     >
       <Card title={r.title} className="result">
+        {WEEK_SCENE[r.title] && <SceneBanner id={WEEK_SCENE[r.title]} />}
         {r.lines.map((l, i) => (
           <p key={i}>{l}</p>
         ))}
