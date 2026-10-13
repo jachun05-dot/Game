@@ -830,7 +830,7 @@ describe("마법사 원소", () => {
     expect(SKILLS.fireEmber.kind).toBe("passive");
     expect(SKILLS.frostArrow.kind).toBe("active");
   });
-  it("4레벨 특수 훈련에서 고른 원소가 주 원소가 되고, 지팡이가 그 원소의 주 능력치로 쏜다", () => {
+  it("4레벨 특수 훈련에서 고른 원소가 주 원소가 되고, 지팡이는 지능 마력탄 그대로", () => {
     const s = mage();
     s.hero.level = 3;
     s.inventory.heart = 1;
@@ -839,7 +839,7 @@ describe("마법사 원소", () => {
     expect(s.hero.level).toBe(4);
     expect(s.skills).toContain("boltMark");
     expect(s.mainElement).toBe("bolt");
-    expect(weaponOf(s).stat).toBe(s.hero.stats.dex > s.hero.stats.int ? "dex" : "int");
+    expect(weaponOf(s).stat).toBe("int");
     expect(weaponOf(s).magic).toBe(true);
   });
   it("원소 주문이 전투에서 발동하고, 각인이 있으면 그 원소 액티브를 한 번 더 쓴다", () => {

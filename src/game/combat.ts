@@ -194,16 +194,16 @@ function freeze(e: Enemy): void {
   e.stun = Math.max(e.stun ?? 0, 1);
 }
 
-/** 서리의 각인: 얼림 확률 +20%p + 지능 보정 ×3%p */
+/** 서리의 각인: 얼림 확률 +20%p + 감각 보정 ×3%p */
 function freezeChance(s: GameState, p: number): number {
-  return p + (has(s, "frostMark") ? 0.2 + Math.max(0, smod(s, "int")) * 0.03 : 0);
+  return p + (has(s, "frostMark") ? 0.2 + Math.max(0, smod(s, "per")) * 0.03 : 0);
 }
 
-/** 행운의 낙뢰: 행운 보정 ×10% 확률로 두 번 굴려 높은 쪽 */
+/** 번개 같은 손: 민첩 보정 ×10% 확률로 두 번 굴려 높은 쪽 */
 function rollDice(s: GameState, n: number, sides: number): number {
   const r = rngOf(s);
   const a = r.dice(n, sides);
-  return has(s, "boltLuck") && r.chance(Math.max(0, smod(s, "luk")) * 0.1) ? Math.max(a, r.dice(n, sides)) : a;
+  return has(s, "boltLuck") && r.chance(Math.max(0, smod(s, "dex")) * 0.1) ? Math.max(a, r.dice(n, sides)) : a;
 }
 
 /** 원소별 추가 피해(열기·불의 각인·타오르는 의지·대지의 각인) */
@@ -224,10 +224,10 @@ function elementHit(s: GameState, c: CombatState, t: Enemy, sk: SkillDef, half =
   const r = rngOf(s);
   const def = MONSTERS[t.defId];
   const sides = e.vary ? r.pick([4, 6, 8, 10]) : e.dice[1];
-  let dmg = rollDice(s, e.dice[0], sides) + smod(s, ELEMENTS[e.el].main) + elementBonus(s, e.el, t) + (e.hardBonus && def.hard ? e.hardBonus : 0);
+  let dmg = rollDice(s, e.dice[0], sides) + smod(s, "int") + elementBonus(s, e.el, t) + (e.hardBonus && def.hard ? e.hardBonus : 0);
   dmg = Math.max(1, half ? Math.floor(dmg / 2) : dmg);
   t.hp -= dmg;
-  note(s, ELEMENTS[e.el].main);
+  note(s, "int");
   const extra: string[] = [];
   if (t.hp > 0) {
     if (e.el === "fire" && has(s, "fireMark")) {
@@ -272,7 +272,7 @@ function castElement(s: GameState, c: CombatState, skillId: string, target?: Ene
     elementHit(s, c, t, sk);
     if (e.bounce) {
       // 번개의 각인: 한 번 더, 행운 보정 ×10%로 또 한 번
-      const jumps = 1 + (has(s, "boltMark") ? 1 + (r.chance(Math.max(0, smod(s, "luk")) * 0.1) ? 1 : 0) : 0);
+      const jumps = 1 + (has(s, "boltMark") ? 1 + (r.chance(Math.max(0, smod(s, "dex")) * 0.1) ? 1 : 0) : 0);
       for (let j = 0; j < jumps; j++) {
         const others = alive(c).filter((x) => x !== t);
         if (!others.length) break;

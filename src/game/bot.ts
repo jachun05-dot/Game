@@ -55,7 +55,7 @@ function townAction(s: GameState): Action {
   if (canTrain(s) && spare >= trainCost(s)) {
     if (s.hero.cls === "mage") {
       const el = (magePlan ?? defaultMagePlan)(s);
-      return { t: "train", training: el, free: [ELEMENTS[el].main, "con"] };
+      return { t: "train", training: el, free: ["int", "con"] };
     }
     const order = ["warfare", "arcane", "sword", "endure", "footwork", "scout", "study"].filter((id) => CLASSES[s.hero.cls].trainings.includes(id));
     const training = order.find((id) => nextSkill(s, id)) ?? order[0];
@@ -74,10 +74,10 @@ function townAction(s: GameState): Action {
   return { t: "activity", a: "rumor" };
 }
 
-/** 마법사가 이번 훈련에 고를 원소. 기본: 주 원소가 있으면 그것, 없으면 주 능력치가 가장 높은 원소 한 가지에 몰아준다 */
+/** 마법사가 이번 훈련에 고를 원소. 기본: 주 원소가 있으면 그것, 없으면 원소 능력치가 가장 높은 원소 한 가지에 몰아준다 */
 export function defaultMagePlan(s: GameState): ElementKey {
   if (s.mainElement) return s.mainElement;
-  return [...ELEMENT_KEYS].sort((a, b) => s.hero.stats[ELEMENTS[b].main] - s.hero.stats[ELEMENTS[a].main])[0];
+  return [...ELEMENT_KEYS].sort((a, b) => s.hero.stats[ELEMENTS[b].stat] - s.hero.stats[ELEMENTS[a].stat])[0];
 }
 let magePlan: ((s: GameState) => ElementKey) | null = null;
 /** 시뮬레이션용: 마법사 원소 선택 방식을 바꾼다(null이면 기본) */

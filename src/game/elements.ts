@@ -3,17 +3,19 @@ import type { StatKey } from "./types";
 // 마법사 원소(2026-10-14): 마법사의 훈련은 화염·서리·번개·대지 수련 네 가지뿐이다.
 // 어느 레벨에서 어느 원소를 수련했는지에 따라 배우는 기술이 정해진다(짝수 레벨 패시브, 홀수 레벨 액티브).
 // 4·7·10레벨은 보스 재료가 드는 특수 훈련 — 그때 고른 원소의 특화 기술을 얻는다.
-// 주문의 명중·피해는 그 원소의 주 능력치를 따른다. 지팡이 마력탄은 4레벨에 처음 특화한 원소(주 원소)를 따른다.
+// 훈련의 고정 능력치는 지능(마법사 기본) + 그 원소의 능력치. 주문·지팡이 피해는 지능을 따르고,
+// 원소 능력치는 그 원소의 부가 효과를 키운다(화염 힘: 불탐, 서리 감각: 얼림, 번개 민첩: 튐, 대지 체력: HP).
 // 데이터만 둔다(효과 처리는 combat.ts, 기술 정의는 skills.ts).
 
 export type ElementKey = "fire" | "frost" | "bolt" | "earth";
 export const ELEMENT_KEYS: ElementKey[] = ["fire", "frost", "bolt", "earth"];
 
-export const ELEMENTS: Record<ElementKey, { name: string; main: StatKey; sub: StatKey; mark: string }> = {
-  fire: { name: "화염", main: "int", sub: "str", mark: "fireMark" },
-  frost: { name: "서리", main: "per", sub: "int", mark: "frostMark" },
-  bolt: { name: "번개", main: "dex", sub: "luk", mark: "boltMark" },
-  earth: { name: "대지", main: "con", sub: "per", mark: "earthMark" },
+/** stat: 그 원소 수련이 지능과 함께 올리는 능력치(부가 효과에 쓰인다) */
+export const ELEMENTS: Record<ElementKey, { name: string; stat: StatKey; mark: string }> = {
+  fire: { name: "화염", stat: "str", mark: "fireMark" },
+  frost: { name: "서리", stat: "per", mark: "frostMark" },
+  bolt: { name: "번개", stat: "dex", mark: "boltMark" },
+  earth: { name: "대지", stat: "con", mark: "earthMark" },
 };
 
 /** 원소 수련을 받아 이 레벨이 되면 배우는 기술(10레벨은 3섹터와 함께 예정) */
