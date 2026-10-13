@@ -62,3 +62,20 @@ Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, 
 ```
 
 결과(2026-10-13): 1차 생성본 채택 → `assets/reference/mage.png`(44×86, 지팡이 포함) = `public/mage.png`, 얼굴 `mage_face.png`(30×30, 전신 (3,0)에서 자름) = `public/mage-face.png`. 후처리 후 머리 위 마젠타 번짐 2픽셀을 손으로 지움(보석 보라색은 유지). 주머니보다는 기운 천 조각으로 나왔지만 톤이 맞아 채택
+
+## 004 — 쥐 (기준 이미지 첨부)
+
+몬스터는 모두 기준 이미지와 **같은 도트 크기(월드 스케일)** 로 그린다 → 덩치 차이가 그림 크기로 드러난다. 주인공은 정면, 몬스터는 왼쪽을 본다. 도감(`CodexScreen`)에는 88×104 액자 안에 들어가는 최대 정수배로, 안 본 몬스터는 같은 그림의 실루엣(CSS 필터)으로 보여 준다. 연결은 `src/ui/art.ts`의 `MONSTER_ART`.
+
+```
+Match the exact art style, outline, palette and pixel scale of the attached reference image.
+
+Pixel art game sprite of a single creature, 3/4 side view facing left, classic 16-bit RPG style, same world scale as the reference boy (this rat is only knee-high to him, so it should be small in the frame).
+A filthy dungeon rat from a grim dark-fantasy labyrinth: lean, mangy grey-brown fur with bald patches, long scaly pink-grey tail, small beady dark eyes, yellowed front teeth bared, crouched low ready to bite.
+Muted earthy palette of about 12 colors: dark browns, ash grey, desaturated pink only on the ears, tail and nose.
+Crisp hard pixel edges, 1-pixel dark outline, no anti-aliasing, no blur, no gradients, no noisy dithering.
+Centered, small margin around it.
+Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, no frame or border. Square 1:1 image.
+```
+
+결과(2026-10-13): 1차 생성본 채택 → `assets/monsters/rat.png`(36×22) = `public/mon-rat.png`

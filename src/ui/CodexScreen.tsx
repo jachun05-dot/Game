@@ -3,9 +3,25 @@ import { FRAGMENTS, TIER_LABEL, fragStatText } from "../game/fragments";
 import { SKILLS } from "../game/skills";
 import type { Codex } from "../game/types";
 import { Card, Shell } from "./components";
+import { MONSTER_ART, fitScale } from "./art";
 
 // 몬스터 도감: 마주친 몬스터만 정보가 열리고, 편린 능력치는 흡수해 본 것만 보인다.
 // 도감은 삶을 넘어 이어진다(Meta에 저장).
+// 그림은 정수배로만 키우고, 안 본 몬스터는 실루엣만 보여 준다(이름·수치는 ???).
+
+const FRAME_W = 88;
+const FRAME_H = 104;
+
+function MonsterFigure({ id, seen }: { id: string; seen: boolean }) {
+  const a = MONSTER_ART[id];
+  if (!a) return <div className="codex-figure empty">?</div>;
+  const k = fitScale(a, FRAME_W, FRAME_H);
+  return (
+    <div className={`codex-figure${seen ? "" : " silhouette"}`}>
+      <img src={a.src} width={a.w * k} height={a.h * k} alt="" />
+    </div>
+  );
+}
 
 const ORDER = ["rat", "goblin", "skeleton", "boss", "goldrat", "jewelgoblin", "crystalskel"];
 
@@ -34,7 +50,10 @@ export function CodexScreen({ codex, onBack }: { codex: Codex; onBack: () => voi
           if (!codex.seen.includes(id)) {
             return (
               <Card key={id} title={`${no} ???`} className="codex unseen">
-                <p className="dim small">아직 마주친 적 없는 몬스터.</p>
+                <div className="codex-row">
+                  <MonsterFigure id={id} seen={false} />
+                  <p className="dim small">아직 마주친 적 없는 몬스터.</p>
+                </div>
               </Card>
             );
           }
@@ -43,13 +62,18 @@ export function CodexScreen({ codex, onBack }: { codex: Codex; onBack: () => voi
           const sk = f?.skill ? SKILLS[f.skill] : null;
           return (
             <Card key={id} title={`${no} ${m.name}${m.rare ? " · 희귀" : ""}${id === "boss" ? " · 보스" : ""}`} className="codex">
-              <p className="small">
-                HP {m.hp} · AC {m.ac} · 공격 {m.dice[0]}d{m.dice[1]} · 마석 {m.mana}G 어치
-              </p>
-              <p className="dim small">
-                출현: {whereFound(id) || "알 수 없음"} · 처치 {codex.kills[id] ?? 0}
-              </p>
-              {m.note && <p className="dim small">{m.note}</p>}
+              <div className="codex-row">
+                <MonsterFigure id={id} seen />
+                <div className="codex-info">
+                  <p className="small">
+                    HP {m.hp} · AC {m.ac} · 공격 {m.dice[0]}d{m.dice[1]} · 마석 {m.mana}G 어치
+                  </p>
+                  <p className="dim small">
+                    출현: {whereFound(id) || "알 수 없음"} · 처치 {codex.kills[id] ?? 0}
+                  </p>
+                  {m.note && <p className="dim small">{m.note}</p>}
+                </div>
+              </div>
               {f && (
                 <div className="codex-frag">
                   {known ? (
