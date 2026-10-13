@@ -57,6 +57,7 @@ export const SCENE_ART: Record<string, SpriteArt> = {
   temple: { src: "./scene-temple.png", w: 179, h: 110 },
   office: { src: "./scene-office.png", w: 179, h: 100, focus: 0.85 },
   graveyard: { src: "./scene-grave.png", w: 179, h: 80 },
+  dungeon1: { src: "./scene-dungeon1.png", w: 179, h: 100 },
 };
 
 /** 주간 결과 카드 제목 → 장소 그림 */

@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { maxHp } from "../game/core";
 import { ROOM_LABEL, ROOM_SHORT, currentRoom } from "../game/dungeon";
 import type { PendingChoice } from "../game/dungeon";
@@ -10,6 +11,7 @@ import type { Ctl } from "./App";
 import { josa } from "../game/josa";
 import { godOf, power } from "../game/faith";
 import { Bar, FragIcon, GameScreen, HeroHeader, LogView } from "./components";
+import { SCENE_ART } from "./art";
 
 function fmtTime(turns: number): string {
   const h = Math.max(0, turns) / 2;
@@ -253,6 +255,18 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
 }
 
 /** 방 그래프 지도: 입구에서의 거리로 가로 배치. 가 본 방과 그 이웃만 그린다 */
+/** 지도 칸 배경: 섹터 장소 그림을 2배로 깔고 어둡게 눌러 지도 점·선이 먼저 읽히게 한다 */
+function mapBackdrop(dg: DungeonState): CSSProperties | undefined {
+  const a = SCENE_ART[`dungeon${dg.sector}`];
+  if (!a) return undefined;
+  return {
+    backgroundImage: `linear-gradient(rgba(12, 10, 7, 0.62), rgba(12, 10, 7, 0.62)), url(${a.src})`,
+    backgroundSize: `auto, ${a.w * 2}px ${a.h * 2}px`,
+    backgroundPosition: "center, center 40%",
+    backgroundRepeat: "no-repeat",
+  };
+}
+
 function FloorMap({ dg }: { dg: DungeonState }) {
   const visible = new Set<number>();
   for (const r of dg.rooms) {
@@ -277,7 +291,7 @@ function FloorMap({ dg }: { dg: DungeonState }) {
     });
   }
   return (
-    <svg className="floormap" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="층 지도">
+    <svg className="floormap" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="층 지도" style={mapBackdrop(dg)}>
       {dg.rooms.map((r) =>
         r.edges
           .filter((e) => e > r.id && visible.has(e) && visible.has(r.id) && (r.visited || dg.rooms[e].visited))

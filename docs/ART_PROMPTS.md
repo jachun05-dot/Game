@@ -319,3 +319,18 @@ No readable text on the markers, no UI, no frame or border. Square 1:1 image.
 ```
 
 결과(2026-10-13): 1차 채택(512, 200격자) → 띠 `(10,50)~(189,130)` = `public/scene-grave.png`. 묘지 화면 맨 위. 나무 묘표가 십자 모양으로 나왔지만 묘표의 흔한 관습 모양이라 그대로 둠(신전 문양과는 무관)
+
+## 020 — 미궁 1섹터 (기준 이미지 + 훈련장 첨부)
+
+```
+Match the exact art style, outline, palette and pixel scale of the attached images; the second image (a training yard) shows the scene scale and level of detail to follow.
+
+Pixel art game location illustration, classic 16-bit RPG style, wide view, slightly elevated 3/4 view.
+The first sector of an ancient underground labyrinth beneath a remote island in a grim dark-fantasy world: a damp stone corridor of huge old blocks opening into a small chamber, a single guttering torch on the wall, rubble and old bones on the floor, a rusty iron gate half open, rat droppings and gnawed scraps, faint scratch marks on the walls left by earlier adventurers counting days, and darkness swallowing the far end of the corridor.
+Muted palette of about 20 colors: cold dark grey stone, black, dirty browns; warm dull gold (#cf9a44) light only from the single torch, fading quickly into the dark.
+Crisp hard pixel edges, 1-pixel dark outlines, no anti-aliasing, no blur, no gradients, no noisy dithering.
+Keep the torch, the gate and the dark corridor within the middle 60% of the height so it reads when cropped to a wide horizontal strip.
+No people, no monsters, no text, no UI, no frame or border. Square 1:1 image.
+```
+
+결과(2026-10-13): 1차 채택. Gemini가 가로 이미지(512×286)로 줬지만 도트는 같은 2.56px → 200×112로 복원. 워터마크가 바닥 위라 밝은 16픽셀을 주변 평균으로 메움(`assets/scenes/dungeon1_clean.png`). 띠 179×100 `(10,8)~(189,108)` = `public/scene-dungeon1.png`. 미궁 화면은 자리가 빠듯해 띠 대신 **지도 칸 배경**으로 깐다(2배, 62% 어둡게 눌러 지도 점·선이 먼저 읽히게, `SCENE_ART["dungeon"+섹터]`). 벽의 날짜 긁은 자국은 안 나옴

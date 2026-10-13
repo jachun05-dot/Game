@@ -240,7 +240,7 @@ button {
 /* ---------- 던전 ---------- */
 .survival { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .survival > div { display: flex; flex-direction: column; gap: 2px; }
-.floormap { width: 100%; height: auto; background: #0c0a07; border: 1px solid var(--border); }
+.floormap { width: 100%; height: auto; background-color: #0c0a07; image-rendering: pixelated; border: 1px solid var(--border); }
 .map-edge { stroke: var(--border); stroke-width: 2; }
 .map-node { fill: #2a2117; stroke: var(--dim); stroke-width: 1; }
 .map-node.unknown { fill: #0c0a07; stroke-dasharray: 2 2; }
