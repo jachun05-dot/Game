@@ -1,0 +1,38 @@
+# 작업 인수인계 (2026-10-13 세션 요약)
+
+새 세션이나 대화 요약 뒤에 이어서 작업할 때 이 파일부터 읽는다.
+
+## 프로젝트
+- 레포 `jachun05-dot/Game`, 브랜치 `master`. 텍스트 기반 던전크롤 로그라이크 웹게임 "DDD — 열여섯 살, 미궁으로"
+- 플레이 링크(비공개 아티팩트): https://claude.ai/artifact/3hRQb1UtFGqHvFAGstGNdy
+  - 배포: `npx vite build` → `dist/assets/*`를 스크래치패드 `artifact/assets`로 복사, `artifact/index.html`의 js/css 파일명 교체 → Artifact publish(이전 해시 파일은 `null`로 제거)
+- 참고작: slbcareer.com(이번 생은 야구다), kickru.com(벤치에서 발롱까지), 1in8b.life(80억 분의 1) — 텍스트+카드, 턴 결과 리포트, 성장
+- 기획 원본은 사용자 PC의 다른 세션("게임 신앙 시스템 디자인 논의")에서 가져와 `docs/DESIGN.md`로 복원. 그리드 턴제 → 텍스트 게임으로 전환함
+
+## 문서
+- `docs/DESIGN.md` 기획(14절 = 텍스트 진행 구조), `docs/DECISIONS.md` 결정 기록(시간순), `docs/PROTOTYPE.md` 구현 범위·수치·시뮬 결과, `docs/ART_PROMPTS.md` 아트 파이프라인
+- 아트: 사용자가 Gemini(구독, API 키 없음)로 생성 → 채팅에 이미지 첨부 → Claude가 마젠타 배경·워터마크 제거, 100격자 도트 복원. 기준 이미지 `assets/reference/style_reference.png`, 얼굴 `public/hero-face.png`
+
+## 환경 메모
+- npm 기본 레지스트리 차단 → `.npmrc`로 `registry.yarnpkg.com` 사용
+- 테스트 `npx vitest run`(16개), 타입 `npx tsc -b`, 빠른 실행은 `bun`도 가능
+- 밸런스: `bun scripts/sim-all.ts 1000`(직업별 첫 달 사망·12개월 클리어), `bun scripts/sim-boss.ts`, `scripts/sim.ts`, `scripts/sim-month1.ts`
+- 브라우저 확인: Playwright(`NODE_PATH=$(npm root -g)`), `npx vite preview --port 4173`
+
+## 코드 구조
+- `src/game/` 순수 로직. `engine.ts`의 `act/apply(action)`가 진입점, 시드 RNG(`rng.ts`)로 결정론적
+  - `town.ts` 생성·직업 선택·주간 활동(훈련/탐문/숲)·상점·정산, `dungeon.ts` 방 그래프 층 생성·이동·함정/매복·보물/장비·야영·귀환, `combat.ts` 자동 전투, `skills.ts` 기술, `gear.ts` 장비 9슬롯, `classes.ts` 직업, `data.ts` 수치(BAL)·몬스터·조우표, `bot.ts` 자동 결정 겸 시뮬 봇, `josa.ts` 조사
+- `src/ui/` React. 고정 레이아웃(상단 헤더/가운데 스크롤/하단 선택지 도크), ⚙ 설정(속도·자동 결정·전투 방침), 캐릭터 시트(장비), 저장은 localStorage(+ 복사/붙여넣기 내보내기), 구 저장 보정은 `storage.ts`
+
+## 지금까지 확정된 게임 규칙(요약)
+- 한 달 = 마을 1~3주(주마다 활동 1개 + 결과 카드) + 4주차 미궁(336턴=7일) → 월말 정산·세금(미납 시 처형)
+- 미궁: 1섹터 3층, 층 = 방 그래프(??? 방은 감각으로 엿보기), 3층 보스 → 차원문(2섹터는 미구현)
+- 전투 완전 자동. 플레이어는 전투 방침(물약/도주 HP 기준)만 설정. 기술 = 조건부 자동 발동 액티브 + 패시브, 훈련마다 3단계 사다리로 습득
+- 직업: 모험가(일반 훈련 전부)·전사(장검+가죽 갑옷, 전장 훈련)·마법사(지팡이 지능 마력탄+로브, 주문학). 후보 카드 능력치가 직업 성향으로 쏠림(합 30)
+- 장비 9슬롯, 대장간 판매 + 보물상자/보스 드롭(착용 or 두고 가기)
+- 고블린은 비겁: 함정방에 매복, 함정 밟고 다치면 기습, 해체하면 도주. 층마다 0.8% 희귀 개체(마석 180~220G, 몇 라운드 뒤 도주)
+- 레벨 3→4 훈련은 1섹터 보스의 "거대 쥐의 마석 심장" 필요
+- 밸런스 목표(봇 기준): 첫 달 사망 ~30%, 12개월 내 1섹터 클리어 ~40% → 현재 세 직업 모두 달성
+
+## 미구현/다음 후보
+- 직업별 초상화, 로그·성직자, 히든 트레이닝, 부위 부상·정신 상태이상, 신앙 효과, 2섹터 이후, 탐문 단서·진엔딩, 몬스터/장소 이미지(Gemini 프롬프트)
