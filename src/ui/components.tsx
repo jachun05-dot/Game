@@ -9,7 +9,7 @@ import { SKILLS } from "../game/skills";
 import type { AutoGoal, GameState } from "../game/types";
 import type { Ctl, Speed } from "./App";
 import { CharacterSheet } from "./CharacterSheet";
-import { CLASS_ART, FRAG_ICON, MONSTER_ART } from "./art";
+import { CLASS_ART, FRAG_ICON, MONSTER_ART, SCENE_ART } from "./art";
 
 export function Shell({ children, wide }: { children: ReactNode; wide?: boolean }) {
   return <main className={`shell${wide ? " wide" : ""}`}>{children}</main>;
@@ -346,4 +346,15 @@ export function FragIcon({ tier, scale = 1, hidden }: { tier: number; scale?: nu
   const a = FRAG_ICON[hidden ? 1 : tier];
   if (!a?.src) return null;
   return <img className={`frag-icon${hidden ? " silhouette" : ""}`} src={a.src} width={a.w * scale} height={a.h * scale} alt="" />;
+}
+
+/** 장소 그림 띠. 2배 정수 확대, 가운데 정렬로 좁은 화면에서는 양옆만 잘린다. 장식이라 대체 텍스트는 비운다 */
+export function SceneBanner({ id }: { id: string }) {
+  const a = SCENE_ART[id];
+  if (!a) return null;
+  return (
+    <div className="scene" style={{ height: a.h * 2 }}>
+      <img src={a.src} width={a.w * 2} height={a.h * 2} style={{ marginLeft: -a.w }} alt="" />
+    </div>
+  );
 }

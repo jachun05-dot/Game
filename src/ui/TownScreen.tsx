@@ -10,7 +10,7 @@ import { taxDue, yearOf } from "../game/core";
 import type { StatKey } from "../game/types";
 import type { Ctl } from "./App";
 import { josa } from "../game/josa";
-import { Card, GameScreen, GearList, HeroHeader, LogView, FaithCard, FragList, SkillList, StatGrid, TacticsBar } from "./components";
+import { Card, GameScreen, GearList, HeroHeader, LogView, FaithCard, FragList, SceneBanner, SkillList, StatGrid, TacticsBar } from "./components";
 
 const ITEM_INFO = {
   food: { name: "말린 고기", desc: "포만감 +40" },
@@ -228,6 +228,7 @@ function TrainingPanel({ ctl, onClose }: { ctl: Ctl; onClose: () => void }) {
 
   return (
     <Card title={`훈련 — ${trainCost(s)}G`}>
+      <SceneBanner id="training" />
       <p className="dim small">훈련마다 6포인트: 훈련 종류로 정해지는 2 + 자유 2 + 지난 행동으로 정해지는 2.</p>
       <div className="stack tight">
         {allowed.map((x) => {

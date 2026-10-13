@@ -44,3 +44,8 @@ export const FRAG_ICON: SpriteArt[] = [
   { src: "./frag-3.png", w: 12, h: 26 },
   { src: "./frag-4.png", w: 12, h: 29 },
 ];
+
+// 장소 그림(띠 모양, 원래 도트 크기). 화면에서는 2배로 키우고 좁은 화면에서는 양옆이 잘린다.
+export const SCENE_ART: Record<string, SpriteArt> = {
+  training: { src: "./scene-training.png", w: 179, h: 80 },
+};

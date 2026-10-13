@@ -444,3 +444,7 @@ html, body, #root { height: 100%; }
 /* 신앙 */
 .faith-line { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; margin: 4px 0 8px; }
 .faith-line > span:first-child { white-space: nowrap; }
+
+/* 장소 그림 띠 */
+.scene { position: relative; overflow: hidden; margin: 0 0 10px; border: 1px solid var(--border); background: #000; }
+.scene img { position: absolute; left: 50%; top: 0; image-rendering: pixelated; display: block; }
