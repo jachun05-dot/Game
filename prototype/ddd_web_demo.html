@@ -1,0 +1,1729 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}</style></head><body>
+<title>DDD — 던전 프로토타입</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<style>
+  :root {
+    --bg: #100d0a;
+    --bg-panel: #1a1510;
+    --bg-panel-alt: #221b13;
+    --border: #3a2e1f;
+    --text: #c3b18d;
+    --text-dim: #71624a;
+    --text-bright: #f1e4c4;
+    --accent: #cf9a44;
+    --danger: #b8514a;
+    --ok: #7fa15e;
+    --wall: #4a3d2c;
+    --floor-base: #23190f;
+    --floor-seam: #140e09;
+    --wall-face: #5c4a32;
+    --wall-top: #3b2f21;
+    --wall-seam: #221a10;
+    --wall-highlight: #a3855c;
+    --torch: #ffbf6b;
+    --trap: #d9622f;
+    --mon-rat: #b08a52;
+    --mon-goblin: #7ea25a;
+    --mon-skeleton: #d8dbd6;
+    --mon-boss: #d97a4a;
+    --portal: #9a7bc0;
+    --dpad-size: 34px;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Cascadia Code", "JetBrains Mono", ui-monospace, "SF Mono", Consolas, "Liberation Mono", monospace;
+    overflow-x: hidden;
+  }
+
+  body {
+    min-height: 100vh;
+    padding: clamp(10px, 3vw, 28px);
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 10px);
+    display: flex;
+    justify-content: center;
+  }
+
+  .app {
+    width: 100%;
+    max-width: 980px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  header.titlebar {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 8px 14px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    gap: 8px;
+  }
+
+  header.titlebar .game-title {
+    font-size: 14px;
+    letter-spacing: 0.1em;
+    color: var(--text-bright);
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  header.titlebar .game-title .mark { color: var(--accent); }
+
+  header.titlebar .subtitle {
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .main-row {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: minmax(0, 1fr) 250px;
+    grid-template-areas:
+      "map player"
+      "map minimap"
+      "map progress"
+      "map legend"
+      "map controls";
+  }
+
+  .viewport-frame {
+    grid-area: map;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+  }
+
+  #mapCanvas {
+    width: 100%;
+    height: auto;
+    display: block;
+    image-rendering: pixelated;
+    touch-action: none;
+  }
+
+  .panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    padding: 10px 12px;
+  }
+  .panel--player { grid-area: player; }
+  .panel--minimap { grid-area: minimap; }
+  .panel--progress { grid-area: progress; }
+  .panel--legend { grid-area: legend; }
+  .panel--controls { grid-area: controls; }
+
+  .minimap-frame {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+  }
+  #minimapCanvas { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+
+  /* --- 패널 모서리 장식(은은한 프레임 느낌) --- */
+  .panel, .town-menu-panel, .town-detail-panel, .viewport-frame, .log-panel, .setup-card {
+    position: relative;
+  }
+  .panel::before, .panel::after,
+  .town-menu-panel::before, .town-menu-panel::after,
+  .town-detail-panel::before, .town-detail-panel::after,
+  .viewport-frame::before, .viewport-frame::after,
+  .log-panel::before, .log-panel::after,
+  .setup-card::before, .setup-card::after {
+    content: "";
+    position: absolute;
+    width: 9px;
+    height: 9px;
+    border-color: var(--accent);
+    border-style: solid;
+    opacity: 0.45;
+    pointer-events: none;
+  }
+  .panel::before, .town-menu-panel::before, .town-detail-panel::before,
+  .viewport-frame::before, .log-panel::before, .setup-card::before {
+    top: -1px; left: -1px; border-width: 1px 0 0 1px;
+  }
+  .panel::after, .town-menu-panel::after, .town-detail-panel::after,
+  .viewport-frame::after, .log-panel::after, .setup-card::after {
+    bottom: -1px; right: -1px; border-width: 0 1px 1px 0;
+  }
+
+  .panel .panel-label {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin: 0 0 8px;
+  }
+
+  .hp-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 13px;
+    color: var(--text-bright);
+    margin-bottom: 6px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .hp-track {
+    position: relative;
+    height: 10px;
+    background: var(--bg-panel-alt);
+    border: 1px solid var(--border);
+  }
+  /* 체력 눈금 — 채워진 부분 위에도 보이도록 hp-fill보다 나중에(위에) 그려지는
+     의사요소(::after)로 얹는다. */
+  .hp-track::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: repeating-linear-gradient(
+      90deg, transparent, transparent 9px, rgba(0, 0, 0, 0.4) 9px, rgba(0, 0, 0, 0.4) 10px
+    );
+    pointer-events: none;
+  }
+
+  .hp-fill {
+    height: 100%;
+    background: var(--ok);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3);
+    transition: width 0.15s ease-out, background-color 0.2s;
+  }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 10px;
+    font-size: 12px;
+  }
+
+  .stat-grid .k { color: var(--text-dim); }
+  .stat-grid .v { color: var(--text-bright); text-align: right; font-variant-numeric: tabular-nums; }
+
+  .meta-line {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text);
+    padding: 2px 0;
+    font-variant-numeric: tabular-nums;
+  }
+  .meta-line .k { color: var(--text-dim); }
+
+  .legend { display: flex; flex-direction: column; gap: 5px; font-size: 12px; }
+  .legend .row { display: flex; align-items: center; gap: 8px; }
+  .legend .glyph { width: 1.2em; text-align: center; font-weight: 700; }
+
+  .hint {
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    margin: 0 0 8px;
+  }
+  .hint b { color: var(--text); font-weight: 600; }
+
+  .dpad {
+    display: grid;
+    grid-template-columns: var(--dpad-size) var(--dpad-size) var(--dpad-size);
+    grid-template-rows: var(--dpad-size) var(--dpad-size);
+    gap: 4px;
+    justify-content: center;
+  }
+  .dpad button {
+    font-family: inherit;
+    background: var(--bg-panel-alt);
+    color: var(--text);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    touch-action: manipulation;
+    user-select: none;
+  }
+  .dpad button:hover { color: var(--text-bright); border-color: var(--accent); }
+  .dpad button:active { background: var(--border); color: var(--text-bright); }
+  .dpad button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .dpad .up { grid-column: 2; grid-row: 1; }
+  .dpad .left { grid-column: 1; grid-row: 2; }
+  .dpad .down { grid-column: 2; grid-row: 2; }
+  .dpad .right { grid-column: 3; grid-row: 2; }
+
+  /* 모바일 전용 플로팅 D패드 — 기본은 숨김, 좁은 화면에서만 화면 하단 고정으로 노출된다.
+     스크롤을 아무리 내려도 엄지로 바로 조작할 수 있어야 해서 position:fixed를 쓴다. */
+  .dpad--floating {
+    display: none;
+    position: fixed;
+    right: max(env(safe-area-inset-right, 0px), 14px);
+    bottom: max(env(safe-area-inset-bottom, 0px), 14px);
+    z-index: 5;
+    background: rgba(16, 13, 10, 0.55);
+    padding: 8px;
+    border: 1px solid var(--border);
+    backdrop-filter: blur(2px);
+  }
+
+  .log-panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    height: 128px;
+    overflow-y: auto;
+    font-size: 12px;
+    line-height: 1.65;
+  }
+  .log-panel::-webkit-scrollbar { width: 8px; }
+  .log-panel::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .log-line { color: var(--text); }
+  .log-line.hit { color: var(--text-bright); }
+  .log-line.crit { color: var(--accent); }
+  .log-line.miss { color: var(--text-dim); }
+  .log-line.dmg-taken { color: var(--danger); }
+  .log-line.system { color: var(--ok); }
+  .log-icon { display: inline-block; width: 1.3em; text-align: center; opacity: 0.75; }
+
+  .death-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(8, 6, 4, 0.86);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 14px;
+    z-index: 10;
+    padding: 20px;
+    text-align: center;
+  }
+  .death-overlay.show { display: flex; }
+  .death-overlay .death-title {
+    font-size: 20px;
+    letter-spacing: 0.1em;
+    color: var(--danger);
+    text-transform: uppercase;
+  }
+  .death-overlay.clear .death-title { color: var(--ok); }
+  .death-overlay .death-sub {
+    font-size: 13px;
+    color: var(--text);
+    text-align: center;
+    max-width: 380px;
+    line-height: 1.6;
+  }
+  .death-overlay button {
+    font-family: inherit;
+    background: var(--accent);
+    color: #1a1005;
+    border: none;
+    padding: 10px 26px;
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    text-transform: uppercase;
+    touch-action: manipulation;
+  }
+  .death-overlay button:hover { filter: brightness(1.1); }
+
+  /* --- 캐릭터 생성 화면 --- */
+  .setup-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(8, 6, 4, 0.92);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+    padding: 16px;
+  }
+  .setup-overlay.show { display: flex; }
+
+  .setup-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    width: 100%;
+    max-width: 380px;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .setup-title {
+    font-size: 16px;
+    letter-spacing: 0.1em;
+    color: var(--text-bright);
+    text-transform: uppercase;
+    margin: 0 0 2px;
+  }
+  .setup-points {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin: 0 0 8px;
+    font-variant-numeric: tabular-nums;
+  }
+  .setup-label {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin: 10px 0 4px;
+  }
+
+  .setup-stat-header {
+    display: grid;
+    grid-template-columns: 1fr 26px 44px 48px 26px;
+    gap: 6px;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 0 0 4px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 4px;
+  }
+  .setup-stat-header span { text-align: center; }
+
+  .setup-stat-row {
+    display: grid;
+    grid-template-columns: 1fr 26px 44px 48px 26px;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    padding: 3px 0;
+  }
+  .setup-stat-value { text-align: center; color: var(--text-bright); font-variant-numeric: tabular-nums; }
+  .setup-stat-mod {
+    text-align: center;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    background: var(--bg-panel-alt);
+    border: 1px solid var(--border);
+    padding: 2px 0;
+    font-size: 11px;
+  }
+
+  .stepper {
+    font-family: inherit;
+    background: var(--bg-panel-alt);
+    color: var(--text);
+    border: 1px solid var(--border);
+    width: 26px;
+    height: 26px;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .stepper:hover { border-color: var(--accent); color: var(--text-bright); }
+  .stepper:disabled { opacity: 0.3; cursor: default; border-color: var(--border); color: var(--text-dim); }
+
+  .setup-derived {
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 6px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .setup-equip-row { display: flex; justify-content: space-between; font-size: 11px; padding: 1px 0; }
+  .setup-equip-row .k { color: var(--text-dim); }
+  .setup-equip-row .v { color: var(--text); text-align: right; }
+
+  .setup-hint { font-size: 10px; color: var(--text-dim); line-height: 1.5; margin: 8px 0 0; }
+
+  #startBtn {
+    font-family: inherit;
+    background: var(--accent);
+    color: #1a1005;
+    border: none;
+    padding: 11px;
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    margin-top: 10px;
+    touch-action: manipulation;
+  }
+  #startBtn:hover { filter: brightness(1.1); }
+
+  /* --- 공용 버튼 --- */
+  .btn {
+    font-family: inherit;
+    background: var(--accent);
+    color: #1a1005;
+    border: none;
+    padding: 10px 18px;
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .btn:hover { filter: brightness(1.1); }
+  .btn-secondary { background: var(--bg-panel-alt); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { filter: none; color: var(--text-bright); border-color: var(--accent); }
+  .btn-small { padding: 5px 10px; font-size: 10px; }
+
+  /* --- 마을(영지) 화면 --- */
+  .town-page { width: 100%; max-width: 980px; display: flex; flex-direction: column; gap: 10px; }
+  .town-page:not(.active) { display: none; }
+  #pageDungeon:not(.active) { display: none; }
+
+  .town-menu-panel, .town-detail-panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    padding: 14px 16px;
+  }
+  .town-menu-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    background: none;
+    border: none;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+    padding: 9px 6px;
+    cursor: pointer;
+    text-align: left;
+    touch-action: manipulation;
+  }
+  .town-menu-row:hover { background: var(--bg-panel-alt); color: var(--text-bright); }
+  .town-menu-row .hotkey { color: var(--accent); width: 1.4em; }
+
+  .town-detail-panel .hint { margin-bottom: 10px; }
+  .town-detail-status { color: var(--text-dim); font-size: 11px; margin: 0 0 14px; line-height: 1.5; }
+
+  .town-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  /* --- 모바일 레이아웃 --- */
+  @media (max-width: 680px) {
+    body { padding: 8px; padding-bottom: max(env(safe-area-inset-bottom, 0px), 8px); }
+
+    header.titlebar .subtitle { display: none; }
+
+    .main-row {
+      grid-template-columns: 1fr 1fr;
+      grid-template-areas:
+        "player progress"
+        "map map"
+        "legend legend";
+      gap: 6px;
+    }
+
+    .panel { padding: 8px 10px; }
+    .panel-label { margin-bottom: 4px !important; }
+
+    /* 사이드바용 인라인 조작 패널은 화면 아래 플로팅 D패드로 대체한다 — 같은 조작을
+       두 군데(패널 안 + 화면 고정)에 중복으로 둘 필요가 없다. */
+    .panel--controls { display: none; }
+    /* 작은 화면에서는 미니맵까지 넣으면 너무 빽빽해져서 뺀다 — 메인 던전 뷰 자체가
+       충분히 크고, 안개 상태는 어차피 메인 뷰에서 바로 보인다. */
+    .panel--minimap { display: none; }
+
+    .dpad--floating { display: grid; }
+    :root { --dpad-size: 56px; }
+    .dpad--floating button { font-size: 20px; }
+
+    /* 플로팅 D패드(2행x56px + 안쪽 여백 + 화면 여백)에 로그 마지막 줄이 가리지 않도록
+       넉넉하게 여유 공간을 아래에 남겨둔다. */
+    .log-panel { height: 96px; margin-bottom: 150px; }
+  }
+</style>
+
+<!-- DESIGN.md 4절 "영지 구조"를 텍스트 메뉴로 옮긴 마을 화면. 실제 장소 기능(상점 목록,
+     세금 계산 등)은 대부분 미정/미구현이라, 각 장소는 현재 Unity 쪽 구현 상태를 그대로
+     솔직하게 보여주는 안내문 정도로만 채워둔다. -->
+<div class="town-page active" id="pageTown">
+  <header class="titlebar">
+    <div class="game-title"><span class="mark">D</span>DD <span class="mark">·</span> 영지</div>
+    <div class="subtitle">준비 기간 — 4주차에 던전으로</div>
+  </header>
+
+  <div class="town-menu-panel" id="townMenuPanel">
+    <p class="panel-label">장소</p>
+    <div id="townMenu"></div>
+  </div>
+
+  <div class="town-detail-panel" id="townDetail" style="display:none">
+    <p class="panel-label" id="townDetailTitle"></p>
+    <p class="hint" id="townDetailBody"></p>
+    <p class="town-detail-status" id="townDetailStatus"></p>
+    <button class="btn btn-secondary" id="townDetailBack">뒤로</button>
+  </div>
+
+  <div class="town-actions">
+    <button class="btn btn-secondary" id="charBtn">모험가 상태</button>
+    <button class="btn" id="enterDungeonBtn">던전입구 (테스트)</button>
+  </div>
+</div>
+
+<div class="app" id="pageDungeon">
+  <header class="titlebar">
+    <div class="game-title"><span class="mark">D</span>DD <span class="mark">·</span> 1섹터 프로토타입</div>
+    <button class="btn btn-secondary btn-small" id="abandonBtn">마을로</button>
+  </header>
+
+  <div class="main-row">
+    <div class="viewport-frame">
+      <canvas id="mapCanvas" width="350" height="350"></canvas>
+    </div>
+
+    <div class="panel panel--player">
+      <p class="panel-label">모험가</p>
+      <div class="hp-row"><span>HP</span><span id="hpText">10 / 10</span></div>
+      <div class="hp-track"><div class="hp-fill" id="hpFill" style="width:100%"></div></div>
+      <div class="stat-grid" style="margin-top:10px">
+        <span class="k">힘 STR</span><span class="v" id="sbStr">+0</span>
+        <span class="k">민첩 DEX</span><span class="v" id="sbDex">+0</span>
+        <span class="k">체력 CON</span><span class="v" id="sbCon">+0</span>
+        <span class="k">지능 INT</span><span class="v" id="sbInt">+0</span>
+        <span class="k">감각 PER</span><span class="v" id="sbPer">+0</span>
+        <span class="k">행운 LUK</span><span class="v" id="sbLuk">+0</span>
+      </div>
+    </div>
+
+    <div class="panel panel--minimap">
+      <p class="panel-label">지도</p>
+      <div class="minimap-frame">
+        <canvas id="minimapCanvas" width="108" height="108"></canvas>
+      </div>
+    </div>
+
+    <div class="panel panel--progress">
+      <p class="panel-label">진행 · 1섹터</p>
+      <div class="meta-line"><span class="k">층</span><span id="floorText">1 / 3</span></div>
+      <div class="meta-line"><span class="k">턴</span><span id="turnText">0</span></div>
+    </div>
+
+    <div class="panel panel--legend">
+      <p class="panel-label">범례</p>
+      <div class="legend">
+        <div class="row"><span class="glyph" style="color:var(--text-bright)">@</span>모험가</div>
+        <div class="row"><span class="glyph" style="color:var(--mon-rat)">r</span>쥐</div>
+        <div class="row"><span class="glyph" style="color:var(--mon-goblin)">g</span>고블린</div>
+        <div class="row"><span class="glyph" style="color:var(--mon-skeleton)">s</span>스켈레톤 병사</div>
+        <div class="row"><span class="glyph" style="color:var(--mon-boss)">R</span>거대한 돌연변이 쥐(3층 보스)</div>
+        <div class="row"><span class="glyph" style="color:var(--trap)">^</span>가시함정(발견됨)</div>
+        <div class="row"><span class="glyph" style="color:var(--accent)">&gt;</span>계단(다음 층)</div>
+        <div class="row"><span class="glyph" style="color:var(--portal)">O</span>차원문(섹터 클리어)</div>
+      </div>
+    </div>
+
+    <div class="panel panel--controls">
+      <p class="panel-label">조작</p>
+      <p class="hint">방향키 / <b>WASD</b>로 이동<br>몬스터 방향으로 이동 = 공격<br>시야 범위 3칸 — 어두운 곳은 지나간 기억, 칠흑은 미탐색<br>옆칸에 붙으면 감각 굴림으로 가시함정을 미리 발견할 수 있다</p>
+      <div class="dpad">
+        <button class="up" data-dir="N" aria-label="북쪽으로 이동">▲</button>
+        <button class="left" data-dir="W" aria-label="서쪽으로 이동">◀</button>
+        <button class="down" data-dir="S" aria-label="남쪽으로 이동">▼</button>
+        <button class="right" data-dir="E" aria-label="동쪽으로 이동">▶</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="log-panel" id="log" aria-live="polite"></div>
+</div>
+
+<!-- DESIGN.md 6절(스탯) / 10절(장비)을 최소한으로 체감할 수 있게 만든 캐릭터 생성 화면.
+     실제 게임의 "훈련(레벨업)"은 아니고, 데모용으로 포인트를 자유배분하는 임시 방식이다. -->
+<div class="setup-overlay" id="setupOverlay">
+  <div class="setup-card">
+    <p class="setup-title">모험가 상태 (레벨 10 가정)</p>
+    <p class="setup-points">남은 포인트: <span id="pointsRemaining">54</span> · 5점당 보정치 +1</p>
+
+    <div class="setup-stat-header">
+      <span></span><span></span><span>값</span><span>보정</span><span></span>
+    </div>
+    <div id="setupStats"></div>
+
+    <div class="setup-derived">
+      <div class="meta-line"><span class="k">최대 HP</span><span id="previewHp">10</span></div>
+      <div class="meta-line"><span class="k">AC</span><span id="previewAc">10</span></div>
+      <div class="meta-line"><span class="k">턴당 행동</span><span id="previewActions">1</span></div>
+    </div>
+
+    <p class="setup-label">장비 (9슬롯)</p>
+    <div id="setupEquip"></div>
+    <p class="setup-hint">DESIGN.md 6절: 훈련(레벨업)마다 6포인트씩 배분되므로 레벨 10(=9회 훈련)이면 대략 54포인트 — 정확한 배분 규칙은 미정이라 이 데모에서는 자유배분으로 단순화했다. 장비는 파워 스케일링이 아니라 생존 최소기준선(10절) — 숏소드 외 나머지는 아직 미정이라 오른손만 채워져 있다. 감각은 가시함정 발견에, 민첩은 회피에 쓰인다 — 지능은 아직 이 데모에 반영되지 않는다(설계상 주문용).</p>
+
+    <button id="startBtn">확인</button>
+  </div>
+</div>
+
+<!-- 모바일 전용: 화면 하단에 항상 고정된 D패드. 데스크톱에서는 CSS로 숨긴다. -->
+<div class="dpad dpad--floating" aria-label="이동/공격 조작">
+  <button class="up" data-dir="N" aria-label="북쪽으로 이동">▲</button>
+  <button class="left" data-dir="W" aria-label="서쪽으로 이동">◀</button>
+  <button class="down" data-dir="S" aria-label="남쪽으로 이동">▼</button>
+  <button class="right" data-dir="E" aria-label="동쪽으로 이동">▶</button>
+</div>
+
+<div class="death-overlay" id="deathOverlay">
+  <div class="death-title" id="endTitle">쓰러졌다</div>
+  <div class="death-sub" id="deathReason"></div>
+  <button id="restartBtn">마을로 돌아가기</button>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var SIZE = 27;
+  var CELL = 50;
+  // 던전크롤의 재미는 "지금 내가 전체 지도의 어디쯤 있는지 한눈에 안 보인다"는 데 있다 —
+  // 그래서 맵 전체를 그리지 않고, 플레이어를 항상 정중앙에 고정한 7x7 창(카메라)만 그린다.
+  // 창 전체를 원 안에 딱 맞추기 위해 VIEWPORT를 VISION_RADIUS*2+1로 둔다.
+  var VIEWPORT = 7;
+  var CENTER = Math.floor(SIZE / 2);
+  var WALL_DENSITY = 0.24;
+  var CORRIDOR_HALF_WIDTH = 1;
+  var CHASE_RANGE = 8;
+  var DIRS = ["N", "S", "E", "W"];
+  // 전장의 안개 시야 범위(원형, 사용자 지정: 3칸). DESIGN.md 11절에 "포그 오브 워... 세부는
+  // 미정"으로 남아있던 항목을 여기서 확정한다. 반경 안이라도 벽에 막히면(Bresenham 직선
+  // 레이캐스팅, hasLineOfSight 참고) 그 뒤는 보이지 않는다.
+  var VISION_RADIUS = 3;
+  // 가시함정: 민첩 굴림으로 회피, 옆칸에서 감각 굴림으로 미리 발견 가능(사용자 지정 규칙).
+  // 정확한 DC/피해량은 다른 밸런스 수치와 마찬가지로 미정이라 몬스터 AC(12~13) 대와
+  // 비슷한 수준으로 임시로 잡았다.
+  var TRAP_DETECT_DC = 14;
+  var TRAP_DODGE_DC = 12;
+  var TRAP_DAMAGE_DICE = [1, 6];
+
+  var canvas = document.getElementById("mapCanvas");
+  var ctx = canvas.getContext("2d");
+  var dpr = window.devicePixelRatio || 1;
+  canvas.width = VIEWPORT * CELL * dpr;
+  canvas.height = VIEWPORT * CELL * dpr;
+  ctx.scale(dpr, dpr);
+
+  var MM_CELL = 4;
+  var minimapCanvas = document.getElementById("minimapCanvas");
+  var mmCtx = minimapCanvas.getContext("2d");
+
+  var css = getComputedStyle(document.documentElement);
+  function token(name) { return css.getPropertyValue(name).trim(); }
+  var COL = {
+    bg: token("--bg"),
+    floorBase: token("--floor-base"),
+    floorSeam: token("--floor-seam"),
+    wallFace: token("--wall-face"),
+    wallTop: token("--wall-top"),
+    wallSeam: token("--wall-seam"),
+    wallHighlight: token("--wall-highlight"),
+    torch: token("--torch"),
+    trap: token("--trap"),
+    textBright: token("--text-bright"),
+    textDim: token("--text-dim"),
+    accent: token("--accent"),
+    rat: token("--mon-rat"),
+    goblin: token("--mon-goblin"),
+    skeleton: token("--mon-skeleton"),
+    boss: token("--mon-boss"),
+    portal: token("--portal"),
+    danger: token("--danger"),
+  };
+
+  /// 결정론적 의사난수(0~1) — 같은 (x,y)는 매 프레임 항상 같은 값을 준다. 벽/바닥 텍스처가
+  /// 렌더링할 때마다 깜빡이지 않고 타일마다 고정된 무늬를 갖게 하려면 Math.random() 대신
+  /// 이걸 써야 한다.
+  function hash2(x, y) {
+    var s = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
+    return s - Math.floor(s);
+  }
+
+  function hexToRgb(hex) {
+    hex = hex.replace("#", "");
+    return {
+      r: parseInt(hex.substring(0, 2), 16),
+      g: parseInt(hex.substring(2, 4), 16),
+      b: parseInt(hex.substring(4, 6), 16),
+    };
+  }
+
+  /// amt>0이면 흰색 쪽으로, amt<0이면 검은색 쪽으로 hex 색을 살짝 민다. 돌 하나하나가
+  /// 미묘하게 다른 명암을 갖게 해서(hash2와 함께 사용) 텍스처가 있는 것처럼 보이게 한다.
+  function shade(hex, amt) {
+    var c = hexToRgb(hex);
+    function adj(v) { return amt >= 0 ? Math.round(v + (255 - v) * amt) : Math.round(v + v * amt); }
+    return "rgb(" + adj(c.r) + "," + adj(c.g) + "," + adj(c.b) + ")";
+  }
+
+  // DESIGN.md 11절 "1섹터 몬스터(확정)" / "1섹터 보스" 표를 그대로 옮긴 것.
+  var MONSTERS = {
+    rat: { name: "쥐", hp: 4, ac: 12, atk: 2, dice: [1, 4], color: COL.rat, glyph: "r" },
+    goblin: { name: "고블린", hp: 7, ac: 12, atk: 3, dice: [1, 6], color: COL.goblin, glyph: "g" },
+    skeleton: { name: "스켈레톤 병사", hp: 10, ac: 13, atk: 3, dice: [1, 8], color: COL.skeleton, glyph: "s" },
+    boss: { name: "거대한 돌연변이 쥐", hp: 18, ac: 13, atk: 4, dice: [1, 8], color: COL.boss, glyph: "R" },
+  };
+
+  // 캐릭터 생성 화면에서 확정되기 전까지의 중립 기본값. base 10은 CharacterSheet.cs의
+  // BaseHpPlaceholder와 같은 미정 수치 placeholder(DESIGN.md 7절: 레벨1 기본 HP는 아직 미정).
+  var PLAYER = { maxHp: 10, hp: 10, str: 0, dex: 0, con: 0, int: 0, per: 0, luk: 0, dexRaw: 0, acBase: 10, dice: [1, 6] };
+
+  var floor, floorNumber = 1, turnNumber = 0, gameOver = false, started = false;
+  var actionsRemaining = 1;
+  // 1층에서 뽑은 방향을 2층 시작점 계산에 재사용한다(DESIGN.md 11절: "2층은 1층에서 고른
+  // 방향과 같은 방향의 끝에서 시작"). 3층 포탈 방향은 이 값과 무관하게 새로 랜덤 뽑는다.
+  var sector1Direction = null;
+
+  // --- 캐릭터 생성(DESIGN.md 6절 스탯 / 10절 장비의 최소 체감 버전) ---
+  var STAT_DEFS = [
+    { key: "str", label: "힘 STR" },
+    { key: "dex", label: "민첩 DEX" },
+    { key: "con", label: "체력 CON" },
+    { key: "int", label: "지능 INT" },
+    { key: "per", label: "감각 PER" },
+    { key: "luk", label: "행운 LUK" },
+  ];
+  var EQUIP_SLOTS = [
+    { slot: "머리", item: "-" },
+    { slot: "몸통", item: "-" },
+    { slot: "오른손", item: "숏소드 (1d6, 힘 기반)" },
+    { slot: "왼손", item: "-" },
+    { slot: "허리", item: "-" },
+    { slot: "발", item: "-" },
+    { slot: "목걸이", item: "-" },
+    { slot: "반지 A", item: "-" },
+    { slot: "반지 B", item: "-" },
+  ];
+  // DESIGN.md 6절: 훈련(레벨업)마다 6포인트, 스탯 상한 50. "레벨 10 기준"으로 테스트하고
+  // 싶다는 요청에 맞춰 9회 훈련(레벨1->10) 분량인 54포인트를 미리 쓸 수 있게 했다 — 실제
+  // 고정/자유/행동기반 배분 규칙은 미정이라 이 데모에서는 전부 자유배분으로 단순화한다.
+  var TOTAL_POINTS = 54, STAT_STEP = 5, MAX_STAT = 50;
+  var statAlloc = { str: 0, dex: 0, con: 0, int: 0, per: 0, luk: 0 };
+
+  function mod(v) { return Math.floor(v / 5); }
+  function pointsUsed() {
+    var sum = 0;
+    STAT_DEFS.forEach(function (s) { sum += statAlloc[s.key]; });
+    return sum;
+  }
+
+  function buildSetupUI() {
+    var statsEl = document.getElementById("setupStats");
+    STAT_DEFS.forEach(function (s) {
+      var row = document.createElement("div");
+      row.className = "setup-stat-row";
+      row.innerHTML =
+        '<span>' + s.label + '</span>' +
+        '<button class="stepper" data-stat="' + s.key + '" data-delta="-1">-</button>' +
+        '<span class="setup-stat-value" id="val-' + s.key + '">0</span>' +
+        '<span class="setup-stat-mod" id="mod-' + s.key + '">+0</span>' +
+        '<button class="stepper" data-stat="' + s.key + '" data-delta="1">+</button>';
+      statsEl.appendChild(row);
+    });
+
+    var equipEl = document.getElementById("setupEquip");
+    EQUIP_SLOTS.forEach(function (e) {
+      var row = document.createElement("div");
+      row.className = "setup-equip-row";
+      row.innerHTML = '<span class="k">' + e.slot + '</span><span class="v">' + e.item + '</span>';
+      equipEl.appendChild(row);
+    });
+
+    var steppers = statsEl.querySelectorAll(".stepper");
+    for (var i = 0; i < steppers.length; i++) {
+      steppers[i].addEventListener("click", function () {
+        var key = this.getAttribute("data-stat");
+        var dir = parseInt(this.getAttribute("data-delta"), 10);
+        var current = statAlloc[key];
+
+        // "-5"/"+5"를 그대로 더하면 시작값이 5의 배수가 아닐 때(예: 기본값 9) 0이나 상한에
+        // 정확히 못 맞고 어중간한 값에서 막혀버린다 — 그래서 항상 0/상한 쪽으로 "clamp"해서
+        // 딱 그 값까지는 반드시 도달하게 한다.
+        var next;
+        if (dir < 0) {
+          next = Math.max(0, current - STAT_STEP);
+        } else {
+          var budget = TOTAL_POINTS - pointsUsed();
+          if (budget <= 0) return;
+          next = Math.min(MAX_STAT, current + Math.min(STAT_STEP, budget));
+        }
+        statAlloc[key] = next;
+        refreshSetupUI();
+      });
+    }
+
+    refreshSetupUI();
+  }
+
+  function refreshSetupUI() {
+    var remaining = TOTAL_POINTS - pointsUsed();
+    STAT_DEFS.forEach(function (s) {
+      var value = statAlloc[s.key];
+      document.getElementById("val-" + s.key).textContent = value;
+      var m = mod(value);
+      document.getElementById("mod-" + s.key).textContent = (m >= 0 ? "+" : "") + m;
+
+      var minusBtn = document.querySelector('.stepper[data-stat="' + s.key + '"][data-delta="-1"]');
+      var plusBtn = document.querySelector('.stepper[data-stat="' + s.key + '"][data-delta="1"]');
+      minusBtn.disabled = value <= 0;
+      plusBtn.disabled = value >= MAX_STAT || remaining <= 0;
+    });
+    document.getElementById("pointsRemaining").textContent = remaining;
+    // DESIGN.md 7절: 레벨업마다 CON보정치만큼 최대HP가 고정 누적 -> 레벨10 가정이면 9회 누적.
+    document.getElementById("previewHp").textContent = 10 + mod(statAlloc.con) * 9;
+    document.getElementById("previewAc").textContent = 10 + mod(statAlloc.dex);
+    document.getElementById("previewActions").textContent = 1 + (statAlloc.dex >= 35 ? 1 : 0);
+  }
+
+  /// 캐릭터 생성/상태 화면의 statAlloc을 실제 전투에 쓰는 PLAYER 값으로 확정한다.
+  /// 페이지 로드 시 기본 배분에도, "확인" 버튼을 눌렀을 때도 이 함수 하나만 쓴다.
+  function applyStatsFromAlloc() {
+    PLAYER.str = mod(statAlloc.str);
+    PLAYER.dex = mod(statAlloc.dex);
+    PLAYER.con = mod(statAlloc.con);
+    PLAYER.int = mod(statAlloc.int);
+    PLAYER.per = mod(statAlloc.per);
+    PLAYER.luk = mod(statAlloc.luk);
+    PLAYER.dexRaw = statAlloc.dex;
+    PLAYER.maxHp = 10 + mod(statAlloc.con) * 9;
+  }
+
+  function refreshPlayerPanel() {
+    document.getElementById("sbStr").textContent = fmtMod(PLAYER.str);
+    document.getElementById("sbDex").textContent = fmtMod(PLAYER.dex);
+    document.getElementById("sbCon").textContent = fmtMod(PLAYER.con);
+    document.getElementById("sbInt").textContent = fmtMod(PLAYER.int);
+    document.getElementById("sbPer").textContent = fmtMod(PLAYER.per);
+    document.getElementById("sbLuk").textContent = fmtMod(PLAYER.luk);
+  }
+  function fmtMod(v) { return (v >= 0 ? "+" : "") + v; }
+
+  function actionsPerTurn() { return 1 + (PLAYER.dexRaw >= 35 ? 1 : 0); }
+
+  // --- 마을(영지) — DESIGN.md 4절 "영지 구조"의 장소 8개(직업교관 제외, Unity 스켈레톤과 동일).
+  // 대부분의 실제 기능(상점 목록/세금 계산 등)이 여전히 미정이라, 상태 문구는 지금 Unity
+  // 코드가 실제로 보여주는 것과 똑같이 정직하게(placeholder임을 숨기지 않고) 적었다.
+  var TOWN_LOCATIONS = [
+    { name: "영주성", flavor: "셉터를 헌납하는 대상. 진엔딩에선 이곳에서 영주와 최종 결전을 벌인다.", status: "이동만 가능 — 구현 예정" },
+    { name: "대장간", flavor: "장비 구매·수리. 등급이 오르면 취급 장비도 고급화된다.", status: "판매 목록 미정 — 아직 취급 품목이 없습니다" },
+    { name: "상점가", flavor: "일반 소모품을 구매하는 곳.", status: "판매 목록 미정 — 아직 취급 품목이 없습니다" },
+    { name: "술집", flavor: "탐문(소문·정보·사이드퀘스트)의 주요 장소.", status: "탐문 콘텐츠 미정" },
+    { name: "관공서", flavor: "세금 징수 · 던전 부산물 납품 · 등급(랭크) 관리.", status: "세금 공식 미정 — 지금은 고정 100G 스텁" },
+    { name: "성당", flavor: "표면적 유일신교의 공식 예배 장소. 이단(옛 신앙) 감시와 얽혀 있다.", status: "이단 감시 메커니즘 미정" },
+    { name: "묘지", flavor: "퍼머데스로 죽은 이전 모험가들의 무덤. 사망 방식과 해금된 신앙이 묘비명으로 남는다.", status: "묘비 기록 시스템 미정" },
+    { name: "여관", flavor: "상태이상 해소를 위한 휴식(포만감·피로도 회복 수단은 아님).", status: "상태이상 해소 세부 미정" },
+  ];
+
+  function renderTownMenu() {
+    var el = document.getElementById("townMenu");
+    var hotkeys = "abcdefgh";
+    TOWN_LOCATIONS.forEach(function (loc, i) {
+      var row = document.createElement("button");
+      row.className = "town-menu-row";
+      row.innerHTML = '<span class="hotkey">' + hotkeys[i] + ')</span><span>' + loc.name + '</span>';
+      row.addEventListener("click", function () { showLocationDetail(loc); });
+      el.appendChild(row);
+    });
+  }
+
+  function showLocationDetail(loc) {
+    document.getElementById("townMenuPanel").style.display = "none";
+    document.getElementById("townDetail").style.display = "block";
+    document.getElementById("townDetailTitle").textContent = loc.name;
+    document.getElementById("townDetailBody").textContent = loc.flavor;
+    document.getElementById("townDetailStatus").textContent = loc.status;
+  }
+
+  function showPage(id) {
+    document.getElementById("pageTown").classList.toggle("active", id === "pageTown");
+    document.getElementById("pageDungeon").classList.toggle("active", id === "pageDungeon");
+  }
+
+  function rollDie(sides) { return 1 + Math.floor(Math.random() * sides); }
+  function rollDice(count, sides) {
+    var t = 0;
+    for (var i = 0; i < count; i++) t += rollDie(sides);
+    return t;
+  }
+  function rollD20() { return rollDie(20); }
+
+  function resolveAttack(attackBonus, targetAc, dice, dmgBonus, luckMod) {
+    var roll = rollD20();
+    if (roll === 1) return { fumble: true, hit: false, dmg: 0, crit: false };
+    var natTwenty = roll === 20;
+    var total = roll + attackBonus;
+    if (!natTwenty && total < targetAc) return { fumble: false, hit: false, dmg: 0, crit: false };
+    var luckCritPct = 5 + (luckMod || 0);
+    var crit = natTwenty || (Math.random() * 100 < luckCritPct);
+    var mult = crit ? 2 : 1;
+    var dmg = Math.max(1, rollDice(dice[0] * mult, dice[1]) + (dmgBonus || 0));
+    return { fumble: false, hit: true, dmg: dmg, crit: crit };
+  }
+
+  /// DESIGN.md 8절 판정 공식(d20+보정치 vs DC)을 성공/실패만 필요한 간단한 판정(함정 감지·회피
+  /// 등)에 쓰는 버전. 자연 1은 자동 실패, 자연 20은 자동 성공 — resolveAttack과 동일한 규칙.
+  function skillCheck(modifier, dc) {
+    var roll = rollD20();
+    if (roll === 1) return false;
+    if (roll === 20) return true;
+    return roll + modifier >= dc;
+  }
+
+  function key(x, y) { return x + "," + y; }
+
+  function randomDir() { return DIRS[Math.floor(Math.random() * 4)]; }
+
+  function edgePoint(dir) {
+    if (dir === "N") return { x: CENTER, y: SIZE - 1 };
+    if (dir === "S") return { x: CENTER, y: 0 };
+    if (dir === "E") return { x: SIZE - 1, y: CENTER };
+    return { x: 0, y: CENTER };
+  }
+
+  /// "중앙 시작"이 정확히 한 타일로 고정돼 있으면 매 런이 너무 예측 가능해서, 중앙을 기준으로
+  /// 가로/세로 각각 -2~+2(5x5) 범위 안에서 무작위 위치를 고른다.
+  function randomNearCenter() {
+    return {
+      x: clamp(CENTER + Math.floor(Math.random() * 5) - 2, 0, SIZE - 1),
+      y: clamp(CENTER + Math.floor(Math.random() * 5) - 2, 0, SIZE - 1),
+    };
+  }
+
+  /// a와 b가 x 또는 y를 공유하는(직선으로 이어지는) 구간 하나를 "보호된 바닥"으로 확정한다.
+  function protectSegment(protectedSet, a, b) {
+    var vertical = a.x === b.x;
+    var fixed = vertical ? a.x : a.y;
+    var lo = vertical ? Math.min(a.y, b.y) : Math.min(a.x, b.x);
+    var hi = vertical ? Math.max(a.y, b.y) : Math.max(a.x, b.x);
+    for (var i = lo; i <= hi; i++) {
+      for (var w = -CORRIDOR_HALF_WIDTH; w <= CORRIDOR_HALF_WIDTH; w++) {
+        var px = vertical ? clamp(fixed + w, 0, SIZE - 1) : i;
+        var py = vertical ? i : clamp(fixed + w, 0, SIZE - 1);
+        protectedSet[key(px, py)] = true;
+      }
+    }
+  }
+
+  /// 시작점→목표점을 잇는 통로(및 그 옆 1칸)를 "보호된 바닥"으로 먼저 확정하고, 나머지 칸에만
+  /// 벽을 랜덤 배치한다 — DESIGN.md 11절의 "생성 후 검증이 아니라 설계 단계에서 보장" 원칙.
+  /// start가 중앙 5x5 안에서 랜덤이라 dest와 축이 안 맞는 경우가 생길 수 있어서, 그럴 때는
+  /// 꼭짓점(elbow) 하나를 두고 두 직선 구간(ㄱ자 통로)으로 잇는다.
+  function buildTiles(start, dest) {
+    var tiles = [];
+    for (var x = 0; x < SIZE; x++) { tiles[x] = []; for (var y = 0; y < SIZE; y++) tiles[x][y] = 1; }
+
+    var protectedSet = {};
+    if (start.x === dest.x || start.y === dest.y) {
+      protectSegment(protectedSet, start, dest);
+    } else {
+      var elbow = { x: dest.x, y: start.y };
+      protectSegment(protectedSet, start, elbow);
+      protectSegment(protectedSet, elbow, dest);
+    }
+
+    for (x = 0; x < SIZE; x++) {
+      for (var y = 0; y < SIZE; y++) {
+        var isWall = !protectedSet[key(x, y)] && Math.random() < WALL_DENSITY;
+        tiles[x][y] = isWall ? 1 : 0; // 1 = wall, 0 = floor
+      }
+    }
+    return tiles;
+  }
+
+  function makeIsWalkable(tiles) {
+    return function (x, y) { return x >= 0 && x < SIZE && y >= 0 && y < SIZE && tiles[x][y] === 0; };
+  }
+
+  function floodFillReachable(tiles, start) {
+    var isWalkable = makeIsWalkable(tiles);
+    var visited = {};
+    var queue = [start];
+    visited[key(start.x, start.y)] = true;
+    while (queue.length) {
+      var cur = queue.shift();
+      var neigh = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+      for (var n = 0; n < 4; n++) {
+        var nx = cur.x + neigh[n][0], ny = cur.y + neigh[n][1];
+        if (visited[key(nx, ny)] || !isWalkable(nx, ny)) continue;
+        visited[key(nx, ny)] = true;
+        queue.push({ x: nx, y: ny });
+      }
+    }
+    return visited;
+  }
+
+  function candidatesFrom(visited, start, minDist) {
+    var list = [];
+    for (var k in visited) {
+      var parts = k.split(",");
+      var cx = parseInt(parts[0], 10), cy = parseInt(parts[1], 10);
+      if (Math.abs(cx - start.x) + Math.abs(cy - start.y) >= minDist) list.push({ x: cx, y: cy });
+    }
+    shuffle(list);
+    return list;
+  }
+
+  function popFar(candidates, placed, minDist) {
+    for (var i = 0; i < candidates.length; i++) {
+      var c = candidates[i];
+      var tooClose = placed.some(function (m) { return Math.abs(m.x - c.x) + Math.abs(m.y - c.y) < minDist; });
+      if (!tooClose) { candidates.splice(i, 1); return c; }
+    }
+    return null;
+  }
+
+  function nearbySpot(isWalkable, anchor, radius, occupied) {
+    for (var t = 0; t < 12; t++) {
+      var ox = Math.floor(Math.random() * (radius * 2 + 1)) - radius;
+      var oy = Math.floor(Math.random() * (radius * 2 + 1)) - radius;
+      var p = { x: anchor.x + ox, y: anchor.y + oy };
+      if (isWalkable(p.x, p.y) && !occupied.some(function (m) { return m.x === p.x && m.y === p.y; })) return p;
+    }
+    return null;
+  }
+
+  function spawnSolo(candidates, monsters, type, count) {
+    for (var i = 0; i < count; i++) {
+      var spot = popFar(candidates, monsters, 4);
+      if (!spot) break;
+      var def = MONSTERS[type];
+      monsters.push({ type: type, x: spot.x, y: spot.y, hp: def.hp, alive: true });
+    }
+  }
+
+  /// anchor 하나를 뽑고 그 주변에 count마리를 몰아서 "무리" 조우를 표현한다(DESIGN.md 11절
+  /// "2층부터 무리로 등장 가능").
+  function spawnCluster(isWalkable, candidates, monsters, type, minCount, maxCount) {
+    var anchor = popFar(candidates, monsters, 5);
+    if (!anchor) return;
+    var count = minCount + Math.floor(Math.random() * (maxCount - minCount + 1));
+    var def = MONSTERS[type];
+    monsters.push({ type: type, x: anchor.x, y: anchor.y, hp: def.hp, alive: true });
+    for (var i = 1; i < count; i++) {
+      var p = nearbySpot(isWalkable, anchor, 2, monsters);
+      if (p) monsters.push({ type: type, x: p.x, y: p.y, hp: def.hp, alive: true });
+    }
+  }
+
+  /// 3층 보스: 포탈에서 2~4칸 떨어진 도달 가능한 칸에 놓고, 쥐 2~3마리를 근처에 동반시킨다
+  /// (DESIGN.md 11절 보스 특성 "무리를 이끔").
+  function spawnBoss(isWalkable, visited, feature, monsters) {
+    var candidates = [];
+    for (var k in visited) {
+      var parts = k.split(",");
+      var cx = parseInt(parts[0], 10), cy = parseInt(parts[1], 10);
+      var d = Math.abs(cx - feature.x) + Math.abs(cy - feature.y);
+      if (d >= 2 && d <= 4) candidates.push({ x: cx, y: cy });
+    }
+    if (!candidates.length) return;
+    var spot = candidates[Math.floor(Math.random() * candidates.length)];
+    monsters.push({ type: "boss", x: spot.x, y: spot.y, hp: MONSTERS.boss.hp, alive: true });
+
+    var escortCount = 2 + Math.floor(Math.random() * 2);
+    for (var i = 0; i < escortCount; i++) {
+      var p = nearbySpot(isWalkable, spot, 2, monsters);
+      if (p) monsters.push({ type: "rat", x: p.x, y: p.y, hp: MONSTERS.rat.hp, alive: true });
+    }
+  }
+
+  /// 가시함정(사용자 지정): candidates 중 남은 자리를 그냥 무작위로 count개 골라 숨겨둔다.
+  /// 몬스터처럼 서로 거리를 둘 필요는 없다 — 함정끼리 붙어있어도 그 나름대로 위협이 된다.
+  /// revealed(감각 굴림으로 미리 발견했는지)와 sprung(이미 밟아서 소모됐는지)을 따로 추적한다.
+  function spawnTraps(candidates, count) {
+    var traps = [];
+    for (var i = 0; i < count && candidates.length; i++) {
+      var idx = Math.floor(Math.random() * candidates.length);
+      var spot = candidates.splice(idx, 1)[0];
+      traps.push({ x: spot.x, y: spot.y, revealed: false, sprung: false });
+    }
+    return traps;
+  }
+
+  /// DESIGN.md 11절 "1섹터 층 구조(확정)"을 그대로 옮긴 것: 1층은 중앙->임의의 끝(계단),
+  /// 2층은 그 끝->중앙(계단), 3층은 중앙->임의의 끝(포탈, 방향은 1/2층과 무관하게 새로 뽑음).
+  function generateFloor(num, direction) {
+    var start, dest, featureType;
+    if (num === 1) { start = randomNearCenter(); dest = edgePoint(direction); featureType = "stairs"; }
+    else if (num === 2) { start = edgePoint(direction); dest = { x: CENTER, y: CENTER }; featureType = "stairs"; }
+    else { start = randomNearCenter(); dest = edgePoint(direction); featureType = "portal"; }
+
+    var tiles = buildTiles(start, dest);
+    var isWalkable = makeIsWalkable(tiles);
+    var visited = floodFillReachable(tiles, start);
+    var candidates = candidatesFrom(visited, start, 3)
+      .filter(function (c) { return !(c.x === dest.x && c.y === dest.y); }); // 계단/포탈 칸엔 아무것도 안 둔다
+    var monsters = [];
+
+    // DESIGN.md 11절 "층별 조우 구성" 표: 1층은 항상 단독, 2층은 무리+스켈레톤 첫 등장,
+    // 3층은 다수 무리+보스. 정확한 마리수는 밸런스 미정 사항이라 상대적 구조만 지킨다.
+    if (num === 1) {
+      spawnSolo(candidates, monsters, "rat", 4);
+      spawnSolo(candidates, monsters, "goblin", 3);
+    } else if (num === 2) {
+      spawnCluster(isWalkable, candidates, monsters, "goblin", 2, 3);
+      spawnCluster(isWalkable, candidates, monsters, "goblin", 2, 2);
+      spawnCluster(isWalkable, candidates, monsters, "rat", 2, 3);
+      spawnSolo(candidates, monsters, "skeleton", 1);
+    } else {
+      spawnCluster(isWalkable, candidates, monsters, "skeleton", 2, 2);
+      spawnCluster(isWalkable, candidates, monsters, "skeleton", 2, 2);
+      spawnCluster(isWalkable, candidates, monsters, "goblin", 2, 3);
+      spawnCluster(isWalkable, candidates, monsters, "goblin", 2, 3);
+      spawnSolo(candidates, monsters, "rat", 2);
+      spawnBoss(isWalkable, visited, dest, monsters);
+    }
+
+    // 가시함정: 층이 깊어질수록 살짝 늘어난다(몬스터 조우 escalation과 같은 결) — 정확한
+    // 개수는 다른 밸런스 수치처럼 미정이라 임시로 "2 + 층수"로 잡았다.
+    var traps = spawnTraps(candidates, 2 + num);
+
+    return {
+      tiles: tiles,
+      isWalkable: isWalkable,
+      feature: dest,
+      featureType: featureType,
+      monsters: monsters,
+      traps: traps,
+      playerX: start.x,
+      playerY: start.y,
+      // 전장의 안개: 한 번이라도 시야에 들어왔던 칸(지형만 기억, 몬스터 위치는 기억 안 함).
+      // 층이 바뀌면 완전히 새로 시작한다(1/2/3층 모두 미탐색 상태에서 출발).
+      seen: makeGrid(false),
+    };
+  }
+
+  /// 1층->2층은 같은 방향을 재사용하고, 3층은 새 방향을 뽑는다(위 generateFloor 주석 참고).
+  function loadFloor(num) {
+    floorNumber = num;
+    var dir;
+    if (num === 1) { sector1Direction = randomDir(); dir = sector1Direction; }
+    else if (num === 2) { dir = sector1Direction; }
+    else { dir = randomDir(); }
+    floor = generateFloor(num, dir);
+  }
+
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+  function makeGrid(defaultValue) {
+    var g = [];
+    for (var x = 0; x < SIZE; x++) {
+      g[x] = [];
+      for (var y = 0; y < SIZE; y++) g[x][y] = defaultValue;
+    }
+    return g;
+  }
+  function shuffle(arr) {
+    for (var i = arr.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+    }
+  }
+
+  var logEl = document.getElementById("log");
+  var LOG_ICONS = { hit: "⚔", crit: "✦", miss: "·", "dmg-taken": "!", system: "»" };
+  function log(text, cls) {
+    var line = document.createElement("div");
+    line.className = "log-line" + (cls ? " " + cls : "");
+    var iconSpan = document.createElement("span");
+    iconSpan.className = "log-icon";
+    iconSpan.textContent = LOG_ICONS[cls] || "•";
+    line.appendChild(iconSpan);
+    line.appendChild(document.createTextNode(text));
+    logEl.appendChild(line);
+    while (logEl.children.length > 60) logEl.removeChild(logEl.firstChild);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function monsterAt(x, y) {
+    for (var i = 0; i < floor.monsters.length; i++) {
+      var m = floor.monsters[i];
+      if (m.alive && m.x === x && m.y === y) return m;
+    }
+    return null;
+  }
+
+  function trapAt(x, y) {
+    for (var i = 0; i < floor.traps.length; i++) {
+      var t = floor.traps[i];
+      if (t.x === x && t.y === y) return t;
+    }
+    return null;
+  }
+
+  /// 플레이어와 맞닿은(상하좌우 한 칸) 아직 안 들킨 함정을 감각 굴림으로 발견 시도한다.
+  /// 이동할 때마다 매번 새로 굴리므로, 함정 옆을 여러 턴 서성이면 발견 확률이 누적된다.
+  function checkTrapDetection() {
+    for (var i = 0; i < floor.traps.length; i++) {
+      var t = floor.traps[i];
+      if (t.revealed) continue;
+      var dist = Math.abs(t.x - floor.playerX) + Math.abs(t.y - floor.playerY);
+      if (dist !== 1) continue;
+      if (skillCheck(PLAYER.per, TRAP_DETECT_DC)) {
+        t.revealed = true;
+        log("옆에서 가시함정을 발견했다.", "system");
+      }
+    }
+  }
+
+  /// 함정 칸을 실제로 밟았을 때: 민첩 굴림으로 회피 시도, 실패하면 피해를 입는다. 성공/실패와
+  /// 무관하게 이 시점부터는 위치가 드러나고(revealed) 다시 작동하지 않는다(sprung).
+  function triggerTrap(trap) {
+    trap.revealed = true;
+    trap.sprung = true;
+    if (skillCheck(PLAYER.dex, TRAP_DODGE_DC)) {
+      log("가시함정을 아슬아슬하게 피했다!", "system");
+      return;
+    }
+    var dmg = rollDice(TRAP_DAMAGE_DICE[0], TRAP_DAMAGE_DICE[1]);
+    PLAYER.hp = Math.max(0, PLAYER.hp - dmg);
+    log("가시함정을 밟았다! " + dmg + " 피해", "dmg-taken");
+    refreshHud();
+    if (PLAYER.hp <= 0) showEnd("death", "쓰러졌다", "가시함정에 목숨을 잃었다. — 재앙의 신 해금");
+  }
+
+  function attackResultLog(attackerName, targetName, res, dmgClass) {
+    if (res.fumble) { log(attackerName + "의 공격이 대실패했다!", "miss"); return; }
+    if (!res.hit) { log(attackerName + "의 공격이 " + targetName + "에게 빗나갔다.", "miss"); return; }
+    var msg = attackerName + "의 공격이 " + targetName + "에게 명중! " + res.dmg + " 피해" + (res.crit ? " (크리티컬!)" : "");
+    log(msg, res.crit ? "crit" : dmgClass);
+  }
+
+  function playerAttack(m) {
+    var def = MONSTERS[m.type];
+    var res = resolveAttack(PLAYER.str, def.ac, PLAYER.dice, PLAYER.str, PLAYER.luk);
+    attackResultLog("모험가", def.name, res, "hit");
+    if (res.hit) {
+      m.hp -= res.dmg;
+      if (m.hp <= 0) { m.alive = false; log(def.name + "을(를) 쓰러뜨렸다.", "system"); }
+    }
+  }
+
+  function monsterTurn() {
+    var adjacentAttackers = 0;
+    for (var i = 0; i < floor.monsters.length; i++) {
+      var m = floor.monsters[i];
+      if (!m.alive) continue;
+      var def = MONSTERS[m.type];
+      var dist = Math.abs(m.x - floor.playerX) + Math.abs(m.y - floor.playerY);
+      if (dist === 1) {
+        adjacentAttackers++;
+        var ac = PLAYER.acBase + PLAYER.dex;
+        var res = resolveAttack(def.atk, ac, def.dice, 0, 0);
+        attackResultLog(def.name, "모험가", res, "dmg-taken");
+        if (res.hit) PLAYER.hp = Math.max(0, PLAYER.hp - res.dmg);
+      } else if (dist <= CHASE_RANGE) {
+        var dx = floor.playerX - m.x, dy = floor.playerY - m.y;
+        var step;
+        if (Math.abs(dx) >= Math.abs(dy)) step = { x: dx > 0 ? 1 : -1, y: 0 };
+        else step = { x: 0, y: dy > 0 ? 1 : -1 };
+        var nx = m.x + step.x, ny = m.y + step.y;
+        if (floor.isWalkable(nx, ny) && !monsterAt(nx, ny) && !(nx === floor.playerX && ny === floor.playerY)) {
+          m.x = nx; m.y = ny;
+        }
+      }
+    }
+    turnNumber++;
+    if (PLAYER.hp <= 0) {
+      showEnd("death", "쓰러졌다",
+        adjacentAttackers >= 2 ? "여러 몹에게 둘러싸여 쓰러졌다. — 전쟁의 신 해금" : "쓰러졌다.");
+    }
+    refreshHud();
+  }
+
+  function tryMove(dir) {
+    if (!started || gameOver) return;
+    var offsets = { N: [0, 1], S: [0, -1], E: [1, 0], W: [-1, 0] };
+    var off = offsets[dir];
+    var tx = floor.playerX + off[0], ty = floor.playerY + off[1];
+
+    var m = monsterAt(tx, ty);
+    if (m) { playerAttack(m); consumeAction(); render(); return; }
+
+    if (!floor.isWalkable(tx, ty)) return;
+
+    floor.playerX = tx; floor.playerY = ty;
+
+    var trap = trapAt(tx, ty);
+    if (trap && !trap.sprung) {
+      triggerTrap(trap);
+      if (gameOver) { render(); return; } // 함정으로 죽었으면 여기서 끝 — 층 이동 판정도 필요 없다
+    }
+    checkTrapDetection();
+
+    if (tx === floor.feature.x && ty === floor.feature.y) {
+      if (floor.featureType === "portal") {
+        log("포탈에 도달했다 — 1섹터 클리어!", "system");
+        showEnd("clear", "1섹터 클리어!", "차원문을 넘어 다음 섹터로 향한다.");
+        render();
+        return;
+      }
+      var next = floorNumber + 1;
+      log(next + "층으로 내려간다.", "system");
+      loadFloor(next);
+      checkTrapDetection();
+      actionsRemaining = actionsPerTurn();
+      refreshHud();
+      render();
+      return;
+    }
+
+    consumeAction();
+    render();
+  }
+
+  /// DESIGN.md 8절: 기본 1행동 + DEX 35 이상이면 +1행동. 이번 턴 행동을 다 썼을 때만
+  /// 몬스터 턴이 돌아간다 — 그 전까지는 계속 플레이어가 이어서 행동할 수 있다.
+  function consumeAction() {
+    actionsRemaining--;
+    if (actionsRemaining <= 0) {
+      monsterTurn();
+      actionsRemaining = actionsPerTurn();
+    } else {
+      refreshHud();
+    }
+  }
+
+  function showEnd(kind, title, reason) {
+    gameOver = true;
+    var overlay = document.getElementById("deathOverlay");
+    overlay.classList.toggle("clear", kind === "clear");
+    document.getElementById("endTitle").textContent = title;
+    document.getElementById("deathReason").textContent = reason;
+    overlay.classList.add("show");
+  }
+
+  function refreshHud() {
+    document.getElementById("hpText").textContent = Math.max(0, PLAYER.hp) + " / " + PLAYER.maxHp;
+    var pct = Math.max(0, PLAYER.hp) / PLAYER.maxHp * 100;
+    var fill = document.getElementById("hpFill");
+    fill.style.width = pct + "%";
+    fill.style.background = pct <= 30 ? COL.danger : (pct <= 60 ? COL.accent : token("--ok"));
+    document.getElementById("floorText").textContent = floorNumber + " / 3";
+    document.getElementById("turnText").textContent = turnNumber;
+  }
+
+  /// 플레이어 칸부터 목표 칸까지의 격자 점들을 Bresenham 직선 알고리즘으로 나열한다.
+  function bresenhamLine(x0, y0, x1, y1) {
+    var points = [];
+    var dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0);
+    var sx = x1 > x0 ? 1 : -1, sy = y1 > y0 ? 1 : -1;
+    var err = dx - dy;
+    var x = x0, y = y0;
+    while (true) {
+      points.push({ x: x, y: y });
+      if (x === x1 && y === y1) break;
+      var e2 = err * 2;
+      if (e2 > -dy) { err -= dy; x += sx; }
+      if (e2 < dx) { err += dx; y += sy; }
+    }
+    return points;
+  }
+
+  /// 시작점과 목표점 "사이"의 칸에 벽이 하나라도 있으면 그 뒤는 안 보인다. 목표 칸 자체가
+  /// 벽이어도(벽면을 보는 것) 시야는 성립한다 — 그래서 마지막 점은 검사에서 뺀다.
+  /// 대각선 코너를 살짝 스쳐 지나가는 극단적 사례까지 완벽히 막는 정식 셰도우캐스팅은
+  /// 아니지만, 이 정도 격자 크기에서는 "벽 뒤가 안 보인다"는 체감을 충분히 준다.
+  function hasLineOfSight(tiles, x0, y0, x1, y1) {
+    var line = bresenhamLine(x0, y0, x1, y1);
+    for (var i = 1; i < line.length - 1; i++) {
+      var p = line[i];
+      if (tiles[p.x][p.y] === 1) return false;
+    }
+    return true;
+  }
+
+  /// 이번 위치를 기준으로 "지금 보이는 칸" 집합을 계산하고, 동시에 floor.seen에 영구
+  /// 기록한다(기억에는 남지만 몬스터 위치까지 기억하진 않는다 — 그건 render()에서
+  /// visibleNow만 보고 몬스터를 그리는 걸로 자연히 구현된다).
+  function computeVisible(px, py) {
+    var visible = {};
+    var r2 = VISION_RADIUS * VISION_RADIUS;
+    for (var dx = -VISION_RADIUS; dx <= VISION_RADIUS; dx++) {
+      for (var dy = -VISION_RADIUS; dy <= VISION_RADIUS; dy++) {
+        if (dx * dx + dy * dy > r2) continue;
+        var vx = px + dx, vy = py + dy;
+        if (vx < 0 || vx >= SIZE || vy < 0 || vy >= SIZE) continue;
+        if (!hasLineOfSight(floor.tiles, px, py, vx, vy)) continue;
+        visible[key(vx, vy)] = true;
+        floor.seen[vx][vy] = true;
+      }
+    }
+    return visible;
+  }
+
+  /// 벽 하나를 "돌덩이 쌓은 느낌"으로 그린다. 아래(플레이어 쪽에서 보이는 방향)가 바닥이면
+  /// 빛을 받는 정면 벽으로 취급해서 밝은 하이라이트/그림자 띠를 더해 입체감을 준다.
+  /// (wx,wy)는 맵 좌표(텍스처가 카메라와 무관하게 고정되도록), (baseX,baseY)는 실제로
+  /// 그릴 화면 픽셀 좌표 — 카메라가 플레이어를 따라다니므로 둘을 분리해야 한다.
+  function drawWallTile(wx, wy, baseX, baseY) {
+    var faceBelow = wy > 0 && floor.tiles[wx][wy - 1] === 0;
+    var base = faceBelow ? COL.wallFace : COL.wallTop;
+    var h = hash2(wx, wy);
+
+    ctx.fillStyle = shade(base, (h - 0.5) * 0.14);
+    ctx.fillRect(baseX, baseY, CELL, CELL);
+
+    // 벽돌 이음선 — 타일 중앙을 가로지르는 줄 + 위/아래에서 서로 어긋나는 세로줄(엇갈린 쌓기).
+    ctx.strokeStyle = COL.wallSeam;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(baseX, baseY + CELL / 2);
+    ctx.lineTo(baseX + CELL, baseY + CELL / 2);
+    var off = h > 0.5 ? CELL * 0.28 : CELL * 0.72;
+    ctx.moveTo(baseX + CELL / 2, baseY);
+    ctx.lineTo(baseX + CELL / 2, baseY + CELL / 2);
+    ctx.moveTo(baseX + off, baseY + CELL / 2);
+    ctx.lineTo(baseX + off, baseY + CELL);
+    ctx.stroke();
+
+    if (faceBelow) {
+      ctx.fillStyle = "rgba(255, 235, 200, 0.3)";
+      ctx.fillRect(baseX, baseY, CELL, 2);
+      ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
+      ctx.fillRect(baseX, baseY + CELL - 3, CELL, 3);
+    }
+  }
+
+  /// 바닥 하나를 살짝 얼룩진 석재 타일처럼 그린다 — 균일한 색 대신 타일마다 미세하게 다른
+  /// 명암(hash2)과 옅은 이음선, 가끔 작은 얼룩 하나로 "손으로 깐 돌바닥" 느낌을 낸다.
+  /// drawWallTile과 같은 이유로 맵 좌표(wx,wy)와 화면 좌표(baseX,baseY)를 분리해서 받는다.
+  function drawFloorTile(wx, wy, baseX, baseY) {
+    var h = hash2(wx, wy);
+
+    ctx.fillStyle = shade(COL.floorBase, (h - 0.5) * 0.12);
+    ctx.fillRect(baseX, baseY, CELL, CELL);
+
+    ctx.strokeStyle = COL.floorSeam;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(baseX + 0.5, baseY + 0.5, CELL - 1, CELL - 1);
+
+    if (h < 0.16) {
+      ctx.fillStyle = COL.floorSeam;
+      ctx.beginPath();
+      ctx.arc(baseX + CELL * (0.3 + hash2(wx + 1, wy) * 0.4), baseY + CELL * (0.3 + hash2(wx, wy + 1) * 0.4), 1.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  /// 글리프 뒤에 살짝 그림자를 깔아서 텍스처 있는 배경 위에서도 또렷하게 읽히게 한다.
+  function drawGlyph(ch, px, py, color) {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
+    ctx.fillText(ch, px + 1, py + 1);
+    ctx.fillStyle = color;
+    ctx.fillText(ch, px, py);
+  }
+
+  function render() {
+    var visibleNow = computeVisible(floor.playerX, floor.playerY);
+
+    // 카메라: 플레이어가 항상 창(VIEWPORT x VIEWPORT)의 정중앙 칸에 오도록 맵 좌표를 offset.
+    var half = Math.floor(VIEWPORT / 2);
+    var camX = floor.playerX - half;
+    var camY = floor.playerY - half;
+
+    ctx.fillStyle = COL.bg;
+    ctx.fillRect(0, 0, VIEWPORT * CELL, VIEWPORT * CELL);
+    ctx.font = (CELL * 0.62) + "px 'Cascadia Code', monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    for (var lx = 0; lx < VIEWPORT; lx++) {
+      for (var ly = 0; ly < VIEWPORT; ly++) {
+        var wx = camX + lx, wy = camY + ly;
+        if (wx < 0 || wx >= SIZE || wy < 0 || wy >= SIZE) continue; // 맵 밖 — 칠흑
+        if (!floor.seen[wx][wy]) continue; // 한 번도 안 본 칸 — 칠흑
+
+        var screenRow = VIEWPORT - 1 - ly; // 창 안에서 북쪽이 위로 오도록 뒤집기
+        var baseX = lx * CELL, baseY = screenRow * CELL;
+        var visible = visibleNow[key(wx, wy)];
+
+        if (visible) {
+          // 플레이어에게 가까울수록 밝고, 시야 반경 가장자리로 갈수록 살짝 어두워지는
+          // 횃불 그러데이션 — 하드컷 대신 자연스러운 감쇠.
+          var dx = wx - floor.playerX, dy = wy - floor.playerY;
+          var t = clamp(Math.sqrt(dx * dx + dy * dy) / VISION_RADIUS, 0, 1);
+          ctx.globalAlpha = 1 - t * 0.35;
+        } else {
+          ctx.globalAlpha = 0.32; // 기억만 남은 칸(지형만, 몬스터는 안 그림)
+        }
+
+        if (floor.tiles[wx][wy] === 1) drawWallTile(wx, wy, baseX, baseY);
+        else drawFloorTile(wx, wy, baseX, baseY);
+      }
+    }
+    ctx.globalAlpha = 1;
+
+    // 발견된(revealed) 함정만 그린다 — 안 들킨 함정은 바닥과 구분 없이 완전히 숨어 있어야
+    // "던전크롤의 묘미"가 산다. 이미 밟아 소모된 함정(sprung)은 흐린 색으로 "안전 표시".
+    for (var ti = 0; ti < floor.traps.length; ti++) {
+      var trap = floor.traps[ti];
+      if (!trap.revealed || !floor.seen[trap.x][trap.y]) continue;
+      var tlx = trap.x - camX, tly = trap.y - camY;
+      if (tlx < 0 || tlx >= VIEWPORT || tly < 0 || tly >= VIEWPORT) continue;
+
+      var trapVisible = visibleNow[key(trap.x, trap.y)];
+      if (trapVisible) {
+        var tdx = trap.x - floor.playerX, tdy = trap.y - floor.playerY;
+        var tt = clamp(Math.sqrt(tdx * tdx + tdy * tdy) / VISION_RADIUS, 0, 1);
+        ctx.globalAlpha = 1 - tt * 0.35;
+      } else {
+        ctx.globalAlpha = 0.32;
+      }
+      var tsx = tlx * CELL + CELL / 2, tsy = (VIEWPORT - 1 - tly) * CELL + CELL / 2;
+      drawGlyph("^", tsx, tsy, trap.sprung ? COL.textDim : COL.trap);
+    }
+    ctx.globalAlpha = 1;
+
+    // 플레이어가 항상 정중앙이므로 횃불 오버레이 중심도 항상 화면 중앙으로 고정된다.
+    var glowX = half * CELL + CELL / 2, glowY = half * CELL + CELL / 2;
+    var glowR = (VISION_RADIUS + 0.5) * CELL;
+    var grad = ctx.createRadialGradient(glowX, glowY, 0, glowX, glowY, glowR);
+    grad.addColorStop(0, "rgba(255, 191, 107, 0.10)");
+    grad.addColorStop(1, "rgba(255, 191, 107, 0)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, VIEWPORT * CELL, VIEWPORT * CELL);
+
+    if (visibleNow[key(floor.feature.x, floor.feature.y)]) {
+      var flx = floor.feature.x - camX, fly = floor.feature.y - camY;
+      var fx = flx * CELL + CELL / 2, fy = (VIEWPORT - 1 - fly) * CELL + CELL / 2;
+      var isPortal = floor.featureType === "portal";
+      drawGlyph(isPortal ? "O" : ">", fx, fy, isPortal ? COL.portal : COL.accent);
+    }
+
+    for (var i = 0; i < floor.monsters.length; i++) {
+      var m = floor.monsters[i];
+      if (!m.alive || !visibleNow[key(m.x, m.y)]) continue;
+      var def = MONSTERS[m.type];
+      var mlx = m.x - camX, mly = m.y - camY;
+      drawGlyph(def.glyph, mlx * CELL + CELL / 2, (VIEWPORT - 1 - mly) * CELL + CELL / 2, def.color);
+    }
+
+    // 플레이어는 정의상 항상 창의 한가운데 칸(half, half)에 있다.
+    drawGlyph("@", half * CELL + CELL / 2, half * CELL + CELL / 2, COL.textBright);
+
+    renderMinimap();
+  }
+
+  /// 사이드바의 작은 전체 지도. 지금까지 본(floor.seen) 지형만 축소해서 보여주고,
+  /// 플레이어 위치는 항상, 목표 지점은 한 번이라도 본 적 있을 때만 표시한다.
+  function renderMinimap() {
+    mmCtx.fillStyle = COL.bg;
+    mmCtx.fillRect(0, 0, SIZE * MM_CELL, SIZE * MM_CELL);
+
+    for (var x = 0; x < SIZE; x++) {
+      for (var y = 0; y < SIZE; y++) {
+        if (!floor.seen[x][y]) continue;
+        var sy = SIZE - 1 - y;
+        mmCtx.fillStyle = floor.tiles[x][y] === 1 ? COL.wallTop : COL.floorBase;
+        mmCtx.fillRect(x * MM_CELL, sy * MM_CELL, MM_CELL, MM_CELL);
+      }
+    }
+
+    for (var ti = 0; ti < floor.traps.length; ti++) {
+      var trap = floor.traps[ti];
+      if (!trap.revealed) continue;
+      mmCtx.fillStyle = trap.sprung ? COL.textDim : COL.trap;
+      mmCtx.fillRect(trap.x * MM_CELL, (SIZE - 1 - trap.y) * MM_CELL, MM_CELL, MM_CELL);
+    }
+
+    if (floor.seen[floor.feature.x][floor.feature.y]) {
+      mmCtx.fillStyle = floor.featureType === "portal" ? COL.portal : COL.accent;
+      mmCtx.fillRect(floor.feature.x * MM_CELL, (SIZE - 1 - floor.feature.y) * MM_CELL, MM_CELL, MM_CELL);
+    }
+
+    mmCtx.fillStyle = COL.textBright;
+    mmCtx.fillRect(floor.playerX * MM_CELL, (SIZE - 1 - floor.playerY) * MM_CELL, MM_CELL, MM_CELL);
+  }
+
+  function restart() {
+    PLAYER.hp = PLAYER.maxHp;
+    turnNumber = 0;
+    gameOver = false;
+    actionsRemaining = actionsPerTurn();
+    sector1Direction = null;
+    loadFloor(1);
+    logEl.innerHTML = "";
+    log("1층에 진입했다.", "system");
+    refreshHud();
+    render();
+    document.getElementById("deathOverlay").classList.remove("show", "clear");
+  }
+
+  window.addEventListener("keydown", function (e) {
+    var map = {
+      ArrowUp: "N", w: "N", W: "N",
+      ArrowDown: "S", s: "S", S: "S",
+      ArrowRight: "E", d: "E", D: "E",
+      ArrowLeft: "W", a: "W", A: "W",
+    };
+    var dir = map[e.key];
+    if (!dir) return;
+    e.preventDefault();
+    tryMove(dir);
+  });
+
+  var dpadButtons = document.querySelectorAll(".dpad button");
+  for (var i = 0; i < dpadButtons.length; i++) {
+    dpadButtons[i].addEventListener("click", function () { tryMove(this.getAttribute("data-dir")); });
+  }
+
+  // 사망/섹터클리어 후에는 곧바로 새 런을 시작하지 않고 마을로 돌아간다 — 퍼머데스 구조상
+  // "다음 시도"는 항상 마을을 거쳐야 한다(DESIGN.md 3절 월간 사이클).
+  document.getElementById("restartBtn").addEventListener("click", function () {
+    started = false;
+    document.getElementById("deathOverlay").classList.remove("show", "clear");
+    showPage("pageTown");
+  });
+
+  document.getElementById("startBtn").addEventListener("click", function () {
+    applyStatsFromAlloc();
+    document.getElementById("setupOverlay").classList.remove("show");
+    refreshPlayerPanel();
+  });
+
+  document.getElementById("charBtn").addEventListener("click", function () {
+    document.getElementById("setupOverlay").classList.add("show");
+  });
+
+  document.getElementById("enterDungeonBtn").addEventListener("click", function () {
+    started = true;
+    showPage("pageDungeon");
+    restart();
+  });
+
+  document.getElementById("abandonBtn").addEventListener("click", function () {
+    started = false;
+    showPage("pageTown");
+  });
+
+  document.getElementById("townDetailBack").addEventListener("click", function () {
+    document.getElementById("townDetail").style.display = "none";
+    document.getElementById("townMenuPanel").style.display = "block";
+  });
+
+  // 레벨10 가정 기본 배분(6절: 훈련당 6포인트 × 9회 ≈ 54포인트를 6개 스탯에 균등 배분) —
+  // 캐릭터 상태 화면을 아예 안 열어봐도 곧바로 던전 테스트가 가능하도록 미리 채워둔다.
+  statAlloc = { str: 9, dex: 9, con: 9, int: 9, per: 9, luk: 9 };
+  applyStatsFromAlloc();
+  refreshPlayerPanel();
+  buildSetupUI();
+  renderTownMenu();
+  showPage("pageTown");
+})();
+</script>
+
+</body></html>
