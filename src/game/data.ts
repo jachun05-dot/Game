@@ -13,7 +13,7 @@ export const BAL = {
   minHpPerLevel: 2,
   /** 숙련 보너스(공격 굴림). DESIGN에는 없는 임시 보정 — 레벨1이 1층 단독 몬스터를 감당하게 하는 용도 */
   proficiency: 2,
-  trainCostPerLevel: 12,
+  trainCostPerLevel: 10,
   maxLevel: 16,
   taxBase: 30,
   /** 해가 바뀔 때마다 오르는 세금(1년차 30, 2년차 70, 3년차 110 …) */
@@ -27,7 +27,7 @@ export const BAL = {
   trapDodgeDc: 12,
   trapDisarmDc: 13,
   fleeDcBase: 10,
-  prices: { food: 5, potion: 12, scroll: 45 },
+  prices: { food: 5, potion: 10, scroll: 45 },
   /** 치료 물약 회복량 = 2d4 + 이 값 */
   potionBase: 6,
   /** 이 레벨에서 다음 레벨로 가는 훈련은 보스 증표가 있어야 받을 수 있다 */
@@ -35,6 +35,10 @@ export const BAL = {
   heartName: "거대 쥐의 마석 심장",
   /** 층마다 희귀 개체가 나올 확률 */
   rareChance: 0.008,
+  /** 리젠: 이 턴(8시간)마다 비운 전투방이 respawnChance 확률로 다시 채워진다. 리젠 몬스터 마석은 respawnManaMult배 */
+  respawnEveryTurns: 16,
+  respawnChance: 0.3,
+  respawnManaMult: 0.5,
   /** 신전에서 편린 하나를 지우는 값 */
   fragEraseCost: 1000,
   /** 함정 발견 후 숨은 고블린을 알아채는 감각 DC */

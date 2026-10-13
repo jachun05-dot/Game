@@ -110,7 +110,8 @@ function floorLimit(s: GameState): number {
 function floorDone(s: GameState): boolean {
   const dg = s.dungeon!;
   if (s.autoGoal === "rush") return true;
-  if (s.autoGoal === "farm") return !dg.rooms.some((r) => !r.visited || (!r.resolved && ["combat", "treasure"].includes(r.type)));
+  // 리젠된 방은 "남은 일"로 치지 않는다(아니면 파밍이 영영 내려가지 않는다)
+  if (s.autoGoal === "farm") return !dg.rooms.some((r) => !r.visited || (!r.resolved && !r.respawned && ["combat", "treasure"].includes(r.type)));
   return dg.rooms.every((r) => r.visited || ["stairs", "portal", "boss"].includes(r.type));
 }
 
@@ -142,16 +143,19 @@ function nextStep(s: GameState): number | null {
     if (target === null) target = first((id) => !dg.rooms[id].visited && !(dg.rooms[id].type === "trap" && seen(id)));
     if (target === null) target = first((id) => !dg.rooms[id].visited);
   } else if (goal === "farm") {
-    // 알려진 전투방·상자 → 모르는 방 → 다 털었으면 출구/보스
-    target = first((id) => seen(id) && !dg.rooms[id].resolved && ["combat", "treasure"].includes(dg.rooms[id].type));
+    // 알려진 전투방·상자 → 모르는 방 → 다 털었으면 출구/보스 → 더 못 내려가면 리젠된 방을 계속 사냥
+    target = first((id) => seen(id) && !dg.rooms[id].resolved && !dg.rooms[id].respawned && ["combat", "treasure"].includes(dg.rooms[id].type));
     if (target === null) target = first((id) => !dg.rooms[id].visited && !(seen(id) && ["trap", "record", "shrine", "empty"].includes(dg.rooms[id].type)));
     if (target === null && dg.floor === 3 && comfortFloor(s) >= 3) target = boss();
     if (target === null && exitOk) target = exitRoom();
+    if (target === null) target = first((id) => dg.rooms[id].respawned === true && !dg.rooms[id].resolved);
   } else {
     // 구석구석: 3층에서는 보스(차원문)가 보이면 그쪽, 아니면 가장 가까운 미방문 방, 다 돌면 출구
     if (dg.floor === 3) target = boss();
     if (target === null) target = first((id) => !dg.rooms[id].visited);
     if (target === null && exitOk) target = exitRoom();
+    // 더 내려갈 수 없으면 야영만 하지 않고 다시 채워진 방을 정리한다
+    if (target === null && s.hero.hp / maxHp(s) >= 0.7) target = first((id) => dg.rooms[id].respawned === true && !dg.rooms[id].resolved);
   }
   if (target === null) return null;
   let step = target;

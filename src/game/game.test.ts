@@ -380,3 +380,20 @@ describe("캐릭터 생성 후보", () => {
     expect(JSON.stringify(s.candidates)).toBe(rerolled);
   });
 });
+
+describe("몬스터 리젠", () => {
+  it("비운 전투방은 시간이 지나면 다시 채워지고, 함정·상자·보스방은 그대로다", () => {
+    const s = newRun(8);
+    apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    s.week = 3;
+    s.phase = "week-result";
+    apply(s, { t: "closeWeek" });
+    const dg = s.dungeon!;
+    for (const r of dg.rooms) r.resolved = true;
+    dg.current = dg.rooms.find((r) => r.type === "entrance")!.id;
+    for (let i = 0; i < 20; i++) apply(s, { t: "camp" });
+    const combat = dg.rooms.filter((r) => r.type === "combat");
+    expect(combat.some((r) => r.respawned && !r.resolved && r.encounter?.length)).toBe(true);
+    expect(dg.rooms.filter((r) => r.type !== "combat").every((r) => r.resolved && !r.respawned)).toBe(true);
+  });
+});

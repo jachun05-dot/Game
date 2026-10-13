@@ -95,6 +95,8 @@ export interface Room {
   ambush?: string[];
   /** 숨은 고블린을 알아챘는지 */
   ambushKnown?: boolean;
+  /** 비웠던 전투방에 몬스터가 다시 들어왔다(마석 절반) */
+  respawned?: boolean;
   flavor: number;
 }
 
@@ -124,6 +126,8 @@ export interface DungeonState {
   /** 포만감 0 상태로 지난 턴 수 */
   starvingTurns: number;
   deepestFloor: number;
+  /** 리젠 판정까지 쌓인 턴 */
+  respawnClock?: number;
 }
 
 export type Activity = "train" | "rumor" | "field";

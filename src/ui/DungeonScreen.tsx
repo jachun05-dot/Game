@@ -205,7 +205,7 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
       <div className="choices">
         {room.edges.map((id) => {
           const nb = dg.rooms[id];
-          const label = nb.visited || nb.known ? ROOM_LABEL[nb.type] + (nb.ambushKnown && nb.ambush ? " · 고블린 매복" : "") : "???";
+          const label = nb.visited || nb.known ? (nb.respawned && !nb.resolved ? "새로운 기척" : ROOM_LABEL[nb.type]) + (nb.ambushKnown && nb.ambush ? " · 고블린 매복" : "") : "???";
           const note = id === dg.prev ? "왔던 길" : nb.visited ? "가 본 곳" : "";
           const danger = (nb.known || nb.visited) && !nb.resolved && ["combat", "trap", "boss"].includes(nb.type);
           return (

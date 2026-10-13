@@ -145,6 +145,11 @@ export function passTime(s: GameState, turns: number): void {
   h.satiety = Math.max(0, h.satiety - turns * 0.5 * hungerMult(s));
   h.fatigue = Math.min(100, h.fatigue + turns / 3);
   if (wasFed && h.satiety <= 0) log(s, "배가 고파 손이 떨린다. (굶주림: 판정 -2)", "hurt");
+  dg.respawnClock = (dg.respawnClock ?? 0) + turns;
+  while (dg.respawnClock >= BAL.respawnEveryTurns) {
+    dg.respawnClock -= BAL.respawnEveryTurns;
+    respawn(s);
+  }
   if (h.satiety <= 0) {
     dg.starvingTurns += turns;
     if (dg.starvingTurns >= BAL.starveLimitTurns) {
@@ -154,6 +159,23 @@ export function passTime(s: GameState, turns: number): void {
   } else {
     dg.starvingTurns = 0;
   }
+}
+
+/** 미궁은 스스로 괴물을 낳는다: 비워 둔 전투방이 다시 채워진다(함정·상자·보스방은 그대로) */
+function respawn(s: GameState): void {
+  const dg = d(s);
+  const r = rngOf(s);
+  let any = false;
+  for (const room of dg.rooms) {
+    if (room.type !== "combat" || !room.resolved || room.id === dg.current) continue;
+    if (!r.chance(BAL.respawnChance)) continue;
+    room.resolved = false;
+    room.respawned = true;
+    room.remaining = undefined;
+    room.encounter = r.weighted(ENCOUNTERS[dg.floor]);
+    any = true;
+  }
+  if (any) log(s, "멀리서 무언가 기어 나오는 소리가 들린다. 비워 둔 방에 새로운 기척이 생겼다.", "system");
 }
 
 /** 시간이 다 됐으면 강제 귀환. 전투 중이면 전투가 끝난 뒤 판정한다 */
@@ -216,7 +238,7 @@ function arrive(s: GameState, firstOfFloor: boolean): void {
       case "combat":
       case "boss": {
         room.known = true;
-        log(s, flavor(room, room.type), "story");
+        log(s, room.respawned ? "비워 두었던 방에 다시 무언가 자리를 잡았다." : flavor(room, room.type), "story");
         const enemies = room.remaining ?? makeEnemies(s, room.encounter ?? ["rat"]);
         room.remaining = undefined;
         startCombat(s, "dungeon", enemies);
@@ -551,10 +573,14 @@ export function afterDungeonCombat(s: GameState, outcome: "win" | "fled", c: Com
   const room = currentRoom(s);
   s.phase = "dungeon";
   const roomFight = room.type === "combat" || room.type === "boss";
-  const loot = Math.round(c.loot * MANA_FLOOR_MULT[dg.floor]) + c.bonus;
+  // 리젠된 몬스터의 마석은 절반(희귀 개체 보너스는 그대로)
+  const loot = Math.round(c.loot * MANA_FLOOR_MULT[dg.floor] * (roomFight && room.respawned ? BAL.respawnManaMult : 1)) + c.bonus;
   if (c.bonus > 0) remember(s, `희귀 개체를 잡아 마석 ${c.bonus}G 어치를 얻었다.`);
   if (outcome === "win") {
-    if (roomFight) room.resolved = true; // 야영 중 기습 전투는 방 사건과 무관
+    if (roomFight) {
+      room.resolved = true; // 야영 중 기습 전투는 방 사건과 무관
+      room.respawned = false;
+    }
     if (loot > 0) {
       dg.mana += loot;
       log(s, `쓰러진 적에게서 마석(${loot}G 어치)을 챙겼다.`, "good");
