@@ -60,3 +60,5 @@ Same pixel size and character height as the reference: realistic proportions, no
 Full body, centered, idle standing pose, feet visible, small margin around the character.
 Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, no frame or border. Square 1:1 image.
 ```
+
+결과(2026-10-13): 1차 생성본 채택 → `assets/reference/mage.png`(44×86, 지팡이 포함) = `public/mage.png`, 얼굴 `mage_face.png`(30×30, 전신 (3,0)에서 자름) = `public/mage-face.png`. 후처리 후 머리 위 마젠타 번짐 2픽셀을 손으로 지움(보석 보라색은 유지). 주머니보다는 기운 천 조각으로 나왔지만 톤이 맞아 채택
