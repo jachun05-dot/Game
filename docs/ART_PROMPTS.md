@@ -43,6 +43,8 @@ Full body, centered, idle standing pose, feet visible, small margin around the c
 Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, no frame or border. Square 1:1 image.
 ```
 
+결과(2026-10-13): 1차 생성본 채택 → `assets/reference/warrior.png`(35×86) = `public/warrior.png`, 얼굴 `warrior_face.png`(30×30, 전신 (4,0)에서 자름) = `public/warrior-face.png`. 직업별 그림 연결은 `src/ui/art.ts`의 `CLASS_ART`
+
 ## 003 — 마법사 전신 (기준 이미지 첨부)
 
 지급 장비: 참나무 지팡이(`staff`), 수습생 로브(`robe`, "주머니가 많다"). 지팡이 돌은 UI 기술 색 `--violet`(#9a7bc0)과 맞춘다.
