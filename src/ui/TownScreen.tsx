@@ -24,7 +24,7 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
       title={`${s.month}월 ${s.week}주차 · 영지`}
       header={
         <>
-          <HeroHeader s={s} />
+          <HeroHeader s={s} onOpen={() => ctl.setSheet(true)} />
           <WeekTrack month={s.month} week={s.week} />
         </>
       }
@@ -94,6 +94,9 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
 
       {tab === "me" && (
         <div className="stack">
+          <button className="btn primary wide" onClick={() => ctl.setSheet(true)}>
+            장비 · 전투 수치 자세히 보기
+          </button>
           <Card title="모험가 상태">
             <StatGrid s={s} />
             <GearList s={s} />

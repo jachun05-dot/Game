@@ -22,7 +22,7 @@ export function DungeonScreen({ ctl }: { ctl: Ctl }) {
       title={`${dg.sector}섹터 ${dg.floor}층 · 미궁`}
       header={
         <>
-          <HeroHeader s={s} extra={<span>마석 {dg.mana}G</span>} />
+          <HeroHeader s={s} onOpen={() => ctl.setSheet(true)} extra={<span>마석 {dg.mana}G</span>} />
           <div className="survival">
             <div>
               <span className="dim small">시간 <b className="num">{fmtTime(dg.turnsLeft)}</b></span>

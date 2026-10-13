@@ -8,7 +8,7 @@ export function SettlementScreen({ ctl }: { ctl: Ctl }) {
     <GameScreen
       ctl={ctl}
       title={`${st.month}월 정산`}
-      header={<HeroHeader s={s} />}
+      header={<HeroHeader s={s} onOpen={() => ctl.setSheet(true)} />}
       dock={
         <button className={`btn wide ${st.paid ? "primary" : "danger"}`} onClick={() => dispatch({ t: "closeSettlement" })}>
           {st.paid ? `${st.month + 1}월로 →` : "관공서로 끌려간다"}

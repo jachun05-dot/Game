@@ -4,6 +4,7 @@ import { GEAR, STAT_KEYS, STAT_LABEL } from "../game/data";
 import { SKILLS } from "../game/skills";
 import type { GameState } from "../game/types";
 import type { Ctl, Speed } from "./App";
+import { CharacterSheet } from "./CharacterSheet";
 
 export function Shell({ children, wide }: { children: ReactNode; wide?: boolean }) {
   return <main className={`shell${wide ? " wide" : ""}`}>{children}</main>;
@@ -42,14 +43,15 @@ export function GameScreen({ ctl, title, header, children, dock, dockClass }: { 
       {header && <div className="screen-head">{header}</div>}
       <div className="screen-body">{children}</div>
       {dock && <div className={`dock ${dockClass ?? ""}${ctl.busy ? " waiting" : ""}`}>{dock}</div>}
+      {ctl.sheet && <CharacterSheet ctl={ctl} />}
     </div>
   );
 }
 
-export function HeroHeader({ s, extra }: { s: GameState; extra?: ReactNode }) {
+export function HeroHeader({ s, extra, onOpen }: { s: GameState; extra?: ReactNode; onOpen?: () => void }) {
   const hp = maxHp(s);
   return (
-    <header className="hero-head">
+    <header className={`hero-head${onOpen ? " clickable" : ""}`} onClick={onOpen} role={onOpen ? "button" : undefined} aria-label={onOpen ? "캐릭터와 장비 보기" : undefined}>
       <img className="portrait" src="./hero-face.png" alt="" />
       <div className="hero-info">
         <div className="hero-name">
@@ -68,6 +70,7 @@ export function HeroHeader({ s, extra }: { s: GameState; extra?: ReactNode }) {
           <span>AC {heroAc(s)}</span>
           <span>등급 {s.rank}</span>
           {extra}
+          {onOpen && <span className="accent">장비 ›</span>}
         </div>
       </div>
     </header>
@@ -142,6 +145,9 @@ export function TopBar({ ctl, title }: { ctl: Ctl; title: ReactNode }) {
         ≡
       </button>
       <span className="topbar-title">{title}</span>
+      <button className="gear-btn" onClick={() => ctl.setSheet(true)} aria-label="캐릭터와 장비">
+        장비
+      </button>
       <button className={`gear-btn${open ? " on" : ""}`} onClick={() => setOpen(!open)} aria-expanded={open} aria-label="설정">
         ⚙ <span className="small">{ctl.speed === 0 ? "즉시" : `${ctl.speed}×`}{ctl.auto ? " · 자동" : ""}</span>
       </button>

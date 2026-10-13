@@ -29,6 +29,9 @@ export interface Ctl {
   auto: boolean;
   setAuto: (v: boolean) => void;
   goTitle: () => void;
+  /** 캐릭터(장비) 화면 열기/닫기 */
+  sheet: boolean;
+  setSheet: (v: boolean) => void;
 }
 
 const LINE_MS = 520;
@@ -40,6 +43,7 @@ export function App() {
   const [shown, setShown] = useState(() => loadRun()?.logCount ?? 0);
   const [speed, setSpeed] = useState<Speed>(2);
   const [auto, setAuto] = useState(false);
+  const [sheet, setSheet] = useState(false);
   const autoTimer = useRef<number | null>(null);
 
   useEffect(() => saveRun(s), [s]);
@@ -130,6 +134,8 @@ export function App() {
     auto,
     setAuto,
     goTitle,
+    sheet,
+    setSheet,
   };
 
   // 전투·던전이 끝나 결과 화면으로 넘어가도, 남은 로그(마지막 일격 등)는 먼저 다 보여준다

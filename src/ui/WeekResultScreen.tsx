@@ -15,7 +15,7 @@ export function WeekResultScreen({ ctl }: { ctl: Ctl }) {
     <GameScreen
       ctl={ctl}
       title={`${r.month}월 ${r.week}주차 결과`}
-      header={<HeroHeader s={s} />}
+      header={<HeroHeader s={s} onOpen={() => ctl.setSheet(true)} />}
       dock={
         <button className="btn primary wide" onClick={() => dispatch({ t: "closeWeek" })}>
           {toDungeon ? "미궁으로 →" : "다음 주 →"}

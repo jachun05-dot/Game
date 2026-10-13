@@ -33,6 +33,19 @@ export const GEAR: Record<string, { id: string; name: string; slot: "body" | "of
   cap: { id: "cap", name: "가죽 모자", slot: "head", ac: 1, price: 30, desc: "머리. AC +1" },
 };
 
+/** 장비 슬롯 9개(DESIGN 10절). 지금 상점에서 파는 건 몸통·왼손·머리뿐 */
+export const EQUIP_SLOTS: { key: string; name: string }[] = [
+  { key: "head", name: "머리" },
+  { key: "body", name: "몸통" },
+  { key: "main", name: "오른손" },
+  { key: "offhand", name: "왼손" },
+  { key: "waist", name: "허리" },
+  { key: "feet", name: "발" },
+  { key: "neck", name: "목걸이" },
+  { key: "ring1", name: "반지 1" },
+  { key: "ring2", name: "반지 2" },
+];
+
 /** 층이 깊을수록 마석 가치가 오른다 */
 export const MANA_FLOOR_MULT = [0, 1, 1.5, 2];
 
