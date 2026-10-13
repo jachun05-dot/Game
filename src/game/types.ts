@@ -191,6 +191,8 @@ export interface GameState {
   skills: string[];
   /** 흡수한 편린(fragments.ts의 id). 칸 수는 fragSlots(level) */
   fragments: string[];
+  /** 몬스터 도감. 새 삶을 시작할 때 Meta의 도감을 복사해 오고, 바뀌면 다시 Meta에 합친다 */
+  codex: Codex;
   tactics: Tactics;
   /** 미궁 한 번 들어갈 때 1회 쓰는 기술 중 이미 쓴 것 */
   tripUsed: string[];
@@ -214,7 +216,20 @@ export interface GameState {
   nextUid: number;
 }
 
+/** 몬스터 도감(삶을 넘어 이어진다 — Meta에 합쳐 저장) */
+export interface Codex {
+  /** 마주친 몬스터 id */
+  seen: string[];
+  /** 몬스터별 처치 수 */
+  kills: Record<string, number>;
+  /** 떨어지는 걸 본 편린 */
+  fragSeen: string[];
+  /** 흡수해 본 편린(이것만 능력치를 안다) */
+  fragKnown: string[];
+}
+
 export interface Meta {
   graveyard: Tomb[];
   faiths: string[];
+  codex: Codex;
 }

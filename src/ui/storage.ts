@@ -1,4 +1,5 @@
 import type { GameState, Meta, Tomb } from "../game/types";
+import { emptyCodex, mergeCodex } from "../game/fragments";
 
 const RUN_KEY = "ddd-run-v1";
 const META_KEY = "ddd-meta-v1";
@@ -9,22 +10,31 @@ export function loadRun(): GameState | null {
   try {
     const raw = localStorage.getItem(RUN_KEY);
     if (!raw) return null;
-    const s = JSON.parse(raw) as GameState;
-    if (s.version !== 1) return null;
-    // 기술·자동 전투 이전 저장 데이터 보정
-    s.skills ??= [];
-    s.tactics ??= { potionAt: 35, fleeAt: 0 };
-    s.tripUsed ??= [];
-    s.hero.cls ??= "adventurer";
-    s.inventory.heart ??= 0;
-    s.fragments ??= [];
-    if (s.phase !== "create") s.gear.main ??= "shortsword";
-    if ((s.phase as string) === "combat") s.phase = "town";
-    s.combat = null;
-    return s;
+    return fixRun(JSON.parse(raw) as GameState);
   } catch {
     return null;
   }
+}
+
+/** 예전 저장 데이터 보정 */
+function fixRun(s: GameState | null): GameState | null {
+  if (!s || s.version !== 1) return null;
+  // 기술·자동 전투·편린 이전 저장 데이터 보정
+  s.skills ??= [];
+  s.tactics ??= { potionAt: 35, fleeAt: 0 };
+  s.tripUsed ??= [];
+  s.hero.cls ??= "adventurer";
+  s.inventory.heart ??= 0;
+  if (s.phase !== "create") s.gear.main ??= "shortsword";
+  if ((s.phase as string) === "combat") s.phase = "town";
+  s.combat = null;
+  s.fragments ??= [];
+  s.codex = mergeCodex(s.codex ?? emptyCodex(), { ...emptyCodex(), fragKnown: s.fragments });
+  return s;
+}
+
+function fixMeta(m: Partial<Meta> | null | undefined): Meta {
+  return { graveyard: m?.graveyard ?? [], faiths: m?.faiths ?? [], codex: m?.codex ? mergeCodex(emptyCodex(), m.codex) : emptyCodex() };
 }
 
 export function saveRun(s: GameState | null): void {
@@ -39,11 +49,11 @@ export function saveRun(s: GameState | null): void {
 export function loadMeta(): Meta {
   try {
     const raw = localStorage.getItem(META_KEY);
-    if (raw) return JSON.parse(raw) as Meta;
+    if (raw) return fixMeta(JSON.parse(raw) as Meta);
   } catch {
     /* ignore */
   }
-  return { graveyard: [], faiths: [] };
+  return fixMeta(null);
 }
 
 export function saveMeta(m: Meta): void {
@@ -57,7 +67,7 @@ export function saveMeta(m: Meta): void {
 export function buryTomb(m: Meta, t: Tomb): Meta {
   if (m.graveyard.some((x) => x.id === t.id)) return m;
   const faiths = [...new Set([...m.faiths, ...t.faithsUnlocked])];
-  return { graveyard: [t, ...m.graveyard].slice(0, 200), faiths };
+  return { ...m, graveyard: [t, ...m.graveyard].slice(0, 200), faiths };
 }
 
 export function exportSave(run: GameState | null, meta: Meta): string {
@@ -68,7 +78,7 @@ export function importSave(text: string): { run: GameState | null; meta: Meta } 
   try {
     const d = JSON.parse(text);
     if (d?.app !== "ddd" || d.v !== 1) return null;
-    return { run: d.run ?? null, meta: d.meta ?? { graveyard: [], faiths: [] } };
+    return { run: fixRun(d.run ?? null), meta: fixMeta(d.meta) };
   } catch {
     return null;
   }

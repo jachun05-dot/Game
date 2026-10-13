@@ -12,6 +12,8 @@ import { DungeonScreen } from "./DungeonScreen";
 import { SettlementScreen } from "./SettlementScreen";
 import { DeadScreen } from "./DeadScreen";
 import { GraveyardScreen } from "./GraveyardScreen";
+import { CodexScreen } from "./CodexScreen";
+import { mergeCodex } from "../game/fragments";
 import { GameScreen, HeroHeader, LogView } from "./components";
 
 export type Speed = 1 | 2 | 4 | 8 | 0; // 0 = 즉시
@@ -29,6 +31,8 @@ export interface Ctl {
   auto: boolean;
   setAuto: (v: boolean) => void;
   goTitle: () => void;
+  /** 몬스터 도감 열기 */
+  openCodex: () => void;
   /** 캐릭터(장비) 화면 열기/닫기 */
   sheet: boolean;
   setSheet: (v: boolean) => void;
@@ -39,12 +43,13 @@ const LINE_MS = 520;
 export function App() {
   const [s, setS] = useState<GameState | null>(() => loadRun());
   const [meta, setMeta] = useState<Meta>(() => loadMeta());
-  const [view, setView] = useState<"title" | "game" | "graveyard">("title");
+  const [view, setView] = useState<"title" | "game" | "graveyard" | "codex">("title");
   const [shown, setShown] = useState(() => loadRun()?.logCount ?? 0);
   const [speed, setSpeed] = useState<Speed>(2);
   const [auto, setAuto] = useState(false);
   const [sheet, setSheet] = useState(false);
   const autoTimer = useRef<number | null>(null);
+  const codexFrom = useRef<"title" | "game">("title");
 
   useEffect(() => saveRun(s), [s]);
   useEffect(() => saveMeta(meta), [meta]);
@@ -53,6 +58,15 @@ export function App() {
   useEffect(() => {
     if (s?.phase === "dead" && s.tomb) setMeta((m) => buryTomb(m, s.tomb!));
   }, [s?.phase, s?.tomb]);
+
+  // 도감은 삶을 넘어 이어진다: 진행 중인 삶의 도감을 Meta에 합친다
+  useEffect(() => {
+    if (!s?.codex) return;
+    setMeta((m) => {
+      const c = mergeCodex(m.codex, s.codex);
+      return JSON.stringify(c) === JSON.stringify(m.codex) ? m : { ...m, codex: c };
+    });
+  }, [s?.codex]);
 
   const total = s?.logCount ?? 0;
   const busy = shown < total;
@@ -92,6 +106,7 @@ export function App() {
   const startNew = () => {
     const seed = (Date.now() ^ Math.floor(Math.random() * 1e9)) | 0;
     const run = newRun(seed);
+    run.codex = structuredClone(meta.codex);
     setS(run);
     setShown(0);
     setAuto(false);
@@ -99,6 +114,8 @@ export function App() {
   };
 
   const goTitle = () => setView("title");
+
+  if (view === "codex") return <CodexScreen codex={s ? mergeCodex(meta.codex, s.codex) : meta.codex} onBack={() => setView(s && s.phase !== "dead" && s.phase !== "create" && codexFrom.current === "game" ? "game" : "title")} />;
 
   if (view === "graveyard") return <GraveyardScreen meta={meta} onBack={() => setView(s && s.phase !== "dead" ? "game" : "title")} />;
 
@@ -113,6 +130,10 @@ export function App() {
           setView("game");
         }}
         onGraveyard={() => setView("graveyard")}
+        onCodex={() => {
+          codexFrom.current = "title";
+          setView("codex");
+        }}
         onImport={(run, m) => {
           setS(run);
           setMeta(m);
@@ -134,6 +155,11 @@ export function App() {
     auto,
     setAuto,
     goTitle,
+    openCodex: () => {
+      codexFrom.current = "game";
+      setSheet(false);
+      setView("codex");
+    },
     sheet,
     setSheet,
   };

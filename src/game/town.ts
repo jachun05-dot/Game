@@ -1,7 +1,7 @@
 import { josa } from "./josa";
 import { BAL, FEED, FIELD_ENCOUNTERS, NAMES, RIVAL_NEWS, RIVALS, RUMORS, STAT_KEYS, STAT_LABEL, TRAININGS } from "./data";
 import { addStat, emptyStats, kill, log, maxHp, rngOf, taxDue, topBehavior, yearOf } from "./core";
-import { fragSlots } from "./fragments";
+import { FRAGMENTS, emptyCodex, fragSlots } from "./fragments";
 import { makeEnemies, startCombat } from "./combat";
 import { Rng } from "./rng";
 import { CLASSES, type ClassId } from "./classes";
@@ -24,6 +24,7 @@ export function newRun(seed: number): GameState {
     gear: {},
     skills: [],
     fragments: [],
+    codex: emptyCodex(),
     tactics: { potionAt: 35, fleeAt: 0 },
     tripUsed: [],
     rank: 0,
@@ -254,6 +255,16 @@ export function sell(s: GameState, item: keyof typeof BAL.prices): void {
   if (s.phase !== "town" || s.inventory[item] <= 0) return;
   s.gold += Math.floor(BAL.prices[item] / 2);
   s.inventory[item] -= 1;
+}
+
+/** 신전: 큰돈을 내고 편린 하나를 지운다(시간은 들지 않는다) */
+export function eraseFrag(s: GameState, index: number): void {
+  const id = s.fragments[index];
+  if (s.phase !== "town" || id === undefined || s.gold < BAL.fragEraseCost) return;
+  s.gold -= BAL.fragEraseCost;
+  s.fragments.splice(index, 1);
+  s.hero.hp = Math.min(s.hero.hp, maxHp(s));
+  log(s, `신전 사제가 ${BAL.fragEraseCost}G를 받고 주문을 외웠다. ${josa(FRAGMENTS[id].name, "이")} 몸에서 빠져나가 흩어졌다.`, "system");
 }
 
 /** 주간 결과 카드를 닫고 다음 주로. 3주차가 끝나면 던전 */

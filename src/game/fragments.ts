@@ -1,4 +1,4 @@
-import type { GameState, StatKey, Stats } from "./types";
+import type { Codex, GameState, StatKey, Stats } from "./types";
 
 // 편린(2026-10-13): 몬스터를 쓰러뜨리면 아주 드물게(최대 3%) 그 몬스터 힘의 조각이 남는다.
 // 흡수하면 능력치가 오르고, 몬스터에 따라 패시브/액티브 능력이 붙는다(능력 없는 편린도 있다).
@@ -52,6 +52,23 @@ const STAT_NAME: Record<StatKey, string> = { str: "힘", dex: "민첩", con: "�
 
 export function fragStatText(id: string): string {
   return (Object.entries(FRAGMENTS[id].stats) as [StatKey, number][]).map(([k, v]) => `${STAT_NAME[k]} +${v}`).join(" · ");
+}
+
+export function emptyCodex(): Codex {
+  return { seen: [], kills: {}, fragSeen: [], fragKnown: [] };
+}
+
+/** 두 도감을 합친다(처치 수는 큰 쪽) */
+export function mergeCodex(a: Codex, b: Codex): Codex {
+  const kills = { ...a.kills };
+  for (const [k, v] of Object.entries(b.kills)) kills[k] = Math.max(kills[k] ?? 0, v);
+  const u = (x: string[], y: string[]) => [...new Set([...x, ...y])];
+  return { seen: u(a.seen, b.seen), kills, fragSeen: u(a.fragSeen, b.fragSeen), fragKnown: u(a.fragKnown, b.fragKnown) };
+}
+
+/** 흡수해 본 편린인지(아니면 능력치를 모른다) */
+export function fragKnown(s: GameState, id: string): boolean {
+  return s.codex.fragKnown.includes(id);
 }
 
 /** 봇·자동 결정용 대략 가치 */

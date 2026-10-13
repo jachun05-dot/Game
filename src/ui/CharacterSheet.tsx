@@ -96,6 +96,9 @@ export function CharacterSheet({ ctl }: { ctl: Ctl }) {
 
           <Card title="편린">
             <FragList s={s} />
+            <button className="btn small" onClick={ctl.openCodex}>
+              몬스터 도감 보기
+            </button>
           </Card>
 
           <Card title="소지품">

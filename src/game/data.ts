@@ -32,6 +32,8 @@ export const BAL = {
   heartName: "거대 쥐의 마석 심장",
   /** 층마다 희귀 개체가 나올 확률 */
   rareChance: 0.008,
+  /** 신전에서 편린 하나를 지우는 값 */
+  fragEraseCost: 1000,
   /** 함정 발견 후 숨은 고블린을 알아채는 감각 DC */
   ambushSpotDc: 13,
 } as const;

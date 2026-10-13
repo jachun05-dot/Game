@@ -5,6 +5,7 @@ import { CLASSES } from "../game/classes";
 import { canTrain, needsHeart, nextSkill, trainCost } from "../game/town";
 import type { GameState } from "../game/types";
 import { SKILLS } from "../game/skills";
+import { FRAGMENTS, fragStatText } from "../game/fragments";
 import { taxDue, yearOf } from "../game/core";
 import type { StatKey } from "../game/types";
 import type { Ctl } from "./App";
@@ -20,6 +21,7 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
   const { s, dispatch, busy } = ctl;
   const [training, setTraining] = useState(false);
   const [tab, setTab] = useState<"act" | "shop" | "me">("act");
+  const [erase, setErase] = useState<number | null>(null);
 
   return (
     <GameScreen
@@ -39,7 +41,7 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
           이번 주 할 일
         </button>
         <button className={tab === "shop" ? "on" : ""} onClick={() => setTab("shop")}>
-          상점가 · 대장간
+          상점가 · 대장간 · 신전
         </button>
         <button className={tab === "me" ? "on" : ""} onClick={() => setTab("me")}>
           모험가
@@ -53,9 +55,14 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
           <ActivityButton title="탐문" sub="술집 · 소문을 듣고 잔일을 구한다" disabled={busy} onClick={() => dispatch({ t: "activity", a: "rumor" })} />
           <ActivityButton title="외부 탐험" sub="영지 밖 숲 · 작은 전투, 마석 획득 (위험)" disabled={busy} onClick={() => dispatch({ t: "activity", a: "field" })} />
           <p className="dim small">{yearOf(s.month)}년차 · 다음 달 세금: {taxDue(s.month + 1)}G (미납 시 처형 · 해가 바뀔 때마다 {BAL.taxPerYear}G씩 오른다)</p>
-          <button className="btn ghost small" onClick={onGraveyard}>
-            묘지 들르기
-          </button>
+          <div className="row">
+            <button className="btn ghost small" onClick={onGraveyard}>
+              묘지 들르기
+            </button>
+            <button className="btn ghost small" onClick={ctl.openCodex}>
+              몬스터 도감
+            </button>
+          </div>
         </div>
       )}
 
@@ -98,6 +105,31 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
                 );
               })}
             <p className="dim small">반지·목걸이와 좋은 장비는 미궁 보물상자에서만 나온다.</p>
+          </Card>
+          <Card title="신전">
+            <p className="dim small">사제에게 큰돈을 바치면 몸에 새긴 편린 하나를 지워 준다. 지운 편린은 돌아오지 않는다.</p>
+            {s.fragments.length === 0 && <p className="dim small">지울 편린이 없다.</p>}
+            {s.fragments.map((id, i) => (
+              <div key={i} className="shop-row">
+                <div>
+                  <b>{FRAGMENTS[id].name}</b>
+                  <div className="accent small">{fragStatText(id)}</div>
+                </div>
+                {/* 미리보기 등에서 confirm 창이 막힐 수 있어 버튼을 두 번 누르게 한다 */}
+                <button
+                  className={`btn small${erase === i ? " danger" : ""}`}
+                  disabled={busy || s.gold < BAL.fragEraseCost}
+                  onClick={() => {
+                    if (erase === i) {
+                      dispatch({ t: "eraseFrag", index: i });
+                      setErase(null);
+                    } else setErase(i);
+                  }}
+                >
+                  {erase === i ? "정말 지운다" : `지우기 ${BAL.fragEraseCost}G`}
+                </button>
+              </div>
+            ))}
           </Card>
         </div>
       )}

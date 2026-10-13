@@ -44,6 +44,7 @@ export function startCombat(s: GameState, context: CombatState["context"], enemi
   const c: CombatState = { context, enemies, round: 1, loot: 0, bonus: 0, frags: [], used: {}, guard: null };
   s.combat = c;
   log(s, `${josa(describeGroup(enemies), "이")} 나타났다!`, "hurt");
+  for (const e of enemies) if (!s.codex.seen.includes(e.defId)) s.codex.seen.push(e.defId);
   for (const e of enemies) {
     const def = MONSTERS[e.defId];
     if (def.rare) log(s, `【희귀 개체】 ${def.name} — ${def.note} 놓치기 전에 잡아야 한다! (마석 ${def.mana}G 어치)`, "crit");
@@ -142,10 +143,12 @@ function gainLoot(s: GameState, c: CombatState, defId: string): void {
   const def = MONSTERS[defId];
   if (def.rare) c.bonus += def.mana;
   else c.loot += def.mana;
+  s.codex.kills[defId] = (s.codex.kills[defId] ?? 0) + 1;
   // 편린은 미궁 안에서만 맺힌다
   const f = FRAGMENTS[defId];
   if (c.context === "dungeon" && f && rngOf(s).chance(f.chance)) {
     c.frags.push(defId);
+    if (!s.codex.fragSeen.includes(defId)) s.codex.fragSeen.push(defId);
     log(s, `쓰러진 ${def.name}의 몸에서 희미한 빛 조각이 떠오른다 — 편린이다!`, "crit");
   }
 }

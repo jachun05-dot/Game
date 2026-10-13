@@ -4,7 +4,7 @@ import type { PendingChoice } from "../game/dungeon";
 import type { DungeonState } from "../game/types";
 import { BAL } from "../game/data";
 import { GEAR, gearEffect, targetSlot } from "../game/gear";
-import { FRAGMENTS, TIER_LABEL, fragSlots, fragStatText } from "../game/fragments";
+import { FRAGMENTS, TIER_LABEL, fragKnown, fragSlots, fragStatText } from "../game/fragments";
 import { SKILLS } from "../game/skills";
 import type { Ctl } from "./App";
 import { Bar, GameScreen, HeroHeader, LogView } from "./components";
@@ -115,23 +115,35 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
     const sk = f.skill ? SKILLS[f.skill] : null;
     const slots = fragSlots(s.hero.level);
     const full = s.fragments.length >= slots;
+    const known = fragKnown(s, id);
     return (
       <>
         <p className="dock-title">편린이 남았다 — 흡수할까? <span className="dim small">(칸 {s.fragments.length}/{slots})</span></p>
-        <div className="loot-card">
-          <b>
-            {f.name} <span className="dim small">{TIER_LABEL[f.tier]}</span>
-          </b>
-          <span className="accent small">{fragStatText(id)}</span>
-          {sk ? (
-            <span className="small">
-              【{sk.name}】 {sk.kind === "active" ? "자동 발동" : "패시브"} · {sk.desc}
-            </span>
-          ) : (
-            <span className="dim small">특별한 능력은 없다.</span>
-          )}
-          <span className="dim small">{f.flavor}</span>
-        </div>
+        {known ? (
+          <div className="loot-card">
+            <b>
+              {f.name} <span className="dim small">{TIER_LABEL[f.tier]}</span>
+            </b>
+            <span className="accent small">{fragStatText(id)}</span>
+            {sk ? (
+              <span className="small">
+                【{sk.name}】 {sk.kind === "active" ? "자동 발동" : "패시브"} · {sk.desc}
+              </span>
+            ) : (
+              <span className="dim small">특별한 능력은 없다.</span>
+            )}
+            <span className="dim small">{f.flavor}</span>
+          </div>
+        ) : (
+          <div className="loot-card">
+            <b>
+              {f.name} <span className="dim small">처음 보는 편린</span>
+            </b>
+            <span className="accent small">능력치 ???</span>
+            <span className="small">능력 ???</span>
+            <span className="dim small">흡수해 보기 전에는 무엇을 줄지 알 수 없다. 흡수하면 도감에 기록된다.</span>
+          </div>
+        )}
         <div className="choices">
           {!full && (
             <button className="btn primary" disabled={busy} onClick={() => go({ t: "pending", choice: "absorb" })}>

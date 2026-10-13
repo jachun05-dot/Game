@@ -5,7 +5,7 @@ import { newRun } from "./town";
 import { act, apply } from "./engine";
 import { botAction } from "./bot";
 import { STAT_KEYS, BAL, MONSTERS } from "./data";
-import { FRAGMENTS, FRAG_MAX_CHANCE, fragSlots } from "./fragments";
+import { FRAGMENTS, FRAG_MAX_CHANCE, fragKnown, fragSlots } from "./fragments";
 import { stat, taxDue } from "./core";
 import { allSkills } from "./skills";
 import type { GameState } from "./types";
@@ -280,5 +280,34 @@ describe("세금", () => {
     expect(taxDue(12)).toBe(BAL.taxBase);
     expect(taxDue(13)).toBe(BAL.taxBase + BAL.taxPerYear);
     expect(taxDue(25)).toBe(BAL.taxBase + BAL.taxPerYear * 2);
+  });
+});
+
+describe("편린 도감과 신전", () => {
+  it("처음 흡수하는 편린은 도감에 기록되고, 전투하면 마주친 몬스터·처치 수가 쌓인다", () => {
+    const s = playBot(3, 4000);
+    expect(s.codex.seen.length).toBeGreaterThan(0);
+    expect(Object.values(s.codex.kills).reduce((a, b) => a + b, 0)).toBeGreaterThan(0);
+    const t = newRun(5);
+    apply(t, { t: "create", name: "x", candidate: 0, faith: null });
+    t.week = 3;
+    t.phase = "week-result";
+    apply(t, { t: "closeWeek" });
+    expect(fragKnown(t, "rat")).toBe(false);
+    t.dungeon!.pending = { kind: "frag", frag: "rat" };
+    apply(t, { t: "pending", choice: "absorb" });
+    expect(fragKnown(t, "rat")).toBe(true);
+  });
+  it("신전에서 1000G를 내야 편린을 지울 수 있다", () => {
+    const s = newRun(5);
+    apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    s.fragments = ["rat"];
+    s.gold = BAL.fragEraseCost - 1;
+    apply(s, { t: "eraseFrag", index: 0 });
+    expect(s.fragments).toEqual(["rat"]);
+    s.gold = BAL.fragEraseCost + 5;
+    apply(s, { t: "eraseFrag", index: 0 });
+    expect(s.fragments).toEqual([]);
+    expect(s.gold).toBe(5);
   });
 });

@@ -1,7 +1,7 @@
 import { josa } from "./josa";
 import { BAL, ENCOUNTERS, MANA_FLOOR_MULT, MIN_COMBAT_ROOMS, MONSTERS, RARE_BY_FLOOR, RECORDS, ROOM_FLAVOR, TRAP_AMBUSH } from "./data";
 import { check, isDead, kill, log, maxHp, note, remember, rngOf, smod } from "./core";
-import { FRAGMENTS, fragSlots, fragStatText } from "./fragments";
+import { FRAGMENTS, fragKnown, fragSlots, fragStatText } from "./fragments";
 import { SKILLS } from "./skills";
 import { describeGroup, makeEnemies, potionHeal, startCombat } from "./combat";
 import { hungerMult } from "./skills";
@@ -516,7 +516,7 @@ function offerFrag(s: GameState, frags: string[]): void {
   if (frags.length === 0) return;
   const best = [...frags].sort((a, b) => FRAGMENTS[b].tier - FRAGMENTS[a].tier)[0];
   const f = FRAGMENTS[best];
-  log(s, `${f.name} — ${f.flavor}`, "story");
+  log(s, fragKnown(s, best) ? `${f.name} — ${f.flavor}` : `${f.name} — 처음 보는 빛이다. 흡수해 보기 전에는 무엇을 줄지 알 수 없다.`, "story");
   if (frags.length > 1) log(s, "편린이 여럿 떠올랐지만, 손에 잡히는 것은 하나뿐이다.", "system");
   offer(s, { kind: "frag", frag: best });
 }
@@ -538,6 +538,10 @@ function resolveFrag(s: GameState, id: string, choice: PendingChoice): void {
     return;
   }
   const skill = f.skill ? SKILLS[f.skill] : null;
+  if (!fragKnown(s, id)) {
+    s.codex.fragKnown.push(id);
+    log(s, `처음 흡수한 편린이다 — ${f.flavor} (도감에 기록되었다)`, "story");
+  }
   remember(s, `${josa(f.name, "을")} 흡수했다.`);
   log(s, `${josa(f.name, "을")} 흡수했다! ${fragStatText(id)}${skill ? ` · 능력 【${skill.name}】 ${skill.desc}` : ""}`, "good");
 }

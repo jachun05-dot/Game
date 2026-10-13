@@ -9,10 +9,11 @@ interface Props {
   onNew: () => void;
   onContinue: () => void;
   onGraveyard: () => void;
+  onCodex: () => void;
   onImport: (run: GameState | null, meta: Meta) => void;
 }
 
-export function TitleScreen({ run, meta, onNew, onContinue, onGraveyard, onImport }: Props) {
+export function TitleScreen({ run, meta, onNew, onContinue, onGraveyard, onCodex, onImport }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [msg, setMsg] = useState("");
   const canContinue = run && run.phase !== "dead" && run.phase !== "create";
@@ -64,6 +65,9 @@ export function TitleScreen({ run, meta, onNew, onContinue, onGraveyard, onImpor
         </button>
         <button className="btn" onClick={onGraveyard}>
           묘지 <span className="dim">— 잠든 모험가 {meta.graveyard.length}명</span>
+        </button>
+        <button className="btn" onClick={onCodex}>
+          몬스터 도감 <span className="dim">— 발견 {meta.codex.seen.length}종</span>
         </button>
       </div>
 
