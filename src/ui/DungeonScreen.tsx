@@ -8,7 +8,7 @@ import { FRAGMENTS, TIER_LABEL, fragKnown, fragSlots, fragStatText } from "../ga
 import { SKILLS } from "../game/skills";
 import type { Ctl } from "./App";
 import { josa } from "../game/josa";
-import { godOf } from "../game/faith";
+import { godOf, power } from "../game/faith";
 import { Bar, FragIcon, GameScreen, HeroHeader, LogView } from "./components";
 
 function fmtTime(turns: number): string {
@@ -189,6 +189,11 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
                 {o.label}
               </button>
             ))}
+          {dg.pending.kind === "trap" && room.trapKind === "pit" && power(s, "abyss", 1) && dg.floor < 3 && (
+            <button className="btn" disabled={busy} onClick={() => go({ t: "pending", choice: "jump" })}>
+              심연으로 뛰어내린다 <span className="dim small">· 아래층 지름길 (1d6 피해)</span>
+            </button>
+          )}
           {dg.pending.kind === "shrine" &&
             s.faithsKnown.map((f, i) =>
               f === s.hero.faith || !godOf(f) ? null : (

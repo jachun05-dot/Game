@@ -37,6 +37,8 @@ export interface Enemy {
   acDown?: number;
   /** 희귀 개체가 달아났음 */
   fled?: boolean;
+  /** 역병의 신 ★2 "전염"으로 병들었다(라운드마다 1d3) */
+  sick?: boolean;
 }
 
 export interface CombatState {

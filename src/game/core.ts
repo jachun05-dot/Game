@@ -4,7 +4,7 @@ import { CLASSES } from "./classes";
 import { Rng } from "./rng";
 import { passive } from "./skills";
 import { fragStat } from "./fragments";
-import { power } from "./faith";
+import { abyssEdge, faithMaxHp, power } from "./faith";
 import { rageAc, rollMindPenalty } from "./mind";
 import { injuryAc, injuryMaxHp, injuryRollPenalty, offhandAcPenalty } from "./injury";
 import type { DeathCause, GameState, LogKind, StatKey, Stats } from "./types";
@@ -35,11 +35,11 @@ export function mod(v: number): number {
 export function maxHp(s: GameState): number {
   // DESIGN 7·8절: CON 보정치가 레벨마다 고정 누적. 기본 HP는 미정이라 임시값.
   const cls = CLASSES[s.hero.cls];
-  return Math.max(1, BAL.baseHp + cls.hp + (Math.max(BAL.minHpPerLevel, smod(s, "con")) + cls.hpPerLevel) * s.hero.level + passive(s, "hp") + injuryMaxHp(s));
+  return Math.max(1, BAL.baseHp + cls.hp + (Math.max(BAL.minHpPerLevel, smod(s, "con")) + cls.hpPerLevel) * s.hero.level + passive(s, "hp") + injuryMaxHp(s) + faithMaxHp(s));
 }
 
 export function heroAc(s: GameState): number {
-  return 10 + smod(s, "dex") + passive(s, "ac") + injuryAc(s) + offhandAcPenalty(s) + rageAc(s);
+  return 10 + smod(s, "dex") + passive(s, "ac") + injuryAc(s) + offhandAcPenalty(s) + rageAc(s) + abyssEdge(s, s.hero.hp / maxHp(s)).ac;
 }
 
 export function actionsPerRound(s: GameState): number {

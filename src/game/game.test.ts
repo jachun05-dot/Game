@@ -618,3 +618,49 @@ describe("정신 상태이상", () => {
     expect(got).toBeGreaterThan(0);
   });
 });
+
+describe("새 세 신", () => {
+  const believer = (name: string, piety = 95, seed = 4) => {
+    const s = newRun(seed);
+    s.faithsKnown = [name];
+    apply(s, { t: "create", name: "x", candidate: 0, faith: name });
+    s.piety = piety;
+    s.week = 3;
+    s.phase = "week-result";
+    apply(s, { t: "closeWeek" });
+    return s;
+  };
+  it("역병의 신도는 병을 품고 시작하고, ★1: 병이 HP를 깎지 않는다, ★3: 병든 동안 최대 HP +4", () => {
+    const s = believer(FAITH.plague);
+    expect(s.disease).toBe(1);
+    s.disease = 0;
+    const hp0 = maxHp(s);
+    s.disease = 2;
+    expect(maxHp(s)).toBe(hp0 + 4);
+    const hp = s.hero.hp;
+    const nb = s.dungeon!.rooms[s.dungeon!.current].edges[0];
+    s.injuries.body = 0;
+    apply(s, { t: "move", room: nb });
+    if (!s.combat && s.phase === "dungeon" && !s.log.some((l) => l.text.includes("피해"))) expect(s.hero.hp).toBeGreaterThanOrEqual(hp);
+    expect(s.log.some((l) => l.text.includes("열에 들떠"))).toBe(false);
+  });
+  it("망각의 신 ★2: 머리 부상이 몸통으로 간다, ★3: 전투 시작 때 적이 1라운드 쉰다", () => {
+    const s = believer(FAITH.oblivion);
+    wound(s, "head", "테스트");
+    expect(s.injuries.head).toBe(0);
+    expect(s.injuries.body).toBe(1);
+    startCombat(s, "dungeon", makeEnemies(s, ["rat"]));
+    expect(s.log.some((l) => l.text.includes("망각의 장막"))).toBe(true);
+  });
+  it("심연의 신 ★1: 꺼진 바닥으로 뛰어내려 아래층으로 간다", () => {
+    const s = believer(FAITH.abyss);
+    const dg = s.dungeon!;
+    dg.floor = 2;
+    const room = dg.rooms.find((r) => r.type === "trap")!;
+    room.trapKind = "pit";
+    dg.current = room.id;
+    dg.pending = { kind: "trap" };
+    apply(s, { t: "pending", choice: "jump" });
+    expect(s.dungeon!.floor).toBe(3);
+  });
+});

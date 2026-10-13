@@ -12,7 +12,7 @@ import type { ClassId } from "../src/game/classes";
 
 const N = Number(process.argv[2] ?? 1000);
 const only = process.argv[3];
-const ALL = [FAITH.mob, FAITH.starve, FAITH.trap, FAITH.tax, FAITH.song];
+const ALL = [FAITH.mob, FAITH.starve, FAITH.trap, FAITH.tax, FAITH.song, FAITH.plague, FAITH.abyss, FAITH.oblivion];
 const gods: (string | null)[] = only ? [only === "none" ? null : only] : [null, ...ALL];
 for (const faith of gods) {
   let m1dead = 0, clear = 0, alive12 = 0, star = 0, inq = 0, total = 0;

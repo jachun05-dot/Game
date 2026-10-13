@@ -110,6 +110,7 @@ export function createHero(s: GameState, name: string, candidate: number, faith:
   // 권능이 정해진 신만 섬길 수 있다(역병·심연·망각은 해금만 되고 권능은 준비 중)
   s.hero.faith = faith && godOf(faith) && (s.faithsKnown.includes(faith) || s.faithsKnown.length === 0) ? faith : null;
   s.piety = s.hero.faith ? FAITH_BAL.start : 0;
+  if (god(s) === "plague") s.disease = Math.max(s.disease, 1); // 역병의 신도는 병을 품고 시작한다
   const cls = CLASSES[s.hero.cls];
   s.gear = { ...cls.start };
   s.gold = BAL.startGold;
@@ -283,6 +284,7 @@ export function inn(s: GameState): void {
   }
   if (s.disease > 0) {
     s.disease -= 1;
+    pray(s, "plague", -5);
     lines.push(s.disease ? "열이 조금 내렸다. (쥐 열병 경상)" : "열이 내렸다. 쥐 열병이 나았다.");
     healed++;
   }
@@ -329,6 +331,7 @@ export function useHerb(s: GameState): void {
   if (s.combat || s.inventory.herb <= 0 || s.disease <= 0 || (s.phase !== "town" && s.phase !== "dungeon")) return;
   s.inventory.herb -= 1;
   s.disease -= 1;
+  pray(s, "plague", -5);
   log(s, s.disease ? "쓴 탕약을 삼켰다. 열이 조금 내렸다." : "쓴 탕약을 삼켰다. 열이 내렸다.", "good");
 }
 
@@ -482,6 +485,7 @@ export function convert(s: GameState, name: string): void {
   }
   s.hero.faith = name;
   s.piety = FAITH_BAL.start;
+  if (god(s) === "plague") s.disease = Math.max(s.disease, 1);
   log(s, `${name} 앞에 무릎 꿇었다. 새로운 신앙이 시작된다.`, "story");
 }
 

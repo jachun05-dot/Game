@@ -2,6 +2,7 @@
 import { GEAR, gearScore, targetSlot } from "./gear";
 import { CLASSES } from "./classes";
 import { INJ, PARTS } from "./injury";
+import { god, power } from "./faith";
 import { fragScore, fragSlots } from "./fragments";
 import { heroAc, maxHp, smod } from "./core";
 import { canTrain, nextSkill, shopPrice, trainCost } from "./town";
@@ -35,10 +36,11 @@ function townAction(s: GameState): Action {
   for (const p of ["main", "offhand", "feet"] as const) {
     if (s.injuries[p] >= 3 && !s.prosthetic[p] && s.gold >= INJ.prostheticCost) return { t: "prosthetic", part: p };
   }
-  if (s.disease > 0 && s.inventory.herb > 0) return { t: "herb" };
+  const keepSick = god(s) === "plague"; // 역병의 신도는 병을 고치지 않는다
+  if (!keepSick && s.disease > 0 && s.inventory.herb > 0) return { t: "herb" };
   // 눈치챈 정신 상태이상이 둘 이상이면(조합이 터질 수 있으니) 여관에서 쉰다
   const minds = Object.values(s.mind).filter((m) => m?.known).length;
-  if ((PARTS.some((p) => s.injuries[p] === 2) || s.disease > 0 || minds >= 2) && s.gold >= INJ.innCost) return { t: "activity", a: "inn" };
+  if ((PARTS.some((p) => s.injuries[p] === 2) || (s.disease > 0 && !keepSick) || minds >= 2) && s.gold >= INJ.innCost) return { t: "activity", a: "inn" };
   // 미궁 준비물(고기 4, 물약 2) 살 돈은 항상 남겨 둔다
   const supply = Math.max(0, 4 - s.inventory.food) * shopPrice(s, "food") + Math.max(0, 2 - s.inventory.potion) * shopPrice(s, "potion");
   const spare = s.gold - supply;
@@ -67,11 +69,13 @@ function dungeonAction(s: GameState): Action | null {
   if (dg.pending) {
     switch (dg.pending.kind) {
       case "trap":
+        // 돌파 목표 + 심연의 신: 꺼진 바닥으로 뛰어내려 지름길
+        if (goal === "rush" && power(s, "abyss", 1) && dg.rooms[dg.current].trapKind === "pit" && dg.floor < floorLimit(s) && s.hero.hp > 8) return { t: "pending", choice: "jump" };
         if (s.hero.hp <= 4 && dg.prev !== null) return { t: "pending", choice: "back" };
         return { t: "pending", choice: smod(s, "dex") >= 2 ? "disarm" : "force" };
       case "treasure": return { t: "pending", choice: "open" };
       // 기록물은 탐험할 때만 읽는다(30분)
-      case "record": return { t: "pending", choice: goal === "explore" ? "read" : "leave" };
+      case "record": return { t: "pending", choice: goal === "explore" && god(s) !== "oblivion" ? "read" : "leave" };
       case "shrine": return { t: "pending", choice: goal === "rush" && hp >= 0.8 ? "leave" : "pray" };
       case "stairs":
         return { t: "pending", choice: wantDescend(s) ? "descend" : "stay" };
@@ -91,7 +95,7 @@ function dungeonAction(s: GameState): Action | null {
     }
   }
   if (s.inventory.bandage > 0 && PARTS.some((p) => s.injuries[p] === 2)) return { t: "bandage" };
-  if (s.inventory.herb > 0 && s.disease > 0) return { t: "herb" };
+  if (s.inventory.herb > 0 && s.disease > 0 && god(s) !== "plague") return { t: "herb" };
   if (hp < 0.4 && s.inventory.potion > 0) return { t: "potion" };
   if (hp < 0.45 && s.inventory.potion === 0 && s.inventory.scroll > 0) return { t: "scroll" };
   if (s.hero.satiety < 25 && s.inventory.food > 0) return { t: "eat" };

@@ -1,5 +1,6 @@
 import { josa } from "./josa";
 import { MIND, afflict } from "./mind";
+import { plagueImmune, power } from "./faith";
 import type { GameState } from "./types";
 
 // 물리적 상태이상(DESIGN 11절 "상태이상 시스템", 2026-10-13 1차 구현).
@@ -54,7 +55,7 @@ export function lvl(s: GameState, p: Part): number {
 /** 판정 페널티(머리·질병) */
 export function injuryRollPenalty(s: GameState): number {
   const h = lvl(s, "head");
-  return (h >= 2 ? -4 : h === 1 ? -2 : 0) + (s.disease >= 2 ? -2 : 0);
+  return (h >= 2 ? -4 : h === 1 ? -2 : 0) + (s.disease >= 2 && !plagueImmune(s) ? -2 : 0);
 }
 
 export function injuryHit(s: GameState): number {
@@ -114,7 +115,8 @@ export function canPeek(s: GameState): boolean {
 /** 방을 옮길 때 깎이는 HP(출혈 + 질병)와 그 원인 */
 export function bleedPerMove(s: GameState): { bleed: number; disease: number } {
   const b = s.injuries.body ?? 0;
-  return { bleed: b >= 2 ? 2 : b === 1 ? 1 : 0, disease: s.disease >= 2 ? 2 : s.disease === 1 ? 1 : 0 };
+  const dz = plagueImmune(s) ? 0 : s.disease >= 2 ? 2 : s.disease === 1 ? 1 : 0; // 역병의 신 ★1
+  return { bleed: b >= 2 ? 2 : b === 1 ? 1 : 0, disease: dz };
 }
 
 export function anyInjury(s: GameState): boolean {
@@ -151,6 +153,7 @@ export function partEffect(s: GameState, p: Part): string {
 
 /** 부위를 다치게 한다. 머리·몸통이 결손이 되면 죽음 원인을 돌려준다 */
 export function wound(s: GameState, p: Part, why: string): "oblivion" | "body" | null {
+  if (p === "head" && power(s, "oblivion", 2)) p = "body"; // 망각의 신 ★2 "이미 내준 머리"
   const before = s.injuries[p] ?? 0;
   if (before >= 3) return null;
   const v = before + 1;

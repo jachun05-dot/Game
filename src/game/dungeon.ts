@@ -4,7 +4,7 @@ import { check, isDead, kill, log, maxHp, note, remember, rngOf, smod } from "./
 import { FRAGMENTS, fragKnown, fragSlots, fragStatText } from "./fragments";
 import { INJ, bleedPerMove, canPeek, moveMult, wound } from "./injury";
 import { MIND, MIND_KEYS, MIND_NAME, afflict, cure, has, noticeCheck, symptom } from "./mind";
-import { FAITH_BAL, addPiety, faithPeek, faithTrapSense, god, power, pray } from "./faith";
+import { FAITH_BAL, faithFallMult, addPiety, faithPeek, faithTrapSense, god, power, pray } from "./faith";
 import { beginSettlement, convert } from "./town";
 import { SKILLS } from "./skills";
 import { describeGroup, makeEnemies, potionHeal, startCombat } from "./combat";
@@ -215,6 +215,7 @@ export function moveTo(s: GameState, id: number): void {
   dg.current = id;
   passTime(s, BAL.moveTurns * moveMult(s)); // 발 부상이면 느리다
   if (isDead(s)) return;
+  if (s.disease > 0) pray(s, "plague", 1); // 역병의 신은 병을 앓은 채 버티는 것을 좋아한다
   // 정신 상태이상: 눈치채기 판정, 절망(탈진·굶주림), 주저앉기
   noticeCheck(s, smod(s, "per") + smod(s, "int"));
   if (s.hero.fatigue >= 100) afflict(s, "despair", MIND.despairExhausted, "다리가 무겁다. 이 길 끝에 무엇이 있을지 생각하기도 싫어진다.");
@@ -347,7 +348,7 @@ function fall(s: GameState): boolean {
   const dg = d(s);
   const r = rngOf(s);
   const deep = dg.floor >= 3;
-  const dmg = r.dice(deep ? 3 : 2, 6);
+  const dmg = Math.max(1, Math.round(r.dice(deep ? 3 : 2, 6) * faithFallMult(s)));
   s.hero.hp -= dmg;
   log(s, deep ? `바닥이 꺼졌다 — 끝이 보이지 않는 틈으로 미끄러져 내려갔다! ${dmg} 피해` : `바닥이 꺼졌다 — 아래층으로 곤두박질쳤다! ${dmg} 피해`, "hurt");
   if (s.hero.hp <= 0) {
@@ -357,6 +358,7 @@ function fall(s: GameState): boolean {
   }
   if (r.chance(INJ.fallFeet)) wound(s, "feet", "떨어지며 발목이 꺾였다");
   pray(s, "trap", 3);
+  pray(s, "abyss", 5);
   if (deep) {
     log(s, "한참을 기어 올라와 원래 층의 다른 통로로 빠져나왔다.", "system");
     passTime(s, 8);
@@ -415,6 +417,8 @@ export type PendingChoice =
   | "read"
   | "pray"
   | "descend" | "stay"
+  /** 심연의 신 ★1: 꺼진 바닥으로 뛰어내리기 */
+  | "jump"
   | "enter"
   | "equip"
   /** 성소: 해금된 n번째 신으로 개종 */
@@ -441,6 +445,23 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
   const kind = pend.kind;
   dg.pending = null;
   const r = rngOf(s);
+
+  if (kind === "trap" && choice === "jump" && room.trapKind === "pit" && power(s, "abyss", 1) && dg.floor < 3) {
+    // 심연의 신 ★1: 꺼진 바닥으로 일부러 뛰어내린다(아래층 지름길)
+    room.resolved = true;
+    const dmg = r.dice(1, 6);
+    s.hero.hp = Math.max(1, s.hero.hp - dmg);
+    log(s, `심연을 향해 스스로 몸을 던졌다. 착지가 거칠다. ${dmg} 피해`, "story");
+    pray(s, "abyss", 5);
+    dg.floor += 1;
+    dg.deepestFloor = Math.max(dg.deepestFloor, dg.floor);
+    dg.rooms = generateFloor(r, dg.floor);
+    dg.current = 0;
+    dg.prev = null;
+    log(s, `— ${dg.floor}층에 내려섰다.`, "system");
+    arrive(s, true);
+    return;
+  }
 
   if (kind === "trap") {
     if (choice === "back" && dg.prev !== null) {
@@ -541,6 +562,7 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
       log(s, RECORDS[(room.flavor + s.recordsRead) % RECORDS.length], "story");
       log(s, `(읽은 기록물 ${s.recordsRead}개)`, "system");
       pray(s, "song", 4);
+      pray(s, "oblivion", -5);
       if (power(s, "song", 1)) {
         s.hero.hp = Math.min(maxHp(s), s.hero.hp + 5);
         log(s, "글자를 읽는 동안 어디선가 노랫소리가 들린다. HP +5", "good");
@@ -548,6 +570,7 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
     } else {
       log(s, "글자를 외면하고 지나쳤다.");
       pray(s, "song", -2);
+      pray(s, "oblivion", 6);
     }
     return;
   }
@@ -590,6 +613,7 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
     dg.current = 0;
     dg.prev = null;
     passTime(s, 1);
+    pray(s, "abyss", 8);
     log(s, `— ${dg.floor}층으로 내려간다.`, "system");
     if (dg.floor === 2) remember(s, "미궁 2층에 발을 디뎠다.");
     if (dg.floor === 3) remember(s, "미궁 3층까지 내려갔다.");
@@ -740,6 +764,7 @@ export function camp(s: GameState): void {
   if (!dg || s.combat || dg.pending || s.phase !== "dungeon") return;
   const r = rngOf(s);
   log(s, "벽에 등을 기대고 야영한다. (8시간)", "system");
+  pray(s, "oblivion", 1); // 잠은 망각이다
   passTime(s, BAL.campTurns);
   if (isDead(s)) return;
   s.hero.satiety = Math.max(0, s.hero.satiety - 6); // 휴식하면 포만감이 더 빨리 닳는다(DESIGN 11절 트레이드오프)
@@ -780,6 +805,7 @@ export function drinkPotion(s: GameState): void {
 export function useScroll(s: GameState): void {
   if (!s.dungeon || s.inventory.scroll <= 0 || s.combat || s.phase !== "dungeon") return;
   s.inventory.scroll -= 1;
+  pray(s, "abyss", -5);
   log(s, "귀환 주문서를 찢었다. 빛과 함께 미궁 입구로 돌아왔다.", "system");
   leaveDungeon(s, { cleared: false, forced: false });
 }

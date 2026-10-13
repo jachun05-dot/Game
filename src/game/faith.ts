@@ -5,7 +5,7 @@ import type { GameState } from "./types";
 // ★1(30)·★2(60)·★3(90)마다 권능이 열린다. 매달 정산 때 −5. 미궁 성소에서 기도·개종, 개종하면 버린 신의 저주 1개월.
 // 성당이 이단을 감시한다: 매달 정산 때 ★당 5% 확률로 심문 → 신앙 포기 / 거부(현상수배: 마을은 외곽만, 미궁에 이단심문관).
 
-export type GodKey = "war" | "hunger" | "trap" | "greed" | "song";
+export type GodKey = "war" | "hunger" | "trap" | "greed" | "song" | "plague" | "abyss" | "oblivion";
 
 export interface GodDef {
   key: GodKey;
@@ -48,6 +48,24 @@ export const GODS: Record<GodKey, GodDef> = {
     likes: "기록물 읽기, 탐문", dislikes: "기록물을 지나치기",
     powers: ["탐문 보상 +50%, 기록물을 읽으면 HP +5", "앞방 엿보기 +3, 야영 회복 +3", "끝나지 않은 노래: 쓰러질 피해를 받으면 HP 1로 버틴다(미궁마다 1회)"],
     curse: "앞방 엿보기 −3",
+  },
+  plague: {
+    key: "plague", name: FAITH.plague, align: "중립-악",
+    likes: "병을 앓은 채 버티기, 쥐 잡기(신도는 쥐 열병을 품고 시작한다)", dislikes: "탕약·여관으로 병 고치기",
+    powers: ["병든 몸: 쥐 열병에 걸려도 HP가 깎이지 않고 판정 페널티도 없다", "전염: 병을 앓는 동안 명중하면 25% 확률로 적도 병든다(라운드마다 1d3)", "역병의 축복: 병을 앓는 동안 최대 HP +4, 피해 +1"],
+    curse: "쥐 열병에 걸릴 확률 3배",
+  },
+  abyss: {
+    key: "abyss", name: FAITH.abyss, align: "혼돈-중립",
+    likes: "더 깊이 내려가기, 꺼진 바닥으로 떨어지기, 깊은 층에서 적 쓰러뜨리기", dislikes: "귀환 주문서",
+    powers: ["낙하에 익숙한 몸: 추락 피해 절반, 꺼진 바닥으로 일부러 뛰어내릴 수 있다(아래층 지름길, 1d6)", "깊을수록: 2층 명중 +1, 3층 명중 +2", "벼랑 끝: HP 30% 이하일 때 피해 +3, AC +2"],
+    curse: "추락 피해 2배",
+  },
+  oblivion: {
+    key: "oblivion", name: FAITH.oblivion, align: "혼돈-악",
+    likes: "기록물을 지나치기, 잠(야영)", dislikes: "기록물 읽기",
+    powers: ["흐려지는 마음: 정신 상태이상에 걸릴 확률 절반, 미궁을 나오면 모두 사라진다", "이미 내준 머리: 머리를 다치지 않는다(그 부상은 몸통으로)", "망각의 장막: 전투가 시작되면 모든 적이 1라운드 동안 나를 잊는다(행동 불가)"],
+    curse: "정신 상태이상에 걸릴 확률 2배",
   },
 };
 
@@ -110,7 +128,42 @@ export function addPiety(s: GameState, n: number): void {
 
 /** 숫자 보정 모음(전투·판정·경제에서 쓴다) */
 export function faithHit(s: GameState, enemies: number): number {
-  return (power(s, "war", 1) ? (enemies >= 2 ? 2 : 1) : 0) - (cursed(s, "war") ? 1 : 0);
+  const deep = s.dungeon && power(s, "abyss", 2) ? s.dungeon.floor - 1 : 0; // 심연 ★2
+  return (power(s, "war", 1) ? (enemies >= 2 ? 2 : 1) : 0) - (cursed(s, "war") ? 1 : 0) + deep;
+}
+
+/** 병을 앓는 중인가(역병의 신 권능 조건) */
+function sick(s: GameState): boolean {
+  return s.disease > 0;
+}
+
+/** 역병 ★1: 병이 몸을 해치지 않는다 */
+export function plagueImmune(s: GameState): boolean {
+  return power(s, "plague", 1);
+}
+
+export function faithMaxHp(s: GameState): number {
+  return power(s, "plague", 3) && sick(s) ? 4 : 0;
+}
+
+/** 쥐 열병 감염 확률 배율 */
+export function faithInfectMult(s: GameState): number {
+  return cursed(s, "plague") ? 3 : 1;
+}
+
+/** 추락 피해 배율 */
+export function faithFallMult(s: GameState): number {
+  return (power(s, "abyss", 1) ? 0.5 : 1) * (cursed(s, "abyss") ? 2 : 1);
+}
+
+/** 심연 ★3 "벼랑 끝": HP 비율을 받아 피해·AC 보정 */
+export function abyssEdge(s: GameState, hpRatio: number): { dmg: number; ac: number } {
+  return power(s, "abyss", 3) && hpRatio <= 0.3 ? { dmg: 3, ac: 2 } : { dmg: 0, ac: 0 };
+}
+
+/** 정신 상태이상 걸릴 확률 배율 */
+export function faithMindMult(s: GameState): number {
+  return (power(s, "oblivion", 1) ? 0.5 : 1) * (cursed(s, "oblivion") ? 2 : 1);
 }
 
 export function faithHungerMult(s: GameState): number {
@@ -123,7 +176,7 @@ export function faithTrapSense(s: GameState): number {
 
 /** 기아/풍요의 신 ★2: 배고플 때 피해 +2 */
 export function faithDmg(s: GameState): number {
-  return power(s, "hunger", 2) && s.hero.satiety <= 30 ? 2 : 0;
+  return (power(s, "hunger", 2) && s.hero.satiety <= 30 ? 2 : 0) + (power(s, "plague", 3) && sick(s) ? 1 : 0);
 }
 
 export function faithPeek(s: GameState): number {

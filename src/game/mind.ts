@@ -1,5 +1,6 @@
 import { Rng } from "./rng";
 import { josa } from "./josa";
+import { faithMindMult, power } from "./faith";
 import type { GameState } from "./types";
 
 // 정신적 상태이상(DESIGN 11절, 2026-10-13 2차 구현). 부위·단계 없이 개별로 켜지고 꺼진다.
@@ -62,7 +63,7 @@ function say(s: GameState, text: string, kind: "hurt" | "system" | "story" | "sk
 
 /** 확률 p로 상태이상을 건다(이미 걸려 있으면 그대로). 걸린 사실은 알리지 않는다 */
 export function afflict(s: GameState, k: MindKey, p: number, hint: string): boolean {
-  if (has(s, k) || !rng(s).chance(p)) return false;
+  if (has(s, k) || !rng(s).chance(p * faithMindMult(s))) return false;
   s.mind[k] = { known: false };
   say(s, hint, "story"); // 무엇이 걸렸는지는 말하지 않는 분위기 문장
   return true;
@@ -137,8 +138,9 @@ export function mindSummary(s: GameState): string[] {
 /** 미궁에서 나오면 일부는 저절로 가라앉는다 */
 export function fadeAfterDungeon(s: GameState, lines: string[]): void {
   const r = rng(s);
+  const forget = power(s, "oblivion", 1); // 망각의 신 ★1: 나오면 모두 사라진다
   for (const k of MIND_KEYS) {
-    if (!has(s, k) || !r.chance(MIND.fade)) continue;
+    if (!has(s, k) || (!forget && !r.chance(MIND.fade))) continue;
     const was = known(s, k);
     cure(s, k);
     lines.push(was ? `햇빛 아래로 나오자 ${josa(MIND_NAME[k], "이")} 가라앉았다.` : "미궁을 나서자 가슴 한구석이 이상하게 가벼워졌다.");

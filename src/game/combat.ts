@@ -2,7 +2,7 @@ import { josa } from "./josa";
 import { BAL, MONSTERS } from "./data";
 import { actionsPerRound, heroAc, isDead, kill, log, maxHp, note, rngOf, rollPenalty, smod } from "./core";
 import { FRAGMENTS } from "./fragments";
-import { GODS, faithDmg, faithHit, power, pray } from "./faith";
+import { GODS, abyssEdge, faithDmg, faithHit, faithInfectMult, power, pray } from "./faith";
 import { HEAD_STUN, INJ, canFlee, infect, injuryHit, lvl, noCrit, wound, type Part } from "./injury";
 import { MIND, afflict, comboNow, missPotion, rageDmg, symptom } from "./mind";
 import { activeSkills, passive, SKILLS, type SkillDef } from "./skills";
@@ -65,6 +65,11 @@ export function startCombat(s: GameState, context: CombatState["context"], enemi
     if (isDead(s)) return;
   }
 
+  // 망각의 신 ★3 "망각의 장막"
+  if (power(s, "oblivion", 3)) {
+    for (const foe of alive(c)) foe.stun = (foe.stun ?? 0) + 1;
+    log(s, `【${GODS.oblivion.name}】 망각의 장막 — 적들이 잠시 당신이 거기 있다는 것을 잊었다.`, "skill");
+  }
   // 전쟁의 신 ★3 "피의 함성"
   if (power(s, "war", 3) && alive(c).length >= 3) {
     c.cow = 2;
@@ -108,6 +113,7 @@ export function startCombat(s: GameState, context: CombatState["context"], enemi
     if (isDead(s)) return;
     enemyPhase(s, c);
     if (isDead(s)) return;
+    plagueTick(s, c);
     escapeRares(s, c);
     if (alive(c).length === 0) return finish(s, "win");
     c.round += 1;
@@ -143,6 +149,22 @@ function castSpell(s: GameState, c: CombatState, dice: [number, number], all: bo
   }
 }
 
+/** 역병의 신 ★2: 병든 적은 라운드마다 1d3 */
+function plagueTick(s: GameState, c: CombatState): void {
+  const r = rngOf(s);
+  for (const e of alive(c)) {
+    if (!e.sick) continue;
+    const def = MONSTERS[e.defId];
+    const dmg = r.dice(1, 3);
+    e.hp -= dmg;
+    log(s, `${josa(def.name, "이")} 병으로 몸부림친다. ${dmg} 피해`, "hit");
+    if (e.hp <= 0) {
+      gainLoot(s, c, def.id);
+      log(s, `${josa(def.name, "이")} 병으로 쓰러졌다.`, "good");
+    }
+  }
+}
+
 /** 희귀 개체는 정해진 라운드가 지나면 달아난다 */
 function escapeRares(s: GameState, c: CombatState): void {
   for (const e of alive(c)) {
@@ -160,6 +182,8 @@ function gainLoot(s: GameState, c: CombatState, defId: string): void {
   if (def.rare) c.bonus += def.mana;
   else c.loot += def.mana;
   s.codex.kills[defId] = (s.codex.kills[defId] ?? 0) + 1;
+  if (["rat", "goldrat", "boss"].includes(defId)) pray(s, "plague", 1);
+  if (c.context === "dungeon" && (s.dungeon?.floor ?? 1) >= 2) pray(s, "abyss", s.dungeon!.floor - 1);
   // 편린은 미궁 안에서만 맺힌다
   const f = FRAGMENTS[defId];
   if (c.context === "dungeon" && f && rngOf(s).chance(f.chance)) {
@@ -275,11 +299,16 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
   }
   const crit = !noCrit(s) && (roll === 20 || r.float() * 100 < 5 + smod(s, "luk") + passive(s, "crit"));
   selfInjury(s, def.id, w.stat);
-  const base = r.dice(w.dice[0] * (crit ? 2 : 1), w.dice[1]) + statMod + passive(s, "dmg") + st.dmg + faithDmg(s) + rageDmg(s);
+  const base = r.dice(w.dice[0] * (crit ? 2 : 1), w.dice[1]) + statMod + passive(s, "dmg") + st.dmg + faithDmg(s) + rageDmg(s) + abyssEdge(s, s.hero.hp / maxHp(s)).dmg;
   const dmg = Math.max(1, Math.round(base * st.mult));
   target.hp -= dmg;
   if (crit) note(s, "luk");
   log(s, `${def.name}에게 ${w.verb} 명중! ${dmg} 피해${crit ? " (치명타!)" : ""}`, crit ? "crit" : "hit");
+  // 역병의 신 ★2 "전염"
+  if (target.hp > 0 && !target.sick && s.disease > 0 && power(s, "plague", 2) && r.chance(0.25)) {
+    target.sick = true;
+    log(s, `【${GODS.plague.name}】 ${josa(def.name, "이")} 병에 옮았다.`, "skill");
+  }
   if (target.hp <= 0) {
     note(s, w.stat === "int" ? "int" : w.stat === "dex" ? "dex" : "str");
     gainLoot(s, c, def.id);
@@ -315,7 +344,7 @@ function hitInjury(s: GameState, defId: string, dmg: number, crit: boolean): voi
     if (isDead(s)) return;
   }
   const dz = defId === "boss" ? INJ.diseaseBoss : ["rat", "goldrat"].includes(defId) ? INJ.diseaseRat : 0;
-  if (dz && r.chance(dz)) infect(s);
+  if (dz && r.chance(dz * faithInfectMult(s))) infect(s);
 }
 
 export function potionHeal(s: GameState): number {
