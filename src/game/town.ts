@@ -276,7 +276,7 @@ export function doActivity(s: GameState, a: Activity): void {
   else if (a === "inn") inn(s);
 }
 
-/** 여관: 한 주와 20G를 들여 모든 부상·질병을 한 단계 낫게 한다(결손은 그대로) */
+/** 여관: 한 주와 INJ.innCost(G)를 들여 모든 부상·질병을 한 단계 낫게 한다(결손은 그대로) */
 export function inn(s: GameState): void {
   if (s.phase !== "town" || s.heretic || s.gold < INJ.innCost) return;
   s.gold -= INJ.innCost;

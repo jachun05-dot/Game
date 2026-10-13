@@ -192,6 +192,9 @@ function progressKey(s: GameState): string {
   return `${s.phase}|${s.month}|${s.week}|${s.dungeon?.turnsLeft}|${s.dungeon?.current}|${s.combat?.round}|${s.logCount}|${s.dungeon?.pending?.kind}`;
 }
 
+// 커버리지: 실제로 상태를 바꾼 행동 종류, 죽음 원인
+const cover = new Map<string, number>();
+const hit = (k: string) => cover.set(k, (cover.get(k) ?? 0) + 1);
 const t0 = Date.now();
 let total = 0, stalls = 0, botNull = 0, exceptions = 0, deaths = 0, cleared = 0, steps = 0;
 for (let i = 0; i < N; i++) {
@@ -219,6 +222,8 @@ for (let i = 0; i < N; i++) {
         if (!a) { botNull++; report({ kind: "봇 행동 없음", msg: `phase ${s.phase} pending ${s.dungeon?.pending?.kind ?? "-"}`, ...ctx, step, action: "-", phase: s.phase }); a = randomAction(s); }
       }
       const before = s.phase;
+      const logBefore = s.logCount;
+      const lockedBefore = s.heretic && s.phase === "town" ? JSON.stringify([s.gold, s.inventory, s.gear, s.hero.level, s.fragments, s.injuries, s.prosthetic]) : null;
       try {
         apply(s, a);
       } catch (err) {
@@ -226,11 +231,17 @@ for (let i = 0; i < N; i++) {
         report({ kind: "예외", msg: String((err as Error).stack?.split("\n").slice(0, 3).join(" | ")), ...ctx, step, action: JSON.stringify(a), phase: before });
         break;
       }
+      if (s.logCount !== logBefore || s.phase !== before) hit(a.t === "pending" ? `pending:${a.choice.replace(/\d+$/, "N")}` : a.t === "activity" ? `activity:${a.a}` : a.t);
+      if (s.combat === null && s.log.slice(-6).some((l) => l.mons?.includes("inquisitor"))) hit("이단심문관 조우");
       const extra: string[] = [];
+      const fresh = [...s.log.slice(Math.max(0, s.log.length - (s.logCount - logBefore))).map((l) => l.text), ...(s.weekResult?.lines ?? []), ...(s.settlement?.lines ?? []), ...(s.weekResult?.feed ?? [])];
+      for (const line of fresh) if (/undefined|NaN|\[object|null|이\(가\)|을\(를\)|은\(는\)|%s|\$\{/.test(line)) extra.push(`이상한 문장: ${line.slice(0, 80)}`);
       if (s.hero.level < prevLevel) extra.push(`레벨 역행 ${prevLevel}→${s.hero.level}`);
       if (s.rank < prevRank) extra.push(`등급 역행`);
       if (a.t === "train" && s.month < BAL.firstTrainMonth && s.hero.level > prevLevel) extra.push("첫 달 훈련으로 레벨업");
       prevLevel = s.hero.level; prevRank = s.rank;
+      const townOnly = ["buy", "sell", "buyGear", "train", "eraseFrag", "regen", "prosthetic"].includes(a.t) || (a.t === "activity" && a.a !== "field");
+      if (lockedBefore && townOnly && JSON.stringify([s.gold, s.inventory, s.gear, s.hero.level, s.fragments, s.injuries, s.prosthetic]) !== lockedBefore) extra.push(`현상수배 중 마을 시설 이용 ${a.t}`);
       for (const m of [...invariants(s), ...extra]) report({ kind: "불변식", msg: m.replace(/-?\d+(\.\d+)?/g, "#") + ` ← ${a.t}${a.t === "pending" ? ":" + a.choice : ""}`, ...ctx, step, action: JSON.stringify(a) + ` (${m})`, phase: before });
       const k = progressKey(s);
       if (k === last) same++;
@@ -246,7 +257,8 @@ for (let i = 0; i < N; i++) {
   }
   total++;
   steps += step;
-  if (s.phase === "dead") deaths++;
+  if (s.phase === "dead") { deaths++; hit(`죽음:${s.tomb?.cause}`); }
+  if (s.dungeon?.sector === 2 || s.rank >= 2) hit("2섹터 도달");
   if (s.rank > 0) cleared++;
   if (VERBOSE && i % 100 === 0) console.error(`${i}/${N} ${((Date.now() - t0) / 1000).toFixed(0)}s`);
 }
@@ -254,6 +266,7 @@ for (let i = 0; i < N; i++) {
 console.log(`판 ${total} · 행동 ${steps} · 사망 ${deaths} · 클리어 ${cleared} · 예외 ${exceptions} · 멈춤 ${stalls} · 봇 null ${botNull} · ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 console.log(`버그 종류 ${seenKinds.size}`);
 for (const [k, n] of [...seenKinds].sort((a, b) => b[1] - a[1])) console.log(`  ${n}× ${k}`);
+if (process.env.COVER) console.log("커버리지 " + [...cover].sort().map(([k, n]) => `${k}=${n}`).join(" · "));
 console.log("--- 예시 ---");
 const shown = new Set<string>();
 for (const b of bugs) {
