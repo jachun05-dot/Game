@@ -30,5 +30,6 @@ export const MONSTER_ART: Record<string, SpriteArt> = {
   goblin: { src: "./mon-goblin.png", w: 63, h: 69 },
   skeleton: { src: "./mon-skeleton.png", w: 62, h: 83 },
   goldrat: { src: "./mon-goldrat.png", w: 36, h: 24 },
+  jewelgoblin: { src: "./mon-jewelgoblin.png", w: 60, h: 71 },
 };
 

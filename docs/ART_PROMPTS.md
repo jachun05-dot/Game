@@ -128,3 +128,18 @@ Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, 
 ```
 
 결과(2026-10-13): 채택 → `assets/monsters/goldrat.png`(36×24) = `public/mon-goldrat.png`. 생성본은 기본 쥐에 수정 몇 개를 붙인 정도라, 배 부분에 청록 3단(코어 #9ee2d4 / #5fb3a8 / 털과 반반 섞은 테두리)을 손으로 칠해 "삼킨 마석이 비치는" 느낌을 보강함(외곽선은 유지)
+
+## 008 — 보석 박힌 고블린 (기준 이미지 + 고블린 첨부)
+
+```
+Match the exact art style, outline, palette and pixel scale of the first attached reference image. Use the second attached image (a goblin) as the base creature.
+
+Pixel art game sprite of the same goblin species, same size, same 3/4 view facing left, classic 16-bit RPG style.
+This rare goblin has crudely jammed stolen mana stones into its own flesh: several cold teal-cyan crystals (#5fb3a8) embedded in its shoulders, forehead and forearms, with scarred skin around them. Instead of a dagger it holds a heavy wooden club studded with more teal crystals. Greedy, twitchy expression, glancing sideways as if ready to run.
+Keep the muted earthy palette of the base goblin; the teal crystals are the only cold color, drawn with 2-3 flat pixel shades, no soft light, no bloom.
+Crisp hard pixel edges, 1-pixel dark outline, no anti-aliasing, no blur, no gradients, no noisy dithering.
+Full body, centered, feet visible, small margin around it.
+Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, no frame or border. Square 1:1 image.
+```
+
+결과(2026-10-13): 1차 생성본 채택 → `assets/monsters/jewelgoblin.png`(60×71) = `public/mon-jewelgoblin.png`. 기본 고블린과 같은 자리(손가락 사이) 마젠타 3픽셀만 투명 처리
