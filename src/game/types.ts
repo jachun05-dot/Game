@@ -207,6 +207,8 @@ export interface GameState {
   /** 직전 레벨업 이후 행동 집계(행동 기반 스탯 2포인트, DESIGN 7절) */
   behavior: Stats;
   candidates: Candidate[];
+  /** 직업별로 이미 뽑은 후보(직업을 바꿨다 돌아와도 같은 후보가 남는다) */
+  candidatePool?: Partial<Record<ClassId, Candidate[]>>;
   rerollsLeft: number;
   log: LogLine[];
   /** 지금까지 쌓인 로그 총 개수(오래된 줄이 잘려도 화면 표시 위치 계산용) */

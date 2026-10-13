@@ -73,13 +73,19 @@ export function rerollCandidates(s: GameState): void {
   if (s.phase !== "create" || s.rerollsLeft <= 0) return;
   s.rerollsLeft -= 1;
   s.candidates = makeCandidates(rngOf(s), s.hero.cls);
+  (s.candidatePool ??= {})[s.hero.cls] = s.candidates;
 }
 
-/** 직업을 바꾸면 그 직업 성향의 후보를 새로 뽑는다(다시 뽑기 횟수는 쓰지 않음) */
+/**
+ * 직업을 바꾸면 그 직업 성향의 후보를 보여준다. 처음 고른 직업이면 새로 뽑고(다시 뽑기 횟수는 쓰지 않음),
+ * 전에 골라 봤던 직업이면 그때 후보를 그대로 돌려준다(직업을 오가며 후보를 새로 뽑는 꼼수도 막힌다).
+ */
 export function pickClass(s: GameState, cls: ClassId): void {
   if (s.phase !== "create" || !CLASSES[cls] || s.hero.cls === cls) return;
+  const pool = (s.candidatePool ??= {});
+  pool[s.hero.cls] = s.candidates;
   s.hero.cls = cls;
-  s.candidates = makeCandidates(rngOf(s), cls);
+  s.candidates = pool[cls] ??= makeCandidates(rngOf(s), cls);
 }
 
 export function randomName(s: GameState): string {

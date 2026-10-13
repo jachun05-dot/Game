@@ -360,3 +360,23 @@ describe("시작 조건", () => {
     }
   });
 });
+
+describe("캐릭터 생성 후보", () => {
+  it("직업을 바꿨다 돌아오면 그 직업의 후보가 그대로 남는다", () => {
+    const s = newRun(11);
+    const first = JSON.stringify(s.candidates);
+    apply(s, { t: "pickClass", cls: "warrior" });
+    const warrior = JSON.stringify(s.candidates);
+    apply(s, { t: "pickClass", cls: "mage" });
+    apply(s, { t: "pickClass", cls: "adventurer" });
+    expect(JSON.stringify(s.candidates)).toBe(first);
+    apply(s, { t: "pickClass", cls: "warrior" });
+    expect(JSON.stringify(s.candidates)).toBe(warrior);
+    // 다시 뽑기는 지금 직업의 후보만 바꾸고, 바꾼 후보가 기억된다
+    apply(s, { t: "reroll" });
+    const rerolled = JSON.stringify(s.candidates);
+    apply(s, { t: "pickClass", cls: "mage" });
+    apply(s, { t: "pickClass", cls: "warrior" });
+    expect(JSON.stringify(s.candidates)).toBe(rerolled);
+  });
+});

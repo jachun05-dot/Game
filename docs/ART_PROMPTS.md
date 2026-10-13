@@ -1,6 +1,6 @@
 # 아트 프롬프트 가이드 (Gemini)
 
-이미지는 Claude가 프롬프트를 만들고 → 사용자가 Gemini에서 생성 → 채팅에 첨부 → Claude가 후처리(마젠타 배경·Gemini 워터마크 제거, 도트 격자 복원, 분할) 후 `assets/`에 넣는 방식으로 만든다.
+이미지는 Claude가 프롬프트를 만들고 → 사용자가 Gemini에서 생성 → 채팅에 첨부 → Claude가 후처리(`python3 tools/sprite.py`: 마젠타 배경·Gemini 워터마크 제거, 도트 격자 복원) 후 `assets/`에 넣는 방식으로 만든다. 비주얼 작업 전반은 `docs/VISUAL_HANDOFF.md`.
 
 ## 공통 규칙
 

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { INTRO, NAMES, STAT_KEYS, STAT_LABEL, BAL } from "../game/data";
 import { mod } from "../game/core";
-import { CLASSES, CLASS_IDS } from "../game/classes";
+import { CLASSES, CLASS_IDS, type ClassId } from "../game/classes";
 import { GEAR } from "../game/gear";
 import { TRAININGS } from "../game/data";
 import { kitItems } from "../game/town";
@@ -12,8 +12,14 @@ export function CreateScreen({ ctl }: { ctl: Ctl }) {
   const { s, meta, dispatch } = ctl;
   const [intro, setIntro] = useState(0);
   const [name, setName] = useState("");
-  const [open, setOpen] = useState<boolean[]>([false, false, false]);
-  const [pick, setPick] = useState<number | null>(null);
+  // 카드 뒤집기·선택 상태는 직업별로 기억한다(직업을 바꿨다 돌아와도 열어 둔 카드가 그대로)
+  const cls = s.hero.cls;
+  const [openBy, setOpenBy] = useState<Partial<Record<ClassId, boolean[]>>>({});
+  const [pickBy, setPickBy] = useState<Partial<Record<ClassId, number | null>>>({});
+  const open = openBy[cls] ?? [false, false, false];
+  const pick = pickBy[cls] ?? null;
+  const setOpen = (v: boolean[] | ((o: boolean[]) => boolean[])) => setOpenBy((m) => ({ ...m, [cls]: typeof v === "function" ? v(m[cls] ?? [false, false, false]) : v }));
+  const setPick = (v: number | null) => setPickBy((m) => ({ ...m, [cls]: v }));
   const [faith, setFaith] = useState<string | null>(null);
 
   if (intro < INTRO.length) {
@@ -60,11 +66,7 @@ export function CreateScreen({ ctl }: { ctl: Ctl }) {
               <button
                 key={id}
                 className={`class-card${s.hero.cls === id ? " on" : ""}`}
-                onClick={() => {
-                  dispatch({ t: "pickClass", cls: id });
-                  setOpen([false, false, false]);
-                  setPick(null);
-                }}
+                onClick={() => dispatch({ t: "pickClass", cls: id })}
               >
                 <b>{c.name}</b>
                 <span className="dim small">{c.motive}</span>

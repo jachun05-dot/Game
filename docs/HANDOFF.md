@@ -10,6 +10,7 @@
 - 기획 원본은 사용자 PC의 다른 세션("게임 신앙 시스템 디자인 논의")에서 가져와 `docs/DESIGN.md`로 복원. 그리드 턴제 → 텍스트 게임으로 전환함
 
 ## 문서
+- **비주얼 작업은 별도 세션** → `docs/VISUAL_HANDOFF.md`(분담 규칙, 아트 방향, 그림 목록, UI 구조, 스크린샷·후처리 도구)
 - `docs/DESIGN.md` 기획(14절 = 텍스트 진행 구조), `docs/DECISIONS.md` 결정 기록(시간순), `docs/PROTOTYPE.md` 구현 범위·수치·시뮬 결과, `docs/ART_PROMPTS.md` 아트 파이프라인
 - 아트: 사용자가 Gemini(구독, API 키 없음)로 생성 → 채팅에 이미지 첨부 → Claude가 마젠타 배경·워터마크 제거, 100격자 도트 복원. 기준 이미지 `assets/reference/style_reference.png`, 얼굴 `public/hero-face.png`
 
