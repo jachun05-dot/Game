@@ -398,3 +398,25 @@ Solid flat magenta background (#FF00FF). No text, no numbers, no frame or border
 ```
 
 결과(2026-10-13): 1차 채택. 이번 시트는 **100격자**(5.12px)였다 — 시트마다 도트 크기를 재고(가로 색 변화 간격의 최빈값) 격자를 고른다. 방패가 워터마크 모서리에 걸쳐 `--keep-watermark`. 연결 성분(8방향)으로 7개 분할, 12픽셀 미만 조각은 가까운 덩어리에 합침 → `assets/icons/gear-*.png`(19~31도트)
+
+## 024 — 방어구 9종 (기준 이미지 첨부)
+
+```
+Match the exact art style, outline, palette and pixel scale of the attached reference image.
+
+A sheet of nine pixel art equipment icons for a grim dark-fantasy RPG, classic 16-bit style, in a neat grid of three rows of three, evenly spaced with clear magenta gaps, all drawn at the same scale, each a clean single object:
+1. a frayed dark brown wool apprentice robe with many small mismatched pockets;
+2. a scuffed brown leather cuirass with stitched cowhide patches;
+3. a rusty, patched chain mail shirt;
+4. a simple soft leather cap;
+5. a dented iron half-helm;
+6. a sturdy plain leather belt with an iron buckle;
+7. a leather belt hung with small herb pouches and a dried sprig;
+8. a pair of worn leather boots;
+9. a pair of light, laced leather boots with a faint green-grey tint, built for running.
+Muted earthy palette: dark browns, iron grey, faded ochre, wool; dull gold (#cf9a44) only on small buckles. Everything looks used, cheap and worn.
+Crisp hard pixel edges, 1-pixel dark outline, no anti-aliasing, no blur, no gradients, no noisy dithering.
+Solid flat magenta background (#FF00FF). No text, no numbers, no frame or border. Square 1:1 image.
+```
+
+결과(2026-10-13): 1차 채택(100격자). 워터마크가 날랜 장화 위에 찍혀 `--keep-watermark` 후, 장화 색(파랑이 낮은 올리브)과 다른 회백색 픽셀 6개를 장화 중간색으로 메움 → `assets/icons/gear_sheet2.png` → `split_sheet.py`로 9개

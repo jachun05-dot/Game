@@ -80,11 +80,20 @@ export const ROOM_ICON: Record<string, SpriteArt> = {
 
 // 장비 아이콘(원래 도트 크기, 목록 1배 · 장비 발견 카드 2배). 아이콘이 없는 장비는 글자만 나온다
 export const GEAR_ICON: Record<string, SpriteArt> = {
-  bonewand: { src: "./gear-bonewand.png", w: 26, h: 30 },
-  dagger: { src: "./gear-dagger.png", w: 19, h: 20 },
-  ironshield: { src: "./gear-ironshield.png", w: 28, h: 28 },
-  longsword: { src: "./gear-longsword.png", w: 31, h: 31 },
-  shield: { src: "./gear-shield.png", w: 26, h: 26 },
   shortsword: { src: "./gear-shortsword.png", w: 22, h: 22 },
+  longsword: { src: "./gear-longsword.png", w: 31, h: 31 },
+  dagger: { src: "./gear-dagger.png", w: 19, h: 20 },
   staff: { src: "./gear-staff.png", w: 26, h: 27 },
+  bonewand: { src: "./gear-bonewand.png", w: 26, h: 30 },
+  robe: { src: "./gear-robe.png", w: 29, h: 29 },
+  leather: { src: "./gear-leather.png", w: 22, h: 26 },
+  chain: { src: "./gear-chain.png", w: 30, h: 27 },
+  shield: { src: "./gear-shield.png", w: 26, h: 26 },
+  ironshield: { src: "./gear-ironshield.png", w: 28, h: 28 },
+  cap: { src: "./gear-cap.png", w: 18, h: 22 },
+  helm: { src: "./gear-helm.png", w: 22, h: 25 },
+  belt: { src: "./gear-belt.png", w: 28, h: 14 },
+  pouchbelt: { src: "./gear-pouchbelt.png", w: 29, h: 19 },
+  boots: { src: "./gear-boots.png", w: 26, h: 24 },
+  swiftboots: { src: "./gear-swiftboots.png", w: 26, h: 24 },
 };
