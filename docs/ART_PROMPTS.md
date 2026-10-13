@@ -109,3 +109,22 @@ Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, 
 ```
 
 결과(2026-10-13): 1차 생성본 채택 → `assets/monsters/skeleton.png`(62×83) = `public/mon-skeleton.png`. 후처리 수정 없음. 단, 몸 높이가 약 75도트로 소년(90)보다 작게 나왔다(요청은 "한 머리 더 큼"). 다시 뽑으면 "the skeleton's skull is clearly higher than the reference boy's head; fill about 95% of the image height"를 넣는다
+
+## 희귀 개체 공통 규칙
+
+희귀 개체(마석 몬스터)는 기본형 그림을 두 번째로 첨부해 같은 종족으로 변형한다. 마석은 팔레트에서 유일한 차가운 색인 탁한 청록 `#5fb3a8`(2~4단 평면 음영, 번짐·발광 효과 없음)으로 그려 한눈에 "돈 되는 놈"으로 읽히게 한다.
+
+## 007 — 마석 먹은 쥐 (기준 이미지 + 쥐 첨부)
+
+```
+Match the exact art style, outline, palette and pixel scale of the first attached reference image. Use the second attached image (a dungeon rat) as the base creature.
+
+Pixel art game sprite of the same dungeon rat species, same size, same 3/4 side view facing left, classic 16-bit RPG style.
+This rare rat has swallowed a mana stone: its belly is swollen and translucent, with a cold teal-cyan crystal (#5fb3a8) glowing faintly through the stretched skin, a few small crystal shards poking out of its back fur. Its eyes are wide and frightened, body tensed as if about to flee.
+Keep the muted earthy palette of the base rat; the teal crystal is the only cold color. The glow is drawn with 2-3 flat pixel shades only, no soft light, no bloom.
+Crisp hard pixel edges, 1-pixel dark outline, no anti-aliasing, no blur, no gradients, no noisy dithering.
+Centered, small margin around it.
+Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, no frame or border. Square 1:1 image.
+```
+
+결과(2026-10-13): 채택 → `assets/monsters/goldrat.png`(36×24) = `public/mon-goldrat.png`. 생성본은 기본 쥐에 수정 몇 개를 붙인 정도라, 배 부분에 청록 3단(코어 #9ee2d4 / #5fb3a8 / 털과 반반 섞은 테두리)을 손으로 칠해 "삼킨 마석이 비치는" 느낌을 보강함(외곽선은 유지)
