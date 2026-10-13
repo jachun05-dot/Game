@@ -7,6 +7,7 @@ import { fragScore, fragSlots } from "./fragments";
 import { heroAc, maxHp, smod } from "./core";
 import { canTrain, nextSkill, shopPrice, trainCost } from "./town";
 import type { Action } from "./engine";
+import { ELEMENTS, ELEMENT_KEYS, type ElementKey } from "./elements";
 import type { GameState } from "./types";
 
 // "자동 결정" 옵션과 밸런스 시뮬레이션이 같이 쓰는 단순한 정책.
@@ -52,10 +53,13 @@ function townAction(s: GameState): Action {
   }
   // 1) 훈련 2) 몸통·방패 3) 여유가 되면 물약을 더
   if (canTrain(s) && spare >= trainCost(s)) {
+    if (s.hero.cls === "mage") {
+      const el = (magePlan ?? defaultMagePlan)(s);
+      return { t: "train", training: el, free: [ELEMENTS[el].main, "con"] };
+    }
     const order = ["warfare", "arcane", "sword", "endure", "footwork", "scout", "study"].filter((id) => CLASSES[s.hero.cls].trainings.includes(id));
     const training = order.find((id) => nextSkill(s, id)) ?? order[0];
-    const main = s.hero.cls === "mage" ? "int" : "str";
-    return { t: "train", training, free: [main, "con"] };
+    return { t: "train", training, free: ["str", "con"] };
   }
   if (!s.gear.body && spare >= GEAR.leather.price!) return { t: "buyGear", id: "leather" };
   if (!s.gear.offhand && spare >= GEAR.shield.price!) return { t: "buyGear", id: "shield" };
@@ -68,6 +72,17 @@ function townAction(s: GameState): Action {
   if (s.week === 3 && s.inventory.potion < 6 && spare >= shopPrice(s, "potion") + 20) return { t: "buy", item: "potion" };
   if (s.hero.level >= 2 && s.week !== 3) return { t: "activity", a: "field" };
   return { t: "activity", a: "rumor" };
+}
+
+/** 마법사가 이번 훈련에 고를 원소. 기본: 주 원소가 있으면 그것, 없으면 주 능력치가 가장 높은 원소 한 가지에 몰아준다 */
+export function defaultMagePlan(s: GameState): ElementKey {
+  if (s.mainElement) return s.mainElement;
+  return [...ELEMENT_KEYS].sort((a, b) => s.hero.stats[ELEMENTS[b].main] - s.hero.stats[ELEMENTS[a].main])[0];
+}
+let magePlan: ((s: GameState) => ElementKey) | null = null;
+/** 시뮬레이션용: 마법사 원소 선택 방식을 바꾼다(null이면 기본) */
+export function setMagePlan(fn: ((s: GameState) => ElementKey) | null): void {
+  magePlan = fn;
 }
 
 /** 이미 클리어한 1섹터를 2섹터로 가려고 다시 지날 때는 서둘러 지나간다 */

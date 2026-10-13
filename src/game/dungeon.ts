@@ -406,7 +406,7 @@ function fall(s: GameState): boolean {
 /** 함정 작동. 숨어 있던 고블린이 있으면 덮친다(밟아서 다쳤으면 기습). 매복 전투가 벌어졌으면 true */
 function springTrap(s: GameState, room: Room): boolean {
   room.resolved = true;
-  const c = check(s, "dex", BAL.trapDodgeDc, power(s, "trap", 1) ? 3 : 0);
+  const c = check(s, "dex", BAL.trapDodgeDc, (power(s, "trap", 1) ? 3 : 0) + (room.trapKind === "pit" && s.skills.includes("earthLevel") ? 5 : 0)); // 땅 고르기
   let hurt = false;
   if (c.ok) {
     note(s, "dex");
@@ -507,7 +507,7 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
     }
     if (choice === "disarm") {
       passTime(s, 1);
-      const c = check(s, "dex", BAL.trapDisarmDc, power(s, "trap", 1) ? 3 : 0);
+      const c = check(s, "dex", BAL.trapDisarmDc, (power(s, "trap", 1) ? 3 : 0) + (s.skills.includes("earthLevel") ? 3 : 0));
       if (c.ok) {
         note(s, "per");
         room.resolved = true;

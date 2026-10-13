@@ -76,8 +76,8 @@ export function injuryMaxHp(s: GameState): number {
 /** 방 하나 이동 시간 배율(발) */
 export function moveMult(s: GameState): number {
   const raw = s.injuries.feet ?? 0;
-  if (raw >= 3 && !s.prosthetic?.feet) return 4;
-  return [1, 2, 3, 3][lvl(s, "feet")];
+  const m = raw >= 3 && !s.prosthetic?.feet ? 4 : [1, 2, 3, 3][lvl(s, "feet")];
+  return s.skills.includes("earthRoot") ? 1 + (m - 1) / 2 : m; // 마법사 "뿌리 내리기": 발 부상 이동 페널티 절반
 }
 
 export function canFlee(s: GameState): boolean {

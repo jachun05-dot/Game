@@ -39,6 +39,12 @@ export interface Enemy {
   fled?: boolean;
   /** 역병의 신 ★2 "전염"으로 병들었다(라운드마다 1d3) */
   sick?: boolean;
+  /** 마법사 원소: 불탐(남은 라운드, 라운드마다 1d3 + bonus) */
+  burn?: { rounds: number; bonus: number };
+  /** 명중 감소(서리 안개·정전기) */
+  hitDown?: { n: number; rounds: number };
+  /** 감전(뇌격): 남은 라운드 동안 50% 확률로 행동 실패 */
+  shock?: number;
 }
 
 export interface CombatState {
@@ -66,7 +72,9 @@ export interface CombatState {
   /** 전쟁의 신 ★3 "피의 함성": 남은 라운드 동안 적 명중 −2 */
   cow?: number;
   /** 흘려내기 등 일시 AC 보너스 */
-  guard: { ac: number; rounds: number } | null;
+  guard: { ac: number; rounds: number; freeze?: number; reduce?: number } | null;
+  /** 바위 감옥: 이번 라운드 받는 피해 절반 */
+  halfDmg?: boolean;
 }
 
 /** 자동 결정의 미궁 목표: 구석구석 탐험 / 빠르게 다음 층 / 파밍(전투·상자 위주) */
@@ -227,6 +235,8 @@ export interface GameState {
   gear: Partial<Record<SlotKey, string>>;
   /** 배운 기술 id */
   skills: string[];
+  /** 마법사: 4레벨 특수 훈련에서 처음 특화한 원소(지팡이 마력탄이 이 원소의 주 능력치를 따른다) */
+  mainElement?: "fire" | "frost" | "bolt" | "earth";
   /** 흡수한 편린(fragments.ts의 id). 칸 수는 fragSlots(level) */
   fragments: string[];
   /** 부위 부상 단계(injury.ts): 0 멀쩡함 · 1 경상 · 2 중상 · 3 결손 */

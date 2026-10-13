@@ -13,6 +13,7 @@ import { FAITH } from "./data";
 import { maxHp } from "./core";
 import { injuryHit, injuryRollPenalty, lvl, wound } from "./injury";
 import { weaponOf } from "./gear";
+import { SKILLS } from "./skills";
 import { mindSummary } from "./mind";
 import { makeEnemies, startCombat } from "./combat";
 import type { GameState } from "./types";
@@ -158,15 +159,17 @@ describe("직업과 장비", () => {
     apply(s, { t: "create", name: "x", candidate: 0, faith: null });
     s.month = 2;
     s.gold = 999;
-    apply(s, { t: "train", training: "arcane", free: ["int", "int"] });
+    apply(s, { t: "train", training: "fire", free: ["int", "int"] });
     expect(s.hero.level).toBe(1);
     const m = newRun(9);
     apply(m, { t: "pickClass", cls: "mage" });
     apply(m, { t: "create", name: "x", candidate: 0, faith: null });
     m.month = 2;
     m.gold = 999;
-    apply(m, { t: "train", training: "arcane", free: ["int", "int"] });
-    expect(m.skills).toContain("magicMissile");
+    apply(m, { t: "train", training: "sword", free: ["int", "int"] });
+    expect(m.hero.level).toBe(1);
+    apply(m, { t: "train", training: "fire", free: ["int", "int"] });
+    expect(m.skills).toContain("fireEmber");
   });
   it("미궁 보물상자에서 장비가 나오고, 착용을 고르면 그 슬롯이 바뀐다", () => {
     let offered = 0;
@@ -359,10 +362,10 @@ describe("시작 조건", () => {
       expect(s.gold).toBe(0);
       expect(s.inventory.food + s.inventory.potion).toBeGreaterThan(0);
       s.gold = 999;
-      apply(s, { t: "train", training: s.hero.cls === "mage" ? "arcane" : "sword", free: ["str", "con"] });
+      apply(s, { t: "train", training: s.hero.cls === "mage" ? "fire" : "sword", free: ["str", "con"] });
       expect(s.hero.level).toBe(1);
       s.month = 2;
-      apply(s, { t: "train", training: s.hero.cls === "mage" ? "arcane" : "sword", free: ["str", "con"] });
+      apply(s, { t: "train", training: s.hero.cls === "mage" ? "fire" : "sword", free: ["str", "con"] });
       expect(s.hero.level).toBe(2);
     }
   });
@@ -802,5 +805,53 @@ describe("퍼징 회귀", () => {
     expect(s.settlement!.sector).toBe(2);
     expect(s.settlement!.lines[0]).toContain("2섹터");
     expect(s.settlement!.lines.some((l) => l.includes("등급이 올랐다"))).toBe(false);
+  });
+});
+
+describe("마법사 원소", () => {
+  const mage = (seed = 31) => {
+    const s = newRun(seed);
+    apply(s, { t: "pickClass", cls: "mage" });
+    apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    s.month = 2;
+    s.gold = 9999;
+    return s;
+  };
+  it("레벨마다 그 원소의 정해진 기술을 배운다(짝수 패시브, 홀수 액티브)", () => {
+    const s = mage();
+    apply(s, { t: "train", training: "fire", free: ["int", "con"] });
+    expect(s.hero.level).toBe(2);
+    expect(s.skills).toContain("fireEmber");
+    expect(s.skills).toContain("magicMissile"); // 첫 수련 때 기본기 마력 화살
+    s.phase = "town";
+    apply(s, { t: "train", training: "frost", free: ["per", "con"] });
+    expect(s.skills).toContain("frostArrow");
+    expect(s.skills).not.toContain("frostCalm");
+    expect(SKILLS.fireEmber.kind).toBe("passive");
+    expect(SKILLS.frostArrow.kind).toBe("active");
+  });
+  it("4레벨 특수 훈련에서 고른 원소가 주 원소가 되고, 지팡이가 그 원소의 주 능력치로 쏜다", () => {
+    const s = mage();
+    s.hero.level = 3;
+    s.inventory.heart = 1;
+    expect(weaponOf(s).stat).toBe("int");
+    apply(s, { t: "train", training: "bolt", free: ["dex", "con"] });
+    expect(s.hero.level).toBe(4);
+    expect(s.skills).toContain("boltMark");
+    expect(s.mainElement).toBe("bolt");
+    expect(weaponOf(s).stat).toBe(s.hero.stats.dex > s.hero.stats.int ? "dex" : "int");
+    expect(weaponOf(s).magic).toBe(true);
+  });
+  it("원소 주문이 전투에서 발동하고, 각인이 있으면 그 원소 액티브를 한 번 더 쓴다", () => {
+    const s = mage();
+    s.week = 3;
+    s.phase = "week-result";
+    apply(s, { t: "closeWeek" });
+    s.skills.push("fireArrow", "fireMark");
+    s.hero.hp = 999;
+    s.combat = null;
+    startCombat(s, "dungeon", makeEnemies(s, ["skeleton", "skeleton", "skeleton"]));
+    const casts = s.log.filter((l) => l.text.startsWith("【불화살】")).length;
+    expect(casts).toBe(2);
   });
 });

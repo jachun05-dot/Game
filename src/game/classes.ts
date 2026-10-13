@@ -19,6 +19,8 @@ export interface ClassDef {
   start: Partial<Record<SlotKey, string>>;
   /** 시작 소모품 */
   items: { food: number; potion: number; scroll: number };
+  /** 첫 훈련 때 함께 배우는 기본기(마법사: 마력 화살) */
+  firstSkill?: string;
   /** 받을 수 있는 훈련 id */
   trainings: string[];
   /** 후보 카드 성향: 이름과 많이 오르는 능력치(앞쪽일수록 더) */
@@ -70,12 +72,13 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     id: "mage",
     name: "마법사",
     motive: "차원문과 그 너머를 연구하러 왔다.",
-    desc: "지팡이로 지능 기반 마력탄을 쏜다. 몸이 약하다. 척후·학문 훈련과 전용 '주문학'을 받는다.",
+    desc: "지팡이로 마력탄을 쏜다. 몸이 약하다. 훈련은 화염·서리·번개·대지 수련뿐 — 레벨마다 고른 원소의 기술을 배운다.",
     hp: -2,
     hpPerLevel: 0,
     start: { main: "staff", body: "robe" },
     items: { food: 3, potion: 4, scroll: 0 },
-    trainings: ["scout", "study", "arcane"],
+    firstSkill: "magicMissile",
+    trainings: ["fire", "frost", "bolt", "earth"],
     archetypes: [
       { name: "책벌레", favor: ["int", "per"] },
       { name: "예민한 감응자", favor: ["per", "int"] },

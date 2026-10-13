@@ -1,3 +1,4 @@
+import { ELEMENTS } from "./elements";
 import type { GameState, StatKey } from "./types";
 import { mainLost, slotWorks } from "./injury";
 import { MIND_NAME, mindResist, type MindKey } from "./mind";
@@ -38,6 +39,8 @@ export interface Weapon {
   stat: StatKey;
   /** 로그 문장: "{대상}에게 {verb}" */
   verb: string;
+  /** 마력탄(지팡이): 근접 페널티·자기 부상이 없다 */
+  magic?: boolean;
 }
 
 export interface GearDef {
@@ -146,7 +149,11 @@ const FISTS: Weapon = { dice: [1, 2], stat: "str", verb: "주먹을 휘둘러" }
 export function weaponOf(s: GameState): Weapon {
   const id = s.gear.main;
   if (mainLost(s)) return FISTS; // 오른손 결손(의수 없음)
-  return (id && GEAR[id]?.weapon) || FISTS;
+  const w = (id && GEAR[id]?.weapon) || FISTS;
+  if (w.stat !== "int") return w;
+  // 마법사의 지팡이: 지능과 주 원소의 주 능력치 중 높은 쪽으로 쏜다
+  const el = s.mainElement ? ELEMENTS[s.mainElement].main : null;
+  return { ...w, magic: true, stat: el && s.hero.stats[el] > s.hero.stats.int ? el : "int" };
 }
 
 /** 이 장비가 들어갈 슬롯(반지는 빈 쪽, 둘 다 차 있으면 약한 쪽) */
