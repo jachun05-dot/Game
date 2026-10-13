@@ -161,7 +161,7 @@ export const MIN_COMBAT_ROOMS = [0, 2, 2, 2];
 /** 함정방에 고블린이 숨어 있을 확률과 마릿수 */
 export const TRAP_AMBUSH: { chance: number; size: [number, number] }[] = [
   { chance: 0, size: [0, 0] },
-  { chance: 0.5, size: [1, 1] },
+  { chance: 0.3, size: [1, 1] },
   { chance: 0.45, size: [1, 2] },
   { chance: 0.15, size: [1, 1] },
 ];

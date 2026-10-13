@@ -36,7 +36,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     hp: -2,
     hpPerLevel: 3,
     start: { main: "shortsword", body: "leather" },
-    items: { food: 3, potion: 0, scroll: 0 },
+    items: { food: 3, potion: 1, scroll: 0 },
     trainings: ["sword", "footwork", "scout", "study", "endure"],
     archetypes: [
       { name: "힘쓰는 소년", favor: ["str", "con"] },
@@ -56,7 +56,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     hp: -6,
     hpPerLevel: 2,
     start: { main: "longsword", body: "leather" },
-    items: { food: 3, potion: 2, scroll: 0 },
+    items: { food: 3, potion: 3, scroll: 0 },
     trainings: ["sword", "footwork", "endure", "warfare"],
     archetypes: [
       { name: "타고난 장사", favor: ["str", "con"] },
@@ -74,7 +74,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     hp: -2,
     hpPerLevel: 0,
     start: { main: "staff", body: "robe" },
-    items: { food: 3, potion: 3, scroll: 0 },
+    items: { food: 3, potion: 4, scroll: 0 },
     trainings: ["scout", "study", "arcane"],
     archetypes: [
       { name: "책벌레", favor: ["int", "per"] },
