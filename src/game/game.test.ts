@@ -435,9 +435,10 @@ describe("신앙", () => {
     apply(s, { t: "closeSettlement" });
     expect(s.phase).toBe("town"); // 세금을 못 내도 처형되지 않는다(관공서에 갈 수 없음)
     s.gold = 999;
+    const potions = s.inventory.potion;
     apply(s, { t: "buy", item: "potion" });
     apply(s, { t: "activity", a: "rumor" });
-    expect(s.inventory.potion).toBe(0);
+    expect(s.inventory.potion).toBe(potions); // 상점가를 쓸 수 없다
     expect(s.phase).toBe("town");
     apply(s, { t: "surrender" });
     expect(s.heretic).toBe(false);
