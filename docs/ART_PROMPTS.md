@@ -143,3 +143,18 @@ Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, 
 ```
 
 결과(2026-10-13): 1차 생성본 채택 → `assets/monsters/jewelgoblin.png`(60×71) = `public/mon-jewelgoblin.png`. 기본 고블린과 같은 자리(손가락 사이) 마젠타 3픽셀만 투명 처리
+
+## 009 — 마석 갑옷 스켈레톤 (기준 이미지 + 스켈레톤 첨부)
+
+```
+Match the exact art style, outline, palette and pixel scale of the first attached reference image. Use the second attached image (a skeleton soldier) as the base creature.
+
+Pixel art game sprite of the same skeleton soldier species, 3/4 view facing left, classic 16-bit RPG style. It is an adult-sized skeleton: its skull is clearly higher than the reference boy's head; fill about 95% of the image height.
+This rare skeleton wears armor made entirely of rough, faceted mana stone: a chest plate, pauldrons and a helm of cold teal-cyan crystal (#5fb3a8), and it holds a bone sword with crystal shards grown along the blade. Faint teal light inside the empty eye sockets.
+Keep the muted earthy bone palette of the base skeleton; the teal crystal is the only cold color, drawn with 3-4 flat pixel shades, no soft light, no bloom.
+Crisp hard pixel edges, 1-pixel dark outline, no anti-aliasing, no blur, no gradients, no noisy dithering.
+Full body, centered, feet visible, small margin around it.
+Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, no frame or border. Square 1:1 image.
+```
+
+결과(2026-10-13): 채택 → `assets/monsters/crystalskel.png`(82×92, 소년보다 머리 하나 큼 — "95% 높이" 지시가 먹혔다) = `public/mon-crystalskel.png`. 이번 생성본은 1024×1024(도트 10.24px, 격자는 똑같이 100)였고 `tools/sprite.py`가 그대로 처리했다. 넓은 청록 갑옷이 팔레트에서 튀어 청록 채도 −30%·명도 −8%, 뼈는 기본 스켈레톤 평균색에 맞춰 채널 보정(R×1.09, G×1.11, B×1.22)
