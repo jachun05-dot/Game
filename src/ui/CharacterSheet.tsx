@@ -98,6 +98,7 @@ export function CharacterSheet({ ctl }: { ctl: Ctl }) {
             <p className="small">
               말린 고기 {s.inventory.food} · 치료 물약 {s.inventory.potion} · 귀환 주문서 {s.inventory.scroll}
               {s.dungeon ? ` · 마석 ${s.dungeon.mana}G 어치` : ""}
+              {s.inventory.heart > 0 ? ` · ${BAL.heartName} ${s.inventory.heart}` : ""}
             </p>
             <p className="dim small">읽은 기록물 {s.recordsRead}개</p>
           </Card>

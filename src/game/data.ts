@@ -10,9 +10,9 @@ export const BAL = {
   minHpPerLevel: 2,
   /** 숙련 보너스(공격 굴림). DESIGN에는 없는 임시 보정 — 레벨1이 1층 단독 몬스터를 감당하게 하는 용도 */
   proficiency: 2,
-  trainCostPerLevel: 20,
+  trainCostPerLevel: 15,
   maxLevel: 16,
-  taxBase: 50,
+  taxBase: 30,
   taxPerRank: 40,
   weekTurns: 336,
   moveTurns: 4,
@@ -23,7 +23,12 @@ export const BAL = {
   trapDodgeDc: 12,
   trapDisarmDc: 13,
   fleeDcBase: 10,
-  prices: { food: 5, potion: 15, scroll: 45 },
+  prices: { food: 5, potion: 12, scroll: 45 },
+  /** 치료 물약 회복량 = 2d4 + 이 값 */
+  potionBase: 6,
+  /** 이 레벨에서 다음 레벨로 가는 훈련은 보스 증표가 있어야 받을 수 있다 */
+  heartGateLevel: 3,
+  heartName: "거대 쥐의 마석 심장",
   /** 층마다 희귀 개체가 나올 확률 */
   rareChance: 0.008,
   /** 함정 발견 후 숨은 고블린을 알아채는 감각 DC */
@@ -77,32 +82,33 @@ export const MONSTERS: Record<string, MonsterDef> = {
 /** 층별 조우 구성(DESIGN 11절 표): 1층 단독, 2층 무리+스켈레톤 첫 등장, 3층 다수 */
 export const ENCOUNTERS: Record<number, { item: string[]; w: number }[]> = {
   1: [
-    { item: ["rat"], w: 3 },
+    { item: ["rat"], w: 2 },
     { item: ["goblin"], w: 2 },
   ],
   2: [
-    { item: ["goblin", "goblin"], w: 3 },
+    { item: ["goblin", "goblin"], w: 5 },
     { item: ["goblin"], w: 2 },
-    { item: ["rat", "rat"], w: 3 },
+    { item: ["rat", "rat"], w: 2 },
     { item: ["rat", "rat", "rat"], w: 1 },
-    { item: ["skeleton"], w: 2 },
+    { item: ["skeleton"], w: 3 },
   ],
   3: [
-    { item: ["skeleton", "skeleton"], w: 3 },
-    { item: ["goblin", "goblin", "goblin"], w: 2 },
     { item: ["skeleton", "goblin"], w: 2 },
-    { item: ["rat", "rat", "rat"], w: 1 },
+    { item: ["skeleton"], w: 3 },
+    { item: ["goblin", "goblin"], w: 2 },
+    { item: ["skeleton", "skeleton"], w: 1 },
+    { item: ["rat", "rat", "rat"], w: 2 },
   ],
 };
 
 /** 층마다 전투방 최소 개수(함정이 많아도 몬스터가 줄지 않게) */
-export const MIN_COMBAT_ROOMS = [0, 2, 2, 3];
+export const MIN_COMBAT_ROOMS = [0, 2, 2, 2];
 /** 함정방에 고블린이 숨어 있을 확률과 마릿수 */
 export const TRAP_AMBUSH: { chance: number; size: [number, number] }[] = [
   { chance: 0, size: [0, 0] },
-  { chance: 0.2, size: [1, 1] },
-  { chance: 0.3, size: [1, 1] },
-  { chance: 0.4, size: [1, 2] },
+  { chance: 0.5, size: [1, 1] },
+  { chance: 0.45, size: [1, 2] },
+  { chance: 0.15, size: [1, 1] },
 ];
 export const RARE_BY_FLOOR = ["", "goldrat", "jewelgoblin", "crystalskel"];
 

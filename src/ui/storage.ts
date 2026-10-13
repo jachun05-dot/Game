@@ -16,6 +16,7 @@ export function loadRun(): GameState | null {
     s.tactics ??= { potionAt: 35, fleeAt: 0 };
     s.tripUsed ??= [];
     s.hero.cls ??= "adventurer";
+    s.inventory.heart ??= 0;
     if (s.phase !== "create") s.gear.main ??= "shortsword";
     if ((s.phase as string) === "combat") s.phase = "town";
     s.combat = null;

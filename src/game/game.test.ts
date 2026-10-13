@@ -87,6 +87,7 @@ describe("자동 전투와 기술", () => {
   it("훈련할 때마다 그 훈련의 기술을 순서대로 배운다", () => {
     const s = hero();
     s.gold = 9999;
+    s.inventory.heart = 1; // 레벨 3→4 관문
     for (const want of ["firstStrike", "sweep", "finisher"]) {
       apply(s, { t: "train", training: "sword", free: ["str", "con"] });
       expect(s.skills[s.skills.length - 1]).toBe(want);
@@ -178,7 +179,7 @@ describe("고블린 매복과 희귀 개체", () => {
     for (const f of [1, 2, 3]) {
       let combat = 0;
       for (let seed = 1; seed <= 500; seed++) combat += generateFloor(new Rng({ s: seed }), f).filter((r) => r.type === "combat").length;
-      expect(combat / 500).toBeGreaterThanOrEqual([0, 2, 2, 3][f]);
+      expect(combat / 500).toBeGreaterThanOrEqual([0, 2, 2, 2][f]);
     }
   });
   it("함정을 밟아 다치면 숨은 고블린이 기습한다", () => {
@@ -188,5 +189,35 @@ describe("고블린 매복과 희귀 개체", () => {
       if (s.log.some((l) => l.text.startsWith("기습!"))) surprised++;
     }
     expect(surprised).toBeGreaterThan(0);
+  });
+});
+
+describe("레벨 4 관문", () => {
+  it("레벨 3→4 훈련은 보스의 마석 심장이 있어야 하고, 받으면 심장을 쓴다", () => {
+    const s = newRun(21);
+    apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    const up = () => {
+      s.gold = 999;
+      apply(s, { t: "train", training: "sword", free: ["str", "con"] });
+      s.phase = "town";
+      s.weekResult = null;
+    };
+    up();
+    up();
+    expect(s.hero.level).toBe(3);
+    up();
+    expect(s.hero.level).toBe(3);
+    s.inventory.heart = 1;
+    up();
+    expect(s.hero.level).toBe(4);
+    expect(s.inventory.heart).toBe(0);
+  });
+  it("보스를 쓰러뜨리면 마석 심장을 얻는다", () => {
+    let got = 0;
+    for (let seed = 1; seed <= 300 && !got; seed++) {
+      const s = playBot(seed, 20000);
+      if (s.log.some((l) => l.text.includes("마석 심장을 꺼냈다"))) got++;
+    }
+    expect(got).toBeGreaterThan(0);
   });
 });

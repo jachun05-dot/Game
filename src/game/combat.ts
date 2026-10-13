@@ -241,7 +241,7 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
 }
 
 export function potionHeal(s: GameState): number {
-  return rngOf(s).dice(2, 4) + 2 + passive(s, "potion");
+  return rngOf(s).dice(2, 4) + BAL.potionBase + passive(s, "potion");
 }
 
 function drink(s: GameState, when: string): void {

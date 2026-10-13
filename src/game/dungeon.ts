@@ -457,7 +457,7 @@ export function resolvePending(s: GameState, choice: PendingChoice): void {
       log(s, "아직은 차원문을 넘지 않기로 했다.");
       return;
     }
-    s.rank += 1;
+    s.rank = Math.max(s.rank, dg.sector); // 등급 = 클리어한 섹터 수(같은 섹터를 다시 넘어도 오르지 않음)
     remember(s, `${dg.sector}섹터의 차원문에 도달했다.`);
     log(s, "차원문에 손을 뻗자 빛이 몸을 감싼다 — 1섹터 클리어!", "good");
     log(s, "(2섹터는 다음 업데이트 예정 — 이번 달 탐험은 여기까지)", "system");
@@ -501,6 +501,8 @@ export function afterDungeonCombat(s: GameState, outcome: "win" | "fled", c: Com
     if (room.type === "boss") {
       remember(s, "거대한 돌연변이 쥐를 쓰러뜨렸다.");
       log(s, "보스가 쓰러지자 포탈의 빛이 한층 밝아진다.", "story");
+      s.inventory.heart += 1;
+      log(s, `보스의 가슴에서 ${BAL.heartName}을 꺼냈다. 직업교관이 레벨 4 훈련의 대가로 요구하는 물건이다.`, "good");
       log(s, "쥐의 둥지에서 무언가 반짝인다.", "system");
       offerGear(s, rollLoot(s));
       return;

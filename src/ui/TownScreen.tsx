@@ -2,7 +2,8 @@ import { useState } from "react";
 import { BAL, STAT_KEYS, STAT_LABEL, TRAININGS } from "../game/data";
 import { GEAR, SLOTS, gearEffect, targetSlot } from "../game/gear";
 import { CLASSES } from "../game/classes";
-import { canTrain, nextSkill, trainCost } from "../game/town";
+import { canTrain, needsHeart, nextSkill, trainCost } from "../game/town";
+import type { GameState } from "../game/types";
 import { SKILLS } from "../game/skills";
 import { taxDue } from "../game/core";
 import type { StatKey } from "../game/types";
@@ -48,7 +49,7 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
       {tab === "act" && !training && (
         <div className="stack">
           <p className="dim small">한 주에 한 가지 일을 합니다. 쇼핑은 시간이 들지 않습니다.{s.week === 3 && " 다음 주는 미궁이 열립니다 — 준비물을 챙기세요."}</p>
-          <ActivityButton title="훈련" sub={canTrain(s) ? `직업교관 · ${trainCost(s)}G · 레벨 ${s.hero.level} → ${s.hero.level + 1}` : s.hero.level >= BAL.maxLevel ? "최대 레벨" : `돈이 모자라다 (${trainCost(s)}G)`} disabled={busy || !canTrain(s)} onClick={() => setTraining(true)} />
+          <ActivityButton title="훈련" sub={trainSub(s)} disabled={busy || !canTrain(s)} onClick={() => setTraining(true)} />
           <ActivityButton title="탐문" sub="술집 · 소문을 듣고 잔일을 구한다" disabled={busy} onClick={() => dispatch({ t: "activity", a: "rumor" })} />
           <ActivityButton title="외부 탐험" sub="영지 밖 숲 · 작은 전투, 마석 획득 (위험)" disabled={busy} onClick={() => dispatch({ t: "activity", a: "field" })} />
           <p className="dim small">다음 달 세금: {taxDue(s)}G (미납 시 처형)</p>
@@ -125,6 +126,17 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
 
     </GameScreen>
   );
+}
+
+function trainSub(s: GameState): string {
+  if (s.hero.level >= BAL.maxLevel) return "최대 레벨";
+  const base = `직업교관 · ${trainCost(s)}G · 레벨 ${s.hero.level} → ${s.hero.level + 1}`;
+  if (needsHeart(s)) {
+    if (s.inventory.heart <= 0) return `${BAL.heartName}이 필요하다 — 1섹터 3층 보스가 지니고 있다`;
+    if (s.gold < trainCost(s)) return `돈이 모자라다 (${trainCost(s)}G + ${BAL.heartName})`;
+    return `${base} + ${BAL.heartName}`;
+  }
+  return canTrain(s) ? base : `돈이 모자라다 (${trainCost(s)}G)`;
 }
 
 function WeekTrack({ month, week }: { month: number; week: number }) {

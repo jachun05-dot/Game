@@ -20,7 +20,8 @@ export function mod(v: number): number {
 
 export function maxHp(s: GameState): number {
   // DESIGN 7·8절: CON 보정치가 레벨마다 고정 누적. 기본 HP는 미정이라 임시값.
-  return BAL.baseHp + CLASSES[s.hero.cls].hp + Math.max(BAL.minHpPerLevel, mod(s.hero.stats.con)) * s.hero.level + passive(s, "hp");
+  const cls = CLASSES[s.hero.cls];
+  return BAL.baseHp + cls.hp + (Math.max(BAL.minHpPerLevel, mod(s.hero.stats.con)) + cls.hpPerLevel) * s.hero.level + passive(s, "hp");
 }
 
 export function heroAc(s: GameState): number {

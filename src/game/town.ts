@@ -19,7 +19,7 @@ export function newRun(seed: number): GameState {
     month: 1,
     week: 1,
     gold: BAL.startGold,
-    inventory: { food: 0, potion: 0, scroll: 0 },
+    inventory: { food: 0, potion: 0, scroll: 0, heart: 0 },
     gear: {},
     skills: [],
     tactics: { potionAt: 35, fleeAt: 0 },
@@ -104,8 +104,14 @@ export function trainCost(s: GameState): number {
   return BAL.trainCostPerLevel * s.hero.level;
 }
 
+/** 레벨 3→4 훈련은 1섹터 보스의 마석 심장이 있어야 한다 */
+export function needsHeart(s: GameState): boolean {
+  return s.hero.level === BAL.heartGateLevel;
+}
+
 export function canTrain(s: GameState): boolean {
-  return s.phase === "town" && s.hero.level < BAL.maxLevel && s.gold >= trainCost(s);
+  if (s.phase !== "town" || s.hero.level >= BAL.maxLevel || s.gold < trainCost(s)) return false;
+  return !needsHeart(s) || s.inventory.heart > 0;
 }
 
 function feedLines(r: Rng, good: boolean): string[] {
@@ -133,6 +139,8 @@ export function train(s: GameState, trainingId: string, free: [StatKey, StatKey]
   if (!t || !canTrainAt(s, t.id)) return;
   const cost = trainCost(s);
   s.gold -= cost;
+  const paidHeart = needsHeart(s);
+  if (paidHeart) s.inventory.heart -= 1;
   const delta: Partial<Stats> = {};
   const bump = (k: StatKey) => {
     addStat(s, k, 1);
@@ -154,6 +162,7 @@ export function train(s: GameState, trainingId: string, free: [StatKey, StatKey]
     `${t.name} — ${t.desc}. (${cost}G)`,
     `고정: ${t.stats.map((k) => STAT_LABEL[k]).join(", ")} / 자유: ${free.map((k) => STAT_LABEL[k]).join(", ")} / ${noBehavior ? "몸이 기억한 것(무작위)" : "몸이 기억한 것"}: ${behaviorPicks.map((k) => STAT_LABEL[k]).join(", ")}`,
   ];
+  if (paidHeart) lines.unshift(`교관이 ${BAL.heartName}을 받아 들고 고개를 끄덕였다. "이제야 진짜 훈련을 시작할 수 있겠군."`);
   if (!learned) lines.push("이 훈련에서 더 배울 기술은 없다. (히든 트레이닝은 준비 중)");
   finishWeek(s, { title: "훈련", lines, statDelta: delta, levelUp: { from, to: s.hero.level }, learned: learned ?? undefined, goldDelta: -cost }, true);
 }

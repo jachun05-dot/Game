@@ -10,7 +10,9 @@
     "test": "vitest run",
     "typecheck": "tsc -b",
     "sim": "vite-node scripts/sim.ts",
-    "sim:month1": "vite-node scripts/sim-month1.ts"
+    "sim:month1": "vite-node scripts/sim-month1.ts",
+    "sim:all": "vite-node scripts/sim-all.ts",
+    "sim:boss": "vite-node scripts/sim-boss.ts"
   },
   "dependencies": {
     "react": "^18.3.1",

@@ -177,7 +177,8 @@ export interface GameState {
   /** 1~3 마을, 4 던전 */
   week: number;
   gold: number;
-  inventory: { food: number; potion: number; scroll: number };
+  /** heart: 1섹터 보스가 남기는 "거대 쥐의 마석 심장"(레벨 3→4 훈련 대가) */
+  inventory: { food: number; potion: number; scroll: number; heart: number };
   /** 착용 장비(슬롯 → gear.ts의 GEAR id) */
   gear: Partial<Record<SlotKey, string>>;
   /** 배운 기술 id */
