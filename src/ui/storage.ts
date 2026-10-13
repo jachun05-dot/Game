@@ -32,6 +32,11 @@ function fixRun(s: GameState | null): GameState | null {
   s.autoGoal ??= "explore";
   s.piety ??= s.hero.faith ? 15 : 0;
   s.heretic ??= false;
+  s.injuries ??= { head: 0, body: 0, main: 0, offhand: 0, feet: 0 };
+  s.prosthetic ??= {};
+  s.disease ??= 0;
+  s.inventory.bandage ??= 0;
+  s.inventory.herb ??= 0;
   s.faithsKnown ??= s.hero.faith ? [s.hero.faith] : [];
   s.codex = mergeCodex(s.codex ?? emptyCodex(), { ...emptyCodex(), fragKnown: s.fragments });
   return s;

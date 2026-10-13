@@ -148,11 +148,17 @@ export function CreateScreen({ ctl }: { ctl: Ctl }) {
             <button className={`chip${faith === null ? " on" : ""}`} onClick={() => setFaith(null)}>
               섬기지 않음
             </button>
-            {meta.faiths.map((f) => (
-              <button key={f} className={`chip${faith === f ? " on" : ""}`} onClick={() => setFaith(f)}>
-                {f}
-              </button>
-            ))}
+            {meta.faiths.map((f) =>
+              godOf(f) ? (
+                <button key={f} className={`chip${faith === f ? " on" : ""}`} onClick={() => setFaith(f)}>
+                  {f}
+                </button>
+              ) : (
+                <button key={f} className="chip" disabled title="해금되었지만 권능은 아직 준비 중">
+                  {f} (준비 중)
+                </button>
+              ),
+            )}
           </div>
         )}
         {faith && godOf(faith) && (

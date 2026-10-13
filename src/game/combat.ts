@@ -3,8 +3,11 @@ import { BAL, MONSTERS } from "./data";
 import { actionsPerRound, heroAc, isDead, kill, log, maxHp, note, rngOf, rollPenalty, smod } from "./core";
 import { FRAGMENTS } from "./fragments";
 import { GODS, faithDmg, faithHit, power, pray } from "./faith";
+import { HEAD_STUN, INJ, canFlee, infect, injuryHit, lvl, noCrit, wound, type Part } from "./injury";
 import { activeSkills, passive, SKILLS, type SkillDef } from "./skills";
-import { weaponOf } from "./gear";
+import { GEAR, weaponOf } from "./gear";
+
+const GEAR_IS_WEAPON = (id: string) => !!GEAR[id]?.weapon;
 import type { CombatState, Enemy, GameState } from "./types";
 import { afterDungeonCombat, passTime } from "./dungeon";
 import { afterFieldCombat } from "./town";
@@ -193,6 +196,11 @@ function selfTriggers(s: GameState, c: CombatState): void {
 }
 
 function playerPhase(s: GameState, c: CombatState, opener: Strike | null): "win" | "fled" | null {
+  // 머리 중상: 라운드마다 기절
+  if (lvl(s, "head") >= 2 && rngOf(s).chance(HEAD_STUN)) {
+    log(s, "머리가 울려 눈앞이 하얘졌다 — 몸이 움직이지 않는다.", "miss");
+    return null;
+  }
   const actions = actionsPerRound(s);
   for (let a = 0; a < actions; a++) {
     selfTriggers(s, c);
@@ -237,7 +245,7 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
   const w = weaponOf(s);
   const statMod = smod(s, w.stat);
   const roll = r.die(20);
-  const bonus = statMod + BAL.proficiency + passive(s, "hit") + st.hit + rollPenalty(s) + faithHit(s, alive(c).length);
+  const bonus = statMod + BAL.proficiency + passive(s, "hit") + st.hit + rollPenalty(s) + faithHit(s, alive(c).length) + injuryHit(s);
   if (!st.autoHit && roll === 1) {
     log(s, `손이 미끄러졌다! (주사위 1)`, "miss");
     return;
@@ -246,7 +254,8 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
     log(s, `${josa(def.name, "을")} 노렸지만 빗나갔다. (${roll}+${bonus} vs AC ${ac})`, "miss");
     return;
   }
-  const crit = roll === 20 || r.float() * 100 < 5 + smod(s, "luk") + passive(s, "crit");
+  const crit = !noCrit(s) && (roll === 20 || r.float() * 100 < 5 + smod(s, "luk") + passive(s, "crit"));
+  selfInjury(s, def.id, w.stat);
   const base = r.dice(w.dice[0] * (crit ? 2 : 1), w.dice[1]) + statMod + passive(s, "dmg") + st.dmg + faithDmg(s);
   const dmg = Math.max(1, Math.round(base * st.mult));
   target.hp -= dmg;
@@ -258,6 +267,36 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
     log(s, `${josa(def.name, "을")} 쓰러뜨렸다.`, "good");
     if (power(s, "war", 2)) s.hero.hp = Math.min(maxHp(s), s.hero.hp + 2); // 전쟁의 신 ★2
   }
+}
+
+/** 때리다 자기 손을 다친다: 맨손이면 중간 확률, 단단한 몬스터면 낮은 확률(마력탄은 제외) */
+function selfInjury(s: GameState, defId: string, stat: string): void {
+  if (stat === "int" || isDead(s)) return;
+  const r = rngOf(s);
+  const fists = weaponOf(s).verb === "주먹을 휘둘러";
+  if (fists && r.chance(INJ.fistSelf)) wound(s, "main", "맨주먹으로 내리치다 손을 다쳤다");
+  else if (MONSTERS[defId]?.hard && r.chance(INJ.hardSelf)) wound(s, "main", `${MONSTERS[defId].name}의 단단한 몸을 치다 손목이 꺾였다`);
+}
+
+/** 맞았을 때 부상·질병 */
+function hitInjury(s: GameState, defId: string, dmg: number, crit: boolean): void {
+  const def = MONSTERS[defId];
+  const r = rngOf(s);
+  const p = crit ? INJ.hitCrit : dmg >= maxHp(s) * INJ.heavyRatio ? INJ.hitHeavy : INJ.hitNormal;
+  if (r.chance(p)) {
+    const w: Partial<Record<Part, number>> = { head: 1, body: 1, main: 1, offhand: 1, feet: 1, ...(def.wound ?? {}) };
+    // 방패(무기가 아닌 왼손 장비)는 왼손을 지킨다
+    const shield = s.gear.offhand && !GEAR_IS_WEAPON(s.gear.offhand);
+    if (shield) w.offhand = (w.offhand ?? 1) / 2;
+    const part = r.weighted((Object.entries(w) as [Part, number][]).map(([item, wt]) => ({ item, w: wt })));
+    const dead = wound(s, part, `${def.name}의 공격`);
+    s.hero.hp = Math.min(s.hero.hp, maxHp(s)); // 몸통 부상은 최대 HP를 깎는다
+    if (dead === "oblivion") kill(s, "oblivion", `${def.name}의 일격에 머리를 잃었다`);
+    else if (dead === "body") kill(s, "single", `${def.name}에게 몸통을 꿰뚫려 쓰러졌다`);
+    if (isDead(s)) return;
+  }
+  const dz = defId === "boss" ? INJ.diseaseBoss : ["rat", "goldrat"].includes(defId) ? INJ.diseaseRat : 0;
+  if (dz && r.chance(dz)) infect(s);
 }
 
 export function potionHeal(s: GameState): number {
@@ -272,6 +311,10 @@ function drink(s: GameState, when: string): void {
 }
 
 function tryFlee(s: GameState, c: CombatState): boolean {
+  if (!canFlee(s)) {
+    log(s, "다친 다리로는 도망칠 수 없다!", "miss");
+    return false;
+  }
   const dc = BAL.fleeDcBase + alive(c).length * 2;
   const roll = rngOf(s).die(20);
   const bonus = smod(s, "dex") + passive(s, "flee") + rollPenalty(s);
@@ -305,6 +348,10 @@ function enemyPhase(s: GameState, c: CombatState): void {
     const dmg = Math.max(1, r.dice(def.dice[0] * (crit ? 2 : 1), def.dice[1]));
     s.hero.hp -= dmg;
     log(s, `${josa(def.name, "이")} ${def.attackText}! ${dmg} 피해${crit ? " (치명타!)" : ""}`, "hurt");
+    if (s.hero.hp > 0) {
+      hitInjury(s, def.id, dmg, crit);
+      if (isDead(s)) return;
+    }
     if (s.hero.hp <= 0) {
       const grit = activeSkills(s).find((sk) => sk.trigger!.on === "lethal" && !s.tripUsed.includes(sk.id));
       // 시와 노래의 신 ★3 "끝나지 않은 노래"(미궁마다 1회)

@@ -27,7 +27,7 @@ export const BAL = {
   trapDodgeDc: 12,
   trapDisarmDc: 13,
   fleeDcBase: 10,
-  prices: { food: 5, potion: 10, scroll: 45 },
+  prices: { food: 5, potion: 10, scroll: 45, bandage: 15, herb: 15 },
   /** 치료 물약 회복량 = 2d4 + 이 값 */
   potionBase: 6,
   /** 이 레벨에서 다음 레벨로 가는 훈련은 보스 증표가 있어야 받을 수 있다 */
@@ -35,6 +35,8 @@ export const BAL = {
   heartName: "거대 쥐의 마석 심장",
   /** 층마다 희귀 개체가 나올 확률 */
   rareChance: 0.008,
+  /** 2·3층 함정방이 꺼진 바닥일 확률 */
+  pitChance: 0.3,
   /** 리젠: 이 턴(8시간)마다 비운 전투방이 respawnChance 확률로 다시 채워진다. 리젠 몬스터 마석은 respawnManaMult배 */
   respawnEveryTurns: 16,
   respawnChance: 0.3,
@@ -71,6 +73,10 @@ export interface MonsterDef {
   attackText: string;
   /** 성향 설명(로그·도감용) */
   note?: string;
+  /** 맞았을 때 부상 부위 가중치(없으면 고르게). 예: 물어뜯기 = 손·발 */
+  wound?: Partial<Record<"head" | "body" | "main" | "offhand" | "feet", number>>;
+  /** 단단하다: 때리면 낮은 확률로 자기 손을 다친다 */
+  hard?: boolean;
   /** 사람(이단심문관 등): 도감·편린 없음 */
   human?: boolean;
   /** 희귀 개체: 마석이 층 배율 없이 그대로 들어오고, 몇 라운드 뒤 달아난다 */
@@ -81,16 +87,16 @@ export interface MonsterDef {
 
 // DESIGN 11절 "1섹터 몬스터(확정)" / "1섹터 보스"
 export const MONSTERS: Record<string, MonsterDef> = {
-  rat: { id: "rat", name: "쥐", hp: 4, ac: 12, atk: 2, dice: [1, 4], mana: 5, attackText: "물어뜯었다" },
-  goblin: { id: "goblin", name: "고블린", hp: 7, ac: 12, atk: 3, dice: [1, 6], mana: 9, attackText: "녹슨 단검을 휘둘렀다", note: "비겁하다. 함정 근처에 숨어 있다가 함정을 밟은 상대를 노린다. 함정이 해체되면 달아난다." },
-  skeleton: { id: "skeleton", name: "스켈레톤 병사", hp: 10, ac: 13, atk: 3, dice: [1, 8], mana: 15, attackText: "뼈 검을 내리쳤다" },
+  rat: { id: "rat", name: "쥐", wound: { main: 3, offhand: 3, feet: 3, body: 1 }, hp: 4, ac: 12, atk: 2, dice: [1, 4], mana: 5, attackText: "물어뜯었다" },
+  goblin: { id: "goblin", name: "고블린", wound: { body: 3, main: 1, offhand: 1, feet: 1, head: 1 }, hp: 7, ac: 12, atk: 3, dice: [1, 6], mana: 9, attackText: "녹슨 단검을 휘둘렀다", note: "비겁하다. 함정 근처에 숨어 있다가 함정을 밟은 상대를 노린다. 함정이 해체되면 달아난다." },
+  skeleton: { id: "skeleton", name: "스켈레톤 병사", wound: { head: 3, body: 1, main: 1, offhand: 1, feet: 1 }, hard: true, hp: 10, ac: 13, atk: 3, dice: [1, 8], mana: 15, attackText: "뼈 검을 내리쳤다" },
   // 희귀 개체 — 층마다 BAL.rareChance 확률로 전투방 하나에 단독 출현
-  goldrat: { id: "goldrat", name: "마석 먹은 쥐", hp: 8, ac: 15, atk: 1, dice: [1, 3], mana: 180, attackText: "번들거리는 이빨로 물었다", rare: true, escapeAfter: 3, note: "마석을 삼켜 배가 빛난다. 겁이 많아 금방 달아난다." },
+  goldrat: { id: "goldrat", name: "마석 먹은 쥐", wound: { main: 3, offhand: 3, feet: 3, body: 1 }, hp: 8, ac: 15, atk: 1, dice: [1, 3], mana: 180, attackText: "번들거리는 이빨로 물었다", rare: true, escapeAfter: 3, note: "마석을 삼켜 배가 빛난다. 겁이 많아 금방 달아난다." },
   jewelgoblin: { id: "jewelgoblin", name: "보석 박힌 고블린", hp: 12, ac: 15, atk: 3, dice: [1, 4], mana: 200, attackText: "보석 박힌 곤봉을 휘둘렀다", rare: true, escapeAfter: 3, note: "훔친 마석을 몸에 박아 넣었다. 불리하면 바로 달아난다." },
-  crystalskel: { id: "crystalskel", name: "마석 갑옷 스켈레톤", hp: 16, ac: 16, atk: 4, dice: [1, 6], mana: 220, attackText: "마석 박힌 검을 내리쳤다", rare: true, escapeAfter: 4, note: "갑옷이 통째로 마석이다. 오래 머물지 않고 어둠 속으로 사라진다." },
+  crystalskel: { id: "crystalskel", name: "마석 갑옷 스켈레톤", wound: { head: 3, body: 1, main: 1, offhand: 1, feet: 1 }, hard: true, hp: 16, ac: 16, atk: 4, dice: [1, 6], mana: 220, attackText: "마석 박힌 검을 내리쳤다", rare: true, escapeAfter: 4, note: "갑옷이 통째로 마석이다. 오래 머물지 않고 어둠 속으로 사라진다." },
   // 현상수배된 이단을 쫓는 성당의 사냥꾼. 1섹터 보스 무리와 맞먹는다. 사람이라 마석·편린은 없다
-  inquisitor: { id: "inquisitor", name: "이단심문관", hp: 30, ac: 14, atk: 5, dice: [1, 8], mana: 0, human: true, attackText: "성인의 이름을 외치며 철퇴를 내리쳤다", note: "성당이 보낸 이단 사냥꾼. 이단을 따라 미궁 안까지 들어온다." },
-  boss: { id: "boss", name: "거대한 돌연변이 쥐", hp: 18, ac: 13, atk: 4, dice: [1, 8], mana: 60, attackText: "거대한 이빨로 물어뜯었다" },
+  inquisitor: { id: "inquisitor", name: "이단심문관", wound: { head: 3, body: 2, main: 1, offhand: 1, feet: 1 }, hp: 30, ac: 14, atk: 5, dice: [1, 8], mana: 0, human: true, attackText: "성인의 이름을 외치며 철퇴를 내리쳤다", note: "성당이 보낸 이단 사냥꾼. 이단을 따라 미궁 안까지 들어온다." },
+  boss: { id: "boss", name: "거대한 돌연변이 쥐", wound: { head: 2, body: 2, main: 2, offhand: 2, feet: 2 }, hp: 18, ac: 13, atk: 4, dice: [1, 8], mana: 60, attackText: "거대한 이빨로 물어뜯었다" },
 };
 
 /** 층별 조우 구성(DESIGN 11절 표): 1층 단독, 2층 무리+스켈레톤 첫 등장, 3층 다수 */
@@ -154,6 +160,9 @@ export const FAITH = {
   starve: "기아/풍요의 신",
   trap: "재앙(함정)의 신",
   tax: "탐욕/채무의 신",
+  plague: "역병의 신",
+  abyss: "심연의 신",
+  oblivion: "망각의 신",
   song: "시와 노래의 신",
 } as const;
 
@@ -202,6 +211,7 @@ export const ROOM_FLAVOR: Record<string, string[]> = {
   ],
   combat: ["어둠 속에서 무언가 움직인다!", "날카로운 소리와 함께 그림자가 덤벼든다!", "숨소리가 들린다. 혼자가 아니다."],
   trap: ["바닥 돌의 결이 어딘가 어색하다.", "좁은 통로, 벽 틈에 녹슨 금속이 번뜩인다."],
+  pit: ["바닥 한가운데가 새로 덮은 흙처럼 푸석하다.", "발밑에서 찬바람이 올라온다. 아래가 비어 있다."],
   treasure: ["벽감 안에 낡은 상자가 놓여 있다.", "무너진 선반 아래 작은 궤짝이 보인다."],
   record: ["벽에 빽빽하게 글자가 새겨져 있다.", "바닥에 가죽 표지의 일지가 떨어져 있다."],
   shrine: ["이름 모를 신의 작은 제단이 있다. 성당의 상징과는 다르다.", "부서진 석상 앞에 누군가 꽃을 두고 갔다."],

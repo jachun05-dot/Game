@@ -1,7 +1,8 @@
 import { josa } from "./josa";
 import { BAL, FEED, FIELD_ENCOUNTERS, NAMES, RIVAL_NEWS, RIVALS, RUMORS, STAT_KEYS, STAT_LABEL, TRAININGS } from "./data";
-import { addStat, emptyStats, kill, log, maxHp, rngOf, taxDue, topBehavior, yearOf } from "./core";
+import { addStat, check, emptyStats, kill, log, maxHp, rngOf, taxDue, topBehavior, yearOf } from "./core";
 import { FRAGMENTS, emptyCodex, fragSlots } from "./fragments";
+import { INJ, LIMBS, PART_NAME, PARTS, emptyInjuries, treatWorst, type Part } from "./injury";
 import { FAITH_BAL, GODS, addPiety, faithManaMult, god, godOf, power, pray, tier } from "./faith";
 import { makeEnemies, startCombat } from "./combat";
 import { Rng } from "./rng";
@@ -21,13 +22,16 @@ export function newRun(seed: number): GameState {
     month: 1,
     week: 1,
     gold: BAL.startGold,
-    inventory: { food: 0, potion: 0, scroll: 0, heart: 0 },
+    inventory: { food: 0, potion: 0, scroll: 0, heart: 0, bandage: 0, herb: 0 },
     gear: {},
     skills: [],
     fragments: [],
     codex: emptyCodex(),
     piety: 0,
     heretic: false,
+    injuries: emptyInjuries(),
+    prosthetic: {},
+    disease: 0,
     faithsKnown: [],
     tactics: { potionAt: 35, fleeAt: 0 },
     autoGoal: "explore",
@@ -101,7 +105,8 @@ export function createHero(s: GameState, name: string, candidate: number, faith:
   const c = s.candidates[candidate];
   s.hero.name = name.trim() || "이름 없는 소년";
   s.hero.stats = { ...c.stats };
-  s.hero.faith = faith && s.faithsKnown.includes(faith) ? faith : faith && s.faithsKnown.length === 0 && godOf(faith) ? faith : null;
+  // 권능이 정해진 신만 섬길 수 있다(역병·심연·망각은 해금만 되고 권능은 준비 중)
+  s.hero.faith = faith && godOf(faith) && (s.faithsKnown.includes(faith) || s.faithsKnown.length === 0) ? faith : null;
   s.piety = s.hero.faith ? FAITH_BAL.start : 0;
   const cls = CLASSES[s.hero.cls];
   s.gear = { ...cls.start };
@@ -257,6 +262,67 @@ export function afterFieldCombat(s: GameState, outcome: "win" | "fled", c: Comba
 export function doActivity(s: GameState, a: Activity): void {
   if (a === "rumor") rumor(s);
   else if (a === "field") goField(s);
+  else if (a === "inn") inn(s);
+}
+
+/** 여관: 한 주와 20G를 들여 모든 부상·질병을 한 단계 낫게 한다(결손은 그대로) */
+export function inn(s: GameState): void {
+  if (s.phase !== "town" || s.heretic || s.gold < INJ.innCost) return;
+  s.gold -= INJ.innCost;
+  const lines = [`여관 다락방에 일주일을 묵었다. (${INJ.innCost}G)`];
+  let healed = 0;
+  for (const p of PARTS) {
+    const v = s.injuries[p];
+    if (v > 0 && v < 3) {
+      s.injuries[p] = v - 1;
+      healed++;
+      lines.push(`${PART_NAME[p]}: ${["멀쩡함", "경상", "중상"][v - 1]}으로 나아졌다.`);
+    }
+  }
+  if (s.disease > 0) {
+    s.disease -= 1;
+    lines.push(s.disease ? "열이 조금 내렸다. (쥐 열병 경상)" : "열이 내렸다. 쥐 열병이 나았다.");
+    healed++;
+  }
+  if (!healed) lines.push("푹 쉬었다. 딱히 나을 데는 없었다.");
+  s.hero.hp = maxHp(s);
+  finishWeek(s, { title: "여관", lines, statDelta: {}, goldDelta: -INJ.innCost }, healed > 0);
+}
+
+/** 신전 재생 의식: 결손된 손·발을 완전히 되살린다 */
+export function regen(s: GameState, p: Part): void {
+  if (s.phase !== "town" || s.heretic || !LIMBS.includes(p) || s.injuries[p] < 3 || s.gold < INJ.regenCost) return;
+  s.gold -= INJ.regenCost;
+  s.injuries[p] = 0;
+  delete s.prosthetic[p];
+  pray(s, "greed", -Math.ceil(INJ.regenCost / 20));
+  log(s, `신전 사제가 ${INJ.regenCost}G를 받고 긴 의식을 치렀다. 잃었던 ${PART_NAME[p]}에 감각이 돌아온다.`, "good");
+}
+
+/** 대장간 의수·의족: 결손 부위를 중상 성능으로 대신한다 */
+export function prosthetic(s: GameState, p: Part): void {
+  if (s.phase !== "town" || s.heretic || !LIMBS.includes(p) || s.injuries[p] < 3 || s.prosthetic[p] || s.gold < INJ.prostheticCost) return;
+  s.gold -= INJ.prostheticCost;
+  s.prosthetic[p] = true;
+  pray(s, "greed", -Math.ceil(INJ.prostheticCost / 20));
+  log(s, `대장간에서 ${p === "feet" ? "의족" : "의수"}을 맞췄다. (${INJ.prostheticCost}G) 서툴지만 없는 것보다 낫다.`, "system");
+}
+
+/** 붕대: 가장 심한 부상 하나를 한 단계(결손 제외) */
+export function useBandage(s: GameState): void {
+  if (s.combat || s.inventory.bandage <= 0 || (s.phase !== "town" && s.phase !== "dungeon")) return;
+  const p = treatWorst(s);
+  if (!p) return;
+  s.inventory.bandage -= 1;
+  log(s, `붕대를 단단히 감았다. ${PART_NAME[p]}: ${["멀쩡함", "경상", "중상"][s.injuries[p]]}`, "good");
+}
+
+/** 약초 탕약: 쥐 열병 한 단계 */
+export function useHerb(s: GameState): void {
+  if (s.combat || s.inventory.herb <= 0 || s.disease <= 0 || (s.phase !== "town" && s.phase !== "dungeon")) return;
+  s.inventory.herb -= 1;
+  s.disease -= 1;
+  log(s, s.disease ? "쓴 탕약을 삼켰다. 열이 조금 내렸다." : "쓴 탕약을 삼켰다. 열이 내렸다.", "good");
 }
 
 /** 상점가 가격(탐욕/채무의 신 ★1: 반값) */
@@ -329,6 +395,16 @@ export function beginSettlement(s: GameState, o: { mana: number; cleared: boolea
   pray(s, "greed", Math.min(15, Math.floor(gold / 10)));
   if (o.cleared) lines.push(`등급이 올랐다 — 클리어한 섹터 ${s.rank}개.`);
   faithMonthEnd(s, lines);
+  // 경상은 미궁 밖으로 나오면 체력 판정으로 저절로 낫는다
+  for (const p of PARTS) {
+    if (s.injuries[p] !== 1) continue;
+    if (check(s, "con", INJ.healDc).ok) {
+      s.injuries[p] = 0;
+      lines.push(`${PART_NAME[p]}의 가벼운 상처가 아물었다.`);
+    } else lines.push(`${PART_NAME[p]}의 상처가 아직 욱신거린다. (경상)`);
+  }
+  for (const p of PARTS) if (s.injuries[p] === 2) lines.push(`${PART_NAME[p]} 중상은 저절로 낫지 않는다 — 여관이나 붕대가 필요하다.`);
+  if (s.disease > 0) lines.push("쥐 열병은 저절로 낫지 않는다 — 탕약이나 여관이 필요하다.");
   // 세금은 다음 달 1주차에 낸다. 해가 바뀌면 오른다. 현상수배 중에는 관공서가 세금 대신 목에 현상금을 건다
   let tax = s.heretic ? 0 : taxDue(s.month + 1) + (s.debt ?? 0);
   if (!s.heretic && yearOf(s.month + 1) > yearOf(s.month)) lines.push(`해가 바뀐다. 영주가 세금을 올렸다 — ${taxDue(s.month)}G → ${taxDue(s.month + 1)}G.`);
@@ -390,7 +466,7 @@ export function surrender(s: GameState): void {
 
 /** 미궁 성소에서 개종: 버린 신이 1개월 저주를 건다 */
 export function convert(s: GameState, name: string): void {
-  if (!s.faithsKnown.includes(name) || s.hero.faith === name) return;
+  if (!s.faithsKnown.includes(name) || s.hero.faith === name || !godOf(name)) return;
   const old = s.hero.faith;
   if (old) {
     s.curse = { god: old, months: FAITH_BAL.curseMonths };

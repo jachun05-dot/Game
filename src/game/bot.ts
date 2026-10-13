@@ -1,6 +1,7 @@
 
 import { GEAR, gearScore, targetSlot } from "./gear";
 import { CLASSES } from "./classes";
+import { INJ, PARTS } from "./injury";
 import { fragScore, fragSlots } from "./fragments";
 import { heroAc, maxHp, smod } from "./core";
 import { canTrain, nextSkill, shopPrice, trainCost } from "./town";
@@ -30,6 +31,12 @@ export function botAction(s: GameState): Action | null {
 
 function townAction(s: GameState): Action {
   if (s.heretic) return { t: "activity", a: "field" };
+  // 부상: 결손된 손·발엔 의수·의족, 중상·질병이면 여관에서 한 주 쉰다
+  for (const p of ["main", "offhand", "feet"] as const) {
+    if (s.injuries[p] >= 3 && !s.prosthetic[p] && s.gold >= INJ.prostheticCost) return { t: "prosthetic", part: p };
+  }
+  if (s.disease > 0 && s.inventory.herb > 0) return { t: "herb" };
+  if ((PARTS.some((p) => s.injuries[p] === 2) || s.disease > 0) && s.gold >= INJ.innCost) return { t: "activity", a: "inn" };
   // 미궁 준비물(고기 4, 물약 2) 살 돈은 항상 남겨 둔다
   const supply = Math.max(0, 4 - s.inventory.food) * shopPrice(s, "food") + Math.max(0, 2 - s.inventory.potion) * shopPrice(s, "potion");
   const spare = s.gold - supply;
@@ -81,6 +88,8 @@ function dungeonAction(s: GameState): Action | null {
       }
     }
   }
+  if (s.inventory.bandage > 0 && PARTS.some((p) => s.injuries[p] === 2)) return { t: "bandage" };
+  if (s.inventory.herb > 0 && s.disease > 0) return { t: "herb" };
   if (hp < 0.4 && s.inventory.potion > 0) return { t: "potion" };
   if (hp < 0.45 && s.inventory.potion === 0 && s.inventory.scroll > 0) return { t: "scroll" };
   if (s.hero.satiety < 25 && s.inventory.food > 0) return { t: "eat" };

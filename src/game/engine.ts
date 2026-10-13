@@ -1,6 +1,7 @@
 import { camp, drinkPotion, eat, enterDungeon, moveTo, resolvePending, useScroll, type PendingChoice } from "./dungeon";
-import { answerInquisition, surrender, buy, buyGear, closeSettlement, closeWeek, createHero, doActivity, eraseFrag, pickClass, rerollCandidates, sell, setTactics, train } from "./town";
+import { answerInquisition, surrender, regen, prosthetic, useBandage, useHerb, buy, buyGear, closeSettlement, closeWeek, createHero, doActivity, eraseFrag, pickClass, rerollCandidates, sell, setTactics, train } from "./town";
 import type { ClassId } from "./classes";
+import type { Part } from "./injury";
 import type { Activity, AutoGoal, GameState, StatKey, Tactics } from "./types";
 import type { BAL } from "./data";
 
@@ -29,6 +30,12 @@ export type Action =
   | { t: "inquisition"; renounce: boolean }
   /** 현상수배 중 성당에 자수(신앙 포기) */
   | { t: "surrender" }
+  | { t: "bandage" }
+  | { t: "herb" }
+  /** 신전 재생 의식(손·발 결손) */
+  | { t: "regen"; part: Part }
+  /** 대장간 의수·의족 */
+  | { t: "prosthetic"; part: Part }
   | { t: "closeSettlement" };
 
 /** 순수 함수: 상태를 복사해서 행동을 적용한 새 상태를 돌려준다 */
@@ -62,6 +69,10 @@ export function apply(s: GameState, a: Action): void {
     case "eraseFrag": return eraseFrag(s, a.index);
     case "inquisition": return answerInquisition(s, a.renounce);
     case "surrender": return surrender(s);
+    case "bandage": return useBandage(s);
+    case "herb": return useHerb(s);
+    case "regen": return regen(s, a.part);
+    case "prosthetic": return prosthetic(s, a.part);
     case "autoGoal":
       s.autoGoal = a.goal;
       return;

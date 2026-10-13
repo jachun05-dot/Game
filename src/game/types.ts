@@ -95,6 +95,8 @@ export interface Room {
   remaining?: Enemy[];
   /** 함정방에 숨어 있는 고블린(함정을 밟으면 덮친다) */
   ambush?: string[];
+  /** 함정 종류(기본 가시함정, pit = 꺼진 바닥: 떨어지면 아래층으로) */
+  trapKind?: "spike" | "pit";
   /** 숨은 고블린을 알아챘는지 */
   ambushKnown?: boolean;
   /** 비웠던 전투방에 몬스터가 다시 들어왔다(마석 절반) */
@@ -132,7 +134,7 @@ export interface DungeonState {
   respawnClock?: number;
 }
 
-export type Activity = "train" | "rumor" | "field";
+export type Activity = "train" | "rumor" | "field" | "inn";
 
 export interface WeekResult {
   month: number;
@@ -162,7 +164,7 @@ export interface Settlement {
   lines: string[];
 }
 
-export type DeathCause = "mob" | "single" | "trap" | "starve" | "tax";
+export type DeathCause = "mob" | "single" | "trap" | "starve" | "tax" | "plague" | "abyss" | "oblivion";
 
 export interface Tomb {
   id: string;
@@ -197,13 +199,19 @@ export interface GameState {
   week: number;
   gold: number;
   /** heart: 1섹터 보스가 남기는 "거대 쥐의 마석 심장"(레벨 3→4 훈련 대가) */
-  inventory: { food: number; potion: number; scroll: number; heart: number };
+  inventory: { food: number; potion: number; scroll: number; heart: number; bandage: number; herb: number };
   /** 착용 장비(슬롯 → gear.ts의 GEAR id) */
   gear: Partial<Record<SlotKey, string>>;
   /** 배운 기술 id */
   skills: string[];
   /** 흡수한 편린(fragments.ts의 id). 칸 수는 fragSlots(level) */
   fragments: string[];
+  /** 부위 부상 단계(injury.ts): 0 멀쩡함 · 1 경상 · 2 중상 · 3 결손 */
+  injuries: Record<"head" | "body" | "main" | "offhand" | "feet", number>;
+  /** 결손 부위에 단 의수·의족 */
+  prosthetic: Partial<Record<"head" | "body" | "main" | "offhand" | "feet", boolean>>;
+  /** 쥐 열병 단계(0~2) */
+  disease: number;
   /** 섬기는 신의 신앙심(0~100, faith.ts) */
   piety: number;
   /** 개종으로 버린 신의 저주 */

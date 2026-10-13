@@ -435,3 +435,8 @@ html, body, #root { height: 100%; }
 /* 신앙 */
 .faith-line { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; margin: 4px 0 8px; }
 .faith-line > span:first-child { white-space: nowrap; }
+
+/* 부상 */
+.injury-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.injury-tag { font-size: 11px; padding: 0 6px; border: 1px solid var(--danger); color: var(--danger); }
+.injuries li.hurt-row .item { color: var(--danger); }

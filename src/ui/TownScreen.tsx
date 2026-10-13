@@ -10,12 +10,15 @@ import { taxDue, yearOf } from "../game/core";
 import type { StatKey } from "../game/types";
 import type { Ctl } from "./App";
 import { josa } from "../game/josa";
-import { Card, GameScreen, GearList, HeroHeader, LogView, FaithCard, FragList, SkillList, StatGrid, TacticsBar } from "./components";
+import { INJ, LIMBS, PART_NAME, anyInjury } from "../game/injury";
+import { Card, GameScreen, GearList, HeroHeader, LogView, FaithCard, InjuryCard, FragList, SkillList, StatGrid, TacticsBar } from "./components";
 
 const ITEM_INFO = {
   food: { name: "말린 고기", desc: "포만감 +40" },
-  potion: { name: "치료 물약", desc: "HP 2d4+2 회복" },
+  potion: { name: "치료 물약", desc: `HP 2d4+${BAL.potionBase} 회복` },
   scroll: { name: "귀환 주문서", desc: "언제든 미궁에서 귀환" },
+  bandage: { name: "붕대", desc: "가장 심한 부상 하나를 한 단계 낫게 한다(결손 제외)" },
+  herb: { name: "약초 탕약", desc: "쥐 열병을 한 단계 낫게 한다" },
 } as const;
 
 export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => void }) {
@@ -66,6 +69,12 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
           <ActivityButton title="훈련" sub={trainSub(s)} disabled={busy || !canTrain(s)} onClick={() => setTraining(true)} />
           <ActivityButton title="탐문" sub="술집 · 소문을 듣고 잔일을 구한다" disabled={busy} onClick={() => dispatch({ t: "activity", a: "rumor" })} />
           <ActivityButton title="외부 탐험" sub="영지 밖 숲 · 작은 전투, 마석 획득 (위험)" disabled={busy} onClick={() => dispatch({ t: "activity", a: "field" })} />
+          <ActivityButton
+            title="여관에서 쉬기"
+            sub={`${INJ.innCost}G · 모든 부상·질병이 한 단계 낫는다 (결손 제외)${anyInjury(s) ? "" : " — 지금은 다친 데가 없다"}`}
+            disabled={busy || s.gold < INJ.innCost}
+            onClick={() => dispatch({ t: "activity", a: "inn" })}
+          />
           <p className="dim small">{yearOf(s.month)}년차 · 다음 달 세금: {taxDue(s.month + 1)}G (미납 시 처형 · 해가 바뀔 때마다 {BAL.taxPerYear}G씩 오른다)</p>
           <div className="row">
             <button className="btn ghost small" onClick={onGraveyard}>
@@ -119,8 +128,30 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
                 );
               })}
             <p className="dim small">반지·목걸이와 좋은 장비는 미궁 보물상자에서만 나온다.</p>
+            {LIMBS.filter((p) => s.injuries[p] >= 3 && !s.prosthetic[p]).map((p) => (
+              <div key={p} className="shop-row">
+                <div>
+                  <b>{p === "feet" ? "의족" : `의수 (${PART_NAME[p]})`}</b>
+                  <div className="dim small">잃은 {PART_NAME[p]}을 대신한다 — 중상 정도로는 쓸 수 있다</div>
+                </div>
+                <button className="btn small" disabled={busy || s.gold < INJ.prostheticCost} onClick={() => dispatch({ t: "prosthetic", part: p })}>
+                  {INJ.prostheticCost}G
+                </button>
+              </div>
+            ))}
           </Card>
           <Card title="신전">
+            {LIMBS.filter((p) => s.injuries[p] >= 3).map((p) => (
+              <div key={p} className="shop-row">
+                <div>
+                  <b>재생 의식 — {PART_NAME[p]}</b>
+                  <div className="dim small">잃은 {PART_NAME[p]}을 완전히 되살린다</div>
+                </div>
+                <button className="btn small" disabled={busy || s.gold < INJ.regenCost} onClick={() => dispatch({ t: "regen", part: p })}>
+                  {INJ.regenCost}G
+                </button>
+              </div>
+            ))}
             <p className="dim small">사제에게 큰돈을 바치면 몸에 새긴 편린 하나를 지워 준다. 지운 편린은 돌아오지 않는다.</p>
             {s.fragments.length === 0 && <p className="dim small">지울 편린이 없다.</p>}
             {s.fragments.map((id, i) => (
@@ -162,6 +193,9 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
           </Card>
           <Card title="기술">
             <SkillList s={s} />
+          </Card>
+          <Card title="부상 · 질병">
+            <InjuryCard s={s} />
           </Card>
           <Card title="신앙">
             <FaithCard s={s} />

@@ -2,6 +2,7 @@ import { josa } from "./josa";
 import { BAL, ENCOUNTERS, MANA_FLOOR_MULT, MIN_COMBAT_ROOMS, MONSTERS, RARE_BY_FLOOR, RECORDS, ROOM_FLAVOR, TRAP_AMBUSH } from "./data";
 import { check, isDead, kill, log, maxHp, note, remember, rngOf, smod } from "./core";
 import { FRAGMENTS, fragKnown, fragSlots, fragStatText } from "./fragments";
+import { INJ, bleedPerMove, canPeek, moveMult, wound } from "./injury";
 import { FAITH_BAL, addPiety, faithPeek, faithTrapSense, god, power, pray } from "./faith";
 import { beginSettlement, convert } from "./town";
 import { SKILLS } from "./skills";
@@ -97,6 +98,8 @@ export function generateFloor(r: Rng, floor: number): Room[] {
     if (room.type === "boss") room.encounter = ["boss", ...Array(r.int(2, 3)).fill("rat")];
     if (room.type === "trap" && r.chance(amb.chance)) room.ambush = Array(r.int(amb.size[0], amb.size[1])).fill("goblin");
   }
+  // 2·3층에는 꺼진 바닥(떨어지면 아래층으로, 3층은 깊은 틈)
+  if (floor >= 2) for (const room of rooms) if (room.type === "trap" && r.chance(BAL.pitChance)) room.trapKind = "pit";
   // 희귀 개체: 전투방 하나를 차지한다
   if (r.chance(BAL.rareChance)) {
     const combatRooms = rooms.filter((x) => x.type === "combat");
@@ -204,8 +207,20 @@ export function moveTo(s: GameState, id: number): void {
   const dg = d(s);
   dg.prev = dg.current;
   dg.current = id;
-  passTime(s, BAL.moveTurns);
+  passTime(s, BAL.moveTurns * moveMult(s)); // 발 부상이면 느리다
   if (isDead(s)) return;
+  // 출혈(몸통 부상)·쥐 열병
+  const { bleed, disease } = bleedPerMove(s);
+  if (bleed + disease > 0) {
+    s.hero.hp -= bleed + disease;
+    log(s, [bleed ? `상처에서 피가 배어 나온다 (−${bleed})` : "", disease ? `열에 들떠 비틀거린다 (−${disease})` : ""].filter(Boolean).join(", "), "hurt");
+    if (s.hero.hp <= 0) {
+      s.hero.hp = 0;
+      if (disease > 0) kill(s, "plague", "쥐 열병에 쓰러졌다");
+      else kill(s, "single", "피를 너무 많이 흘려 쓰러졌다");
+      return;
+    }
+  }
   if (checkTimeUp(s)) return;
   // 현상수배 중이면 성당의 이단심문관이 뒤를 밟는다
   if (s.heretic && rngOf(s).chance(FAITH_BAL.inquisitorChance)) {
@@ -273,6 +288,7 @@ function arrive(s: GameState, firstOfFloor: boolean): void {
 /** 연결된 미확인 방들을 감각 판정으로 미리 알아낸다(전장의 안개의 텍스트판) */
 function peek(s: GameState): void {
   const dg = d(s);
+  if (!canPeek(s)) return; // 머리 중상
   for (const id of currentRoom(s).edges) {
     const nb = dg.rooms[id];
     if (nb.known) continue;
@@ -297,7 +313,7 @@ function arriveTrap(s: GameState, room: Room): boolean {
   room.known = true;
   if (c.ok) {
     note(s, "per");
-    log(s, `${flavor(room, "trap")} 함정을 알아챘다! (감각 ${c.total} vs ${BAL.trapDetectDc})`, "system");
+    log(s, `${flavor(room, room.trapKind === "pit" ? "pit" : "trap")} ${room.trapKind === "pit" ? "꺼진 바닥" : "함정"}을 알아챘다! (감각 ${c.total} vs ${BAL.trapDetectDc})`, "system");
     spotAmbush(s, room);
     dg.pending = { kind: "trap" };
     return false;
@@ -314,6 +330,37 @@ function spotAmbush(s: GameState, room: Room): void {
   }
 }
 
+/** 꺼진 바닥에 빠졌다: 2d6(3층은 3d6) 피해, 발 부상, 2층이면 3층으로 떨어진다. 추락으로 죽으면 심연의 신 */
+function fall(s: GameState): boolean {
+  const dg = d(s);
+  const r = rngOf(s);
+  const deep = dg.floor >= 3;
+  const dmg = r.dice(deep ? 3 : 2, 6);
+  s.hero.hp -= dmg;
+  log(s, deep ? `바닥이 꺼졌다 — 끝이 보이지 않는 틈으로 미끄러져 내려갔다! ${dmg} 피해` : `바닥이 꺼졌다 — 아래층으로 곤두박질쳤다! ${dmg} 피해`, "hurt");
+  if (s.hero.hp <= 0) {
+    s.hero.hp = 0;
+    kill(s, "abyss", deep ? "바닥 없는 틈으로 떨어져 죽었다" : "꺼진 바닥 아래로 떨어져 죽었다");
+    return false;
+  }
+  if (r.chance(INJ.fallFeet)) wound(s, "feet", "떨어지며 발목이 꺾였다");
+  pray(s, "trap", 3);
+  if (deep) {
+    log(s, "한참을 기어 올라와 원래 층의 다른 통로로 빠져나왔다.", "system");
+    passTime(s, 8);
+    return false;
+  }
+  dg.floor += 1;
+  dg.deepestFloor = Math.max(dg.deepestFloor, dg.floor);
+  dg.rooms = generateFloor(r, dg.floor);
+  dg.current = 0;
+  dg.prev = null;
+  log(s, `— ${dg.floor}층에 떨어졌다. 올라갈 길은 없다.`, "system");
+  if (dg.floor === 3) remember(s, "미궁 3층까지 떨어졌다.");
+  if (!isDead(s)) arrive(s, true);
+  return true;
+}
+
 /** 함정 작동. 숨어 있던 고블린이 있으면 덮친다(밟아서 다쳤으면 기습). 매복 전투가 벌어졌으면 true */
 function springTrap(s: GameState, room: Room): boolean {
   room.resolved = true;
@@ -324,7 +371,9 @@ function springTrap(s: GameState, room: Room): boolean {
     log(s, `발밑에서 가시가 튀어나왔다 — 아슬아슬하게 피했다! (민첩 ${c.total} vs ${BAL.trapDodgeDc})`, "good");
   } else if (power(s, "trap", 3)) {
     // 재앙의 신 ★3 "먼저 오는 경고"
-    log(s, "가시가 튀어나오기 직전, 귓가에 경고가 울렸다 — 몸이 먼저 비켜섰다. (피해 없음)", "good");
+    log(s, "함정이 발동하기 직전, 귓가에 경고가 울렸다 — 몸이 먼저 비켜섰다. (피해 없음)", "good");
+  } else if (room.trapKind === "pit") {
+    return fall(s);
   } else {
     const dmg = rngOf(s).dice(1, 6);
     s.hero.hp -= dmg;
@@ -336,6 +385,7 @@ function springTrap(s: GameState, room: Room): boolean {
     }
     note(s, "con");
     hurt = true;
+    if (rngOf(s).chance(INJ.spikeFeet)) wound(s, "feet", "가시가 발등을 꿰뚫었다");
   }
   pray(s, "trap", 3); // 재앙을 맞고도 살아남았다
   if (!room.ambush) return false;

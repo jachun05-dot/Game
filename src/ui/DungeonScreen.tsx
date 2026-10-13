@@ -8,6 +8,7 @@ import { FRAGMENTS, TIER_LABEL, fragKnown, fragSlots, fragStatText } from "../ga
 import { SKILLS } from "../game/skills";
 import type { Ctl } from "./App";
 import { josa } from "../game/josa";
+import { godOf } from "../game/faith";
 import { Bar, GameScreen, HeroHeader, LogView } from "./components";
 
 function fmtTime(turns: number): string {
@@ -188,7 +189,7 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
             ))}
           {dg.pending.kind === "shrine" &&
             s.faithsKnown.map((f, i) =>
-              f === s.hero.faith ? null : (
+              f === s.hero.faith || !godOf(f) ? null : (
                 <button key={f} className="btn" disabled={busy} onClick={() => go({ t: "pending", choice: `convert${i}` })}>
                   {josa(f, "을")} 섬긴다 <span className="dim small">· 개종 (1시간)</span>
                 </button>
@@ -215,6 +216,16 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
         <button className="btn small" disabled={busy || s.inventory.scroll <= 0} onClick={() => go({ t: "scroll" })}>
           귀환 {s.inventory.scroll}
         </button>
+        {s.inventory.bandage > 0 && (
+          <button className="btn small" disabled={busy} onClick={() => go({ t: "bandage" })}>
+            붕대 {s.inventory.bandage}
+          </button>
+        )}
+        {s.inventory.herb > 0 && s.disease > 0 && (
+          <button className="btn small" disabled={busy} onClick={() => go({ t: "herb" })}>
+            탕약 {s.inventory.herb}
+          </button>
+        )}
       </div>
       <p className="dock-title">{ROOM_LABEL[room.type]} — 어디로 갈까? <span className="dim small">(한 방 2시간)</span></p>
       <div className="choices">

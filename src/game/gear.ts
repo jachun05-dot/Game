@@ -1,4 +1,5 @@
 import type { GameState, StatKey } from "./types";
+import { mainLost, slotWorks } from "./injury";
 
 // 장비(DESIGN 10절): 슬롯 9개. 장비는 파워 스케일링이 아니라 생존 최소 기준선이고,
 // 미궁에서 주운 장비는 착용해야만 가지고 나올 수 있다(DESIGN 6절).
@@ -110,7 +111,7 @@ export function gearScore(id: string | undefined): number {
 
 export function gearBonus(s: GameState, key: keyof GearBonus): number {
   let t = 0;
-  for (const id of Object.values(s.gear)) if (id) t += GEAR[id]?.bonus[key] ?? 0;
+  for (const [slot, id] of Object.entries(s.gear)) if (id && slotWorks(s, slot)) t += GEAR[id]?.bonus[key] ?? 0;
   return t;
 }
 
@@ -118,6 +119,7 @@ const FISTS: Weapon = { dice: [1, 2], stat: "str", verb: "주먹을 휘둘러" }
 
 export function weaponOf(s: GameState): Weapon {
   const id = s.gear.main;
+  if (mainLost(s)) return FISTS; // 오른손 결손(의수 없음)
   return (id && GEAR[id]?.weapon) || FISTS;
 }
 

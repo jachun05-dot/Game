@@ -4,7 +4,7 @@ import { CLASSES } from "../game/classes";
 import { heroAc, maxHp, smod, stat } from "../game/core";
 import { passive } from "../game/skills";
 import type { Ctl } from "./App";
-import { Card, FaithCard, FragList, SkillList, StatGrid, TacticsBar, fmtMod } from "./components";
+import { Card, FaithCard, InjuryCard, FragList, SkillList, StatGrid, TacticsBar, fmtMod } from "./components";
 import { CLASS_ART } from "./art";
 
 /** 캐릭터 화면: 장비 9슬롯, 공격·방어 계산 내역, 능력치, 기술, 소지품 */
@@ -95,6 +95,10 @@ export function CharacterSheet({ ctl }: { ctl: Ctl }) {
             <SkillList s={s} />
           </Card>
 
+          <Card title="부상 · 질병">
+            <InjuryCard s={s} />
+          </Card>
+
           <Card title="신앙">
             <FaithCard s={s} />
           </Card>
@@ -108,7 +112,7 @@ export function CharacterSheet({ ctl }: { ctl: Ctl }) {
 
           <Card title="소지품">
             <p className="small">
-              말린 고기 {s.inventory.food} · 치료 물약 {s.inventory.potion} · 귀환 주문서 {s.inventory.scroll}
+              말린 고기 {s.inventory.food} · 치료 물약 {s.inventory.potion} · 귀환 주문서 {s.inventory.scroll} · 붕대 {s.inventory.bandage} · 약초 탕약 {s.inventory.herb}
               {s.dungeon ? ` · 마석 ${s.dungeon.mana}G 어치` : ""}
               {s.inventory.heart > 0 ? ` · ${BAL.heartName} ${s.inventory.heart}` : ""}
             </p>

@@ -5,6 +5,7 @@ import { Rng } from "./rng";
 import { passive } from "./skills";
 import { fragStat } from "./fragments";
 import { power } from "./faith";
+import { injuryAc, injuryMaxHp, injuryRollPenalty, offhandAcPenalty } from "./injury";
 import type { DeathCause, GameState, LogKind, StatKey, Stats } from "./types";
 
 export function rngOf(s: GameState): Rng {
@@ -33,11 +34,11 @@ export function mod(v: number): number {
 export function maxHp(s: GameState): number {
   // DESIGN 7·8절: CON 보정치가 레벨마다 고정 누적. 기본 HP는 미정이라 임시값.
   const cls = CLASSES[s.hero.cls];
-  return BAL.baseHp + cls.hp + (Math.max(BAL.minHpPerLevel, smod(s, "con")) + cls.hpPerLevel) * s.hero.level + passive(s, "hp");
+  return Math.max(1, BAL.baseHp + cls.hp + (Math.max(BAL.minHpPerLevel, smod(s, "con")) + cls.hpPerLevel) * s.hero.level + passive(s, "hp") + injuryMaxHp(s));
 }
 
 export function heroAc(s: GameState): number {
-  return 10 + smod(s, "dex") + passive(s, "ac");
+  return 10 + smod(s, "dex") + passive(s, "ac") + injuryAc(s) + offhandAcPenalty(s);
 }
 
 export function actionsPerRound(s: GameState): number {
@@ -48,6 +49,7 @@ export function actionsPerRound(s: GameState): number {
 export function rollPenalty(s: GameState): number {
   let p = 0;
   if (s.hero.satiety <= 0 && !power(s, "hunger", 2)) p -= 2; // 기아/풍요의 신 ★2
+  p += injuryRollPenalty(s); // 머리 부상·질병
   if (s.hero.fatigue >= 100) p -= 2;
   return p;
 }
@@ -103,6 +105,9 @@ const CAUSE_TEXT: Record<DeathCause, string> = {
   trap: "함정에 목숨을 잃었다",
   starve: "굶어 죽었다",
   tax: "세금을 내지 못해 처형당했다",
+  plague: "병에 걸려 쓰러졌다",
+  abyss: "깊은 곳으로 떨어져 죽었다",
+  oblivion: "머리를 잃었다",
 };
 
 const CAUSE_FAITH: Partial<Record<DeathCause, string>> = {
@@ -110,6 +115,9 @@ const CAUSE_FAITH: Partial<Record<DeathCause, string>> = {
   trap: FAITH.trap,
   starve: FAITH.starve,
   tax: FAITH.tax,
+  plague: FAITH.plague,
+  abyss: FAITH.abyss,
+  oblivion: FAITH.oblivion,
 };
 
 export function kill(s: GameState, cause: DeathCause, detail?: string): void {

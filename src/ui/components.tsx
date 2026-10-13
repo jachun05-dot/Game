@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { maxHp, heroAc, smod, stat } from "../game/core";
 import { FRAGMENTS, TIER_LABEL, fragSlots, fragStat, fragStatText } from "../game/fragments";
 import { PIETY_TIERS, godOf, tier } from "../game/faith";
+import { DISEASE_NAME, INJ, LEVEL_NAME, PARTS, PART_NAME, injurySummary, partEffect } from "../game/injury";
 import { STAT_KEYS, STAT_LABEL } from "../game/data";
 import { GEAR } from "../game/gear";
 import { CLASSES } from "../game/classes";
@@ -78,6 +79,7 @@ export function HeroHeader({ s, extra, onOpen }: { s: GameState; extra?: ReactNo
           {extra}
           {onOpen && <span className="accent">장비 ›</span>}
         </div>
+        <InjuryTags s={s} />
       </div>
     </header>
   );
@@ -324,4 +326,43 @@ export function FaithCard({ s }: { s: GameState }) {
       )}
     </>
   );
+}
+
+/** 부위 부상·질병 */
+export function InjuryCard({ s }: { s: GameState }) {
+  return (
+    <>
+      <ul className="equip injuries">
+        {PARTS.map((p) => {
+          const raw = s.injuries[p] ?? 0;
+          const eff = partEffect(s, p);
+          return (
+            <li key={p} className={raw || eff ? "hurt-row" : "empty"}>
+              <span className="slot">{PART_NAME[p]}</span>
+              <span className="item">
+                {LEVEL_NAME[raw]}
+                {raw >= 3 && s.prosthetic[p] ? (p === "feet" ? " · 의족" : " · 의수") : ""}
+              </span>
+              <span className="effect">{eff}</span>
+            </li>
+          );
+        })}
+        <li className={s.disease ? "hurt-row" : "empty"}>
+          <span className="slot">질병</span>
+          <span className="item">{s.disease ? DISEASE_NAME[s.disease] : "없음"}</span>
+          <span className="effect">{s.disease === 2 ? "방을 옮길 때마다 HP −2, 판정 −2" : s.disease === 1 ? "방을 옮길 때마다 HP −1" : ""}</span>
+        </li>
+      </ul>
+      <p className="dim small">
+        경상은 미궁에서 나오면 체력 판정으로 저절로 낫는다. 중상·질병은 붕대·탕약·여관이 필요하다. 손·발 결손은 신전 재생 의식({INJ.regenCost}G)이나 대장간 의수·의족({INJ.prostheticCost}G). 머리·몸통 결손은 즉사.
+      </p>
+    </>
+  );
+}
+
+/** 헤더용 부상 요약 */
+export function InjuryTags({ s }: { s: GameState }) {
+  const list = injurySummary(s);
+  if (!list.length) return null;
+  return <div className="injury-tags">{list.map((t) => <span key={t} className="injury-tag">{t}</span>)}</div>;
 }

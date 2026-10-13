@@ -11,6 +11,8 @@ import { allSkills } from "./skills";
 import { tier } from "./faith";
 import { FAITH } from "./data";
 import { maxHp } from "./core";
+import { injuryHit, injuryRollPenalty, lvl, wound } from "./injury";
+import { weaponOf } from "./gear";
 import type { GameState } from "./types";
 
 function reachable(rooms: ReturnType<typeof generateFloor>): Set<number> {
@@ -471,5 +473,87 @@ describe("신앙", () => {
     apply(s, { t: "pending", choice: `convert${s.faithsKnown.indexOf(FAITH.song)}` });
     expect(s.hero.faith).toBe(FAITH.song);
     expect(s.curse?.god).toBe(FAITH.mob);
+  });
+});
+
+describe("부상·질병", () => {
+  const inDungeon = (seed = 6) => {
+    const s = newRun(seed);
+    apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    s.week = 3;
+    s.phase = "week-result";
+    apply(s, { t: "closeWeek" });
+    return s;
+  };
+  it("같은 부위를 다시 다치면 악화되고, 머리 결손은 즉사하며 망각의 신이 해금된다", () => {
+    const s = inDungeon();
+    expect(wound(s, "head", "테스트")).toBe(null);
+    expect(s.injuries.head).toBe(1);
+    expect(injuryRollPenalty(s)).toBe(-2);
+    wound(s, "head", "테스트");
+    expect(wound(s, "head", "테스트")).toBe("oblivion");
+  });
+  it("몸통 중상이면 다른 부위도 경상 페널티를 받는다", () => {
+    const s = inDungeon();
+    s.injuries.body = 2;
+    expect(lvl(s, "main")).toBe(1);
+    expect(injuryHit(s)).toBe(-2);
+  });
+  it("쥐 열병으로 HP가 0이 되면 역병의 신이 해금된다", () => {
+    const s = inDungeon();
+    s.disease = 2;
+    s.hero.hp = 1;
+    const dg = s.dungeon!;
+    const nb = dg.rooms[dg.current].edges[0];
+    apply(s, { t: "move", room: nb });
+    expect(s.phase).toBe("dead");
+    expect(s.tomb!.faithsUnlocked).toContain(FAITH.plague);
+  });
+  it("꺼진 바닥에 빠지면 아래층으로 떨어지고, 추락사는 심연의 신을 해금한다", () => {
+    let fell = 0, died = 0;
+    for (let seed = 1; seed <= 300 && (!fell || !died); seed++) {
+      const s = inDungeon(seed);
+      const dg = s.dungeon!;
+      dg.floor = 2;
+      const room = dg.rooms.find((r) => r.type === "trap")!;
+      room.trapKind = "pit";
+      room.known = true;
+      room.ambush = undefined;
+      dg.current = room.id;
+      dg.pending = { kind: "trap" };
+      if (seed % 2) s.hero.hp = 1;
+      apply(s, { t: "pending", choice: "force" });
+      if (s.phase === "dead" && s.tomb!.faithsUnlocked.includes(FAITH.abyss)) died++;
+      if (s.phase === "dungeon" && s.dungeon!.floor === 3) fell++;
+    }
+    expect(fell).toBeGreaterThan(0);
+    expect(died).toBeGreaterThan(0);
+  });
+  it("여관은 부상을 한 단계씩 낫게 하고, 결손된 손은 의수(중상 성능)나 재생 의식(완치)으로 되돌린다", () => {
+    const s = newRun(6);
+    apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    s.injuries.feet = 2;
+    s.disease = 1;
+    s.injuries.main = 3;
+    s.gold = 2000;
+    expect(weaponOf(s).verb).toBe("주먹을 휘둘러");
+    apply(s, { t: "activity", a: "inn" });
+    expect(s.injuries.feet).toBe(1);
+    expect(s.disease).toBe(0);
+    s.phase = "town";
+    apply(s, { t: "prosthetic", part: "main" });
+    expect(lvl(s, "main")).toBe(2);
+    expect(weaponOf(s).verb).not.toBe("주먹을 휘둘러");
+    apply(s, { t: "regen", part: "main" });
+    expect(s.injuries.main).toBe(0);
+    expect(s.prosthetic.main).toBeUndefined();
+  });
+  it("봇 플레이에서 실제로 부상이 생긴다", () => {
+    let hurt = 0;
+    for (let seed = 1; seed <= 100 && !hurt; seed++) {
+      const s = playBot(seed, 20000);
+      if (s.log.some((l) => l.text.startsWith("【부상】"))) hurt++;
+    }
+    expect(hurt).toBeGreaterThan(0);
   });
 });
