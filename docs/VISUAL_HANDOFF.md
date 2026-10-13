@@ -50,7 +50,7 @@
 | 직업 얼굴 3종 | `hero-face.png`, `warrior-face.png`, `mage-face.png`(30×30) | 헤더 초상(2배 60px), 캐릭터 시트(3배 90px) |
 | 몬스터 7종 | `mon-{rat,goblin,skeleton,boss,goldrat,jewelgoblin,crystalskel}.png` — 모두 같은 월드 스케일 | 도감 카드 위 무대(모두 2배, 안 본 몬스터는 실루엣), 미궁 로그의 "나타났다" 줄(1배, `LogLine.mons`) |
 | 편린 등급 아이콘 4종 | `frag-1~4.png` | 캐릭터 시트 편린 목록·도감(1배), 미궁 편린 획득 카드(2배). 처음 보는 편린은 늘 같은 실루엣 |
-| 장소 그림 11장 | `scene-{training,tavern,forest,market,smithy,temple,office,grave,dungeon1,title}.png` — 모두 200격자 장면을 띠로 자른 것 | 훈련 카드·주간 결과 카드(훈련/탐문/외부 탐험), 상점가·대장간·신전 카드, 정산 세금 카드, 묘지 화면, 미궁 지도 칸 배경(`dungeon`+섹터), 타이틀 키아트(소년 2배를 위에 세움). `SceneBanner`, 좁은 화면은 `focus` 쪽을 남기고 자른다 |
+| 장소 그림 10장 | `scene-{training,tavern,forest,market,smithy,temple,office,grave,dungeon1,title}.png` — 모두 200격자 장면을 띠로 자른 것 | 훈련 카드·주간 결과 카드(훈련/탐문/외부 탐험), 상점가·대장간·신전 카드, 정산 세금 카드, 묘지 화면, 미궁 지도 칸 배경(`dungeon`+섹터), 타이틀 키아트(소년 2배를 위에 세움). `SceneBanner`, 좁은 화면은 `focus` 쪽을 남기고 자른다 |
 
 ## 6. 필요한 그림(우선순위 제안)
 
