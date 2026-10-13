@@ -29,6 +29,7 @@ function fixRun(s: GameState | null): GameState | null {
   if ((s.phase as string) === "combat") s.phase = "town";
   s.combat = null;
   s.fragments ??= [];
+  s.autoGoal ??= "explore";
   s.codex = mergeCodex(s.codex ?? emptyCodex(), { ...emptyCodex(), fragKnown: s.fragments });
   return s;
 }

@@ -6,7 +6,8 @@ import { botAction } from "../src/game/bot";
 import type { ClassId } from "../src/game/classes";
 import { FRAGMENTS } from "../src/game/fragments";
 
-// FRAG_OFF=1 이면 편린 없이 비교
+// GOAL=rush|farm|explore 로 자동 결정 목표를 바꿔 비교, FRAG_OFF=1 이면 편린 없이 비교
+const GOAL = (process.env.GOAL ?? "explore") as "explore" | "rush" | "farm";
 if (process.env.FRAG_OFF) for (const f of Object.values(FRAGMENTS)) f.chance = 0;
 
 const N = Number(process.argv[2] ?? 1000);
@@ -15,6 +16,7 @@ for (const cls of ["adventurer", "warrior", "mage"] as ClassId[]) {
   for (let seed = 1; seed <= N; seed++) {
     const s = newRun(seed * 7919);
     apply(s, { t: "pickClass", cls });
+    apply(s, { t: "autoGoal", goal: GOAL });
     for (let i = 0; i < 60000 && s.phase !== "dead" && s.month <= 12; i++) {
       const a = botAction(s);
       if (!a) break;

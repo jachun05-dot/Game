@@ -51,17 +51,18 @@ function townAction(s: GameState): Action {
 function dungeonAction(s: GameState): Action | null {
   const dg = s.dungeon!;
   const hp = s.hero.hp / maxHp(s);
+  const goal = s.autoGoal ?? "explore";
   if (dg.pending) {
     switch (dg.pending.kind) {
       case "trap":
         if (s.hero.hp <= 4 && dg.prev !== null) return { t: "pending", choice: "back" };
         return { t: "pending", choice: smod(s, "dex") >= 2 ? "disarm" : "force" };
       case "treasure": return { t: "pending", choice: "open" };
-      case "record": return { t: "pending", choice: "read" };
-      case "shrine": return { t: "pending", choice: "pray" };
+      // 기록물은 탐험할 때만 읽는다(30분)
+      case "record": return { t: "pending", choice: goal === "explore" ? "read" : "leave" };
+      case "shrine": return { t: "pending", choice: goal === "rush" && hp >= 0.8 ? "leave" : "pray" };
       case "stairs":
-        if (hp < 0.6 || dg.floor >= comfortFloor(s)) return { t: "pending", choice: "stay" };
-        return { t: "pending", choice: "descend" };
+        return { t: "pending", choice: wantDescend(s) ? "descend" : "stay" };
       case "portal": return { t: "pending", choice: "enter" };
       case "frag": {
         // 빈 칸이면 흡수, 꽉 찼으면 가장 약한 편린보다 나을 때만 바꾼다
@@ -87,6 +88,8 @@ function dungeonAction(s: GameState): Action | null {
     if (s.hero.satiety < 30 && s.inventory.food > 0) return { t: "eat" };
     if (s.hero.satiety >= 15) return { t: "camp" };
   }
+  // 파밍: 전투방에 들어가기 전에 HP를 채운다
+  if (goal === "farm" && step !== null && dg.rooms[step].type === "combat" && !dg.rooms[step].resolved && hp < 0.7 && s.hero.satiety > 30 && dg.turnsLeft > 40) return { t: "camp" };
   // 더 갈 곳이 없으면(혹은 계단 앞에서 멈췄으면) 시간이 다 될 때까지 야영하며 버틴다
   return step === null ? { t: "camp" } : { t: "move", room: step };
 }
@@ -98,59 +101,79 @@ function comfortFloor(s: GameState): number {
   return s.hero.level >= 2 ? 2 : 1;
 }
 
-/** 가장 가까운 미방문 방(없으면 계단/포탈) 쪽으로 한 걸음 */
+/** 내려갈 수 있는 가장 깊은 층(목표와 상관없이 같다 — 돌파도 무모하게 내려가진 않는다) */
+function floorLimit(s: GameState): number {
+  return comfortFloor(s);
+}
+
+/** 이 층에 아직 할 일이 남았는지(목표 기준) */
+function floorDone(s: GameState): boolean {
+  const dg = s.dungeon!;
+  if (s.autoGoal === "rush") return true;
+  if (s.autoGoal === "farm") return !dg.rooms.some((r) => !r.visited || (!r.resolved && ["combat", "treasure"].includes(r.type)));
+  return dg.rooms.every((r) => r.visited || ["stairs", "portal", "boss"].includes(r.type));
+}
+
+function wantDescend(s: GameState): boolean {
+  const dg = s.dungeon!;
+  const hp = s.hero.hp / maxHp(s);
+  if (dg.floor >= floorLimit(s)) return false;
+  if (s.autoGoal === "rush") return hp >= 0.5;
+  return hp >= 0.6 && floorDone(s);
+}
+
+/** 목표에 따라 다음에 갈 방 쪽으로 한 걸음 */
 function nextStep(s: GameState): number | null {
   const dg = s.dungeon!;
   const start = dg.current;
-  const prevOf = new Map<number, number>([[start, -1]]);
-  const q = [start];
-  let goal: number | null = null;
-  const exit = (id: number) => ["stairs", "portal"].includes(dg.rooms[id].type);
-  // 3층에서는 보스방(또는 차원문)이 보이면 곧장 그쪽으로 간다
-  if (dg.floor === 3) {
-    const target = dg.rooms.find((r) => (r.type === "boss" && !r.resolved && (r.known || r.visited)) || (r.type === "portal" && (r.known || r.visited)));
-    if (target && target.id !== start) {
-      const path = route(dg.rooms, start, target.id);
-      if (path) return path;
-    }
+  const { prev, order } = bfs(dg.rooms, start);
+  const seen = (id: number) => dg.rooms[id].known || dg.rooms[id].visited;
+  const first = (pred: (id: number) => boolean) => order.find((id) => id !== start && pred(id)) ?? null;
+  const goal = s.autoGoal ?? "explore";
+  const exitOk = dg.floor < floorLimit(s) || dg.rooms.some((r) => r.type === "portal");
+  const exitRoom = () => first((id) => ["stairs", "portal"].includes(dg.rooms[id].type) && seen(id));
+  const boss = () => first((id) => (dg.rooms[id].type === "boss" && !dg.rooms[id].resolved && seen(id)) || (dg.rooms[id].type === "portal" && seen(id)));
+
+  let target: number | null = null;
+  if (goal === "rush") {
+    // 출구가 보이면 곧장, 아니면 가장 가까운 미방문 방(알려진 함정은 피해서)
+    if (dg.floor === 3) target = boss();
+    if (target === null && exitOk && wantDescend(s)) target = exitRoom();
+    if (target === null) target = first((id) => !dg.rooms[id].visited && !(dg.rooms[id].type === "trap" && seen(id)));
+    if (target === null) target = first((id) => !dg.rooms[id].visited);
+  } else if (goal === "farm") {
+    // 알려진 전투방·상자 → 모르는 방 → 다 털었으면 출구/보스
+    target = first((id) => seen(id) && !dg.rooms[id].resolved && ["combat", "treasure"].includes(dg.rooms[id].type));
+    if (target === null) target = first((id) => !dg.rooms[id].visited && !(seen(id) && ["trap", "record", "shrine", "empty"].includes(dg.rooms[id].type)));
+    if (target === null && dg.floor === 3 && comfortFloor(s) >= 3) target = boss();
+    if (target === null && exitOk) target = exitRoom();
+  } else {
+    // 구석구석: 3층에서는 보스(차원문)가 보이면 그쪽, 아니면 가장 가까운 미방문 방, 다 돌면 출구
+    if (dg.floor === 3) target = boss();
+    if (target === null) target = first((id) => !dg.rooms[id].visited);
+    if (target === null && exitOk) target = exitRoom();
   }
-  while (q.length) {
-    const cur = q.shift()!;
-    if (cur !== start && !dg.rooms[cur].visited) {
-      goal = cur;
-      break;
-    }
-    for (const nb of dg.rooms[cur].edges) {
-      if (!prevOf.has(nb)) {
-        prevOf.set(nb, cur);
-        q.push(nb);
-      }
-    }
-  }
-  if (goal === null) {
-    if (dg.floor < comfortFloor(s) || dg.rooms.some((r) => r.type === "portal")) goal = dg.rooms.find((r) => exit(r.id))?.id ?? null;
-    if (goal === null || goal === start) return null;
-  }
-  let step = goal;
-  while (prevOf.get(step) !== start) {
-    const p = prevOf.get(step);
+  if (target === null) return null;
+  let step = target;
+  while (prev.get(step) !== start) {
+    const p = prev.get(step);
     if (p === undefined || p === -1) return null;
     step = p;
   }
   return step;
 }
 
-/** start → goal 최단 경로의 첫 걸음 */
-function route(rooms: { edges: number[] }[], start: number, goal: number): number | null {
+/** start에서 가까운 순서의 방 목록과 경로 */
+function bfs(rooms: { edges: number[] }[], start: number): { prev: Map<number, number>; order: number[] } {
   const prev = new Map<number, number>([[start, -1]]);
-  const q = [start];
-  while (q.length) {
-    const cur = q.shift()!;
-    if (cur === goal) break;
-    for (const nb of rooms[cur].edges) if (!prev.has(nb)) { prev.set(nb, cur); q.push(nb); }
+  const order = [start];
+  for (let i = 0; i < order.length; i++) {
+    for (const nb of rooms[order[i]].edges) {
+      if (!prev.has(nb)) {
+        prev.set(nb, order[i]);
+        order.push(nb);
+      }
+    }
   }
-  if (!prev.has(goal)) return null;
-  let step = goal;
-  while (prev.get(step) !== start) step = prev.get(step)!;
-  return step;
+  return { prev, order };
 }

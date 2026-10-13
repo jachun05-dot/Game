@@ -31,9 +31,9 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     name: "모험가",
     motive: "영지에서 나고 자란 소년. 거창한 이유는 없다.",
     desc: "모든 일반 훈련을 자유롭게 받는다. 대신 전문 훈련은 없다.",
-    hp: 1,
+    hp: -1,
     hpPerLevel: 1,
-    gold: 90,
+    gold: 80,
     start: { main: "shortsword" },
     trainings: ["sword", "footwork", "scout", "study", "endure"],
     archetypes: [
@@ -69,9 +69,9 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     name: "마법사",
     motive: "차원문과 그 너머를 연구하러 왔다.",
     desc: "지팡이로 지능 기반 마력탄을 쏜다. 몸이 약하다. 척후·학문 훈련과 전용 '주문학'을 받는다.",
-    hp: -2,
+    hp: -3,
     hpPerLevel: 0,
-    gold: 60,
+    gold: 30,
     start: { main: "staff", body: "robe" },
     trainings: ["scout", "study", "arcane"],
     archetypes: [

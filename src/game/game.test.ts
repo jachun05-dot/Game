@@ -311,3 +311,30 @@ describe("편린 도감과 신전", () => {
     expect(s.gold).toBe(5);
   });
 });
+
+describe("자동 결정 목표", () => {
+  const run = (seed: number, goal: "explore" | "rush" | "farm") => {
+    const s = newRun(seed);
+    apply(s, { t: "autoGoal", goal });
+    let rooms = 0, records = 0;
+    for (let i = 0; i < 20000 && s.phase !== "dead" && s.month <= 6; i++) {
+      const a = botAction(s)!;
+      if (a.t === "move") rooms++;
+      if (a.t === "pending" && a.choice === "read") records++;
+      apply(s, a);
+    }
+    return { s, rooms, records };
+  };
+  it("세 목표 모두 멈추지 않고 진행되며, 돌파는 탐험보다 적게 걷고 기록물을 읽지 않는다", () => {
+    let exploreRooms = 0, rushRooms = 0, rushRecords = 0;
+    for (let seed = 1; seed <= 30; seed++) {
+      exploreRooms += run(seed, "explore").rooms;
+      const r = run(seed, "rush");
+      rushRooms += r.rooms;
+      rushRecords += r.records;
+      run(seed, "farm");
+    }
+    expect(rushRecords).toBe(0);
+    expect(rushRooms).toBeLessThan(exploreRooms);
+  });
+});

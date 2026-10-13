@@ -1,7 +1,7 @@
 import { camp, drinkPotion, eat, enterDungeon, moveTo, resolvePending, useScroll, type PendingChoice } from "./dungeon";
 import { buy, buyGear, closeSettlement, closeWeek, createHero, doActivity, eraseFrag, pickClass, rerollCandidates, sell, setTactics, train } from "./town";
 import type { ClassId } from "./classes";
-import type { Activity, GameState, StatKey, Tactics } from "./types";
+import type { Activity, AutoGoal, GameState, StatKey, Tactics } from "./types";
 import type { BAL } from "./data";
 
 export type ShopItem = keyof typeof BAL.prices;
@@ -24,6 +24,7 @@ export type Action =
   | { t: "scroll" }
   | { t: "tactics"; tactics: Partial<Tactics> }
   | { t: "eraseFrag"; index: number }
+  | { t: "autoGoal"; goal: AutoGoal }
   | { t: "closeSettlement" };
 
 /** 순수 함수: 상태를 복사해서 행동을 적용한 새 상태를 돌려준다 */
@@ -55,6 +56,9 @@ export function apply(s: GameState, a: Action): void {
     case "scroll": return useScroll(s);
     case "tactics": return setTactics(s, a.tactics);
     case "eraseFrag": return eraseFrag(s, a.index);
+    case "autoGoal":
+      s.autoGoal = a.goal;
+      return;
     case "closeSettlement": return closeSettlement(s);
   }
 }

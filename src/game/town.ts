@@ -26,6 +26,7 @@ export function newRun(seed: number): GameState {
     fragments: [],
     codex: emptyCodex(),
     tactics: { potionAt: 35, fleeAt: 0 },
+    autoGoal: "explore",
     tripUsed: [],
     rank: 0,
     recordsRead: 0,

@@ -53,6 +53,9 @@ export interface CombatState {
   guard: { ac: number; rounds: number } | null;
 }
 
+/** 자동 결정의 미궁 목표: 구석구석 탐험 / 빠르게 다음 층 / 파밍(전투·상자 위주) */
+export type AutoGoal = "explore" | "rush" | "farm";
+
 /** 자동 전투 방침(플레이어가 고르는 유일한 전투 설정) */
 export interface Tactics {
   /** HP가 이 %이하면 물약을 마신다(0 = 안 마심) */
@@ -194,6 +197,8 @@ export interface GameState {
   /** 몬스터 도감. 새 삶을 시작할 때 Meta의 도감을 복사해 오고, 바뀌면 다시 Meta에 합친다 */
   codex: Codex;
   tactics: Tactics;
+  /** 자동 결정이 미궁에서 노리는 목표(bot.ts) */
+  autoGoal: AutoGoal;
   /** 미궁 한 번 들어갈 때 1회 쓰는 기술 중 이미 쓴 것 */
   tripUsed: string[];
   /** 클리어한 섹터 수(등급) */

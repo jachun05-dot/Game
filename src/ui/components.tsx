@@ -5,7 +5,7 @@ import { STAT_KEYS, STAT_LABEL } from "../game/data";
 import { GEAR } from "../game/gear";
 import { CLASSES } from "../game/classes";
 import { SKILLS } from "../game/skills";
-import type { GameState } from "../game/types";
+import type { AutoGoal, GameState } from "../game/types";
 import type { Ctl, Speed } from "./App";
 import { CharacterSheet } from "./CharacterSheet";
 
@@ -154,13 +154,15 @@ export function TopBar({ ctl, title }: { ctl: Ctl; title: ReactNode }) {
         장비
       </button>
       <button className={`gear-btn${open ? " on" : ""}`} onClick={() => setOpen(!open)} aria-expanded={open} aria-label="설정">
-        ⚙ <span className="small">{ctl.speed === 0 ? "즉시" : `${ctl.speed}×`}{ctl.auto ? " · 자동" : ""}</span>
+        ⚙ <span className="small">{ctl.speed === 0 ? "즉시" : `${ctl.speed}×`}{ctl.auto ? ` · 자동(${GOAL_SHORT[ctl.s.autoGoal] ?? "탐험"})` : ""}</span>
       </button>
       {open && <div className="settings-backdrop" onClick={() => setOpen(false)} />}
       {open && (
         <div className="settings-sheet" role="dialog" aria-label="설정">
           <p className="eyebrow">진행 속도</p>
           <SpeedBar ctl={ctl} />
+          <p className="eyebrow">자동 결정 목표</p>
+          <GoalBar ctl={ctl} />
           <p className="eyebrow">전투 방침</p>
           <TacticsBar ctl={ctl} />
           <p className="dim small">시드 #{(ctl.s.seed >>> 0).toString(36)}</p>
@@ -170,6 +172,35 @@ export function TopBar({ ctl, title }: { ctl: Ctl; title: ReactNode }) {
         </div>
       )}
     </div>
+  );
+}
+
+const GOAL_SHORT: Record<string, string> = { explore: "탐험", rush: "돌파", farm: "파밍" };
+
+const GOALS: { id: AutoGoal; name: string; desc: string }[] = [
+  { id: "explore", name: "구석구석 탐험", desc: "층의 모든 방을 돌고 기록물도 읽은 뒤 내려간다." },
+  { id: "rush", name: "빠르게 다음 층", desc: "계단이 보이면 곧장 내려간다. 기록물은 건너뛰고, HP 절반만 있어도 내려간다. 그래도 준비 안 된 층까지는 가지 않는다." },
+  { id: "farm", name: "파밍", desc: "전투방과 보물상자 위주로 털고, 싸우기 전에 HP를 채운다. 무리해서 내려가지 않는다." },
+];
+
+/** 자동 결정이 미궁에서 노리는 목표(자동 결정 OFF일 때는 영향 없음) */
+export function GoalBar({ ctl }: { ctl: Ctl }) {
+  const { s, dispatch } = ctl;
+  const cur = GOALS.find((g) => g.id === s.autoGoal) ?? GOALS[0];
+  return (
+    <>
+      <div className="tactics">
+        {GOALS.map((g) => (
+          <button key={g.id} className={`chip${s.autoGoal === g.id ? " on" : ""}`} onClick={() => dispatch({ t: "autoGoal", goal: g.id })}>
+            {g.name}
+          </button>
+        ))}
+      </div>
+      <p className="dim small">
+        {cur.desc}
+        {!ctl.auto && " (자동 결정을 켜야 적용된다)"}
+      </p>
+    </>
   );
 }
 
