@@ -15,7 +15,7 @@ export interface Hero {
   faith: string | null;
 }
 
-export type LogKind = "normal" | "hit" | "crit" | "miss" | "hurt" | "system" | "good" | "story";
+export type LogKind = "normal" | "hit" | "crit" | "miss" | "hurt" | "system" | "good" | "story" | "skill";
 
 export interface LogLine {
   text: string;
@@ -26,16 +26,30 @@ export interface Enemy {
   uid: number;
   defId: string;
   hp: number;
+  /** 남은 행동 불가 라운드(섬광 가루 등) */
+  stun?: number;
+  /** 약점 간파 등으로 깎인 AC */
+  acDown?: number;
 }
 
 export interface CombatState {
   context: "field" | "dungeon";
   enemies: Enemy[];
   round: number;
-  /** 이번 라운드에 남은 플레이어 행동 수(DEX 35 이상이면 2) */
-  actionsLeft: number;
   /** 전투에서 얻은 마석 가치(G) */
   loot: number;
+  /** 액티브 기술별 이번 전투 사용 횟수 */
+  used: Record<string, number>;
+  /** 흘려내기 등 일시 AC 보너스 */
+  guard: { ac: number; rounds: number } | null;
+}
+
+/** 자동 전투 방침(플레이어가 고르는 유일한 전투 설정) */
+export interface Tactics {
+  /** HP가 이 %이하면 물약을 마신다(0 = 안 마심) */
+  potionAt: number;
+  /** HP가 이 %이하면 도주를 시도한다(0 = 끝까지 싸움) */
+  fleeAt: number;
 }
 
 export type RoomType =
@@ -100,6 +114,8 @@ export interface WeekResult {
   lines: string[];
   statDelta: Partial<Stats>;
   levelUp?: { from: number; to: number };
+  /** 이번 훈련으로 배운 기술 id */
+  learned?: string;
   goldDelta: number;
   feed: string[];
 }
@@ -136,7 +152,7 @@ export interface Candidate {
   stats: Stats;
 }
 
-export type Phase = "create" | "town" | "week-result" | "combat" | "dungeon" | "settlement" | "dead";
+export type Phase = "create" | "town" | "week-result" | "dungeon" | "settlement" | "dead";
 
 export interface GameState {
   version: 1;
@@ -151,6 +167,11 @@ export interface GameState {
   inventory: { food: number; potion: number; scroll: number };
   /** 착용 장비(슬롯 → GEAR id). 숏소드는 항상 오른손 */
   gear: Partial<Record<"body" | "offhand" | "head", string>>;
+  /** 배운 기술 id */
+  skills: string[];
+  tactics: Tactics;
+  /** 미궁 한 번 들어갈 때 1회 쓰는 기술 중 이미 쓴 것 */
+  tripUsed: string[];
   /** 클리어한 섹터 수(등급) */
   rank: number;
   recordsRead: number;

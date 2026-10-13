@@ -4,8 +4,7 @@ import type { PendingChoice } from "../game/dungeon";
 import type { DungeonState } from "../game/types";
 import { BAL } from "../game/data";
 import type { Ctl } from "./App";
-import { CombatPanel } from "./CombatPanel";
-import { Bar, Card, HeroHeader, LogView, Shell, SpeedBar, TopBar } from "./components";
+import { Bar, Card, HeroHeader, LogView, Shell, SpeedBar, TacticsBar, TopBar } from "./components";
 
 function fmtTime(turns: number): string {
   const h = Math.max(0, turns) / 2;
@@ -39,7 +38,7 @@ export function DungeonScreen({ ctl }: { ctl: Ctl }) {
         </div>
       </div>
       <FloorMap dg={dg} />
-      {s.combat ? <CombatPanel ctl={ctl} /> : <RoomPanel ctl={ctl} />}
+      <RoomPanel ctl={ctl} />
       <LogView ctl={ctl} tall />
       <SpeedBar ctl={ctl} />
     </Shell>
@@ -127,6 +126,7 @@ function RoomPanel({ ctl }: { ctl: Ctl }) {
           귀환 ({s.inventory.scroll})
         </button>
       </div>
+      <TacticsBar ctl={ctl} />
     </Card>
   );
 }

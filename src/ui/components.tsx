@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { maxHp, heroAc, mod } from "../game/core";
 import { GEAR, STAT_KEYS, STAT_LABEL } from "../game/data";
+import { SKILLS } from "../game/skills";
 import type { GameState } from "../game/types";
 import type { Ctl, Speed } from "./App";
 
@@ -127,5 +128,44 @@ export function TopBar({ ctl, title }: { ctl: Ctl; title: ReactNode }) {
       <span className="topbar-title">{title}</span>
       <span className="dim small">#{(ctl.s.seed >>> 0).toString(36)}</span>
     </div>
+  );
+}
+
+const POTION_STEPS = [0, 25, 35, 50];
+const FLEE_STEPS = [0, 15, 25];
+
+/** 자동 전투 방침 — 누를 때마다 다음 값으로 바뀐다 */
+export function TacticsBar({ ctl }: { ctl: Ctl }) {
+  const { s, dispatch } = ctl;
+  const { potionAt, fleeAt } = s.tactics;
+  const next = (steps: number[], v: number) => steps[(steps.indexOf(v) + 1) % steps.length];
+  return (
+    <div className="tactics">
+      <span className="dim small">전투 방침</span>
+      <button className="chip" onClick={() => dispatch({ t: "tactics", tactics: { potionAt: next(POTION_STEPS, potionAt) } })}>
+        물약: {potionAt ? `HP ${potionAt}% 이하` : "안 마심"}
+      </button>
+      <button className="chip" onClick={() => dispatch({ t: "tactics", tactics: { fleeAt: next(FLEE_STEPS, fleeAt) } })}>
+        도주: {fleeAt ? `HP ${fleeAt}% 이하` : "끝까지 싸움"}
+      </button>
+    </div>
+  );
+}
+
+export function SkillList({ s, empty }: { s: GameState; empty?: string }) {
+  if (s.skills.length === 0) return <p className="dim small">{empty ?? "아직 배운 기술이 없다. 직업교관에게 훈련을 받으면 배운다."}</p>;
+  return (
+    <ul className="skills">
+      {s.skills.map((id) => {
+        const sk = SKILLS[id];
+        return (
+          <li key={id}>
+            <span className={`skill-kind ${sk.kind}`}>{sk.kind === "active" ? "자동 발동" : "패시브"}</span>
+            <b>{sk.name}</b>
+            <span className="dim small">{sk.desc}</span>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

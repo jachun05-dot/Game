@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { STAT_KEYS, STAT_LABEL } from "../game/data";
+import { SKILLS } from "../game/skills";
 import type { Ctl } from "./App";
 import { Card, HeroHeader, Shell } from "./components";
 
@@ -24,6 +25,12 @@ export function WeekResultScreen({ ctl }: { ctl: Ctl }) {
         {r.levelUp && (
           <p className="levelup">
             LEVEL UP {r.levelUp.from} → {r.levelUp.to}
+          </p>
+        )}
+        {r.learned && (
+          <p className="learned">
+            새 기술 — <b>{SKILLS[r.learned].name}</b>
+            <span className="dim small"> ({SKILLS[r.learned].kind === "active" ? "자동 발동" : "패시브"}) {SKILLS[r.learned].desc}</span>
           </p>
         )}
         {changed.length > 0 && (

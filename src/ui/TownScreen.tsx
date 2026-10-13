@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { BAL, GEAR, STAT_KEYS, STAT_LABEL, TRAININGS } from "../game/data";
-import { canTrain, trainCost } from "../game/town";
+import { canTrain, nextSkill, trainCost } from "../game/town";
+import { SKILLS } from "../game/skills";
 import { taxDue } from "../game/core";
 import type { StatKey } from "../game/types";
 import type { Ctl } from "./App";
-import { Card, GearList, HeroHeader, LogView, Shell, SpeedBar, StatGrid, TopBar } from "./components";
+import { Card, GearList, HeroHeader, LogView, Shell, SkillList, SpeedBar, StatGrid, TacticsBar, TopBar } from "./components";
 
 const ITEM_INFO = {
   food: { name: "말린 고기", desc: "포만감 +40" },
@@ -85,13 +86,22 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
       )}
 
       {tab === "me" && (
-        <Card title="모험가 상태">
-          <StatGrid s={s} />
-          <GearList s={s} />
-          <p className="dim small">
-            소지품: 말린 고기 {s.inventory.food} · 물약 {s.inventory.potion} · 귀환 주문서 {s.inventory.scroll} · 읽은 기록물 {s.recordsRead}
-          </p>
-        </Card>
+        <div className="stack">
+          <Card title="모험가 상태">
+            <StatGrid s={s} />
+            <GearList s={s} />
+            <p className="dim small">
+              소지품: 말린 고기 {s.inventory.food} · 물약 {s.inventory.potion} · 귀환 주문서 {s.inventory.scroll} · 읽은 기록물 {s.recordsRead}
+            </p>
+          </Card>
+          <Card title="기술">
+            <SkillList s={s} />
+          </Card>
+          <Card title="전투는 자동으로 진행됩니다">
+            <p className="dim small">가장 약한 적부터 노리고, 기술은 조건이 맞으면 저절로 발동합니다. 정할 수 있는 건 물약과 도주 시점뿐입니다.</p>
+            <TacticsBar ctl={ctl} />
+          </Card>
+        </div>
       )}
 
       <LogView ctl={ctl} max={8} />
@@ -137,15 +147,27 @@ function TrainingPanel({ ctl, onClose }: { ctl: Ctl; onClose: () => void }) {
     <Card title={`훈련 — ${trainCost(s)}G`}>
       <p className="dim small">훈련마다 6포인트: 훈련 종류로 정해지는 2 + 자유 2 + 지난 행동으로 정해지는 2.</p>
       <div className="stack tight">
-        {TRAININGS.map((x) => (
-          <button key={x.id} className={`option${tid === x.id ? " on" : ""}`} onClick={() => setTid(x.id)}>
-            <b>{x.name}</b> <span className="dim small">{x.desc}</span>
-            <span className="small accent">
-              {" "}
-              {x.stats.map((k) => STAT_LABEL[k]).join(" · ")} +1
-            </span>
-          </button>
-        ))}
+        {TRAININGS.map((x) => {
+          const sk = nextSkill(s, x.id);
+          return (
+            <button key={x.id} className={`option${tid === x.id ? " on" : ""}`} onClick={() => setTid(x.id)}>
+              <b>{x.name}</b> <span className="dim small">{x.desc}</span>
+              <span className="small accent">
+                {" "}
+                {x.stats.map((k) => STAT_LABEL[k]).join(" · ")} +1
+              </span>
+              <span className="option-skill small">
+                {sk ? (
+                  <>
+                    배울 기술: <b>{SKILLS[sk].name}</b> <span className="dim">({SKILLS[sk].kind === "active" ? "자동 발동" : "패시브"}) {SKILLS[sk].desc}</span>
+                  </>
+                ) : (
+                  <span className="dim">이 훈련의 기술은 모두 배웠다</span>
+                )}
+              </span>
+            </button>
+          );
+        })}
       </div>
       <p className="eyebrow">자유 배분 2포인트 (같은 능력치에 두 번도 가능)</p>
       <div className="chips">

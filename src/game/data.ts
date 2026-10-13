@@ -95,12 +95,13 @@ export const FIELD_ENCOUNTERS: { item: string[]; w: number }[] = [
 ];
 
 /** 훈련 종류 — 고정 2포인트가 오르는 스탯(DESIGN 7절). 패시브 스킬은 미정 */
-export const TRAININGS: { id: string; name: string; desc: string; stats: [StatKey, StatKey] }[] = [
-  { id: "sword", name: "검술 훈련", desc: "검을 휘두르는 법과 버티는 법", stats: ["str", "con"] },
-  { id: "footwork", name: "보법 훈련", desc: "피하고, 빠져나가는 법", stats: ["dex", "luk"] },
-  { id: "scout", name: "척후 훈련", desc: "보고, 듣고, 알아채는 법", stats: ["per", "dex"] },
-  { id: "study", name: "학문 수업", desc: "글을 읽고 옛 기록을 해석하는 법", stats: ["int", "per"] },
-  { id: "endure", name: "생존 훈련", desc: "굶주림과 상처를 견디는 법", stats: ["con", "str"] },
+/** 훈련 종류 — 고정 2포인트가 오르는 스탯과, 받을 때마다 차례로 배우는 기술 사다리(skills.ts) */
+export const TRAININGS: { id: string; name: string; desc: string; stats: [StatKey, StatKey]; skills: string[] }[] = [
+  { id: "sword", name: "검술 훈련", desc: "검을 휘두르는 법", stats: ["str", "con"], skills: ["firstStrike", "sweep", "finisher"] },
+  { id: "footwork", name: "보법 훈련", desc: "피하고, 빠져나가는 법", stats: ["dex", "luk"], skills: ["lightFeet", "parry", "runner"] },
+  { id: "scout", name: "척후 훈련", desc: "보고, 듣고, 알아채는 법", stats: ["per", "dex"], skills: ["sharpEye", "weakSpot", "trapSense"] },
+  { id: "study", name: "학문 수업", desc: "옛 기록과 약초를 다루는 법", stats: ["int", "per"], skills: ["flashPowder", "firstAid", "poultice"] },
+  { id: "endure", name: "생존 훈련", desc: "굶주림과 상처를 견디는 법", stats: ["con", "str"], skills: ["tough", "grit", "hungerTrained"] },
 ];
 
 export const ARCHETYPES: { name: string; favor: [StatKey, StatKey] }[] = [

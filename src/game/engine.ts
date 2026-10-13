@@ -1,7 +1,6 @@
-import { combatAttack, combatFlee, combatPotion } from "./combat";
 import { camp, drinkPotion, eat, enterDungeon, moveTo, resolvePending, useScroll, type PendingChoice } from "./dungeon";
-import { buy, buyGear, closeSettlement, closeWeek, createHero, doActivity, rerollCandidates, sell, train } from "./town";
-import type { Activity, GameState, StatKey } from "./types";
+import { buy, buyGear, closeSettlement, closeWeek, createHero, doActivity, rerollCandidates, sell, setTactics, train } from "./town";
+import type { Activity, GameState, StatKey, Tactics } from "./types";
 import type { BAL } from "./data";
 
 export type ShopItem = keyof typeof BAL.prices;
@@ -21,9 +20,7 @@ export type Action =
   | { t: "eat" }
   | { t: "potion" }
   | { t: "scroll" }
-  | { t: "attack"; target: number }
-  | { t: "combatPotion" }
-  | { t: "flee" }
+  | { t: "tactics"; tactics: Partial<Tactics> }
   | { t: "closeSettlement" };
 
 /** 순수 함수: 상태를 복사해서 행동을 적용한 새 상태를 돌려준다 */
@@ -52,9 +49,7 @@ export function apply(s: GameState, a: Action): void {
     case "eat": return eat(s);
     case "potion": return drinkPotion(s);
     case "scroll": return useScroll(s);
-    case "attack": return combatAttack(s, a.target);
-    case "combatPotion": return combatPotion(s);
-    case "flee": return combatFlee(s);
+    case "tactics": return setTactics(s, a.tactics);
     case "closeSettlement": return closeSettlement(s);
   }
 }

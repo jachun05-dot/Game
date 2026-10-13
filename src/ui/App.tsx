@@ -9,7 +9,6 @@ import { CreateScreen } from "./CreateScreen";
 import { TownScreen } from "./TownScreen";
 import { WeekResultScreen } from "./WeekResultScreen";
 import { DungeonScreen } from "./DungeonScreen";
-import { CombatScreen } from "./CombatScreen";
 import { SettlementScreen } from "./SettlementScreen";
 import { DeadScreen } from "./DeadScreen";
 import { GraveyardScreen } from "./GraveyardScreen";
@@ -145,8 +144,6 @@ export function App() {
       return <TownScreen ctl={ctl} onGraveyard={() => setView("graveyard")} />;
     case "week-result":
       return <WeekResultScreen ctl={ctl} />;
-    case "combat":
-      return <CombatScreen ctl={ctl} />;
     case "dungeon":
       return <DungeonScreen ctl={ctl} />;
     case "settlement":

@@ -1,7 +1,6 @@
 import { BAL, GEAR } from "./data";
 import { maxHp, mod } from "./core";
-import { alive } from "./combat";
-import { canTrain, trainCost } from "./town";
+import { canTrain, nextSkill, trainCost } from "./town";
 import type { Action } from "./engine";
 import type { GameState } from "./types";
 
@@ -17,10 +16,8 @@ export function botAction(s: GameState): Action | null {
       return { t: "closeSettlement" };
     case "town":
       return townAction(s);
-    case "combat":
-      return combatAction(s);
     case "dungeon":
-      return s.combat ? combatAction(s) : dungeonAction(s);
+      return dungeonAction(s);
     default:
       return null;
   }
@@ -34,19 +31,12 @@ function townAction(s: GameState): Action {
     if (s.inventory.scroll < 1 && s.gold >= BAL.prices.scroll) return { t: "buy", item: "scroll" };
     if (s.inventory.potion < 2 && s.gold >= BAL.prices.potion) return { t: "buy", item: "potion" };
   }
-  if (canTrain(s) && s.gold - trainCost(s) >= 40) return { t: "train", training: "sword", free: ["con", "dex"] };
+  if (canTrain(s) && s.gold - trainCost(s) >= 40) {
+    const training = ["sword", "endure", "footwork", "scout", "study"].find((id) => nextSkill(s, id)) ?? "sword";
+    return { t: "train", training, free: ["con", "dex"] };
+  }
   if (s.hero.level >= 2 && s.week !== 3) return { t: "activity", a: "field" };
   return { t: "activity", a: "rumor" };
-}
-
-function combatAction(s: GameState): Action {
-  const c = s.combat!;
-  const hp = s.hero.hp / maxHp(s);
-  const foes = alive(c);
-  if (hp < 0.35 && s.inventory.potion > 0) return { t: "combatPotion" };
-  if (hp < 0.25 && foes.length >= 2) return { t: "flee" };
-  const target = [...foes].sort((a, b) => a.hp - b.hp)[0];
-  return { t: "attack", target: target.uid };
 }
 
 function dungeonAction(s: GameState): Action | null {

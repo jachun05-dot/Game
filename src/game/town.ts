@@ -3,7 +3,7 @@ import { ARCHETYPES, BAL, GEAR, FEED, FIELD_ENCOUNTERS, NAMES, RIVAL_NEWS, RIVAL
 import { addStat, emptyStats, kill, log, maxHp, rngOf, taxDue, topBehavior } from "./core";
 import { makeEnemies, startCombat } from "./combat";
 import { Rng } from "./rng";
-import type { Activity, Candidate, CombatState, GameState, StatKey, Stats, WeekResult } from "./types";
+import type { Activity, Candidate, CombatState, GameState, StatKey, Stats, Tactics, WeekResult } from "./types";
 
 // DESIGN 14.1 런 시작 / 14.2 마을(1주=1턴) / 14.4 월말 정산
 
@@ -19,6 +19,9 @@ export function newRun(seed: number): GameState {
     gold: BAL.startGold,
     inventory: { food: 0, potion: 0, scroll: 0 },
     gear: {},
+    skills: [],
+    tactics: { potionAt: 35, fleeAt: 0 },
+    tripUsed: [],
     rank: 0,
     recordsRead: 0,
     behavior: emptyStats(),
@@ -126,11 +129,24 @@ export function train(s: GameState, trainingId: string, free: [StatKey, StatKey]
   s.behavior = emptyStats();
   const from = s.hero.level;
   s.hero.level += 1;
+  const learned = nextSkill(s, t.id);
+  if (learned) s.skills.push(learned);
   const lines = [
     `${t.name} — ${t.desc}. (${cost}G)`,
     `고정: ${t.stats.map((k) => STAT_LABEL[k]).join(", ")} / 자유: ${free.map((k) => STAT_LABEL[k]).join(", ")} / ${noBehavior ? "몸이 기억한 것(무작위)" : "몸이 기억한 것"}: ${behaviorPicks.map((k) => STAT_LABEL[k]).join(", ")}`,
   ];
-  finishWeek(s, { title: "훈련", lines, statDelta: delta, levelUp: { from, to: s.hero.level }, goldDelta: -cost }, true);
+  if (!learned) lines.push("이 훈련에서 더 배울 기술은 없다. (히든 트레이닝은 준비 중)");
+  finishWeek(s, { title: "훈련", lines, statDelta: delta, levelUp: { from, to: s.hero.level }, learned: learned ?? undefined, goldDelta: -cost }, true);
+}
+
+/** 이 훈련을 받으면 다음에 배울 기술(사다리 순서) */
+export function nextSkill(s: GameState, trainingId: string): string | null {
+  const t = TRAININGS.find((x) => x.id === trainingId);
+  return t?.skills.find((id) => !s.skills.includes(id)) ?? null;
+}
+
+export function setTactics(s: GameState, t: Partial<Tactics>): void {
+  s.tactics = { ...s.tactics, ...t };
 }
 
 export function rumor(s: GameState): void {
@@ -157,6 +173,7 @@ export function goField(s: GameState): void {
   if (s.phase !== "town") return;
   const r = rngOf(s);
   log(s, "영지 밖 숲으로 나섰다.", "system");
+  s.tripUsed = [];
   startCombat(s, "field", makeEnemies(s, r.weighted(FIELD_ENCOUNTERS)));
 }
 

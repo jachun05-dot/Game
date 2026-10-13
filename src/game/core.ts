@@ -1,6 +1,7 @@
 import { josa } from "./josa";
 import { BAL, FAITH, GEAR, STAT_KEYS } from "./data";
 import { Rng } from "./rng";
+import { passive } from "./skills";
 import type { DeathCause, GameState, LogKind, StatKey, Stats } from "./types";
 
 export function rngOf(s: GameState): Rng {
@@ -18,12 +19,12 @@ export function mod(v: number): number {
 
 export function maxHp(s: GameState): number {
   // DESIGN 7·8절: CON 보정치가 레벨마다 고정 누적. 기본 HP는 미정이라 임시값.
-  return BAL.baseHp + Math.max(BAL.minHpPerLevel, mod(s.hero.stats.con)) * s.hero.level;
+  return BAL.baseHp + Math.max(BAL.minHpPerLevel, mod(s.hero.stats.con)) * s.hero.level + passive(s, "hp");
 }
 
 export function heroAc(s: GameState): number {
   const gearAc = Object.values(s.gear).reduce((a, id) => a + (id ? GEAR[id].ac : 0), 0);
-  return 10 + mod(s.hero.stats.dex) + gearAc;
+  return 10 + mod(s.hero.stats.dex) + gearAc + passive(s, "ac");
 }
 
 export function actionsPerRound(s: GameState): number {
@@ -41,7 +42,7 @@ export function rollPenalty(s: GameState): number {
 /** d20 + 보정치 vs DC. 자연 1 자동 실패, 자연 20 자동 성공(DESIGN 8절) */
 export function check(s: GameState, stat: StatKey, dc: number): { ok: boolean; roll: number; total: number } {
   const roll = rngOf(s).die(20);
-  const total = roll + mod(s.hero.stats[stat]) + rollPenalty(s);
+  const total = roll + mod(s.hero.stats[stat]) + rollPenalty(s) + (stat === "per" ? passive(s, "perception") : 0);
   const ok = roll === 20 || (roll !== 1 && total >= dc);
   return { ok, roll, total };
 }

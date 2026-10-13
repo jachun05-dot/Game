@@ -10,7 +10,14 @@ export function loadRun(): GameState | null {
     const raw = localStorage.getItem(RUN_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 1 ? s : null;
+    if (s.version !== 1) return null;
+    // 기술·자동 전투 이전 저장 데이터 보정
+    s.skills ??= [];
+    s.tactics ??= { potionAt: 35, fleeAt: 0 };
+    s.tripUsed ??= [];
+    if ((s.phase as string) === "combat") s.phase = "town";
+    s.combat = null;
+    return s;
   } catch {
     return null;
   }

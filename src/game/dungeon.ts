@@ -1,7 +1,8 @@
 import { josa } from "./josa";
 import { BAL, ENCOUNTERS, MANA_FLOOR_MULT, MONSTERS, RECORDS, ROOM_FLAVOR } from "./data";
 import { check, isDead, kill, log, maxHp, note, remember, rngOf } from "./core";
-import { describeGroup, makeEnemies, startCombat } from "./combat";
+import { describeGroup, makeEnemies, potionHeal, startCombat } from "./combat";
+import { hungerMult } from "./skills";
 import { beginSettlement } from "./town";
 import type { Rng } from "./rng";
 import type { CombatState, DungeonState, GameState, Room, RoomType } from "./types";
@@ -97,6 +98,7 @@ export function enterDungeon(s: GameState): void {
   const r = rngOf(s);
   s.week = 4;
   s.hero.fatigue = 0;
+  s.tripUsed = [];
   s.dungeon = {
     sector: 1,
     floor: 1,
@@ -130,7 +132,7 @@ export function passTime(s: GameState, turns: number): void {
   dg.turnsLeft -= turns;
   const h = s.hero;
   const wasFed = h.satiety > 0;
-  h.satiety = Math.max(0, h.satiety - turns * 0.5);
+  h.satiety = Math.max(0, h.satiety - turns * 0.5 * hungerMult(s));
   h.fatigue = Math.min(100, h.fatigue + turns / 3);
   if (wasFed && h.satiety <= 0) log(s, "배가 고파 손이 떨린다. (굶주림: 판정 -2)", "hurt");
   if (h.satiety <= 0) {
@@ -479,7 +481,7 @@ export function eat(s: GameState): void {
 export function drinkPotion(s: GameState): void {
   if (!s.dungeon || s.inventory.potion <= 0 || s.combat) return;
   s.inventory.potion -= 1;
-  const heal = rngOf(s).dice(2, 4) + 2;
+  const heal = potionHeal(s);
   s.hero.hp = Math.min(maxHp(s), s.hero.hp + heal);
   log(s, `치료 물약을 마셨다. HP +${heal}`, "good");
 }

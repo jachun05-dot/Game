@@ -77,3 +77,45 @@ describe("봇 전체 플레이", () => {
     }
   });
 });
+
+describe("자동 전투와 기술", () => {
+  function hero(seed = 3): GameState {
+    const s = newRun(seed);
+    apply(s, { t: "create", name: "테스트", candidate: 0, faith: null });
+    return s;
+  }
+  it("훈련할 때마다 그 훈련의 기술을 순서대로 배운다", () => {
+    const s = hero();
+    s.gold = 9999;
+    for (const want of ["firstStrike", "sweep", "finisher"]) {
+      apply(s, { t: "train", training: "sword", free: ["str", "con"] });
+      expect(s.skills.at(-1)).toBe(want);
+      expect(s.weekResult?.learned).toBe(want);
+      apply(s, { t: "closeWeek" });
+      if (s.phase !== "town") { s.phase = "town"; s.dungeon = null; s.week = 1; }
+    }
+    apply(s, { t: "train", training: "sword", free: ["str", "con"] });
+    expect(s.weekResult?.learned).toBeUndefined();
+  });
+  it("숲 전투는 입력 없이 한 번에 끝난다", () => {
+    for (let seed = 1; seed <= 50; seed++) {
+      const s = hero(seed);
+      apply(s, { t: "activity", a: "field" });
+      expect(s.combat).toBeNull();
+      expect(["week-result", "dead"]).toContain(s.phase);
+    }
+  });
+  it("이 악물기는 미궁 한 번에 한 번 죽음을 막는다", () => {
+    let saved = 0;
+    for (let seed = 1; seed <= 200; seed++) {
+      const s = hero(seed);
+      s.skills = ["grit"];
+      s.hero.hp = 1;
+      s.tactics = { potionAt: 0, fleeAt: 0 };
+      apply(s, { t: "activity", a: "field" });
+      if (s.log.some((l) => l.text.includes("이 악물기"))) saved++;
+      expect(s.log.filter((l) => l.text.includes("【이 악물기】")).length).toBeLessThanOrEqual(1);
+    }
+    expect(saved).toBeGreaterThan(0);
+  });
+});
