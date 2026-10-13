@@ -1,5 +1,6 @@
 import { gearBonus } from "./gear";
 import { fragSkills } from "./fragments";
+import { faithHungerMult } from "./faith";
 import type { GameState } from "./types";
 
 // 기술(DESIGN 7절 "훈련은 기술을 가르쳐준다"): 전투는 자동이므로 플레이어가 누르는 기술은 없다.
@@ -164,7 +165,7 @@ export function passive(s: GameState, key: Exclude<keyof Passive, "hunger">): nu
 }
 
 export function hungerMult(s: GameState): number {
-  let m = 1;
+  let m = faithHungerMult(s);
   for (const id of allSkills(s)) m *= SKILLS[id]?.passive?.hunger ?? 1;
   return m;
 }

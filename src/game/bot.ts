@@ -1,9 +1,9 @@
-import { BAL } from "./data";
+
 import { GEAR, gearScore, targetSlot } from "./gear";
 import { CLASSES } from "./classes";
 import { fragScore, fragSlots } from "./fragments";
 import { heroAc, maxHp, smod } from "./core";
-import { canTrain, nextSkill, trainCost } from "./town";
+import { canTrain, nextSkill, shopPrice, trainCost } from "./town";
 import type { Action } from "./engine";
 import type { GameState } from "./types";
 
@@ -16,6 +16,8 @@ export function botAction(s: GameState): Action | null {
     case "week-result":
       return { t: "closeWeek" };
     case "settlement":
+      // 보통 사람은 이단 심문에서 신앙을 포기한다
+      if (s.settlement?.inquisition) return { t: "inquisition", renounce: true };
       return { t: "closeSettlement" };
     case "town":
       return townAction(s);
@@ -27,12 +29,13 @@ export function botAction(s: GameState): Action | null {
 }
 
 function townAction(s: GameState): Action {
+  if (s.heretic) return { t: "activity", a: "field" };
   // 미궁 준비물(고기 4, 물약 2) 살 돈은 항상 남겨 둔다
-  const supply = Math.max(0, 4 - s.inventory.food) * BAL.prices.food + Math.max(0, 2 - s.inventory.potion) * BAL.prices.potion;
+  const supply = Math.max(0, 4 - s.inventory.food) * shopPrice(s, "food") + Math.max(0, 2 - s.inventory.potion) * shopPrice(s, "potion");
   const spare = s.gold - supply;
   if (s.week === 3) {
-    if (s.inventory.food < 4 && s.gold >= BAL.prices.food) return { t: "buy", item: "food" };
-    if (s.inventory.potion < 2 && s.gold >= BAL.prices.potion) return { t: "buy", item: "potion" };
+    if (s.inventory.food < 4 && s.gold >= shopPrice(s, "food")) return { t: "buy", item: "food" };
+    if (s.inventory.potion < 2 && s.gold >= shopPrice(s, "potion")) return { t: "buy", item: "potion" };
   }
   // 1) 훈련 2) 몸통·방패 3) 여유가 되면 물약을 더
   if (canTrain(s) && spare >= trainCost(s)) {
@@ -43,7 +46,7 @@ function townAction(s: GameState): Action {
   }
   if (!s.gear.body && spare >= GEAR.leather.price!) return { t: "buyGear", id: "leather" };
   if (!s.gear.offhand && spare >= GEAR.shield.price!) return { t: "buyGear", id: "shield" };
-  if (s.week === 3 && s.inventory.potion < 4 && spare >= BAL.prices.potion + 20) return { t: "buy", item: "potion" };
+  if (s.week === 3 && s.inventory.potion < 4 && spare >= shopPrice(s, "potion") + 20) return { t: "buy", item: "potion" };
   if (s.hero.level >= 2 && s.week !== 3) return { t: "activity", a: "field" };
   return { t: "activity", a: "rumor" };
 }

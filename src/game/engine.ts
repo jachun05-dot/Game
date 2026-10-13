@@ -1,5 +1,5 @@
 import { camp, drinkPotion, eat, enterDungeon, moveTo, resolvePending, useScroll, type PendingChoice } from "./dungeon";
-import { buy, buyGear, closeSettlement, closeWeek, createHero, doActivity, eraseFrag, pickClass, rerollCandidates, sell, setTactics, train } from "./town";
+import { answerInquisition, surrender, buy, buyGear, closeSettlement, closeWeek, createHero, doActivity, eraseFrag, pickClass, rerollCandidates, sell, setTactics, train } from "./town";
 import type { ClassId } from "./classes";
 import type { Activity, AutoGoal, GameState, StatKey, Tactics } from "./types";
 import type { BAL } from "./data";
@@ -25,6 +25,10 @@ export type Action =
   | { t: "tactics"; tactics: Partial<Tactics> }
   | { t: "eraseFrag"; index: number }
   | { t: "autoGoal"; goal: AutoGoal }
+  /** 이단 심문: true면 신앙 포기, false면 거부(현상수배) */
+  | { t: "inquisition"; renounce: boolean }
+  /** 현상수배 중 성당에 자수(신앙 포기) */
+  | { t: "surrender" }
   | { t: "closeSettlement" };
 
 /** 순수 함수: 상태를 복사해서 행동을 적용한 새 상태를 돌려준다 */
@@ -56,6 +60,8 @@ export function apply(s: GameState, a: Action): void {
     case "scroll": return useScroll(s);
     case "tactics": return setTactics(s, a.tactics);
     case "eraseFrag": return eraseFrag(s, a.index);
+    case "inquisition": return answerInquisition(s, a.renounce);
+    case "surrender": return surrender(s);
     case "autoGoal":
       s.autoGoal = a.goal;
       return;

@@ -160,6 +160,7 @@ button {
 .hp-line { display: grid; grid-template-columns: 22px 1fr auto; gap: 8px; align-items: center; font-size: 12.5px; }
 .hero-meta { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12.5px; }
 .faith-tag { font-size: 11px; border: 1px solid var(--violet); color: var(--violet); padding: 1px 6px; font-weight: 400; }
+.faith-tag.heretic { border-color: var(--danger); color: var(--danger); margin-left: 4px; }
 
 .bar { height: 8px; background: var(--panel-2); border: 1px solid var(--border); overflow: hidden; }
 .bar-fill { height: 100%; transition: width 0.25s; }
@@ -426,3 +427,7 @@ html, body, #root { height: 100%; }
 .codex.unseen { opacity: 0.55; }
 .codex p { margin: 4px 0; }
 .codex-frag { border-top: 1px dashed var(--border); margin-top: 8px; padding-top: 6px; }
+
+/* 신앙 */
+.faith-line { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; margin: 4px 0 8px; }
+.faith-line > span:first-child { white-space: nowrap; }

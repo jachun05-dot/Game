@@ -38,7 +38,7 @@ export function prepared(seed: number, cls: ClassId): GameState {
 }
 
 if (import.meta.main) for (const cls of ["adventurer", "warrior", "mage"] as ClassId[]) {
-  let bossWin = 0, floorClear = 0, hpSum = 0;
+  let bossWin = 0, floorClear = 0, hpSum = 0, inqWin = 0;
   for (let i = 1; i <= N; i++) {
     // A) 보스 무리 단독
     const a = prepared(i * 31, cls);
@@ -50,6 +50,11 @@ if (import.meta.main) for (const cls of ["adventurer", "warrior", "mage"] as Cla
     a.dungeon!.prev = a.dungeon!.rooms[a.dungeon!.current].edges[0];
     startCombat(a, "dungeon", makeEnemies(a, ["boss", "rat", ...(i % 2 ? ["rat"] : []), "rat"]));
     if (a.phase !== "dead" && a.rank === 0 && a.inventory.heart > 0) bossWin++;
+    // A2) 이단심문관 단독(보스 무리와 비슷해야 한다)
+    const q = prepared(i * 31, cls);
+    enterDungeon(q);
+    startCombat(q, "dungeon", makeEnemies(q, ["inquisitor"]));
+    if (q.phase !== "dead" && !q.log.some((l) => l.text.includes("물러났다") || l.text.includes("달아났다!"))) inqWin++;
     // B) 3층 입구부터 끝까지
     const b = prepared(i * 31, cls);
     enterDungeon(b);
@@ -64,5 +69,5 @@ if (import.meta.main) for (const cls of ["adventurer", "warrior", "mage"] as Cla
     }
     if (b.rank > 0) floorClear++;
   }
-  console.log(`${cls}: 레벨3 최대HP ${(hpSum / N).toFixed(1)} | 보스 무리 단독 승률 ${((bossWin / N) * 100).toFixed(1)}% | 3층 입구→차원문 ${((floorClear / N) * 100).toFixed(1)}%`);
+  console.log(`${cls}: 레벨3 최대HP ${(hpSum / N).toFixed(1)} | 보스 무리 단독 승률 ${((bossWin / N) * 100).toFixed(1)}% | 이단심문관 승률 ${((inqWin / N) * 100).toFixed(1)}% | 3층 입구→차원문 ${((floorClear / N) * 100).toFixed(1)}%`);
 }

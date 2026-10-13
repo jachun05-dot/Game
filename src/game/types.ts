@@ -49,6 +49,8 @@ export interface CombatState {
   used: Record<string, number>;
   /** 이번 전투에서 남은 편린(몬스터 id) */
   frags: string[];
+  /** 전쟁의 신 ★3 "피의 함성": 남은 라운드 동안 적 명중 −2 */
+  cow?: number;
   /** 흘려내기 등 일시 AC 보너스 */
   guard: { ac: number; rounds: number } | null;
 }
@@ -147,6 +149,10 @@ export interface WeekResult {
 
 export interface Settlement {
   month: number;
+  /** 이단 심문에 걸렸다(신앙 포기 / 거부를 골라야 정산이 끝난다) */
+  inquisition?: boolean;
+  /** 탐욕의 신 ★3 "빚 문서"로 이번 세금을 외상으로 넘겼다 */
+  debt?: boolean;
   manaSold: number;
   tax: number;
   goldAfter: number;
@@ -198,6 +204,18 @@ export interface GameState {
   skills: string[];
   /** 흡수한 편린(fragments.ts의 id). 칸 수는 fragSlots(level) */
   fragments: string[];
+  /** 섬기는 신의 신앙심(0~100, faith.ts) */
+  piety: number;
+  /** 개종으로 버린 신의 저주 */
+  curse?: { god: string; months: number };
+  /** 이단 심문을 거부해 현상수배 중: 마을은 외곽만, 미궁에 이단심문관이 나타난다 */
+  heretic: boolean;
+  /** 탐욕의 신 "빚 문서"를 이미 썼다(삶마다 1회) */
+  debtUsed?: boolean;
+  /** 다음 세금에 더해질 외상 */
+  debt?: number;
+  /** 이번 삶에서 고를 수 있는 신(새 삶 시작 때 Meta에서 복사) */
+  faithsKnown: string[];
   /** 몬스터 도감. 새 삶을 시작할 때 Meta의 도감을 복사해 오고, 바뀌면 다시 Meta에 합친다 */
   codex: Codex;
   tactics: Tactics;

@@ -7,6 +7,7 @@ import { GEAR, gearEffect, targetSlot } from "../game/gear";
 import { FRAGMENTS, TIER_LABEL, fragKnown, fragSlots, fragStatText } from "../game/fragments";
 import { SKILLS } from "../game/skills";
 import type { Ctl } from "./App";
+import { josa } from "../game/josa";
 import { Bar, GameScreen, HeroHeader, LogView } from "./components";
 
 function fmtTime(turns: number): string {
@@ -153,7 +154,7 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
           {full &&
             s.fragments.map((old, i) => (
               <button key={i} className="btn" disabled={busy} onClick={() => go({ t: "pending", choice: `swap${i}` })}>
-                {FRAGMENTS[old].name}을(를) 깨뜨리고 흡수 <span className="dim small">· {fragStatText(old)}</span>
+                {josa(FRAGMENTS[old].name, "을")} 깨뜨리고 흡수 <span className="dim small">· {fragStatText(old)}</span>
               </button>
             ))}
           <button className="btn ghost" disabled={busy} onClick={() => go({ t: "pending", choice: "leave" })}>
@@ -168,6 +169,12 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
     return (
       <>
         <p className="dock-title">{ROOM_LABEL[room.type]} — 어떻게 할까?</p>
+        {dg.pending.kind === "shrine" && (
+          <p className="dim small">
+            {s.hero.faith ? `섬기는 신: ${s.hero.faith} (신앙심 ${Math.floor(s.piety)}) — 기도하면 신앙심 +5.` : "섬기는 신이 없다."}
+            {s.faithsKnown.some((f) => f !== s.hero.faith) && " 다른 옛 신으로 개종할 수 있다" + (s.hero.faith ? ` — 버린 신은 1개월 동안 저주를 건다.` : ".")}
+          </p>
+        )}
         {dg.pending.kind === "trap" && room.ambushKnown && room.ambush && (
           <p className="dim small">고블린 {room.ambush.length}마리가 숨어 있다. 해체하면 달아나고, 밟고 다치면 기습당한다.</p>
         )}
@@ -179,6 +186,14 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
                 {o.label}
               </button>
             ))}
+          {dg.pending.kind === "shrine" &&
+            s.faithsKnown.map((f, i) =>
+              f === s.hero.faith ? null : (
+                <button key={f} className="btn" disabled={busy} onClick={() => go({ t: "pending", choice: `convert${i}` })}>
+                  {josa(f, "을")} 섬긴다 <span className="dim small">· 개종 (1시간)</span>
+                </button>
+              ),
+            )}
         </div>
       </>
     );

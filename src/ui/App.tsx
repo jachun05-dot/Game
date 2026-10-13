@@ -107,6 +107,7 @@ export function App() {
     const seed = (Date.now() ^ Math.floor(Math.random() * 1e9)) | 0;
     const run = newRun(seed);
     run.codex = structuredClone(meta.codex);
+    run.faithsKnown = [...meta.faiths];
     setS(run);
     setShown(0);
     setAuto(false);

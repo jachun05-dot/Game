@@ -5,6 +5,7 @@ import { CLASSES, CLASS_IDS, type ClassId } from "../game/classes";
 import { GEAR } from "../game/gear";
 import { TRAININGS } from "../game/data";
 import { kitItems } from "../game/town";
+import { godOf } from "../game/faith";
 import type { Ctl } from "./App";
 import { Bar, Card, Shell, fmtMod } from "./components";
 import { CLASS_ART } from "./art";
@@ -154,7 +155,22 @@ export function CreateScreen({ ctl }: { ctl: Ctl }) {
             ))}
           </div>
         )}
-        {faith && <p className="dim small">신앙의 효과(신앙심·권능)는 아직 준비 중입니다. 묘비에 기록됩니다.</p>}
+        {faith && godOf(faith) && (
+          <div className="class-detail">
+            <p className="small">
+              <b>{faith}</b> <span className="dim">· {godOf(faith)!.align}</span>
+            </p>
+            <p className="small">
+              <span className="dim">좋아함</span> {godOf(faith)!.likes} · <span className="dim">싫어함</span> {godOf(faith)!.dislikes}
+            </p>
+            {godOf(faith)!.powers.map((p, i) => (
+              <p key={i} className="small">
+                <span className="accent">★{i + 1}</span> {p}
+              </p>
+            ))}
+            <p className="dim small">신앙심 30(★1)에서 시작해 60·90에서 다음 권능이 열린다. 성당은 옛 신을 섬기는 자를 감시한다 — 신앙이 깊을수록 이단 심문에 걸리기 쉽다.</p>
+          </div>
+        )}
       </Card>
 
       <button className="btn primary" disabled={pick === null} onClick={() => pick !== null && dispatch({ t: "create", name: name || NAMES[Math.floor(Math.random() * NAMES.length)], candidate: pick, faith })}>

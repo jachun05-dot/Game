@@ -30,6 +30,9 @@ function fixRun(s: GameState | null): GameState | null {
   s.combat = null;
   s.fragments ??= [];
   s.autoGoal ??= "explore";
+  s.piety ??= s.hero.faith ? 15 : 0;
+  s.heretic ??= false;
+  s.faithsKnown ??= s.hero.faith ? [s.hero.faith] : [];
   s.codex = mergeCodex(s.codex ?? emptyCodex(), { ...emptyCodex(), fragKnown: s.fragments });
   return s;
 }

@@ -8,6 +8,9 @@ import { STAT_KEYS, BAL, MONSTERS } from "./data";
 import { FRAGMENTS, FRAG_MAX_CHANCE, fragKnown, fragSlots } from "./fragments";
 import { stat, taxDue } from "./core";
 import { allSkills } from "./skills";
+import { tier } from "./faith";
+import { FAITH } from "./data";
+import { maxHp } from "./core";
 import type { GameState } from "./types";
 
 function reachable(rooms: ReturnType<typeof generateFloor>): Set<number> {
@@ -395,5 +398,78 @@ describe("몬스터 리젠", () => {
     const combat = dg.rooms.filter((r) => r.type === "combat");
     expect(combat.some((r) => r.respawned && !r.resolved && r.encounter?.length)).toBe(true);
     expect(dg.rooms.filter((r) => r.type !== "combat").every((r) => r.resolved && !r.respawned)).toBe(true);
+  });
+});
+
+describe("신앙", () => {
+  const withFaith = (name: string, seed = 4) => {
+    const s = newRun(seed);
+    s.faithsKnown = [FAITH.mob, FAITH.starve, FAITH.trap, FAITH.tax, FAITH.song];
+    apply(s, { t: "create", name: "x", candidate: 0, faith: name });
+    return s;
+  };
+  it("해금된 신만 고를 수 있고, 신앙심 30(★1)에서 시작해 60·90에 권능이 열린다", () => {
+    const s = withFaith(FAITH.mob);
+    expect(s.hero.faith).toBe(FAITH.mob);
+    expect(s.piety).toBe(30);
+    expect(tier(s)).toBe(1);
+    s.piety = 60;
+    expect(tier(s)).toBe(2);
+    const t = newRun(4);
+    t.faithsKnown = [FAITH.mob];
+    apply(t, { t: "create", name: "x", candidate: 0, faith: FAITH.song });
+    expect(t.hero.faith).toBe(null);
+  });
+  it("이단 심문을 거부하면 현상수배가 되어 마을 시설을 못 쓰고, 자수하면 신앙을 잃고 돌아온다", () => {
+    const s = withFaith(FAITH.mob);
+    s.phase = "settlement";
+    s.settlement = { month: 1, manaSold: 0, tax: 30, goldAfter: 0, paid: false, cleared: false, forced: false, lines: [], inquisition: true };
+    apply(s, { t: "closeSettlement" });
+    expect(s.phase).toBe("settlement"); // 답하기 전에는 넘어가지 않는다
+    apply(s, { t: "inquisition", renounce: false });
+    expect(s.heretic).toBe(true);
+    apply(s, { t: "closeSettlement" });
+    expect(s.phase).toBe("town"); // 세금을 못 내도 처형되지 않는다(관공서에 갈 수 없음)
+    s.gold = 999;
+    apply(s, { t: "buy", item: "potion" });
+    apply(s, { t: "activity", a: "rumor" });
+    expect(s.inventory.potion).toBe(0);
+    expect(s.phase).toBe("town");
+    apply(s, { t: "surrender" });
+    expect(s.heretic).toBe(false);
+    expect(s.hero.faith).toBe(null);
+  });
+  it("현상수배 중에는 미궁에서 이단심문관이 나타나고, 쓰러뜨리면 신앙심 +10", () => {
+    let met = 0, won = 0;
+    for (let seed = 1; seed <= 200 && won === 0; seed++) {
+      const s = withFaith(FAITH.mob, seed);
+      s.heretic = true;
+      s.hero.level = 6;
+      s.hero.hp = maxHp(s);
+      s.inventory.potion = 5;
+      s.week = 3;
+      s.phase = "week-result";
+      apply(s, { t: "closeWeek" });
+      const before = s.piety;
+      for (let i = 0; i < 300 && (s.phase as string) === "dungeon"; i++) {
+        const a = botAction(s);
+        if (!a) break;
+        apply(s, a);
+        if (s.log.some((l) => l.text.includes("이단심문관이 길을 막아선다"))) met = Math.max(met, 1);
+        if (s.log.some((l) => l.text.includes("신앙심 +10"))) { won++; expect(s.piety).toBeGreaterThanOrEqual(before); break; }
+      }
+    }
+    expect(met).toBe(1);
+    expect(won).toBeGreaterThan(0);
+  });
+  it("개종하면 버린 신이 저주를 건다", () => {
+    const s = withFaith(FAITH.mob);
+    s.week = 3;
+    s.phase = "week-result";
+    apply(s, { t: "closeWeek" });
+    s.dungeon!.pending = { kind: "shrine" };
+    apply(s, { t: "pending", choice: `convert${s.faithsKnown.indexOf(FAITH.song)}` });
+    expect(s.hero.faith).toBe(FAITH.song);
+    expect(s.curse?.god).toBe(FAITH.mob);
   });
 });

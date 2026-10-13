@@ -4,6 +4,7 @@ import { CLASSES } from "./classes";
 import { Rng } from "./rng";
 import { passive } from "./skills";
 import { fragStat } from "./fragments";
+import { power } from "./faith";
 import type { DeathCause, GameState, LogKind, StatKey, Stats } from "./types";
 
 export function rngOf(s: GameState): Rng {
@@ -46,15 +47,15 @@ export function actionsPerRound(s: GameState): number {
 /** 굶주림·탈진 판정 페널티 */
 export function rollPenalty(s: GameState): number {
   let p = 0;
-  if (s.hero.satiety <= 0) p -= 2;
+  if (s.hero.satiety <= 0 && !power(s, "hunger", 2)) p -= 2; // 기아/풍요의 신 ★2
   if (s.hero.fatigue >= 100) p -= 2;
   return p;
 }
 
 /** d20 + 보정치 vs DC. 자연 1 자동 실패, 자연 20 자동 성공(DESIGN 8절) */
-export function check(s: GameState, stat: StatKey, dc: number): { ok: boolean; roll: number; total: number } {
+export function check(s: GameState, stat: StatKey, dc: number, bonus = 0): { ok: boolean; roll: number; total: number } {
   const roll = rngOf(s).die(20);
-  const total = roll + smod(s, stat) + rollPenalty(s) + (stat === "per" ? passive(s, "perception") : 0);
+  const total = roll + bonus + smod(s, stat) + rollPenalty(s) + (stat === "per" ? passive(s, "perception") : 0);
   const ok = roll === 20 || (roll !== 1 && total >= dc);
   return { ok, roll, total };
 }

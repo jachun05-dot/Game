@@ -2,6 +2,7 @@ import { josa } from "./josa";
 import { BAL, MONSTERS } from "./data";
 import { actionsPerRound, heroAc, isDead, kill, log, maxHp, note, rngOf, rollPenalty, smod } from "./core";
 import { FRAGMENTS } from "./fragments";
+import { GODS, faithDmg, faithHit, power, pray } from "./faith";
 import { activeSkills, passive, SKILLS, type SkillDef } from "./skills";
 import { weaponOf } from "./gear";
 import type { CombatState, Enemy, GameState } from "./types";
@@ -50,10 +51,17 @@ export function startCombat(s: GameState, context: CombatState["context"], enemi
     if (def.rare) log(s, `【희귀 개체】 ${def.name} — ${def.note} 놓치기 전에 잡아야 한다! (마석 ${def.mana}G 어치)`, "crit");
   }
   // 기습: 적이 먼저 한 번 행동한다(함정을 밟은 상대를 노리는 고블린 등)
-  if (opts.surprise) {
+  if (opts.surprise && power(s, "trap", 3)) log(s, `【${GODS.trap.name}】 먼저 온 경고 — 기습을 미리 알아챘다.`, "skill");
+  else if (opts.surprise) {
     log(s, "기습! 자세를 잡기도 전에 공격이 들어온다.", "hurt");
     enemyPhase(s, c);
     if (isDead(s)) return;
+  }
+
+  // 전쟁의 신 ★3 "피의 함성"
+  if (power(s, "war", 3) && alive(c).length >= 3) {
+    c.cow = 2;
+    log(s, `【${GODS.war.name}】 피의 함성 — 적들이 움찔한다 (2라운드 동안 적 명중 −2)`, "skill");
   }
 
   let opener: Strike | null = null;
@@ -97,6 +105,7 @@ export function startCombat(s: GameState, context: CombatState["context"], enemi
     if (alive(c).length === 0) return finish(s, "win");
     c.round += 1;
     if (c.guard && --c.guard.rounds <= 0) c.guard = null;
+    if (c.cow) c.cow -= 1;
     if (context === "dungeon") {
       passTime(s, 1);
       if (isDead(s)) return;
@@ -228,7 +237,7 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
   const w = weaponOf(s);
   const statMod = smod(s, w.stat);
   const roll = r.die(20);
-  const bonus = statMod + BAL.proficiency + passive(s, "hit") + st.hit + rollPenalty(s);
+  const bonus = statMod + BAL.proficiency + passive(s, "hit") + st.hit + rollPenalty(s) + faithHit(s, alive(c).length);
   if (!st.autoHit && roll === 1) {
     log(s, `손이 미끄러졌다! (주사위 1)`, "miss");
     return;
@@ -238,7 +247,7 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
     return;
   }
   const crit = roll === 20 || r.float() * 100 < 5 + smod(s, "luk") + passive(s, "crit");
-  const base = r.dice(w.dice[0] * (crit ? 2 : 1), w.dice[1]) + statMod + passive(s, "dmg") + st.dmg;
+  const base = r.dice(w.dice[0] * (crit ? 2 : 1), w.dice[1]) + statMod + passive(s, "dmg") + st.dmg + faithDmg(s);
   const dmg = Math.max(1, Math.round(base * st.mult));
   target.hp -= dmg;
   if (crit) note(s, "luk");
@@ -247,6 +256,7 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
     note(s, w.stat === "int" ? "int" : w.stat === "dex" ? "dex" : "str");
     gainLoot(s, c, def.id);
     log(s, `${josa(def.name, "을")} 쓰러뜨렸다.`, "good");
+    if (power(s, "war", 2)) s.hero.hp = Math.min(maxHp(s), s.hero.hp + 2); // 전쟁의 신 ★2
   }
 }
 
@@ -286,7 +296,7 @@ function enemyPhase(s: GameState, c: CombatState): void {
       continue;
     }
     const roll = r.die(20);
-    if (roll === 1 || (roll !== 20 && roll + def.atk < ac)) {
+    if (roll === 1 || (roll !== 20 && roll + def.atk - (c.cow ? 2 : 0) < ac)) {
       note(s, "dex");
       log(s, `${def.name}의 공격을 피했다.`, "miss");
       continue;
@@ -297,6 +307,22 @@ function enemyPhase(s: GameState, c: CombatState): void {
     log(s, `${josa(def.name, "이")} ${def.attackText}! ${dmg} 피해${crit ? " (치명타!)" : ""}`, "hurt");
     if (s.hero.hp <= 0) {
       const grit = activeSkills(s).find((sk) => sk.trigger!.on === "lethal" && !s.tripUsed.includes(sk.id));
+      // 시와 노래의 신 ★3 "끝나지 않은 노래"(미궁마다 1회)
+      // 탐욕/채무의 신 ★2 "목숨값"(미궁마다 1회, 들고 있는 마석이 있어야)
+      if (!grit && c.context === "dungeon" && power(s, "greed", 2) && !s.tripUsed.includes("faithGreed") && (s.dungeon?.mana ?? 0) > 0) {
+        s.tripUsed.push("faithGreed");
+        const paid = Math.ceil(s.dungeon!.mana / 2);
+        s.dungeon!.mana -= paid;
+        s.hero.hp = 1;
+        log(s, `【${GODS.greed.name}】 목숨값 — 마석 ${paid}G 어치가 손에서 녹아 사라지고, 숨이 붙어 있다. (HP 1)`, "skill");
+        continue;
+      }
+      if (!grit && power(s, "song", 3) && !s.tripUsed.includes("faithSong")) {
+        s.tripUsed.push("faithSong");
+        s.hero.hp = 1;
+        log(s, `【${GODS.song.name}】 끝나지 않은 노래 — 아직 이 이야기는 끝나지 않았다. (HP 1)`, "skill");
+        continue;
+      }
       if (grit) {
         s.tripUsed.push(grit.id);
         s.hero.hp = 1;
@@ -315,6 +341,15 @@ function enemyPhase(s: GameState, c: CombatState): void {
 function finish(s: GameState, outcome: "win" | "fled"): void {
   const c = s.combat!;
   s.combat = null;
+  // 신앙심: 전쟁의 신은 여럿과 싸워 이기는 것을 좋아하고 도주를 싫어한다
+  if (outcome === "win" && c.enemies.length >= 2) pray(s, "war", 3);
+  if (outcome === "fled") pray(s, "war", -3);
+  // 기아/풍요의 신 ★3 "한 몸의 두 얼굴"
+  if (outcome === "win" && s.hero.satiety <= 30 && power(s, "hunger", 3)) {
+    s.hero.satiety = Math.min(100, s.hero.satiety + 25);
+    s.hero.hp = Math.min(maxHp(s), s.hero.hp + 5);
+    log(s, `【${GODS.hunger.name}】 굶주림이 풍요로 뒤집힌다 — 포만감 +25, HP +5`, "skill");
+  }
   if (c.context === "field") afterFieldCombat(s, outcome, c);
   else afterDungeonCombat(s, outcome, c);
 }

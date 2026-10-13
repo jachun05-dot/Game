@@ -2,11 +2,12 @@ import { josa } from "./josa";
 import { BAL, ENCOUNTERS, MANA_FLOOR_MULT, MIN_COMBAT_ROOMS, MONSTERS, RARE_BY_FLOOR, RECORDS, ROOM_FLAVOR, TRAP_AMBUSH } from "./data";
 import { check, isDead, kill, log, maxHp, note, remember, rngOf, smod } from "./core";
 import { FRAGMENTS, fragKnown, fragSlots, fragStatText } from "./fragments";
+import { FAITH_BAL, addPiety, faithPeek, faithTrapSense, god, power, pray } from "./faith";
+import { beginSettlement, convert } from "./town";
 import { SKILLS } from "./skills";
 import { describeGroup, makeEnemies, potionHeal, startCombat } from "./combat";
 import { hungerMult } from "./skills";
 import { GEAR, equip, targetSlot } from "./gear";
-import { beginSettlement } from "./town";
 import type { Rng } from "./rng";
 import type { CombatState, DungeonState, GameState, Pending, Room, RoomType } from "./types";
 
@@ -144,6 +145,8 @@ export function passTime(s: GameState, turns: number): void {
   const wasFed = h.satiety > 0;
   h.satiety = Math.max(0, h.satiety - turns * 0.5 * hungerMult(s));
   h.fatigue = Math.min(100, h.fatigue + turns / 3);
+  // 기아/풍요의 신은 배고픈 채 버티는 것을 좋아한다(포만감 30 이하, 완전히 굶주리면 두 배)
+  if (h.satiety <= 30) pray(s, "hunger", (turns / 3) * (h.satiety <= 0 ? 2 : 1));
   if (wasFed && h.satiety <= 0) log(s, "배가 고파 손이 떨린다. (굶주림: 판정 -2)", "hurt");
   dg.respawnClock = (dg.respawnClock ?? 0) + turns;
   while (dg.respawnClock >= BAL.respawnEveryTurns) {
@@ -204,6 +207,13 @@ export function moveTo(s: GameState, id: number): void {
   passTime(s, BAL.moveTurns);
   if (isDead(s)) return;
   if (checkTimeUp(s)) return;
+  // 현상수배 중이면 성당의 이단심문관이 뒤를 밟는다
+  if (s.heretic && rngOf(s).chance(FAITH_BAL.inquisitorChance)) {
+    log(s, "등 뒤에서 쇠사슬 끌리는 소리 — 성당의 이단심문관이 길을 막아선다!", "hurt");
+    log(s, "\"옛 신의 이름을 입에 올린 자여, 여기가 네 무덤이다.\"", "story");
+    startCombat(s, "dungeon", makeEnemies(s, ["inquisitor"]));
+    return;
+  }
   arrive(s, false);
 }
 
@@ -266,7 +276,7 @@ function peek(s: GameState): void {
   for (const id of currentRoom(s).edges) {
     const nb = dg.rooms[id];
     if (nb.known) continue;
-    if (check(s, "per", BAL.peekDc).ok) {
+    if (check(s, "per", BAL.peekDc, faithPeek(s)).ok) {
       nb.known = true;
       note(s, "per");
       log(s, `앞쪽 통로 너머의 낌새를 읽었다 — ${ROOM_LABEL[nb.type]}.`, "system");
@@ -283,7 +293,7 @@ function arriveTrap(s: GameState, room: Room): boolean {
     dg.pending = { kind: "trap" };
     return false;
   }
-  const c = check(s, "per", BAL.trapDetectDc);
+  const c = check(s, "per", BAL.trapDetectDc, faithTrapSense(s));
   room.known = true;
   if (c.ok) {
     note(s, "per");
@@ -298,7 +308,7 @@ function arriveTrap(s: GameState, room: Room): boolean {
 /** 함정을 알아챈 김에 숨은 고블린도 알아채는지 */
 function spotAmbush(s: GameState, room: Room): void {
   if (!room.ambush || room.ambushKnown) return;
-  if (check(s, "per", BAL.ambushSpotDc).ok) {
+  if (power(s, "trap", 2) || check(s, "per", BAL.ambushSpotDc, faithTrapSense(s)).ok) {
     room.ambushKnown = true;
     log(s, `벽 틈에서 눈빛이 번뜩인다 — 고블린 ${room.ambush.length}마리가 함정을 밟기를 기다리고 있다.`, "system");
   }
@@ -307,11 +317,14 @@ function spotAmbush(s: GameState, room: Room): void {
 /** 함정 작동. 숨어 있던 고블린이 있으면 덮친다(밟아서 다쳤으면 기습). 매복 전투가 벌어졌으면 true */
 function springTrap(s: GameState, room: Room): boolean {
   room.resolved = true;
-  const c = check(s, "dex", BAL.trapDodgeDc);
+  const c = check(s, "dex", BAL.trapDodgeDc, power(s, "trap", 1) ? 3 : 0);
   let hurt = false;
   if (c.ok) {
     note(s, "dex");
     log(s, `발밑에서 가시가 튀어나왔다 — 아슬아슬하게 피했다! (민첩 ${c.total} vs ${BAL.trapDodgeDc})`, "good");
+  } else if (power(s, "trap", 3)) {
+    // 재앙의 신 ★3 "먼저 오는 경고"
+    log(s, "가시가 튀어나오기 직전, 귓가에 경고가 울렸다 — 몸이 먼저 비켜섰다. (피해 없음)", "good");
   } else {
     const dmg = rngOf(s).dice(1, 6);
     s.hero.hp -= dmg;
@@ -324,6 +337,7 @@ function springTrap(s: GameState, room: Room): boolean {
     note(s, "con");
     hurt = true;
   }
+  pray(s, "trap", 3); // 재앙을 맞고도 살아남았다
   if (!room.ambush) return false;
   const ids = room.ambush;
   room.ambush = undefined;
@@ -341,6 +355,8 @@ export type PendingChoice =
   | "descend" | "stay"
   | "enter"
   | "equip"
+  /** 성소: 해금된 n번째 신으로 개종 */
+  | `convert${number}`
   /** 편린: 빈 칸에 흡수 */
   | "absorb"
   /** 편린: n번째 편린을 깨뜨리고 흡수 */
@@ -367,6 +383,7 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
   if (kind === "trap") {
     if (choice === "back" && dg.prev !== null) {
       log(s, "함정을 피해 왔던 길로 물러났다.");
+      pray(s, "trap", -2);
       const back = dg.prev;
       dg.prev = dg.current;
       dg.current = back;
@@ -376,11 +393,16 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
     }
     if (choice === "disarm") {
       passTime(s, 1);
-      const c = check(s, "dex", BAL.trapDisarmDc);
+      const c = check(s, "dex", BAL.trapDisarmDc, power(s, "trap", 1) ? 3 : 0);
       if (c.ok) {
         note(s, "per");
         room.resolved = true;
         log(s, `함정을 해체했다. (민첩 ${c.total} vs ${BAL.trapDisarmDc})`, "good");
+        pray(s, "trap", 4);
+        if (power(s, "trap", 2)) {
+          dg.mana += dg.floor * 10;
+          log(s, `함정 장치에 박혀 있던 마석 조각을 빼냈다. (${dg.floor * 10}G 어치)`, "good");
+        }
         if (room.ambush) {
           log(s, `숨어 있던 고블린 ${room.ambush.length}마리가 겁을 먹고 달아났다. 비겁한 놈들이다.`, "system");
           room.ambush = undefined;
@@ -415,7 +437,7 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
         return;
       }
     }
-    const mana = r.int(12, 30) + dg.floor * 6;
+    let mana = r.int(12, 30) + dg.floor * 6;
     dg.mana += mana;
     const got = [`마석(${mana}G 어치)`];
     if (r.chance(0.4)) {
@@ -456,8 +478,14 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
       note(s, "int");
       log(s, RECORDS[(room.flavor + s.recordsRead) % RECORDS.length], "story");
       log(s, `(읽은 기록물 ${s.recordsRead}개)`, "system");
+      pray(s, "song", 4);
+      if (power(s, "song", 1)) {
+        s.hero.hp = Math.min(maxHp(s), s.hero.hp + 5);
+        log(s, "글자를 읽는 동안 어디선가 노랫소리가 들린다. HP +5", "good");
+      }
     } else {
       log(s, "글자를 외면하고 지나쳤다.");
+      pray(s, "song", -2);
     }
     return;
   }
@@ -469,7 +497,14 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
       const heal = r.dice(1, 4) + 1;
       s.hero.hp = Math.min(maxHp(s), s.hero.hp + heal);
       log(s, `옛 신의 제단 앞에 무릎 꿇었다. 이상하게 마음이 놓인다. HP +${heal}`, "good");
-      log(s, "(신앙 변경은 아직 준비 중)", "system");
+      if (god(s)) {
+        addPiety(s, 5);
+        log(s, `${s.hero.faith}의 기척이 가까이 느껴진다. (신앙심 ${s.piety})`, "story");
+      }
+    } else if (choice.startsWith("convert")) {
+      passTime(s, 2);
+      const name = s.faithsKnown[Number(choice.slice(7))];
+      if (name) convert(s, name);
     } else {
       log(s, "성당의 눈을 떠올리고, 제단을 지나쳤다.");
     }
@@ -572,6 +607,25 @@ export function afterDungeonCombat(s: GameState, outcome: "win" | "fled", c: Com
   const dg = d(s);
   const room = currentRoom(s);
   s.phase = "dungeon";
+  // 이단심문관: 방의 사건과 별개. 이기면 신앙심 +10 후 그 방에 원래대로 들어서고, 도망치면 직전 방으로
+  if (c.enemies.some((e) => e.defId === "inquisitor")) {
+    if (outcome === "win") {
+      remember(s, "이단심문관을 쓰러뜨렸다.");
+      log(s, "심문관이 쓰러졌다. 품에서 떨어진 현상수배서에 당신의 이름이 적혀 있다.", "good");
+      if (god(s)) {
+        addPiety(s, FAITH_BAL.inquisitorPiety);
+        log(s, `${josa(s.hero.faith!, "이")} 기뻐한다. (신앙심 +${FAITH_BAL.inquisitorPiety} → ${s.piety})`, "story");
+      }
+      arrive(s, false);
+    } else if (dg.prev !== null) {
+      dg.current = dg.prev;
+      dg.prev = room.id;
+      log(s, "심문관을 따돌리고 왔던 길로 물러났다.");
+      passTime(s, 1);
+      checkTimeUp(s);
+    }
+    return;
+  }
   const roomFight = room.type === "combat" || room.type === "boss";
   // 리젠된 몬스터의 마석은 절반(희귀 개체 보너스는 그대로)
   const loot = Math.round(c.loot * MANA_FLOOR_MULT[dg.floor] * (roomFight && room.respawned ? BAL.respawnManaMult : 1)) + c.bonus;
@@ -622,7 +676,7 @@ export function camp(s: GameState): void {
   if (isDead(s)) return;
   s.hero.satiety = Math.max(0, s.hero.satiety - 6); // 휴식하면 포만감이 더 빨리 닳는다(DESIGN 11절 트레이드오프)
   s.hero.fatigue = Math.max(0, s.hero.fatigue - 60);
-  const heal = 4 + Math.max(0, smod(s, "con"));
+  const heal = 4 + Math.max(0, smod(s, "con")) + (power(s, "song", 2) ? 3 : 0);
   s.hero.hp = Math.min(maxHp(s), s.hero.hp + heal);
   log(s, `피로가 풀렸다. HP +${heal}`, "good");
   if (r.chance(0.15)) {
@@ -636,10 +690,15 @@ export function camp(s: GameState): void {
 
 export function eat(s: GameState): void {
   if (!s.dungeon || s.inventory.food <= 0 || s.combat) return;
+  if (s.hero.satiety >= 80) pray(s, "hunger", -3);
   s.inventory.food -= 1;
   s.hero.satiety = Math.min(100, s.hero.satiety + 40);
   passTime(s, 1);
   log(s, "말린 고기를 씹었다. 포만감 +40", "good");
+  if (power(s, "hunger", 1)) {
+    s.hero.hp = Math.min(maxHp(s), s.hero.hp + 3);
+    log(s, "배 속이 따뜻해진다. HP +3", "good");
+  }
 }
 
 export function drinkPotion(s: GameState): void {

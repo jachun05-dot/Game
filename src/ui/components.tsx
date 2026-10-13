@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { maxHp, heroAc, smod, stat } from "../game/core";
 import { FRAGMENTS, TIER_LABEL, fragSlots, fragStat, fragStatText } from "../game/fragments";
+import { PIETY_TIERS, godOf, tier } from "../game/faith";
 import { STAT_KEYS, STAT_LABEL } from "../game/data";
 import { GEAR } from "../game/gear";
 import { CLASSES } from "../game/classes";
@@ -60,7 +61,8 @@ export function HeroHeader({ s, extra, onOpen }: { s: GameState; extra?: ReactNo
       <div className="hero-info">
         <div className="hero-name">
           {s.hero.name} <span className="dim">{CLASSES[s.hero.cls].name} Lv.{s.hero.level}</span>
-          {s.hero.faith && <span className="faith-tag">{s.hero.faith}</span>}
+          {s.hero.faith && <span className="faith-tag">{s.hero.faith} {"★".repeat(tier(s))}</span>}
+          {s.heretic && <span className="faith-tag heretic">현상수배</span>}
         </div>
         <div className="hp-line">
           <span>HP</span>
@@ -279,6 +281,47 @@ export function FragList({ s }: { s: GameState }) {
       <p className="dim small">
         편린 칸 {s.fragments.length}/{slots} · 레벨 {nextAt}에 한 칸 더 생긴다. 편린으로 오른 능력치는 노란색으로 표시된다.
       </p>
+    </>
+  );
+}
+
+/** 섬기는 신·신앙심·권능·저주·현상수배 */
+export function FaithCard({ s }: { s: GameState }) {
+  const g = godOf(s.hero.faith);
+  const t = tier(s);
+  return (
+    <>
+      {s.heretic && <p className="hurt small">현상수배 중 — 마을에 들어갈 수 없다. 미궁에서는 이단심문관이 뒤를 쫓는다. 마을의 성당에 자수하면 신앙을 버리고 돌아갈 수 있다.</p>}
+      {!g ? (
+        <p className="dim small">섬기는 신이 없다. 해금된 옛 신은 새 삶을 시작할 때나 미궁의 성소에서 섬길 수 있다.</p>
+      ) : (
+        <>
+          <p className="small">
+            <b>{g.name}</b> <span className="dim">· {g.align}</span> <span className="accent">{"★".repeat(t)}{"☆".repeat(3 - t)}</span>
+          </p>
+          <div className="faith-line">
+            <span className="small dim">신앙심</span>
+            <Bar value={s.piety} max={100} tone="food" />
+            <span className="num small">{Math.floor(s.piety)}</span>
+          </div>
+          <ul className="skills">
+            {g.powers.map((p, i) => (
+              <li key={i} className={t > i ? "" : "empty"}>
+                <span className={`skill-kind${t > i ? " active" : ""}`}>★{i + 1} · {PIETY_TIERS[i]}</span>
+                <span className={`small${t > i ? "" : " dim"}`}>{p}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="dim small">
+            좋아함: {g.likes} · 싫어함: {g.dislikes}. 신앙심은 매달 5씩 줄고, ★이 높을수록 성당의 이단 심문에 걸리기 쉽다(★당 5%).
+          </p>
+        </>
+      )}
+      {s.curse && s.curse.months > 0 && (
+        <p className="hurt small">
+          {s.curse.god}의 저주: {godOf(s.curse.god)?.curse} (남은 {s.curse.months}개월)
+        </p>
+      )}
     </>
   );
 }
