@@ -196,7 +196,7 @@ Solid flat magenta background (#FF00FF). No ground shadow, no text, no numbers, 
 
 ## 장소 그림 공통 규칙
 
-배경이 있는 장면이라 마젠타를 쓰지 않는다. Gemini는 장면을 **200격자**로 그려 준다(1024 이미지면 도트 5.12px, 512 이미지면 2.56px). 그래서 `python3 tools/sprite.py 입력 출력 --grid 200 --keep-watermark`로 복원한다(장면에는 마젠타가 없고, 워터마크 모서리를 지우면 구멍이 나므로 남긴다). 복원본 전체는 `assets/scenes/*_full.png`에 보관하고, 가운데를 **179×80 띠**로 잘라 `public/scene-*.png`로 쓴다(워터마크는 잘리는 아래 모서리에 있어 자연히 빠진다). 화면에서는 2배(358×160), 좁은 화면에서는 가운데 기준으로 양옆이 잘린다(`SceneBanner`, `SCENE_ART`). 장면 속 인물은 원경이라 캐릭터 스프라이트의 절반쯤(약 50도트) 크기로 나온다 — 장면끼리만 맞추면 된다. 프롬프트에 "중요한 요소는 가운데 60% 높이 안에"를 넣는다.
+배경이 있는 장면이라 마젠타를 쓰지 않는다. Gemini는 장면을 **200격자**로 그려 준다(1024 이미지면 도트 5.12px, 512 이미지면 2.56px). 그래서 `python3 tools/sprite.py 입력 출력 --grid 200 --keep-watermark`로 복원한다(장면에는 마젠타가 없고, 워터마크 모서리를 지우면 구멍이 나므로 남긴다). 복원본 전체는 `assets/scenes/*_full.png`에 보관하고, 가운데를 **179×80 띠**로 잘라 `public/scene-*.png`로 쓴다(워터마크는 잘리는 아래 모서리에 있어 자연히 빠진다). 화면에서는 2배(358×160)로 띠의 배경 이미지로 깔고, 좁은 화면에서는 `focus`(0 왼쪽 ~ 1 오른쪽, 기본 0.5) 쪽을 남기고 잘린다(`SceneBanner`, `SCENE_ART`). 앱 안 폭이 보통 328px이라 2배 띠(358px)의 양옆 15도트쯤이 잘린다는 걸 감안해 핵심이 가장자리에 있으면 focus를 준다. 장면 속 인물은 원경이라 캐릭터 스프라이트의 절반쯤(약 50도트) 크기로 나온다 — 장면끼리만 맞추면 된다. 프롬프트에 "중요한 요소는 가운데 60% 높이 안에"를 넣는다.
 
 ## 012 — 훈련장 (기준 이미지 첨부)
 
@@ -289,3 +289,33 @@ No text, no UI, no frame or border. Square 1:1 image.
 ```
 
 결과(2026-10-13): 1차 채택(512, 200격자) → 문양과 사제가 위아래로 멀어 띠를 **179×110**으로 키움 `(14,24)~(193,134)` = `public/scene-temple.png`. 신전 카드 위
+
+## 018 — 관공서 (기준 이미지 + 훈련장 첨부)
+
+```
+Match the exact art style, outline, palette and pixel scale of the attached images; the second image (a training yard) shows the scene scale and level of detail to follow.
+
+Pixel art game location illustration, classic 16-bit RPG style, wide view of an interior, slightly elevated 3/4 view.
+The lord's tax office on a remote island fief in a grim dark-fantasy world: a heavy dark wooden desk with an open ledger, a set of brass scales and neat stacks of coins, a thin pale tax clerk in black with a quill, looking down without pity, two armored guards with halberds standing behind him, a tall window with iron bars, and on the stone wall a faded banner bearing the lord's sun emblem. A coiled rope noose hangs from a hook in the shadowed corner, a quiet reminder of what happens to those who cannot pay.
+Muted palette of about 20 colors: dark browns, cold grey stone, black; dull gold (#cf9a44) only on the coins, the scales and the sun emblem.
+Crisp hard pixel edges, 1-pixel dark outlines, no anti-aliasing, no blur, no gradients, no noisy dithering.
+Keep the desk, the clerk and the guards within the middle 60% of the height so it reads when cropped to a wide horizontal strip.
+No readable text, no UI, no frame or border. Square 1:1 image.
+```
+
+결과(2026-10-13): 1차 채택(512, 200격자) → 띠 179×100 `(18,38)~(197,138)` = `public/scene-office.png`, `focus: 0.85`(오른쪽 구석 올가미를 좁은 화면에서도 남긴다). 월말 정산의 세금 카드 위
+
+## 019 — 묘지 (기준 이미지 + 훈련장 첨부)
+
+```
+Match the exact art style, outline, palette and pixel scale of the attached images; the second image (a training yard) shows the scene scale and level of detail to follow.
+
+Pixel art game location illustration, classic 16-bit RPG style, wide establishing view, slightly elevated 3/4 view.
+A small, crowded graveyard for young adventurers on a remote island fief in a grim dark-fantasy world, on a windy hill under a grey sky: many small crooked wooden grave markers and a few rough stones, far too many of them, some fresh mounds of dirt, a rusty short sword planted in one grave, a worn leather boot left on another, a few wilted wildflowers, a low broken stone wall, a single bare tree, crows. No people.
+Muted palette of about 20 colors: dark browns, cold grey, faded grass green; dull gold (#cf9a44) only on a few wildflowers.
+Crisp hard pixel edges, 1-pixel dark outlines, no anti-aliasing, no blur, no gradients, no noisy dithering.
+Keep the dense rows of grave markers within the middle 60% of the height so it reads when cropped to a wide horizontal strip.
+No readable text on the markers, no UI, no frame or border. Square 1:1 image.
+```
+
+결과(2026-10-13): 1차 채택(512, 200격자) → 띠 `(10,50)~(189,130)` = `public/scene-grave.png`. 묘지 화면 맨 위. 나무 묘표가 십자 모양으로 나왔지만 묘표의 흔한 관습 모양이라 그대로 둠(신전 문양과는 무관)

@@ -23,6 +23,8 @@ export interface SpriteArt {
   src: string;
   w: number;
   h: number;
+  /** 장소 그림: 화면이 좁을 때 남길 가로 위치(0 왼쪽 ~ 1 오른쪽, 기본 0.5) */
+  focus?: number;
 }
 
 export const MONSTER_ART: Record<string, SpriteArt> = {
@@ -45,7 +47,7 @@ export const FRAG_ICON: SpriteArt[] = [
   { src: "./frag-4.png", w: 12, h: 29 },
 ];
 
-// 장소 그림(띠 모양, 원래 도트 크기). 화면에서는 2배로 키우고 좁은 화면에서는 양옆이 잘린다.
+// 장소 그림(띠 모양, 원래 도트 크기). 화면에서는 2배로 키우고 좁은 화면에서는 focus 쪽을 남기고 잘린다.
 export const SCENE_ART: Record<string, SpriteArt> = {
   training: { src: "./scene-training.png", w: 179, h: 80 },
   tavern: { src: "./scene-tavern.png", w: 179, h: 80 },
@@ -53,6 +55,8 @@ export const SCENE_ART: Record<string, SpriteArt> = {
   market: { src: "./scene-market.png", w: 179, h: 80 },
   smithy: { src: "./scene-smithy.png", w: 179, h: 80 },
   temple: { src: "./scene-temple.png", w: 179, h: 110 },
+  office: { src: "./scene-office.png", w: 179, h: 100, focus: 0.85 },
+  graveyard: { src: "./scene-grave.png", w: 179, h: 80 },
 };
 
 /** 주간 결과 카드 제목 → 장소 그림 */
