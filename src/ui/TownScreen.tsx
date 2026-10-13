@@ -94,6 +94,7 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
       {tab === "shop" && !s.heretic && (
         <div className="stack">
           <Card title="상점가">
+            <SceneBanner id="market" />
             {(Object.keys(ITEM_INFO) as (keyof typeof ITEM_INFO)[]).map((k) => (
               <div key={k} className="shop-row">
                 <div>
@@ -107,6 +108,7 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
             ))}
           </Card>
           <Card title="대장간">
+            <SceneBanner id="smithy" />
             <p className="dim small">장비는 강해지는 수단이 아니라 살아남기 위한 최소한이다.</p>
             {Object.values(GEAR)
               .filter((g) => g.price !== undefined)
@@ -141,6 +143,7 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
             ))}
           </Card>
           <Card title="신전">
+            <SceneBanner id="temple" />
             {LIMBS.filter((p) => s.injuries[p] >= 3).map((p) => (
               <div key={p} className="shop-row">
                 <div>

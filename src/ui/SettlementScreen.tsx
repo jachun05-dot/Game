@@ -1,6 +1,6 @@
 import type { Ctl } from "./App";
 import { josa } from "../game/josa";
-import { Card, GameScreen, HeroHeader } from "./components";
+import { Card, GameScreen, HeroHeader, SceneBanner } from "./components";
 
 export function SettlementScreen({ ctl }: { ctl: Ctl }) {
   const { s, dispatch } = ctl;
@@ -50,6 +50,7 @@ export function SettlementScreen({ ctl }: { ctl: Ctl }) {
         </Card>
       ) : (
       <Card title={`다음 달 1주차 — 세금 ${st.tax}G${st.debt ? " (외상)" : ""}`} className={st.paid ? "" : "warn"}>
+        <SceneBanner id="office" />
         {st.debt ? (
           <p>빚 문서로 이번 세금을 미뤘다. 다음 달에 {st.tax}G를 더 내야 한다.</p>
         ) : st.paid ? (

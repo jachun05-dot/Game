@@ -451,6 +451,5 @@ html, body, #root { height: 100%; }
 .injuries li.hurt-row .item { color: var(--danger); }
 
 /* 장소 그림 띠 */
-.scene { position: relative; overflow: hidden; margin: 0 0 10px; border: 1px solid var(--border); background: #000; }
-.scene img { position: absolute; left: 50%; top: 0; image-rendering: pixelated; display: block; }
+.scene { margin: 0 0 10px; border: 1px solid var(--border); background-color: #000; background-repeat: no-repeat; image-rendering: pixelated; }
 .injury-tag.mind, .skill-kind.mind { border-color: var(--violet); color: var(--violet); }
