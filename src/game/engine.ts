@@ -1,5 +1,6 @@
 import { camp, drinkPotion, eat, enterDungeon, moveTo, resolvePending, useScroll, type PendingChoice } from "./dungeon";
-import { buy, buyGear, closeSettlement, closeWeek, createHero, doActivity, rerollCandidates, sell, setTactics, train } from "./town";
+import { buy, buyGear, closeSettlement, closeWeek, createHero, doActivity, pickClass, rerollCandidates, sell, setTactics, train } from "./town";
+import type { ClassId } from "./classes";
 import type { Activity, GameState, StatKey, Tactics } from "./types";
 import type { BAL } from "./data";
 
@@ -7,6 +8,7 @@ export type ShopItem = keyof typeof BAL.prices;
 
 export type Action =
   | { t: "reroll" }
+  | { t: "pickClass"; cls: ClassId }
   | { t: "create"; name: string; candidate: number; faith: string | null }
   | { t: "activity"; a: Activity }
   | { t: "train"; training: string; free: [StatKey, StatKey] }
@@ -34,6 +36,7 @@ export function act(prev: GameState, a: Action): GameState {
 export function apply(s: GameState, a: Action): void {
   switch (a.t) {
     case "reroll": return rerollCandidates(s);
+    case "pickClass": return pickClass(s, a.cls);
     case "create": return createHero(s, a.name, a.candidate, a.faith);
     case "activity": return doActivity(s, a.a);
     case "train": return train(s, a.training, a.free);

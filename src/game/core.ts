@@ -1,5 +1,6 @@
 import { josa } from "./josa";
-import { BAL, FAITH, GEAR, STAT_KEYS } from "./data";
+import { BAL, FAITH, STAT_KEYS } from "./data";
+import { CLASSES } from "./classes";
 import { Rng } from "./rng";
 import { passive } from "./skills";
 import type { DeathCause, GameState, LogKind, StatKey, Stats } from "./types";
@@ -19,12 +20,11 @@ export function mod(v: number): number {
 
 export function maxHp(s: GameState): number {
   // DESIGN 7·8절: CON 보정치가 레벨마다 고정 누적. 기본 HP는 미정이라 임시값.
-  return BAL.baseHp + Math.max(BAL.minHpPerLevel, mod(s.hero.stats.con)) * s.hero.level + passive(s, "hp");
+  return BAL.baseHp + CLASSES[s.hero.cls].hp + Math.max(BAL.minHpPerLevel, mod(s.hero.stats.con)) * s.hero.level + passive(s, "hp");
 }
 
 export function heroAc(s: GameState): number {
-  const gearAc = Object.values(s.gear).reduce((a, id) => a + (id ? GEAR[id].ac : 0), 0);
-  return 10 + mod(s.hero.stats.dex) + gearAc + passive(s, "ac");
+  return 10 + mod(s.hero.stats.dex) + passive(s, "ac");
 }
 
 export function actionsPerRound(s: GameState): number {
@@ -114,6 +114,7 @@ export function kill(s: GameState, cause: DeathCause, detail?: string): void {
     faithsUnlocked: faiths,
     epitaph,
     faith: s.hero.faith,
+    className: CLASSES[s.hero.cls].name,
     seed: s.seed,
     diedAt: new Date().toISOString(),
   };
@@ -124,7 +125,7 @@ export function kill(s: GameState, cause: DeathCause, detail?: string): void {
 }
 
 function buildEpitaph(s: GameState, cause: DeathCause): string {
-  const parts: string[] = [`영지의 열여섯 살 소년, 모험가가 되었다.`];
+  const parts: string[] = [`영지의 열여섯 살 소년, ${CLASSES[s.hero.cls].name}${s.hero.cls === "adventurer" ? "가" : "로"} 미궁에 섰다.`];
   if (s.hero.level > 1) parts.push(`${s.hero.level}레벨까지 훈련받았다.`);
   parts.push(...s.history.slice(-3));
   if (s.rank > 0) parts.push(`차원문에 ${s.rank}번 닿았다.`);

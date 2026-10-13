@@ -3,6 +3,7 @@ import { BAL, ENCOUNTERS, MANA_FLOOR_MULT, MONSTERS, RECORDS, ROOM_FLAVOR } from
 import { check, isDead, kill, log, maxHp, note, remember, rngOf } from "./core";
 import { describeGroup, makeEnemies, potionHeal, startCombat } from "./combat";
 import { hungerMult } from "./skills";
+import { GEAR, equip, targetSlot } from "./gear";
 import { beginSettlement } from "./town";
 import type { Rng } from "./rng";
 import type { CombatState, DungeonState, GameState, Room, RoomType } from "./types";
@@ -285,13 +286,15 @@ export type PendingChoice =
   | "read"
   | "pray"
   | "descend" | "stay"
-  | "enter";
+  | "enter"
+  | "equip";
 
 export function resolvePending(s: GameState, choice: PendingChoice): void {
   const dg = s.dungeon;
   if (!dg || !dg.pending || s.phase !== "dungeon") return;
   const room = currentRoom(s);
-  const kind = dg.pending.kind;
+  const pend = dg.pending;
+  const kind = pend.kind;
   dg.pending = null;
   const r = rngOf(s);
 
@@ -344,16 +347,29 @@ export function resolvePending(s: GameState, choice: PendingChoice): void {
     }
     const mana = r.int(12, 30) + dg.floor * 6;
     dg.mana += mana;
-    let extra = "";
+    const got = [`마석(${mana}G 어치)`];
     if (r.chance(0.4)) {
       s.inventory.potion += 1;
-      extra = ", 치료 물약 1개";
+      got.push("치료 물약 1개");
     } else if (r.chance(0.5)) {
       s.inventory.food += 1;
-      extra = ", 말린 고기 1개";
+      got.push("말린 고기 1개");
     }
     note(s, "luk");
-    log(s, `상자에서 마석(${mana}G 어치)${josa(extra, "을")} 얻었다.`, "good");
+    log(s, `상자에서 ${got.join(", ")}을 얻었다.`, "good");
+    if (r.chance(0.25 + dg.floor * 0.1)) offerGear(s, rollLoot(s));
+    return;
+  }
+
+  if (kind === "gear" && pend.kind === "gear") {
+    const g = GEAR[pend.item];
+    if (choice === "equip") {
+      const old = equip(s, pend.item);
+      remember(s, `미궁에서 ${josa(g.name, "을")} 얻었다.`);
+      log(s, `${josa(g.name, "을")} 착용했다.${old ? ` ${josa(GEAR[old].name, "은")} 여기 두고 간다.` : ""}`, "good");
+    } else {
+      log(s, `${josa(g.name, "은")} 두고 가기로 했다. (착용하지 않은 물건은 가지고 나갈 수 없다)`);
+    }
     return;
   }
 
@@ -416,6 +432,26 @@ export function resolvePending(s: GameState, choice: PendingChoice): void {
   }
 }
 
+/** 보물상자·보스가 떨어뜨리는 장비(층이 깊을수록 좋은 것이 더 잘 나온다) */
+function rollLoot(s: GameState): string {
+  const r = rngOf(s);
+  const floor = s.dungeon?.floor ?? 1;
+  const pool = Object.values(GEAR)
+    .filter((g) => (g.loot ?? 0) > 0)
+    .map((g) => ({ item: g.id, w: (g.loot ?? 0) + (floor >= 2 && (g.loot ?? 0) <= 2 ? 1 : 0) }));
+  return r.weighted(pool);
+}
+
+function offerGear(s: GameState, id: string): void {
+  const dg = d(s);
+  const g = GEAR[id];
+  const slot = targetSlot(s, id);
+  const cur = s.gear[slot];
+  log(s, `${g.name} — ${g.flavor}`, "story");
+  dg.pending = { kind: "gear", item: id };
+  if (cur) log(s, `(지금 착용: ${GEAR[cur].name})`, "system");
+}
+
 export function afterDungeonCombat(s: GameState, outcome: "win" | "fled", c: CombatState): void {
   const dg = d(s);
   const room = currentRoom(s);
@@ -431,6 +467,9 @@ export function afterDungeonCombat(s: GameState, outcome: "win" | "fled", c: Com
     if (room.type === "boss") {
       remember(s, "거대한 돌연변이 쥐를 쓰러뜨렸다.");
       log(s, "보스가 쓰러지자 포탈의 빛이 한층 밝아진다.", "story");
+      log(s, "쥐의 둥지에서 무언가 반짝인다.", "system");
+      offerGear(s, rollLoot(s));
+      return;
     }
     if (!checkTimeUp(s)) peek(s);
     return;

@@ -1,8 +1,10 @@
 import { josa } from "./josa";
-import { ARCHETYPES, BAL, GEAR, FEED, FIELD_ENCOUNTERS, NAMES, RIVAL_NEWS, RIVALS, RUMORS, STAT_KEYS, STAT_LABEL, TRAININGS } from "./data";
+import { BAL, FEED, FIELD_ENCOUNTERS, NAMES, RIVAL_NEWS, RIVALS, RUMORS, STAT_KEYS, STAT_LABEL, TRAININGS } from "./data";
 import { addStat, emptyStats, kill, log, maxHp, rngOf, taxDue, topBehavior } from "./core";
 import { makeEnemies, startCombat } from "./combat";
 import { Rng } from "./rng";
+import { CLASSES, type ClassId } from "./classes";
+import { GEAR, equip, targetSlot } from "./gear";
 import type { Activity, Candidate, CombatState, GameState, StatKey, Stats, Tactics, WeekResult } from "./types";
 
 // DESIGN 14.1 런 시작 / 14.2 마을(1주=1턴) / 14.4 월말 정산
@@ -13,7 +15,7 @@ export function newRun(seed: number): GameState {
     seed,
     rng: { s: seed },
     phase: "create",
-    hero: { name: "", stats: emptyStats(), level: 1, hp: 1, satiety: 100, fatigue: 0, faith: null },
+    hero: { name: "", stats: emptyStats(), level: 1, hp: 1, satiety: 100, fatigue: 0, faith: null, cls: "adventurer" },
     month: 1,
     week: 1,
     gold: BAL.startGold,
@@ -37,19 +39,24 @@ export function newRun(seed: number): GameState {
     history: [],
     nextUid: 1,
   };
-  s.candidates = makeCandidates(new Rng(s.rng));
+  s.candidates = makeCandidates(new Rng(s.rng), "adventurer");
   return s;
 }
 
-/** 합계가 같고 분포만 다른 후보 3장(DESIGN 14.1) */
-export function makeCandidates(r: Rng): Candidate[] {
-  const types = r.shuffle([...ARCHETYPES]).slice(0, 3);
+/**
+ * 합계가 같고 분포만 다른 후보 3장(DESIGN 14.1). 직업마다 성향(archetype)과 공통 성향(lean)이 달라
+ * 전사는 힘·체력, 마법사는 지능 쪽으로 쏠린 후보가 나온다.
+ */
+export function makeCandidates(r: Rng, cls: ClassId): Candidate[] {
+  const def = CLASSES[cls];
+  const types = r.shuffle([...def.archetypes]).slice(0, 3);
   return types.map((t) => {
     const stats = emptyStats();
     for (const k of STAT_KEYS) stats[k] = 2;
     let left = BAL.startStatSum - 12;
+    const weight = (key: StatKey) => (t.favor[0] === key ? 4 : t.favor.includes(key) ? 3 : 1) + (def.lean.includes(key) ? 1 : 0);
     while (left > 0) {
-      const k = r.weighted(STAT_KEYS.map((key) => ({ item: key, w: t.favor.includes(key) ? 3 : 1 })));
+      const k = r.weighted(STAT_KEYS.map((key) => ({ item: key, w: weight(key) })));
       if (stats[k] >= 11) continue;
       stats[k] += 1;
       left -= 1;
@@ -61,7 +68,14 @@ export function makeCandidates(r: Rng): Candidate[] {
 export function rerollCandidates(s: GameState): void {
   if (s.phase !== "create" || s.rerollsLeft <= 0) return;
   s.rerollsLeft -= 1;
-  s.candidates = makeCandidates(rngOf(s));
+  s.candidates = makeCandidates(rngOf(s), s.hero.cls);
+}
+
+/** 직업을 바꾸면 그 직업 성향의 후보를 새로 뽑는다(다시 뽑기 횟수는 쓰지 않음) */
+export function pickClass(s: GameState, cls: ClassId): void {
+  if (s.phase !== "create" || !CLASSES[cls] || s.hero.cls === cls) return;
+  s.hero.cls = cls;
+  s.candidates = makeCandidates(rngOf(s), cls);
 }
 
 export function randomName(s: GameState): string {
@@ -74,9 +88,14 @@ export function createHero(s: GameState, name: string, candidate: number, faith:
   s.hero.name = name.trim() || "이름 없는 소년";
   s.hero.stats = { ...c.stats };
   s.hero.faith = faith;
+  const cls = CLASSES[s.hero.cls];
+  s.gear = { ...cls.start };
+  s.gold = cls.gold;
   s.hero.hp = maxHp(s);
   s.phase = "town";
-  log(s, `— ${s.hero.name}, ${c.archetype}. 모험가로 등록되었다. 소지금 ${s.gold}G.`, "system");
+  const kit = Object.values(cls.start).map((id) => GEAR[id!].name).join(", ");
+  log(s, `— ${s.hero.name}, ${c.archetype}. ${cls.name}${s.hero.cls === "adventurer" ? "로" : "로"} 등록되었다.`, "system");
+  log(s, `${cls.motive} 지급품: ${kit}. 소지금 ${s.gold}G.`, "story");
   if (faith) log(s, `당신은 몰래 ${josa(faith, "을")} 섬기기로 했다.`, "story");
   log(s, `— 1월 1주차. 4주차에 미궁이 열린다.`, "system");
 }
@@ -111,7 +130,7 @@ function finishWeek(s: GameState, res: Omit<WeekResult, "month" | "week" | "feed
 export function train(s: GameState, trainingId: string, free: [StatKey, StatKey]): void {
   if (!canTrain(s)) return;
   const t = TRAININGS.find((x) => x.id === trainingId);
-  if (!t) return;
+  if (!t || !canTrainAt(s, t.id)) return;
   const cost = trainCost(s);
   s.gold -= cost;
   const delta: Partial<Stats> = {};
@@ -206,11 +225,18 @@ export function buy(s: GameState, item: keyof typeof BAL.prices): void {
 
 export function buyGear(s: GameState, id: string): void {
   const g = GEAR[id];
-  if (s.phase !== "town" || !g || s.gold < g.price || s.gear[g.slot] === id) return;
+  if (s.phase !== "town" || !g || g.price === undefined || s.gold < g.price) return;
+  if (Object.values(s.gear).includes(id) && g.slot !== "ring") return;
   s.gold -= g.price;
-  s.gear[g.slot] = id;
-  log(s, `대장간에서 ${josa(g.name, "을")} 샀다. (${g.price}G)`, "system");
+  const old = equip(s, id);
+  log(s, `대장간에서 ${josa(g.name, "을")} 샀다. (${g.price}G)${old ? ` ${josa(GEAR[old].name, "은")} 대장간에 넘겼다.` : ""}`, "system");
 }
+
+export function canTrainAt(s: GameState, trainingId: string): boolean {
+  return CLASSES[s.hero.cls].trainings.includes(trainingId);
+}
+
+export { targetSlot };
 
 export function sell(s: GameState, item: keyof typeof BAL.prices): void {
   if (s.phase !== "town" || s.inventory[item] <= 0) return;

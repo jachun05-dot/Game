@@ -6,7 +6,7 @@ export function TombCard({ t }: { t: Tomb }) {
       <div className="tomb-cross">✝</div>
       <h3 className="tomb-name">{t.name}</h3>
       <p className="dim small">
-        Lv.{t.level} · {t.months}개월 · {t.reached}
+        {t.className ?? "모험가"} Lv.{t.level} · {t.months}개월 · {t.reached}
       </p>
       <p className="tomb-cause">{t.cause}</p>
       <p className="tomb-epitaph">{t.epitaph}</p>

@@ -1,4 +1,6 @@
-import { BAL, EQUIP_SLOTS, GEAR } from "../game/data";
+import { BAL } from "../game/data";
+import { GEAR, SLOTS, gearBonus, gearEffect, weaponOf } from "../game/gear";
+import { CLASSES } from "../game/classes";
 import { heroAc, maxHp, mod } from "../game/core";
 import { passive } from "../game/skills";
 import type { Ctl } from "./App";
@@ -9,17 +11,18 @@ export function CharacterSheet({ ctl }: { ctl: Ctl }) {
   const { s } = ctl;
   const h = s.hero;
   const dexMod = mod(h.stats.dex);
-  const gearAc = Object.values(s.gear).reduce((a, id) => a + (id ? GEAR[id].ac : 0), 0);
-  const skillAc = passive(s, "ac");
-  const strMod = mod(h.stats.str);
+  const gearAc = gearBonus(s, "ac");
+  const skillAc = passive(s, "ac") - gearAc;
+  const w = weaponOf(s);
+  const STAT_KO = { str: "힘", dex: "민첩", con: "체력", int: "지능", per: "감각", luk: "행운" } as const;
+  const strMod = mod(h.stats[w.stat]);
   const hitBonus = strMod + BAL.proficiency + passive(s, "hit");
   const dmgBonus = strMod + passive(s, "dmg");
   const crit = 5 + mod(h.stats.luk) + passive(s, "crit");
 
-  const slotItem = (key: string): { name: string; effect: string } | null => {
-    if (key === "main") return { name: "숏소드", effect: "피해 1d6 · 힘 기반" };
-    const id = s.gear[key as keyof typeof s.gear];
-    return id ? { name: GEAR[id].name, effect: `AC +${GEAR[id].ac}` } : null;
+  const slotItem = (key: keyof typeof s.gear): { name: string; effect: string } | null => {
+    const id = s.gear[key];
+    return id ? { name: GEAR[id].name, effect: gearEffect(id) } : null;
   };
 
   return (
@@ -29,7 +32,7 @@ export function CharacterSheet({ ctl }: { ctl: Ctl }) {
           <img className="portrait big" src="./hero-face.png" alt="" />
           <div>
             <div className="hero-name">
-              {h.name} <span className="dim">Lv.{h.level}</span>
+              {h.name} <span className="dim">{CLASSES[h.cls].name} Lv.{h.level}</span>
               {h.faith && <span className="faith-tag">{h.faith}</span>}
             </div>
             <div className="dim small">
@@ -44,7 +47,7 @@ export function CharacterSheet({ ctl }: { ctl: Ctl }) {
         <div className="sheet-body">
           <Card title="장비">
             <ul className="equip">
-              {EQUIP_SLOTS.map((sl) => {
+              {SLOTS.map((sl) => {
                 const it = slotItem(sl.key);
                 return (
                   <li key={sl.key} className={it ? "" : "empty"}>
@@ -67,12 +70,12 @@ export function CharacterSheet({ ctl }: { ctl: Ctl }) {
               </dd>
               <dt>명중</dt>
               <dd>
-                d20 <b>{fmtMod(hitBonus)}</b> (힘 {fmtMod(strMod)}, 숙련 +{BAL.proficiency}
+                d20 <b>{fmtMod(hitBonus)}</b> ({STAT_KO[w.stat]} {fmtMod(strMod)}, 숙련 +{BAL.proficiency}
                 {passive(s, "hit") ? `, 기술 ${fmtMod(passive(s, "hit"))}` : ""})
               </dd>
               <dt>피해</dt>
               <dd>
-                1d6 <b>{fmtMod(dmgBonus)}</b>
+                {w.dice[0]}d{w.dice[1]} <b>{fmtMod(dmgBonus)}</b>
               </dd>
               <dt>치명타</dt>
               <dd>

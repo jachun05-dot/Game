@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { BAL, GEAR, STAT_KEYS, STAT_LABEL, TRAININGS } from "../game/data";
+import { BAL, STAT_KEYS, STAT_LABEL, TRAININGS } from "../game/data";
+import { GEAR, SLOTS, gearEffect, targetSlot } from "../game/gear";
+import { CLASSES } from "../game/classes";
 import { canTrain, nextSkill, trainCost } from "../game/town";
 import { SKILLS } from "../game/skills";
 import { taxDue } from "../game/core";
@@ -75,19 +77,26 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
           </Card>
           <Card title="대장간">
             <p className="dim small">장비는 강해지는 수단이 아니라 살아남기 위한 최소한이다.</p>
-            {Object.values(GEAR).map((g) => {
-              const owned = s.gear[g.slot] === g.id;
-              return (
-                <div key={g.id} className="shop-row">
-                  <div>
-                    <b>{g.name}</b> <span className="dim small">{g.desc}</span>
+            {Object.values(GEAR)
+              .filter((g) => g.price !== undefined)
+              .map((g) => {
+                const owned = Object.values(s.gear).includes(g.id);
+                const slot = targetSlot(s, g.id);
+                const cur = s.gear[slot];
+                return (
+                  <div key={g.id} className="shop-row">
+                    <div>
+                      <b>{g.name}</b> <span className="dim small">{SLOTS.find((x) => x.key === slot)!.name}</span>
+                      <div className="accent small">{gearEffect(g.id)}</div>
+                      {!owned && cur && <div className="dim small">지금: {GEAR[cur].name} (교체하면 넘긴다)</div>}
+                    </div>
+                    <button className="btn small" disabled={owned || s.gold < g.price!} onClick={() => dispatch({ t: "buyGear", id: g.id })}>
+                      {owned ? "착용 중" : `${g.price}G`}
+                    </button>
                   </div>
-                  <button className="btn small" disabled={owned || s.gold < g.price} onClick={() => dispatch({ t: "buyGear", id: g.id })}>
-                    {owned ? "착용 중" : `${g.price}G`}
-                  </button>
-                </div>
-              );
-            })}
+                );
+              })}
+            <p className="dim small">반지·목걸이와 좋은 장비는 미궁 보물상자에서만 나온다.</p>
           </Card>
         </div>
       )}
@@ -143,7 +152,8 @@ function ActivityButton({ title, sub, disabled, onClick }: { title: string; sub:
 
 function TrainingPanel({ ctl, onClose }: { ctl: Ctl; onClose: () => void }) {
   const { s, dispatch } = ctl;
-  const [tid, setTid] = useState(TRAININGS[0].id);
+  const allowed = TRAININGS.filter((x) => CLASSES[s.hero.cls].trainings.includes(x.id));
+  const [tid, setTid] = useState(allowed[0].id);
   const [free, setFree] = useState<StatKey[]>([]);
   const t = TRAININGS.find((x) => x.id === tid)!;
 
@@ -155,7 +165,7 @@ function TrainingPanel({ ctl, onClose }: { ctl: Ctl; onClose: () => void }) {
     <Card title={`훈련 — ${trainCost(s)}G`}>
       <p className="dim small">훈련마다 6포인트: 훈련 종류로 정해지는 2 + 자유 2 + 지난 행동으로 정해지는 2.</p>
       <div className="stack tight">
-        {TRAININGS.map((x) => {
+        {allowed.map((x) => {
           const sk = nextSkill(s, x.id);
           return (
             <button key={x.id} className={`option${tid === x.id ? " on" : ""}`} onClick={() => setTid(x.id)}>

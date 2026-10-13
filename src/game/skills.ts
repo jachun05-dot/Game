@@ -1,3 +1,4 @@
+import { gearBonus } from "./gear";
 import type { GameState } from "./types";
 
 // 기술(DESIGN 7절 "훈련은 기술을 가르쳐준다"): 전투는 자동이므로 플레이어가 누르는 기술은 없다.
@@ -18,7 +19,10 @@ export type SkillEffect =
   | { type: "weaken"; ac: number }
   | { type: "stunAll"; rounds: number }
   | { type: "heal"; dice: [number, number]; plusInt: boolean }
-  | { type: "endure" };
+  | { type: "endure" }
+  | { type: "stunOne"; rounds: number }
+  /** 주문: 반드시 명중, 피해 = 주사위 + 지능 보정. all이면 모든 적 */
+  | { type: "spell"; dice: [number, number]; all: boolean; text: string };
 
 export interface Passive {
   hit?: number;
@@ -98,15 +102,43 @@ export const SKILLS: Record<string, SkillDef> = {
     trigger: { on: "lethal" }, effect: { type: "endure" }, uses: 1,
   },
   hungerTrained: { id: "hungerTrained", name: "굶주림 단련", kind: "passive", desc: "포만감이 25% 덜 닳는다", passive: { hunger: 0.75 } },
+  // 전장 훈련(전사 전용)
+  shieldBash: {
+    id: "shieldBash", name: "방패 밀치기", kind: "active",
+    desc: "전투 시작 시 가장 위협적인 적 하나를 1라운드 동안 행동 불가로 만든다",
+    trigger: { on: "start" }, effect: { type: "stunOne", rounds: 1 }, uses: 1,
+  },
+  warCry: {
+    id: "warCry", name: "전투 함성", kind: "active",
+    desc: "적이 2마리 이상이면 전투 시작 시 3라운드 동안 AC +2",
+    trigger: { on: "start", minEnemies: 2 }, effect: { type: "guard", ac: 2, rounds: 3 }, uses: 1,
+  },
+  ironBody: { id: "ironBody", name: "강철 몸", kind: "passive", desc: "최대 HP +6, AC +1", passive: { hp: 6, ac: 1 } },
+  // 주문학(마법사 전용)
+  magicMissile: {
+    id: "magicMissile", name: "마력 화살", kind: "active",
+    desc: "전투 시작 시 가장 약한 적에게 반드시 맞는 마력 화살(1d6 + 지능 보정)",
+    trigger: { on: "start" }, effect: { type: "spell", dice: [1, 6], all: false, text: "빛나는 화살이 날아간다" }, uses: 1,
+  },
+  fireBurst: {
+    id: "fireBurst", name: "불꽃 폭발", kind: "active",
+    desc: "적이 3마리 이상이면 모든 적에게 불꽃(1d4 + 지능 보정)",
+    trigger: { on: "enemiesAtLeast", n: 3 }, effect: { type: "spell", dice: [1, 4], all: true, text: "손끝에서 불꽃이 터져 나간다" }, uses: 1,
+  },
+  arcaneWard: {
+    id: "arcaneWard", name: "마력 방벽", kind: "active",
+    desc: "내 HP가 50% 이하가 되면 2라운드 동안 AC +4",
+    trigger: { on: "selfBelow", pct: 50 }, effect: { type: "guard", ac: 4, rounds: 2 }, uses: 1,
+  },
 };
 
 export function hasSkill(s: GameState, id: string): boolean {
   return s.skills.includes(id);
 }
 
-/** 배운 패시브 보정의 합 */
+/** 배운 패시브 + 착용 장비 보정의 합 */
 export function passive(s: GameState, key: Exclude<keyof Passive, "hunger">): number {
-  let t = 0;
+  let t = gearBonus(s, key);
   for (const id of s.skills) t += SKILLS[id]?.passive?.[key] ?? 0;
   return t;
 }

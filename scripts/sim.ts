@@ -11,6 +11,7 @@ let clears = 0, survived = 0;
 const reached = new Map<string, number>();
 for (let seed = 1; seed <= N; seed++) {
   const s = newRun(seed * 7919);
+  apply(s, { t: "pickClass", cls: (process.argv[3] ?? process.env.CLS ?? "adventurer") as never });
   let firstClearMonth = 0;
   for (let i = 0; i < 50000 && s.phase !== "dead" && s.month <= 12; i++) {
     const a = botAction(s);

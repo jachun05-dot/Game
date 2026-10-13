@@ -6,6 +6,7 @@ const agg = { entered: 0, lvl: 0, gold: 0, potion: 0, scroll: 0, settle: 0, mana
 const deep = [0, 0, 0, 0];
 for (let seed = 1; seed <= N; seed++) {
   const s = newRun(seed * 7919);
+  apply(s, { t: "pickClass", cls: (process.argv[3] ?? process.env.CLS ?? "adventurer") as never });
   let entered = false;
   for (let i = 0; i < 50000 && s.phase !== "dead" && s.month === 1; i++) {
     apply(s, botAction(s)!);

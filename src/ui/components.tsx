@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { maxHp, heroAc, mod } from "../game/core";
-import { GEAR, STAT_KEYS, STAT_LABEL } from "../game/data";
+import { STAT_KEYS, STAT_LABEL } from "../game/data";
+import { GEAR } from "../game/gear";
+import { CLASSES } from "../game/classes";
 import { SKILLS } from "../game/skills";
 import type { GameState } from "../game/types";
 import type { Ctl, Speed } from "./App";
@@ -55,7 +57,7 @@ export function HeroHeader({ s, extra, onOpen }: { s: GameState; extra?: ReactNo
       <img className="portrait" src="./hero-face.png" alt="" />
       <div className="hero-info">
         <div className="hero-name">
-          {s.hero.name} <span className="dim">Lv.{s.hero.level}</span>
+          {s.hero.name} <span className="dim">{CLASSES[s.hero.cls].name} Lv.{s.hero.level}</span>
           {s.hero.faith && <span className="faith-tag">{s.hero.faith}</span>}
         </div>
         <div className="hp-line">
@@ -92,7 +94,7 @@ export function StatGrid({ s }: { s: GameState }) {
 }
 
 export function GearList({ s }: { s: GameState }) {
-  const items = ["숏소드(1d6)", ...Object.values(s.gear).map((id) => (id ? GEAR[id].name : ""))].filter(Boolean);
+  const items = Object.values(s.gear).map((id) => (id ? GEAR[id].name : "")).filter(Boolean);
   return <div className="dim small">장비: {items.join(" · ")}</div>;
 }
 
@@ -151,6 +153,7 @@ export function TopBar({ ctl, title }: { ctl: Ctl; title: ReactNode }) {
       <button className={`gear-btn${open ? " on" : ""}`} onClick={() => setOpen(!open)} aria-expanded={open} aria-label="설정">
         ⚙ <span className="small">{ctl.speed === 0 ? "즉시" : `${ctl.speed}×`}{ctl.auto ? " · 자동" : ""}</span>
       </button>
+      {open && <div className="settings-backdrop" onClick={() => setOpen(false)} />}
       {open && (
         <div className="settings-sheet" role="dialog" aria-label="설정">
           <p className="eyebrow">진행 속도</p>

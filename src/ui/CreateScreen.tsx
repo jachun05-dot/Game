@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { INTRO, NAMES, STAT_KEYS, STAT_LABEL, BAL } from "../game/data";
 import { mod } from "../game/core";
+import { CLASSES, CLASS_IDS } from "../game/classes";
+import { GEAR } from "../game/gear";
+import { TRAININGS } from "../game/data";
 import type { Ctl } from "./App";
 import { Bar, Card, Shell, fmtMod } from "./components";
 
@@ -47,6 +50,43 @@ export function CreateScreen({ ctl }: { ctl: Ctl }) {
     <Shell>
       <p className="eyebrow">CHAPTER 01 · 모험가 등록</p>
       <h1 className="h1">어떤 소년으로 살아볼까요?</h1>
+
+      <Card title="직업">
+        <div className="class-row">
+          {CLASS_IDS.map((id) => {
+            const c = CLASSES[id];
+            return (
+              <button
+                key={id}
+                className={`class-card${s.hero.cls === id ? " on" : ""}`}
+                onClick={() => {
+                  dispatch({ t: "pickClass", cls: id });
+                  setOpen([false, false, false]);
+                  setPick(null);
+                }}
+              >
+                <b>{c.name}</b>
+                <span className="dim small">{c.motive}</span>
+              </button>
+            );
+          })}
+        </div>
+        {(() => {
+          const c = CLASSES[s.hero.cls];
+          return (
+            <div className="class-detail">
+              <p className="small">{c.desc}</p>
+              <p className="small">
+                <span className="dim">시작 장비</span> {Object.values(c.start).map((g) => GEAR[g!].name).join(", ")} · <span className="dim">소지금</span> {c.gold}G ·{" "}
+                <span className="dim">HP</span> {c.hp >= 0 ? `+${c.hp}` : c.hp}
+              </p>
+              <p className="small">
+                <span className="dim">받을 수 있는 훈련</span> {c.trainings.map((t) => TRAININGS.find((x) => x.id === t)!.name).join(", ")}
+              </p>
+            </div>
+          );
+        })()}
+      </Card>
 
       <Card title="이름">
         <div className="row">
@@ -113,7 +153,7 @@ export function CreateScreen({ ctl }: { ctl: Ctl }) {
       </Card>
 
       <button className="btn primary" disabled={pick === null} onClick={() => pick !== null && dispatch({ t: "create", name: name || NAMES[Math.floor(Math.random() * NAMES.length)], candidate: pick, faith })}>
-        모험가로 등록하기 →
+        {CLASSES[s.hero.cls].name}로 등록하기 →
       </button>
     </Shell>
   );

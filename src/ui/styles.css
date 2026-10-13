@@ -399,3 +399,14 @@ html, body, #root { height: 100%; }
 .calc dt { color: var(--dim); }
 .calc dd { margin: 0; }
 .calc b { color: var(--bright); }
+
+/* 직업 선택·장비 발견 */
+.class-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.class-card { display: flex; flex-direction: column; gap: 4px; text-align: left; background: var(--panel-2); border: 1px solid var(--border); padding: 9px; cursor: pointer; min-width: 0; }
+.class-card b { color: var(--bright); }
+.class-card.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.class-detail { margin-top: 8px; border-top: 1px solid var(--border); padding-top: 6px; }
+.class-detail p { margin: 3px 0; }
+.loot-card { display: flex; flex-direction: column; gap: 2px; border: 1px solid var(--accent); background: var(--panel-2); padding: 8px 10px; }
+.loot-card b { color: var(--bright); }
+.settings-backdrop { position: fixed; inset: 0; z-index: 19; }

@@ -3,6 +3,7 @@ import { ROOM_LABEL, ROOM_SHORT, currentRoom } from "../game/dungeon";
 import type { PendingChoice } from "../game/dungeon";
 import type { DungeonState } from "../game/types";
 import { BAL } from "../game/data";
+import { GEAR, gearEffect, targetSlot } from "../game/gear";
 import type { Ctl } from "./App";
 import { Bar, GameScreen, HeroHeader, LogView } from "./components";
 
@@ -80,6 +81,31 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
   const dg = s.dungeon!;
   const room = currentRoom(s);
   const go = (a: Parameters<typeof dispatch>[0]) => !busy && dispatch(a);
+
+  if (dg.pending?.kind === "gear") {
+    const id = dg.pending.item;
+    const g = GEAR[id];
+    const cur = s.gear[targetSlot(s, id)];
+    return (
+      <>
+        <p className="dock-title">장비를 발견했다</p>
+        <div className="loot-card">
+          <b>{g.name}</b>
+          <span className="accent small">{gearEffect(id)}</span>
+          <span className="dim small">{g.flavor}</span>
+          <span className="small">지금 착용: {cur ? `${GEAR[cur].name} (${gearEffect(cur) || "효과 없음"})` : "없음"}</span>
+        </div>
+        <div className="choices">
+          <button className="btn primary" disabled={busy} onClick={() => go({ t: "pending", choice: "equip" })}>
+            {cur ? `착용한다 — ${GEAR[cur].name}은 두고 간다` : "착용한다"}
+          </button>
+          <button className="btn" disabled={busy} onClick={() => go({ t: "pending", choice: "leave" })}>
+            두고 간다
+          </button>
+        </div>
+      </>
+    );
+  }
 
   if (dg.pending) {
     return (

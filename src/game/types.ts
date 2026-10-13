@@ -1,4 +1,6 @@
 import type { RngState } from "./rng";
+import type { ClassId } from "./classes";
+import type { SlotKey } from "./gear";
 
 export type StatKey = "str" | "dex" | "con" | "int" | "per" | "luk";
 export type Stats = Record<StatKey, number>;
@@ -13,6 +15,7 @@ export interface Hero {
   /** 0~100. 100이면 탈진(판정 -2) */
   fatigue: number;
   faith: string | null;
+  cls: ClassId;
 }
 
 export type LogKind = "normal" | "hit" | "crit" | "miss" | "hurt" | "system" | "good" | "story" | "skill";
@@ -88,7 +91,8 @@ export type Pending =
   | { kind: "record" }
   | { kind: "shrine" }
   | { kind: "stairs" }
-  | { kind: "portal" };
+  | { kind: "portal" }
+  | { kind: "gear"; item: string };
 
 export interface DungeonState {
   sector: number;
@@ -143,6 +147,7 @@ export interface Tomb {
   faithsUnlocked: string[];
   epitaph: string;
   faith: string | null;
+  className?: string;
   seed: number;
   diedAt: string;
 }
@@ -165,8 +170,8 @@ export interface GameState {
   week: number;
   gold: number;
   inventory: { food: number; potion: number; scroll: number };
-  /** 착용 장비(슬롯 → GEAR id). 숏소드는 항상 오른손 */
-  gear: Partial<Record<"body" | "offhand" | "head", string>>;
+  /** 착용 장비(슬롯 → gear.ts의 GEAR id) */
+  gear: Partial<Record<SlotKey, string>>;
   /** 배운 기술 id */
   skills: string[];
   tactics: Tactics;

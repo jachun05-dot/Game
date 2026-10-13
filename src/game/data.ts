@@ -26,26 +26,6 @@ export const BAL = {
   prices: { food: 5, potion: 15, scroll: 45 },
 } as const;
 
-/** 대장간 장비(DESIGN 10절: 파워가 아니라 생존 최소 기준선). 숏소드는 기본 지급 */
-export const GEAR: Record<string, { id: string; name: string; slot: "body" | "offhand" | "head"; ac: number; price: number; desc: string }> = {
-  leather: { id: "leather", name: "가죽 갑옷", slot: "body", ac: 2, price: 50, desc: "몸통. AC +2" },
-  shield: { id: "shield", name: "나무 방패", slot: "offhand", ac: 1, price: 25, desc: "왼손. AC +1" },
-  cap: { id: "cap", name: "가죽 모자", slot: "head", ac: 1, price: 30, desc: "머리. AC +1" },
-};
-
-/** 장비 슬롯 9개(DESIGN 10절). 지금 상점에서 파는 건 몸통·왼손·머리뿐 */
-export const EQUIP_SLOTS: { key: string; name: string }[] = [
-  { key: "head", name: "머리" },
-  { key: "body", name: "몸통" },
-  { key: "main", name: "오른손" },
-  { key: "offhand", name: "왼손" },
-  { key: "waist", name: "허리" },
-  { key: "feet", name: "발" },
-  { key: "neck", name: "목걸이" },
-  { key: "ring1", name: "반지 1" },
-  { key: "ring2", name: "반지 2" },
-];
-
 /** 층이 깊을수록 마석 가치가 오른다 */
 export const MANA_FLOOR_MULT = [0, 1, 1.5, 2];
 
@@ -115,15 +95,8 @@ export const TRAININGS: { id: string; name: string; desc: string; stats: [StatKe
   { id: "scout", name: "척후 훈련", desc: "보고, 듣고, 알아채는 법", stats: ["per", "dex"], skills: ["sharpEye", "weakSpot", "trapSense"] },
   { id: "study", name: "학문 수업", desc: "옛 기록과 약초를 다루는 법", stats: ["int", "per"], skills: ["flashPowder", "firstAid", "poultice"] },
   { id: "endure", name: "생존 훈련", desc: "굶주림과 상처를 견디는 법", stats: ["con", "str"], skills: ["tough", "grit", "hungerTrained"] },
-];
-
-export const ARCHETYPES: { name: string; favor: [StatKey, StatKey] }[] = [
-  { name: "힘쓰는 소년", favor: ["str", "con"] },
-  { name: "날랜 소년", favor: ["dex", "luk"] },
-  { name: "눈치 빠른 소년", favor: ["per", "dex"] },
-  { name: "글 읽는 소년", favor: ["int", "per"] },
-  { name: "질긴 소년", favor: ["con", "str"] },
-  { name: "운 좋은 소년", favor: ["luk", "per"] },
+  { id: "warfare", name: "전장 훈련", desc: "전사 전용. 방패와 함성으로 싸우는 법", stats: ["str", "con"], skills: ["shieldBash", "warCry", "ironBody"] },
+  { id: "arcane", name: "주문학", desc: "마법사 전용. 마력을 다루는 법", stats: ["int", "per"], skills: ["magicMissile", "fireBurst", "arcaneWard"] },
 ];
 
 export const NAMES = [

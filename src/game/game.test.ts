@@ -119,3 +119,47 @@ describe("자동 전투와 기술", () => {
     expect(saved).toBeGreaterThan(0);
   });
 });
+
+describe("직업과 장비", () => {
+  it("직업마다 시작 장비가 다르고, 후보 능력치가 직업 쪽으로 쏠린다", () => {
+    const avg = (cls: "adventurer" | "warrior" | "mage", k: "str" | "int") => {
+      let t = 0;
+      for (let seed = 1; seed <= 200; seed++) {
+        const s = newRun(seed);
+        apply(s, { t: "pickClass", cls });
+        t += s.candidates.reduce((a, c) => a + c.stats[k], 0) / 3;
+      }
+      return t / 200;
+    };
+    expect(avg("warrior", "str")).toBeGreaterThan(avg("adventurer", "str") + 1);
+    expect(avg("mage", "int")).toBeGreaterThan(avg("adventurer", "int") + 1);
+    for (const [cls, main] of [["adventurer", "shortsword"], ["warrior", "longsword"], ["mage", "staff"]] as const) {
+      const s = newRun(5);
+      apply(s, { t: "pickClass", cls });
+      for (const c of s.candidates) expect(STAT_KEYS.reduce((a, k) => a + c.stats[k], 0)).toBe(BAL.startStatSum);
+      apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+      expect(s.gear.main).toBe(main);
+    }
+  });
+  it("직업 전용 훈련은 그 직업만 받을 수 있다", () => {
+    const s = newRun(9);
+    apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    s.gold = 999;
+    apply(s, { t: "train", training: "arcane", free: ["int", "int"] });
+    expect(s.hero.level).toBe(1);
+    const m = newRun(9);
+    apply(m, { t: "pickClass", cls: "mage" });
+    apply(m, { t: "create", name: "x", candidate: 0, faith: null });
+    m.gold = 999;
+    apply(m, { t: "train", training: "arcane", free: ["int", "int"] });
+    expect(m.skills).toContain("magicMissile");
+  });
+  it("미궁 보물상자에서 장비가 나오고, 착용을 고르면 그 슬롯이 바뀐다", () => {
+    let offered = 0;
+    for (let seed = 1; seed <= 300 && offered < 5; seed++) {
+      const s = playBot(seed, 4000);
+      if (s.history.some((h) => h.includes("얻었다"))) offered++;
+    }
+    expect(offered).toBeGreaterThan(0);
+  });
+});

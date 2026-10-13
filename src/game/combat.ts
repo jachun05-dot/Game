@@ -2,6 +2,7 @@ import { josa } from "./josa";
 import { BAL, MONSTERS } from "./data";
 import { actionsPerRound, heroAc, isDead, kill, log, maxHp, mod, note, rngOf, rollPenalty } from "./core";
 import { activeSkills, passive, SKILLS, type SkillDef } from "./skills";
+import { weaponOf } from "./gear";
 import type { CombatState, Enemy, GameState } from "./types";
 import { afterDungeonCombat, passTime } from "./dungeon";
 import { afterFieldCombat } from "./town";
@@ -10,7 +11,6 @@ import { afterFieldCombat } from "./town";
 // 플레이어 행동(물약·도주 방침 → 조건부 기술 → 가장 약한 적 공격) → 적 전체 행동을 자동으로 굴리고,
 // 결과는 로그로 흘려보낸다. 위치 개념이 없으므로 "포위"는 동시에 살아있는 적 수로 표현한다.
 
-const WEAPON: [number, number] = [1, 6]; // 숏소드
 const MAX_ROUNDS = 60;
 
 export function makeEnemies(s: GameState, ids: string[]): Enemy[] {
@@ -60,6 +60,17 @@ export function startCombat(s: GameState, context: CombatState["context"], enemi
     } else if (e.type === "stunAll") {
       for (const foe of alive(c)) foe.stun = (foe.stun ?? 0) + e.rounds;
       useSkill(s, c, sk, "눈부신 가루에 적들이 눈을 감싸 쥔다");
+    } else if (e.type === "stunOne") {
+      const target = strongest(c);
+      target.stun = (target.stun ?? 0) + e.rounds;
+      useSkill(s, c, sk, `${josa(MONSTERS[target.defId].name, "을")} 방패로 밀쳐 넘어뜨렸다`);
+    } else if (e.type === "guard") {
+      c.guard = { ac: e.ac, rounds: e.rounds };
+      useSkill(s, c, sk, `함성을 지르며 자세를 낮춘다 (AC +${e.ac}, ${e.rounds}라운드)`);
+    } else if (e.type === "spell") {
+      useSkill(s, c, sk, e.text);
+      castSpell(s, c, e.dice, e.all);
+      if (alive(c).length === 0) return finish(s, "win");
     }
   }
 
@@ -79,6 +90,27 @@ export function startCombat(s: GameState, context: CombatState["context"], enemi
   }
   log(s, "지쳐 서로 물러났다.", "system");
   finish(s, "fled");
+}
+
+function strongest(c: CombatState): Enemy {
+  return [...alive(c)].sort((a, b) => MONSTERS[b.defId].atk * MONSTERS[b.defId].dice[1] - MONSTERS[a.defId].atk * MONSTERS[a.defId].dice[1] || b.hp - a.hp)[0];
+}
+
+/** 주문: 반드시 명중, 피해 = 주사위 + 지능 보정 */
+function castSpell(s: GameState, c: CombatState, dice: [number, number], all: boolean): void {
+  const r = rngOf(s);
+  const targets = all ? alive(c) : [[...alive(c)].sort((a, b) => a.hp - b.hp)[0]];
+  for (const t of targets) {
+    const def = MONSTERS[t.defId];
+    const dmg = Math.max(1, r.dice(dice[0], dice[1]) + mod(s.hero.stats.int));
+    t.hp -= dmg;
+    note(s, "int");
+    log(s, `${def.name}에게 ${dmg} 피해`, "hit");
+    if (t.hp <= 0) {
+      c.loot += def.mana;
+      log(s, `${josa(def.name, "을")} 쓰러뜨렸다.`, "good");
+    }
+  }
 }
 
 function canUse(c: CombatState, sk: SkillDef): boolean {
@@ -102,7 +134,7 @@ function selfTriggers(s: GameState, c: CombatState): void {
     const e = sk.effect!;
     if (e.type === "guard") {
       c.guard = { ac: e.ac, rounds: e.rounds };
-      useSkill(s, c, sk, `칼날을 흘려낸다 (AC +${e.ac}, ${e.rounds}라운드)`);
+      useSkill(s, c, sk, `몸을 지킨다 (AC +${e.ac}, ${e.rounds}라운드)`);
     } else if (e.type === "heal") {
       const heal = rngOf(s).dice(e.dice[0], e.dice[1]) + (e.plusInt ? Math.max(0, mod(s.hero.stats.int)) : 0);
       s.hero.hp = Math.min(maxHp(s), s.hero.hp + heal);
@@ -129,6 +161,9 @@ function playerPhase(s: GameState, c: CombatState, opener: Strike | null): "win"
     if (sweep && sweep.effect!.type === "sweep") {
       useSkill(s, c, sweep, "칼을 크게 휘둘러 모두를 벤다");
       for (const foe of foes) attack(s, c, foe, { ...PLAIN, mult: sweep.effect!.dmgMult });
+    } else if (sweep && sweep.effect!.type === "spell") {
+      useSkill(s, c, sweep, sweep.effect!.text);
+      castSpell(s, c, sweep.effect!.dice, sweep.effect!.all);
     } else {
       const target = [...foes].sort((x, y) => x.hp - y.hp)[0];
       let strike = opener && a === 0 ? opener : PLAIN;
@@ -150,24 +185,26 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
   const def = MONSTERS[target.defId];
   const r = rngOf(s);
   const ac = def.ac - (target.acDown ?? 0);
+  const w = weaponOf(s);
+  const statMod = mod(s.hero.stats[w.stat]);
   const roll = r.die(20);
-  const bonus = mod(s.hero.stats.str) + BAL.proficiency + passive(s, "hit") + st.hit + rollPenalty(s);
+  const bonus = statMod + BAL.proficiency + passive(s, "hit") + st.hit + rollPenalty(s);
   if (!st.autoHit && roll === 1) {
-    log(s, `칼이 손에서 미끄러질 뻔했다! (주사위 1)`, "miss");
+    log(s, `손이 미끄러졌다! (주사위 1)`, "miss");
     return;
   }
   if (!st.autoHit && roll !== 20 && roll + bonus < ac) {
-    log(s, `${def.name}에게 휘두른 칼이 빗나갔다. (${roll}+${bonus} vs AC ${ac})`, "miss");
+    log(s, `${josa(def.name, "을")} 노렸지만 빗나갔다. (${roll}+${bonus} vs AC ${ac})`, "miss");
     return;
   }
   const crit = roll === 20 || r.float() * 100 < 5 + mod(s.hero.stats.luk) + passive(s, "crit");
-  const base = r.dice(WEAPON[0] * (crit ? 2 : 1), WEAPON[1]) + mod(s.hero.stats.str) + passive(s, "dmg") + st.dmg;
+  const base = r.dice(w.dice[0] * (crit ? 2 : 1), w.dice[1]) + statMod + passive(s, "dmg") + st.dmg;
   const dmg = Math.max(1, Math.round(base * st.mult));
   target.hp -= dmg;
   if (crit) note(s, "luk");
-  log(s, `${def.name}에게 명중! ${dmg} 피해${crit ? " (치명타!)" : ""}`, crit ? "crit" : "hit");
+  log(s, `${def.name}에게 ${w.verb} 명중! ${dmg} 피해${crit ? " (치명타!)" : ""}`, crit ? "crit" : "hit");
   if (target.hp <= 0) {
-    note(s, "str");
+    note(s, w.stat === "int" ? "int" : w.stat === "dex" ? "dex" : "str");
     c.loot += def.mana;
     log(s, `${josa(def.name, "을")} 쓰러뜨렸다.`, "good");
   }

@@ -1,4 +1,6 @@
-import { BAL, GEAR } from "./data";
+import { BAL } from "./data";
+import { GEAR, gearScore, targetSlot } from "./gear";
+import { CLASSES } from "./classes";
 import { maxHp, mod } from "./core";
 import { canTrain, nextSkill, trainCost } from "./town";
 import type { Action } from "./engine";
@@ -24,16 +26,18 @@ export function botAction(s: GameState): Action | null {
 }
 
 function townAction(s: GameState): Action {
-  if (!s.gear.body && s.gold >= GEAR.leather.price) return { t: "buyGear", id: "leather" };
-  if (!s.gear.offhand && s.gold >= GEAR.shield.price + 40) return { t: "buyGear", id: "shield" };
+  if (!s.gear.body && s.gold >= GEAR.leather.price!) return { t: "buyGear", id: s.hero.cls === "mage" ? "robe" : "leather" };
+  if (!s.gear.offhand && s.gold >= GEAR.shield.price! + 40) return { t: "buyGear", id: "shield" };
   if (s.week === 3) {
     if (s.inventory.food < 5 && s.gold >= BAL.prices.food) return { t: "buy", item: "food" };
     if (s.inventory.scroll < 1 && s.gold >= BAL.prices.scroll) return { t: "buy", item: "scroll" };
     if (s.inventory.potion < 2 && s.gold >= BAL.prices.potion) return { t: "buy", item: "potion" };
   }
   if (canTrain(s) && s.gold - trainCost(s) >= 40) {
-    const training = ["sword", "endure", "footwork", "scout", "study"].find((id) => nextSkill(s, id)) ?? "sword";
-    return { t: "train", training, free: ["con", "dex"] };
+    const order = ["warfare", "arcane", "sword", "endure", "footwork", "scout", "study"].filter((id) => CLASSES[s.hero.cls].trainings.includes(id));
+    const training = order.find((id) => nextSkill(s, id)) ?? order[0];
+    const main = s.hero.cls === "mage" ? "int" : "str";
+    return { t: "train", training, free: [main, "con"] };
   }
   if (s.hero.level >= 2 && s.week !== 3) return { t: "activity", a: "field" };
   return { t: "activity", a: "rumor" };
@@ -54,6 +58,11 @@ function dungeonAction(s: GameState): Action | null {
         if (hp < 0.6 || dg.floor >= comfortFloor(s)) return { t: "pending", choice: "stay" };
         return { t: "pending", choice: "descend" };
       case "portal": return { t: "pending", choice: "enter" };
+      case "gear": {
+        const better = gearScore(dg.pending.item) > gearScore(s.gear[targetSlot(s, dg.pending.item)]);
+        const wrongWeapon = GEAR[dg.pending.item].weapon && GEAR[dg.pending.item].weapon!.stat !== (s.hero.cls === "mage" ? "int" : "str");
+        return { t: "pending", choice: better && !wrongWeapon ? "equip" : "leave" };
+      }
     }
   }
   if (hp < 0.4 && s.inventory.potion > 0) return { t: "potion" };
