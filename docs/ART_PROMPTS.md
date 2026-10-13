@@ -158,3 +158,18 @@ Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, 
 ```
 
 결과(2026-10-13): 채택 → `assets/monsters/crystalskel.png`(82×92, 소년보다 머리 하나 큼 — "95% 높이" 지시가 먹혔다) = `public/mon-crystalskel.png`. 이번 생성본은 1024×1024(도트 10.24px, 격자는 똑같이 100)였고 `tools/sprite.py`가 그대로 처리했다. 넓은 청록 갑옷이 팔레트에서 튀어 청록 채도 −30%·명도 −8%, 뼈는 기본 스켈레톤 평균색에 맞춰 채널 보정(R×1.09, G×1.11, B×1.22)
+
+## 010 — 거대한 돌연변이 쥐, 1섹터 보스 (기준 이미지 + 쥐 첨부)
+
+```
+Match the exact art style, outline, palette and pixel scale of the first attached reference image. Use the second attached image (a small dungeon rat) as the base species.
+
+Pixel art game sprite of a single boss creature, 3/4 side view facing left, classic 16-bit RPG style, same pixel size as the reference. A monstrous mutated rat the size of a calf, so large it fills about 95% of the image width; the reference boy would only reach its shoulder.
+Hunched and bloated, patchy grey-brown fur over swollen tumorous lumps, bald scarred skin, a split ear, too many crooked yellow teeth in a jaw that hangs open, small mad red eyes, thick scaly tail curling behind it, claws like hooks. A dull reddish mana stone heart pulses faintly through a tear in its chest.
+Muted earthy palette of about 16 colors: dark browns, ash grey, desaturated pink on the skin, dull blood red (#c0564d) only on the eyes and the heart.
+Crisp hard pixel edges, 1-pixel dark outline, no anti-aliasing, no blur, no gradients, no noisy dithering.
+Full body, centered, small margin around it.
+Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, no frame or border. Square 1:1 image.
+```
+
+결과(2026-10-13): 1차 생성본 채택 → `assets/monsters/boss.png`(94×87, 소년과 키가 비슷하고 폭은 두 배 이상) = `public/mon-boss.png`. 꼬리가 워터마크 모서리에 걸쳐 `--keep-watermark`로 처리(워터마크는 마젠타 계열이라 배경과 함께 빠짐), 등 위 마젠타 1픽셀 제거. 가슴 상처의 붉은 마석 심장 = 게임의 "거대 쥐의 마석 심장"(레벨 4 훈련 재료)
