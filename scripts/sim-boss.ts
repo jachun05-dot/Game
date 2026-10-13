@@ -23,6 +23,7 @@ export function prepared(seed: number, cls: ClassId): GameState {
   const s = newRun(seed);
   apply(s, { t: "pickClass", cls });
   apply(s, { t: "create", name: "준비된", candidate: 0, faith: null });
+  s.month = 2; // 첫 달에는 훈련 불가
   for (const tr of TRAIN[cls]) {
     s.gold += 999;
     apply(s, { t: "train", training: tr, free: cls === "mage" ? ["int", "con"] : ["str", "con"] });

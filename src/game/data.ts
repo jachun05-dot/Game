@@ -2,7 +2,10 @@ import type { StatKey } from "./types";
 
 // 밸런스 수치는 전부 임시(DESIGN 12절 "미정"). 여기 한 곳에 모아 조정한다.
 export const BAL = {
-  startGold: 150,
+  /** 모든 직업 0G로 시작(지급 장비·소모품은 classes.ts) */
+  startGold: 0,
+  /** 첫 달에는 직업교관이 훈련을 해 주지 않는다 */
+  firstTrainMonth: 2,
   startStatSum: 30,
   statMax: 50,
   baseHp: 16,
@@ -10,7 +13,7 @@ export const BAL = {
   minHpPerLevel: 2,
   /** 숙련 보너스(공격 굴림). DESIGN에는 없는 임시 보정 — 레벨1이 1층 단독 몬스터를 감당하게 하는 용도 */
   proficiency: 2,
-  trainCostPerLevel: 15,
+  trainCostPerLevel: 12,
   maxLevel: 16,
   taxBase: 30,
   /** 해가 바뀔 때마다 오르는 세금(1년차 30, 2년차 70, 3년차 110 …) */

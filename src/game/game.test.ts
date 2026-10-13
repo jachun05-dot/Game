@@ -85,6 +85,7 @@ describe("자동 전투와 기술", () => {
   function hero(seed = 3): GameState {
     const s = newRun(seed);
     apply(s, { t: "create", name: "테스트", candidate: 0, faith: null });
+    s.month = 2; // 첫 달에는 훈련 불가
     return s;
   }
   it("훈련할 때마다 그 훈련의 기술을 순서대로 배운다", () => {
@@ -148,12 +149,14 @@ describe("직업과 장비", () => {
   it("직업 전용 훈련은 그 직업만 받을 수 있다", () => {
     const s = newRun(9);
     apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    s.month = 2;
     s.gold = 999;
     apply(s, { t: "train", training: "arcane", free: ["int", "int"] });
     expect(s.hero.level).toBe(1);
     const m = newRun(9);
     apply(m, { t: "pickClass", cls: "mage" });
     apply(m, { t: "create", name: "x", candidate: 0, faith: null });
+    m.month = 2;
     m.gold = 999;
     apply(m, { t: "train", training: "arcane", free: ["int", "int"] });
     expect(m.skills).toContain("magicMissile");
@@ -199,6 +202,7 @@ describe("레벨 4 관문", () => {
   it("레벨 3→4 훈련은 보스의 마석 심장이 있어야 하고, 받으면 심장을 쓴다", () => {
     const s = newRun(21);
     apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    s.month = 2;
     const up = () => {
       s.gold = 999;
       apply(s, { t: "train", training: "sword", free: ["str", "con"] });
@@ -336,5 +340,23 @@ describe("자동 결정 목표", () => {
     }
     expect(rushRecords).toBe(0);
     expect(rushRooms).toBeLessThan(exploreRooms);
+  });
+});
+
+describe("시작 조건", () => {
+  it("모든 직업이 0G로 시작하고, 직업별 지급품을 받으며, 첫 달에는 훈련할 수 없다", () => {
+    for (const cls of ["adventurer", "warrior", "mage"] as const) {
+      const s = newRun(4);
+      apply(s, { t: "pickClass", cls });
+      apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+      expect(s.gold).toBe(0);
+      expect(s.inventory.food + s.inventory.potion).toBeGreaterThan(0);
+      s.gold = 999;
+      apply(s, { t: "train", training: s.hero.cls === "mage" ? "arcane" : "sword", free: ["str", "con"] });
+      expect(s.hero.level).toBe(1);
+      s.month = 2;
+      apply(s, { t: "train", training: s.hero.cls === "mage" ? "arcane" : "sword", free: ["str", "con"] });
+      expect(s.hero.level).toBe(2);
+    }
   });
 });

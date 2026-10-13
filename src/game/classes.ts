@@ -15,8 +15,10 @@ export interface ClassDef {
   hp: number;
   /** 레벨마다 추가로 오르는 HP */
   hpPerLevel: number;
-  gold: number;
+  /** 시작 장비(소지금은 모든 직업 0G — 대신 장비·소모품으로 직업 차이를 둔다) */
   start: Partial<Record<SlotKey, string>>;
+  /** 시작 소모품 */
+  items: { food: number; potion: number; scroll: number };
   /** 받을 수 있는 훈련 id */
   trainings: string[];
   /** 후보 카드 성향: 이름과 많이 오르는 능력치(앞쪽일수록 더) */
@@ -31,10 +33,10 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     name: "모험가",
     motive: "영지에서 나고 자란 소년. 거창한 이유는 없다.",
     desc: "모든 일반 훈련을 자유롭게 받는다. 대신 전문 훈련은 없다.",
-    hp: -1,
-    hpPerLevel: 1,
-    gold: 80,
-    start: { main: "shortsword" },
+    hp: -2,
+    hpPerLevel: 2,
+    start: { main: "shortsword", body: "leather" },
+    items: { food: 3, potion: 0, scroll: 0 },
     trainings: ["sword", "footwork", "scout", "study", "endure"],
     archetypes: [
       { name: "힘쓰는 소년", favor: ["str", "con"] },
@@ -51,10 +53,10 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     name: "전사",
     motive: "강해지기 위해 미궁에 왔다.",
     desc: "장검과 가죽 갑옷으로 시작한다. 검술·보법·생존 훈련과 전용 '전장 훈련'을 받는다.",
-    hp: -5,
+    hp: -6,
     hpPerLevel: 2,
-    gold: 10,
     start: { main: "longsword", body: "leather" },
+    items: { food: 3, potion: 0, scroll: 0 },
     trainings: ["sword", "footwork", "endure", "warfare"],
     archetypes: [
       { name: "타고난 장사", favor: ["str", "con"] },
@@ -69,10 +71,10 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     name: "마법사",
     motive: "차원문과 그 너머를 연구하러 왔다.",
     desc: "지팡이로 지능 기반 마력탄을 쏜다. 몸이 약하다. 척후·학문 훈련과 전용 '주문학'을 받는다.",
-    hp: -3,
+    hp: -2,
     hpPerLevel: 0,
-    gold: 30,
     start: { main: "staff", body: "robe" },
+    items: { food: 3, potion: 1, scroll: 0 },
     trainings: ["scout", "study", "arcane"],
     archetypes: [
       { name: "책벌레", favor: ["int", "per"] },

@@ -165,6 +165,7 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
 
 function trainSub(s: GameState): string {
   if (s.hero.level >= BAL.maxLevel) return "최대 레벨";
+  if (s.month < BAL.firstTrainMonth) return "첫 달에는 훈련을 받을 수 없다 — 미궁에서 살아 돌아오면 교관이 받아 준다";
   const base = `직업교관 · ${trainCost(s)}G · 레벨 ${s.hero.level} → ${s.hero.level + 1}`;
   if (needsHeart(s)) {
     if (s.inventory.heart <= 0) return `${BAL.heartName}이 필요하다 — 1섹터 3층 보스가 지니고 있다`;

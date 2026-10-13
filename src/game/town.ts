@@ -94,12 +94,17 @@ export function createHero(s: GameState, name: string, candidate: number, faith:
   s.hero.faith = faith;
   const cls = CLASSES[s.hero.cls];
   s.gear = { ...cls.start };
-  s.gold = cls.gold;
+  s.gold = BAL.startGold;
+  s.inventory = { ...s.inventory, ...cls.items };
   s.hero.hp = maxHp(s);
   s.phase = "town";
-  const kit = Object.values(cls.start).map((id) => GEAR[id!].name).join(", ");
+  const kit = [
+    ...Object.values(cls.start).map((id) => GEAR[id!].name),
+    ...kitItems(cls.items),
+  ].join(", ");
   log(s, `— ${s.hero.name}, ${c.archetype}. ${cls.name}${s.hero.cls === "adventurer" ? "로" : "로"} 등록되었다.`, "system");
-  log(s, `${cls.motive} 지급품: ${kit}. 소지금 ${s.gold}G.`, "story");
+  log(s, `${cls.motive} 지급품: ${kit}. 주머니는 비어 있다.`, "story");
+  log(s, "직업교관이 말한다. \"훈련은 미궁에서 한 번 살아 돌아온 다음이다.\"", "story");
   if (faith) log(s, `당신은 몰래 ${josa(faith, "을")} 섬기기로 했다.`, "story");
   log(s, `— 1월 1주차. 4주차에 미궁이 열린다.`, "system");
 }
@@ -113,8 +118,17 @@ export function needsHeart(s: GameState): boolean {
   return s.hero.level === BAL.heartGateLevel;
 }
 
+/** 시작 소모품을 글로 */
+export function kitItems(items: { food: number; potion: number; scroll: number }): string[] {
+  const out: string[] = [];
+  if (items.food) out.push(`말린 고기 ${items.food}`);
+  if (items.potion) out.push(`치료 물약 ${items.potion}`);
+  if (items.scroll) out.push(`귀환 주문서 ${items.scroll}`);
+  return out;
+}
+
 export function canTrain(s: GameState): boolean {
-  if (s.phase !== "town" || s.hero.level >= BAL.maxLevel || s.gold < trainCost(s)) return false;
+  if (s.phase !== "town" || s.month < BAL.firstTrainMonth || s.hero.level >= BAL.maxLevel || s.gold < trainCost(s)) return false;
   return !needsHeart(s) || s.inventory.heart > 0;
 }
 

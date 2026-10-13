@@ -4,6 +4,7 @@ import { mod } from "../game/core";
 import { CLASSES, CLASS_IDS } from "../game/classes";
 import { GEAR } from "../game/gear";
 import { TRAININGS } from "../game/data";
+import { kitItems } from "../game/town";
 import type { Ctl } from "./App";
 import { Bar, Card, Shell, fmtMod } from "./components";
 
@@ -77,11 +78,11 @@ export function CreateScreen({ ctl }: { ctl: Ctl }) {
             <div className="class-detail">
               <p className="small">{c.desc}</p>
               <p className="small">
-                <span className="dim">시작 장비</span> {Object.values(c.start).map((g) => GEAR[g!].name).join(", ")} · <span className="dim">소지금</span> {c.gold}G ·{" "}
+                <span className="dim">시작 장비</span> {Object.values(c.start).map((g) => GEAR[g!].name).join(", ")} · <span className="dim">소모품</span> {kitItems(c.items).join(", ")} ·{" "}
                 <span className="dim">HP</span> {c.hp >= 0 ? `+${c.hp}` : c.hp}
               </p>
               <p className="small">
-                <span className="dim">받을 수 있는 훈련</span> {c.trainings.map((t) => TRAININGS.find((x) => x.id === t)!.name).join(", ")}
+                <span className="dim">받을 수 있는 훈련</span> {c.trainings.map((t) => TRAININGS.find((x) => x.id === t)!.name).join(", ")} <span className="dim">(첫 달에는 훈련 불가 · 소지금은 모두 0G)</span>
               </p>
             </div>
           );
