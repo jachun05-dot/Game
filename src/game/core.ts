@@ -1,3 +1,4 @@
+import { josa } from "./josa";
 import { BAL, FAITH, GEAR, STAT_KEYS } from "./data";
 import { Rng } from "./rng";
 import type { DeathCause, GameState, LogKind, StatKey, Stats } from "./types";
@@ -47,6 +48,7 @@ export function check(s: GameState, stat: StatKey, dc: number): { ok: boolean; r
 
 export function log(s: GameState, text: string, kind: LogKind = "normal"): void {
   s.log.push({ text, kind });
+  s.logCount += 1;
   if (s.log.length > 300) s.log.splice(0, s.log.length - 300);
 }
 
@@ -56,6 +58,11 @@ export function emptyStats(): Stats {
 
 export function addStat(s: GameState, key: StatKey, n: number): void {
   s.hero.stats[key] = Math.min(BAL.statMax, s.hero.stats[key] + n);
+}
+
+/** 묘비 요약용 사건 기록(같은 문장은 한 번만) */
+export function remember(s: GameState, line: string): void {
+  if (!s.history.includes(line)) s.history.push(line);
 }
 
 export function note(s: GameState, key: StatKey): void {
@@ -111,7 +118,7 @@ export function kill(s: GameState, cause: DeathCause, detail?: string): void {
   };
   s.combat = null;
   s.phase = "dead";
-  log(s, `${s.hero.name}은(는) ${detail ?? CAUSE_TEXT[cause]}.`, "hurt");
+  log(s, `${josa(s.hero.name, "은")} ${detail ?? CAUSE_TEXT[cause]}.`, "hurt");
   for (const fa of faiths) log(s, `— ${fa}의 신앙이 해금되었다.`, "story");
 }
 
@@ -119,6 +126,7 @@ function buildEpitaph(s: GameState, cause: DeathCause): string {
   const parts: string[] = [`영지의 열여섯 살 소년, 모험가가 되었다.`];
   if (s.hero.level > 1) parts.push(`${s.hero.level}레벨까지 훈련받았다.`);
   parts.push(...s.history.slice(-3));
+  if (s.rank > 0) parts.push(`차원문에 ${s.rank}번 닿았다.`);
   if (s.recordsRead > 0) parts.push(`미궁의 기록물 ${s.recordsRead}개를 읽었다.`);
   parts.push(`${s.month}번째 달에 ${CAUSE_TEXT[cause]}.`);
   return parts.join(" ");

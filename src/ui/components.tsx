@@ -1,0 +1,131 @@
+import { useEffect, useRef, type ReactNode } from "react";
+import { maxHp, heroAc, mod } from "../game/core";
+import { GEAR, STAT_KEYS, STAT_LABEL } from "../game/data";
+import type { GameState } from "../game/types";
+import type { Ctl, Speed } from "./App";
+
+export function Shell({ children, wide }: { children: ReactNode; wide?: boolean }) {
+  return <main className={`shell${wide ? " wide" : ""}`}>{children}</main>;
+}
+
+export function Card({ title, children, className }: { title?: ReactNode; children: ReactNode; className?: string }) {
+  return (
+    <section className={`card ${className ?? ""}`}>
+      {title && <h2 className="card-title">{title}</h2>}
+      {children}
+    </section>
+  );
+}
+
+export function Bar({ value, max, tone }: { value: number; max: number; tone: "hp" | "food" | "tired" | "enemy" }) {
+  const pct = Math.max(0, Math.min(100, (value / max) * 100));
+  return (
+    <div className={`bar bar-${tone}`}>
+      <div className="bar-fill" style={{ width: `${pct}%` }} />
+    </div>
+  );
+}
+
+export function fmtMod(v: number): string {
+  return (v >= 0 ? "+" : "") + v;
+}
+
+export function HeroHeader({ s, extra }: { s: GameState; extra?: ReactNode }) {
+  const hp = maxHp(s);
+  return (
+    <header className="hero-head">
+      <img className="portrait" src="./hero.png" alt="" />
+      <div className="hero-info">
+        <div className="hero-name">
+          {s.hero.name} <span className="dim">Lv.{s.hero.level}</span>
+          {s.hero.faith && <span className="faith-tag">{s.hero.faith}</span>}
+        </div>
+        <div className="hp-line">
+          <span>HP</span>
+          <Bar value={s.hero.hp} max={hp} tone="hp" />
+          <span className="num">
+            {s.hero.hp}/{hp}
+          </span>
+        </div>
+        <div className="hero-meta">
+          <span>{s.gold}G</span>
+          <span>AC {heroAc(s)}</span>
+          <span>등급 {s.rank}</span>
+          {extra}
+        </div>
+      </div>
+    </header>
+  );
+}
+
+export function StatGrid({ s }: { s: GameState }) {
+  return (
+    <div className="stat-grid">
+      {STAT_KEYS.map((k) => (
+        <div key={k} className="stat-cell">
+          <span className="dim">{STAT_LABEL[k]}</span>
+          <b>{s.hero.stats[k]}</b>
+          <span className="mod">{fmtMod(mod(s.hero.stats[k]))}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function GearList({ s }: { s: GameState }) {
+  const items = ["숏소드(1d6)", ...Object.values(s.gear).map((id) => (id ? GEAR[id].name : ""))].filter(Boolean);
+  return <div className="dim small">장비: {items.join(" · ")}</div>;
+}
+
+/** 로그 패널: shown 개수까지만 보여주고, 누르면 남은 줄을 한 번에 보여준다 */
+export function LogView({ ctl, max = 60, tall }: { ctl: Ctl; max?: number; tall?: boolean }) {
+  const { s, shown } = ctl;
+  const ref = useRef<HTMLDivElement>(null);
+  const start = s.logCount - s.log.length; // log[0]의 전역 번호
+  const visible = s.log
+    .map((l, i) => ({ ...l, n: start + i }))
+    .filter((l) => l.n < shown)
+    .slice(-max);
+  useEffect(() => {
+    ref.current?.scrollTo({ top: ref.current.scrollHeight });
+  }, [shown]);
+  return (
+    <div ref={ref} className={`log${tall ? " tall" : ""}`} onClick={ctl.revealAll} role="log" aria-live="polite">
+      {visible.map((l) => (
+        <p key={l.n} className={`log-line ${l.kind}`}>
+          {l.text}
+        </p>
+      ))}
+      {ctl.busy && <p className="log-line dim blink">▼</p>}
+    </div>
+  );
+}
+
+const SPEEDS: Speed[] = [1, 2, 4, 8, 0];
+
+export function SpeedBar({ ctl }: { ctl: Ctl }) {
+  return (
+    <div className="speed-bar">
+      {SPEEDS.map((v) => (
+        <button key={v} className={`chip${ctl.speed === v ? " on" : ""}`} onClick={() => ctl.setSpeed(v)}>
+          {v === 0 ? "즉시" : `${v}×`}
+        </button>
+      ))}
+      <button className={`chip${ctl.auto ? " on" : ""}`} onClick={() => ctl.setAuto(!ctl.auto)} title="중요한 결정도 자동으로 고릅니다">
+        자동 결정 {ctl.auto ? "ON" : "OFF"}
+      </button>
+    </div>
+  );
+}
+
+export function TopBar({ ctl, title }: { ctl: Ctl; title: ReactNode }) {
+  return (
+    <div className="topbar">
+      <button className="link" onClick={ctl.goTitle}>
+        ≡
+      </button>
+      <span className="topbar-title">{title}</span>
+      <span className="dim small">#{(ctl.s.seed >>> 0).toString(36)}</span>
+    </div>
+  );
+}

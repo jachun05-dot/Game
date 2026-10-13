@@ -1,4 +1,5 @@
-import { ARCHETYPES, BAL, GEAR, FEED, FIELD_ENCOUNTERS, INTRO, NAMES, RIVAL_NEWS, RIVALS, RUMORS, STAT_KEYS, STAT_LABEL, TRAININGS } from "./data";
+import { josa } from "./josa";
+import { ARCHETYPES, BAL, GEAR, FEED, FIELD_ENCOUNTERS, NAMES, RIVAL_NEWS, RIVALS, RUMORS, STAT_KEYS, STAT_LABEL, TRAININGS } from "./data";
 import { addStat, emptyStats, kill, log, maxHp, rngOf, taxDue, topBehavior } from "./core";
 import { makeEnemies, startCombat } from "./combat";
 import { Rng } from "./rng";
@@ -24,6 +25,7 @@ export function newRun(seed: number): GameState {
     candidates: [],
     rerollsLeft: 2,
     log: [],
+    logCount: 0,
     combat: null,
     dungeon: null,
     weekResult: null,
@@ -71,9 +73,8 @@ export function createHero(s: GameState, name: string, candidate: number, faith:
   s.hero.faith = faith;
   s.hero.hp = maxHp(s);
   s.phase = "town";
-  for (const line of INTRO) log(s, line, "story");
   log(s, `— ${s.hero.name}, ${c.archetype}. 모험가로 등록되었다. 소지금 ${s.gold}G.`, "system");
-  if (faith) log(s, `당신은 몰래 ${faith}을(를) 섬기기로 했다.`, "story");
+  if (faith) log(s, `당신은 몰래 ${josa(faith, "을")} 섬기기로 했다.`, "story");
   log(s, `— 1월 1주차. 4주차에 미궁이 열린다.`, "system");
 }
 
@@ -88,7 +89,7 @@ export function canTrain(s: GameState): boolean {
 function feedLines(r: Rng, good: boolean): string[] {
   const out: string[] = [];
   const rival = r.pick(RIVALS);
-  out.push(r.pick(RIVAL_NEWS).replace("%s", rival));
+  out.push(r.pick(RIVAL_NEWS).replace("%s이(가)", josa(rival, "이")).replace("%s", rival));
   out.push(r.pick(good ? FEED.good : FEED.bad));
   if (r.chance(0.5)) out.push(r.pick(RUMORS));
   return out;
@@ -125,7 +126,6 @@ export function train(s: GameState, trainingId: string, free: [StatKey, StatKey]
   s.behavior = emptyStats();
   const from = s.hero.level;
   s.hero.level += 1;
-  s.history.push(`${t.name}을(를) 받아 ${s.hero.level}레벨이 되었다.`);
   const lines = [
     `${t.name} — ${t.desc}. (${cost}G)`,
     `고정: ${t.stats.map((k) => STAT_LABEL[k]).join(", ")} / 자유: ${free.map((k) => STAT_LABEL[k]).join(", ")} / ${noBehavior ? "몸이 기억한 것(무작위)" : "몸이 기억한 것"}: ${behaviorPicks.map((k) => STAT_LABEL[k]).join(", ")}`,
@@ -192,7 +192,7 @@ export function buyGear(s: GameState, id: string): void {
   if (s.phase !== "town" || !g || s.gold < g.price || s.gear[g.slot] === id) return;
   s.gold -= g.price;
   s.gear[g.slot] = id;
-  log(s, `대장간에서 ${g.name}을(를) 샀다. (${g.price}G)`, "system");
+  log(s, `대장간에서 ${josa(g.name, "을")} 샀다. (${g.price}G)`, "system");
 }
 
 export function sell(s: GameState, item: keyof typeof BAL.prices): void {

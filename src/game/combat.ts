@@ -1,3 +1,4 @@
+import { josa } from "./josa";
 import { BAL, MONSTERS } from "./data";
 import { actionsPerRound, heroAc, kill, log, maxHp, mod, note, rngOf, rollPenalty } from "./core";
 import type { CombatState, Enemy, GameState } from "./types";
@@ -17,7 +18,7 @@ export function startCombat(s: GameState, context: CombatState["context"], enemi
   s.combat = { context, enemies, round: 1, actionsLeft: actionsPerRound(s), loot: 0 };
   s.phase = context === "field" ? "combat" : "dungeon";
   const names = describeGroup(enemies);
-  log(s, `${names}이(가) 나타났다!`, "hurt");
+  log(s, `${josa(names, "이")} 나타났다!`, "hurt");
 }
 
 export function describeGroup(enemies: Enemy[]): string {
@@ -54,7 +55,7 @@ export function combatAttack(s: GameState, targetUid: number): void {
     if (target.hp <= 0) {
       note(s, "str");
       c.loot += def.mana;
-      log(s, `${def.name}을(를) 쓰러뜨렸다.`, "good");
+      log(s, `${josa(def.name, "을")} 쓰러뜨렸다.`, "good");
     }
   }
   endPlayerAction(s);
@@ -112,7 +113,7 @@ function enemyTurn(s: GameState): void {
     const crit = roll === 20;
     const dmg = Math.max(1, r.dice(def.dice[0] * (crit ? 2 : 1), def.dice[1]));
     s.hero.hp -= dmg;
-    log(s, `${def.name}이(가) ${def.attackText}! ${dmg} 피해${crit ? " (치명타!)" : ""}`, "hurt");
+    log(s, `${josa(def.name, "이")} ${def.attackText}! ${dmg} 피해${crit ? " (치명타!)" : ""}`, "hurt");
     if (s.hero.hp <= 0) {
       s.hero.hp = 0;
       const cause = attackers.length >= 2 ? "mob" : "single";

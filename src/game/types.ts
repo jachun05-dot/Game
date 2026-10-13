@@ -159,6 +159,8 @@ export interface GameState {
   candidates: Candidate[];
   rerollsLeft: number;
   log: LogLine[];
+  /** 지금까지 쌓인 로그 총 개수(오래된 줄이 잘려도 화면 표시 위치 계산용) */
+  logCount: number;
   combat: CombatState | null;
   dungeon: DungeonState | null;
   weekResult: WeekResult | null;

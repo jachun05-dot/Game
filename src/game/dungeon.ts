@@ -1,5 +1,6 @@
+import { josa } from "./josa";
 import { BAL, ENCOUNTERS, MANA_FLOOR_MULT, MONSTERS, RECORDS, ROOM_FLAVOR } from "./data";
-import { check, isDead, kill, log, maxHp, note, rngOf } from "./core";
+import { check, isDead, kill, log, maxHp, note, remember, rngOf } from "./core";
 import { describeGroup, makeEnemies, startCombat } from "./combat";
 import { beginSettlement } from "./town";
 import type { Rng } from "./rng";
@@ -19,6 +20,12 @@ export const ROOM_LABEL: Record<RoomType, string> = {
   stairs: "계단",
   boss: "보스",
   portal: "차원문",
+};
+
+/** 지도 노드 위 짧은 라벨 */
+export const ROOM_SHORT: Record<RoomType, string> = {
+  entrance: "입구", empty: "빈방", combat: "적", trap: "함정", treasure: "보물",
+  record: "기록", shrine: "성소", stairs: "계단", boss: "보스", portal: "문",
 };
 
 export function generateFloor(r: Rng, floor: number): Room[] {
@@ -344,7 +351,7 @@ export function resolvePending(s: GameState, choice: PendingChoice): void {
       extra = ", 말린 고기 1개";
     }
     note(s, "luk");
-    log(s, `상자에서 마석(${mana}G 어치)${extra}을(를) 얻었다.`, "good");
+    log(s, `상자에서 마석(${mana}G 어치)${josa(extra, "을")} 얻었다.`, "good");
     return;
   }
 
@@ -388,8 +395,8 @@ export function resolvePending(s: GameState, choice: PendingChoice): void {
     dg.prev = null;
     passTime(s, 1);
     log(s, `— ${dg.floor}층으로 내려간다.`, "system");
-    if (dg.floor === 2) s.history.push("미궁 2층에 발을 디뎠다.");
-    if (dg.floor === 3) s.history.push("미궁 3층까지 내려갔다.");
+    if (dg.floor === 2) remember(s, "미궁 2층에 발을 디뎠다.");
+    if (dg.floor === 3) remember(s, "미궁 3층까지 내려갔다.");
     if (!isDead(s)) arrive(s, true);
     return;
   }
@@ -400,7 +407,7 @@ export function resolvePending(s: GameState, choice: PendingChoice): void {
       return;
     }
     s.rank += 1;
-    s.history.push(`${dg.sector}섹터의 차원문에 도달했다.`);
+    remember(s, `${dg.sector}섹터의 차원문에 도달했다.`);
     log(s, "차원문에 손을 뻗자 빛이 몸을 감싼다 — 1섹터 클리어!", "good");
     log(s, "(2섹터는 다음 업데이트 예정 — 이번 달 탐험은 여기까지)", "system");
     leaveDungeon(s, { cleared: true, forced: false });
@@ -420,7 +427,7 @@ export function afterDungeonCombat(s: GameState, outcome: "win" | "fled", c: Com
       log(s, `쓰러진 적에게서 마석(${loot}G 어치)을 챙겼다.`, "good");
     }
     if (room.type === "boss") {
-      s.history.push("거대한 돌연변이 쥐를 쓰러뜨렸다.");
+      remember(s, "거대한 돌연변이 쥐를 쓰러뜨렸다.");
       log(s, "보스가 쓰러지자 포탈의 빛이 한층 밝아진다.", "story");
     }
     if (!checkTimeUp(s)) peek(s);
@@ -434,7 +441,7 @@ export function afterDungeonCombat(s: GameState, outcome: "win" | "fled", c: Com
     const back = dg.prev;
     dg.prev = dg.current;
     dg.current = back;
-    log(s, `${describeGroup(left)}을(를) 남겨두고 이전 방으로 물러났다.`);
+    log(s, `${josa(describeGroup(left), "을")} 남겨두고 이전 방으로 물러났다.`);
   }
   passTime(s, 1);
   checkTimeUp(s);
