@@ -122,6 +122,9 @@ button {
 /* ---------- 타이틀 ---------- */
 .title-wrap { display: flex; flex-direction: column; align-items: center; padding-top: 12px; }
 .title-hero { width: 111px; image-rendering: pixelated; }
+/* 타이틀 키아트: 섬 전경 위에 소년을 2배로 세운다(풍경도 2배) */
+.title-art { position: relative; align-self: stretch; margin-bottom: 4px; }
+.title-art .title-hero { position: absolute; left: 14px; bottom: 6px; width: 74px; height: 180px; }
 .logo { font-size: 44px; letter-spacing: 0.2em; color: var(--bright); margin: 8px 0 0; font-family: ui-monospace, "SF Mono", Consolas, monospace; }
 .tagline { color: var(--accent); margin: 0; letter-spacing: 0.1em; }
 

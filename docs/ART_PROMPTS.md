@@ -334,3 +334,18 @@ No people, no monsters, no text, no UI, no frame or border. Square 1:1 image.
 ```
 
 결과(2026-10-13): 1차 채택. Gemini가 가로 이미지(512×286)로 줬지만 도트는 같은 2.56px → 200×112로 복원. 워터마크가 바닥 위라 밝은 16픽셀을 주변 평균으로 메움(`assets/scenes/dungeon1_clean.png`). 띠 179×100 `(10,8)~(189,108)` = `public/scene-dungeon1.png`. 미궁 화면은 자리가 빠듯해 띠 대신 **지도 칸 배경**으로 깐다(2배, 62% 어둡게 눌러 지도 점·선이 먼저 읽히게, `SCENE_ART["dungeon"+섹터]`). 벽의 날짜 긁은 자국은 안 나옴
+
+## 021 — 타이틀 키아트 (기준 이미지 + 훈련장 첨부)
+
+```
+Match the exact art style, outline, palette and pixel scale of the attached images; the second image (a training yard) shows the scene scale and level of detail to follow.
+
+Pixel art game title illustration, classic 16-bit RPG style, wide establishing view from a slightly elevated angle at dusk.
+A small, bleak island in a cold grey sea in a grim dark-fantasy world. In the center of the island a huge ancient stone pit-entrance to an underground labyrinth gapes open like a mouth, with crumbling stone steps leading down into total darkness. Around it huddles a poor village of crooked timber houses with a few lit windows, a tiny graveyard on a hill full of small grave markers, and a narrow muddy road leading to the pit. On a high cliff above everything stands the lord's dark stone castle, its tallest tower crowned with a gold sun emblem catching the last light. Heavy low clouds, a thin band of dying light on the horizon, crows circling over the pit.
+Muted palette of about 24 colors: cold slate greys, dark sea blue-grey, dark browns, black; dull gold (#cf9a44) only on the sun emblem, a few lit windows and the thin horizon light.
+Crisp hard pixel edges, 1-pixel dark outlines, no anti-aliasing, no blur, no gradients, no noisy dithering.
+Keep the labyrinth pit, the village and the castle within the middle 60% of the height so it reads when cropped to a wide horizontal strip. Leave the bottom fifth of the image as calm dark ground so a character and a title can be placed over it.
+No people, no text, no logo, no UI, no frame or border. Square 1:1 image.
+```
+
+결과(2026-10-13): 1차 채택(512, 200격자) → 179×160 `(10,10)~(189,170)` = `public/scene-title.png`(`focus: 0.65`로 좁은 화면에서도 미궁 구멍을 남김). 타이틀 화면에서 2배로 깔고 그 위 왼쪽 아래에 모험가 소년 스프라이트를 2배로 세운다(`.title-art`)

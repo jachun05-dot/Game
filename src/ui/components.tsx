@@ -413,14 +413,16 @@ export function FragIcon({ tier, scale = 1, hidden }: { tier: number; scale?: nu
 }
 
 /** 장소 그림 띠. 2배 정수 확대. 화면이 좁으면 focus 쪽을 남기고 나머지를 자른다(배경 위치 %라 빈틈이 생기지 않는다). 장식이라 글로 읽히지 않는다 */
-export function SceneBanner({ id }: { id: string }) {
+export function SceneBanner({ id, className, children }: { id: string; className?: string; children?: ReactNode }) {
   const a = SCENE_ART[id];
-  if (!a) return null;
+  if (!a) return <>{children}</>;
   return (
     <div
-      className="scene"
-      aria-hidden="true"
+      className={`scene${className ? " " + className : ""}`}
+      aria-hidden={children ? undefined : true}
       style={{ height: a.h * 2, backgroundImage: `url(${a.src})`, backgroundSize: `${a.w * 2}px ${a.h * 2}px`, backgroundPosition: `${(a.focus ?? 0.5) * 100}% 0` }}
-    />
+    >
+      {children}
+    </div>
   );
 }

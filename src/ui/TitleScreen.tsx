@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import type { GameState, Meta } from "../game/types";
 import { exportSave, importSave } from "./storage";
-import { Card, Shell } from "./components";
+import { Card, SceneBanner, Shell } from "./components";
 
 interface Props {
   run: GameState | null;
@@ -46,7 +46,9 @@ export function TitleScreen({ run, meta, onNew, onContinue, onGraveyard, onCodex
   return (
     <Shell>
       <div className="title-wrap">
-        <img className="title-hero" src="./hero.png" alt="숏소드를 든 열여섯 살 모험가 소년" />
+        <SceneBanner id="title" className="title-art">
+          <img className="title-hero" src="./hero.png" width={74} height={180} alt="숏소드를 든 열여섯 살 모험가 소년" />
+        </SceneBanner>
         <h1 className="logo">
           <span className="accent">D</span>DD
         </h1>
