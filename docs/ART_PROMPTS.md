@@ -65,7 +65,7 @@ Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, 
 
 ## 004 — 쥐 (기준 이미지 첨부)
 
-몬스터는 모두 기준 이미지와 **같은 도트 크기(월드 스케일)** 로 그린다 → 덩치 차이가 그림 크기로 드러난다. 주인공은 정면, 몬스터는 왼쪽을 본다. 도감(`CodexScreen`)에는 88×104 액자 안에 들어가는 최대 정수배로, 안 본 몬스터는 같은 그림의 실루엣(CSS 필터)으로 보여 준다. 연결은 `src/ui/art.ts`의 `MONSTER_ART`.
+몬스터는 모두 기준 이미지와 **같은 도트 크기(월드 스케일)** 로 그린다 → 덩치 차이가 그림 크기로 드러난다. 주인공은 정면, 몬스터는 왼쪽을 본다. 도감(`CodexScreen`)에는 카드 위 무대에 **모든 몬스터를 같은 2배**로 세우고(몬스터마다 배율을 다르게 하면 쥐가 고블린만 해 보인다), 안 본 몬스터는 같은 그림의 실루엣(CSS 필터)으로 보여 준다. 연결은 `src/ui/art.ts`의 `MONSTER_ART`.
 
 ```
 Match the exact art style, outline, palette and pixel scale of the attached reference image.
@@ -79,3 +79,18 @@ Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, 
 ```
 
 결과(2026-10-13): 1차 생성본 채택 → `assets/monsters/rat.png`(36×22) = `public/mon-rat.png`
+
+## 005 — 고블린 (기준 이미지 첨부)
+
+```
+Match the exact art style, outline, palette and pixel scale of the attached reference image.
+
+Pixel art game sprite of a single creature, front-facing 3/4 view facing left, classic 16-bit RPG style, same world scale as the reference boy (the goblin stands about chest-high to him).
+A cowardly dungeon goblin from a grim dark-fantasy labyrinth: scrawny, hunched, sickly olive-green skin, large pointed ears, sly narrow yellow eyes, crooked grin, wearing a filthy torn loincloth and a scrap of hide over one shoulder. It clutches a short rusty dagger low, half hiding it behind its body, in a sneaky crouching pose as if waiting in ambush.
+Muted earthy palette of about 14 colors: dark browns, dull olive green, rust orange on the dagger.
+Crisp hard pixel edges, 1-pixel dark outline, no anti-aliasing, no blur, no gradients, no noisy dithering.
+Full body, centered, feet visible, small margin around it.
+Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, no frame or border. Square 1:1 image.
+```
+
+결과(2026-10-13): 1차 생성본 채택 → `assets/monsters/goblin.png`(63×69, 웅크려서 소년 가슴 높이) = `public/mon-goblin.png`. 왼손 손가락 사이 마젠타 3픽셀을 투명 처리

@@ -27,9 +27,6 @@ export interface SpriteArt {
 
 export const MONSTER_ART: Record<string, SpriteArt> = {
   rat: { src: "./mon-rat.png", w: 36, h: 22 },
+  goblin: { src: "./mon-goblin.png", w: 63, h: 69 },
 };
 
-/** 상자(boxW×boxH) 안에 들어가는 가장 큰 정수 배율(최소 1) */
-export function fitScale(a: SpriteArt, boxW: number, boxH: number): number {
-  return Math.max(1, Math.floor(Math.min(boxW / a.w, boxH / a.h)));
-}
