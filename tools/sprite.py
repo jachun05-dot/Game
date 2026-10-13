@@ -35,8 +35,16 @@ for gy in range(gh):
         y0, y1 = int(gy * block), max(int(gy * block) + 1, int((gy + 1) * block))
         x0, x1 = int(gx * block), max(int(gx * block) + 1, int((gx + 1) * block))
         # 경계 번짐을 피하려고 블록 가운데만 본다
+        # (도트가 3px 이하로 작으면 여백을 빼고 남는 칸이 없으니 가운데 한 칸만 본다)
         m = max(1, int(block * 0.25))
-        ys, xs = slice(min(y0 + m, y1 - 1), max(y1 - m, y0 + 1)), slice(min(x0 + m, x1 - 1), max(x1 - m, x0 + 1))
+        cy0, cy1, cx0, cx1 = y0 + m, y1 - m, x0 + m, x1 - m
+        if cy1 <= cy0:
+            cy0 = (y0 + y1 - 1) // 2
+            cy1 = cy0 + 1
+        if cx1 <= cx0:
+            cx0 = (x0 + x1 - 1) // 2
+            cx1 = cx0 + 1
+        ys, xs = slice(cy0, cy1), slice(cx0, cx1)
         if bg[ys, xs].mean() > 0.5:
             continue
         cells = [tuple(c) for c, b in zip(a[ys, xs].reshape(-1, 3), bg[ys, xs].reshape(-1)) if not b]

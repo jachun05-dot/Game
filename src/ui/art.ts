@@ -48,4 +48,9 @@ export const FRAG_ICON: SpriteArt[] = [
 // 장소 그림(띠 모양, 원래 도트 크기). 화면에서는 2배로 키우고 좁은 화면에서는 양옆이 잘린다.
 export const SCENE_ART: Record<string, SpriteArt> = {
   training: { src: "./scene-training.png", w: 179, h: 80 },
+  tavern: { src: "./scene-tavern.png", w: 179, h: 80 },
+  forest: { src: "./scene-forest.png", w: 179, h: 80 },
 };
+
+/** 주간 결과 카드 제목 → 장소 그림 */
+export const WEEK_SCENE: Record<string, string> = { 훈련: "training", 탐문: "tavern", "외부 탐험": "forest" };
