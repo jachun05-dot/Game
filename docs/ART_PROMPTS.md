@@ -242,3 +242,50 @@ No text, no UI, no frame or border. Square 1:1 image.
 ```
 
 결과(2026-10-13): 1차 생성본 채택(512, 200격자) → `assets/scenes/forest_full.png` → 띠 `(10,70)~(189,150)` = `public/scene-forest.png`. 주간 결과 카드(제목 "외부 탐험")에 건다
+
+## 015 — 상점가 (기준 이미지 + 훈련장 첨부)
+
+```
+Match the exact art style, outline, palette and pixel scale of the attached images; the second image (a training yard) shows the scene scale and level of detail to follow.
+
+Pixel art game location illustration, classic 16-bit RPG style, wide establishing view, slightly elevated 3/4 view.
+A narrow, poor market street on a remote island fief in a grim dark-fantasy world: a few crooked timber stalls under patched canvas awnings, one selling hard bread and strips of dried meat, one with small corked potion bottles and rolled paper scrolls, a wary old woman merchant behind the potion stall, muddy cobblestones, hanging lanterns not yet lit, grey overcast sky. One or two cloaked passers-by in the background.
+Muted earthy palette of about 20 colors: dark browns, faded ochre, wet grey stone; dull gold (#cf9a44) only on coins and lantern frames, a tiny touch of dull red on the potion bottles.
+Crisp hard pixel edges, 1-pixel dark outlines, no anti-aliasing, no blur, no gradients, no noisy dithering.
+Keep the stalls and the merchant within the middle 60% of the height so it reads when cropped to a wide horizontal strip.
+No readable text or signs, no UI, no frame or border. Square 1:1 image.
+```
+
+결과(2026-10-13): 1차 채택(512, 200격자) → 띠 `(6,66)~(185,146)` = `public/scene-market.png`. 상점가 카드 위
+
+## 016 — 대장간 (기준 이미지 + 훈련장 첨부)
+
+```
+Match the exact art style, outline, palette and pixel scale of the attached images; the second image (a training yard) shows the scene scale and level of detail to follow.
+
+Pixel art game location illustration, classic 16-bit RPG style, wide view, slightly elevated 3/4 view.
+A cramped village smithy on a remote island fief in a grim dark-fantasy world: an open-fronted stone and timber workshop, a glowing forge with coals, a heavy anvil, a broad-shouldered blacksmith with a leather apron and soot-covered arms hammering a blade, plain iron swords, shields and leather armor hanging on the back wall, a water barrel, sparks kept to a few single pixels.
+Muted earthy palette of about 20 colors: dark browns, soot black, iron grey; warm orange-gold glow (#cf9a44 and a slightly brighter orange) only from the forge and the hot metal.
+Crisp hard pixel edges, 1-pixel dark outlines, no anti-aliasing, no blur, no gradients, no noisy dithering, no soft glow.
+Keep the forge, anvil and blacksmith within the middle 60% of the height so it reads when cropped to a wide horizontal strip.
+No text, no UI, no frame or border. Square 1:1 image.
+```
+
+결과(2026-10-13): 1차 채택(512, 200격자) → 띠 `(10,56)~(189,136)` = `public/scene-smithy.png`. 대장간 카드 위
+
+## 017 — 신전 (기준 이미지 + 훈련장 첨부)
+
+제단 문양 "달을 삼키는 태양" = 유일신이 짝신을 잡아먹었다는 숨은 설정(DESIGN 2절)의 복선.
+
+```
+Match the exact art style, outline, palette and pixel scale of the attached images; the second image (a training yard) shows the scene scale and level of detail to follow.
+
+Pixel art game location illustration, classic 16-bit RPG style, wide view of an interior, slightly elevated 3/4 view.
+The cold stone temple of the island's single official god in a grim dark-fantasy world: tall grey stone pillars, rows of hard wooden benches, a raised altar under a large stone emblem of a sun swallowing a crescent moon, a gaunt priest in pale grey robes with a heavy offering box at his feet, cold grey light falling from a narrow high window. It should feel austere, rich and quietly threatening rather than welcoming. No crosses or real-world religious symbols.
+Muted palette of about 20 colors: cold greys, pale stone, dark browns; dull gold (#cf9a44) only on the sun emblem and the offering box.
+Crisp hard pixel edges, 1-pixel dark outlines, no anti-aliasing, no blur, no gradients, no noisy dithering.
+Keep the altar, emblem and priest within the middle 60% of the height so it reads when cropped to a wide horizontal strip.
+No text, no UI, no frame or border. Square 1:1 image.
+```
+
+결과(2026-10-13): 1차 채택(512, 200격자) → 문양과 사제가 위아래로 멀어 띠를 **179×110**으로 키움 `(14,24)~(193,134)` = `public/scene-temple.png`. 신전 카드 위

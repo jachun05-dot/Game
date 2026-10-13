@@ -50,6 +50,9 @@ export const SCENE_ART: Record<string, SpriteArt> = {
   training: { src: "./scene-training.png", w: 179, h: 80 },
   tavern: { src: "./scene-tavern.png", w: 179, h: 80 },
   forest: { src: "./scene-forest.png", w: 179, h: 80 },
+  market: { src: "./scene-market.png", w: 179, h: 80 },
+  smithy: { src: "./scene-smithy.png", w: 179, h: 80 },
+  temple: { src: "./scene-temple.png", w: 179, h: 110 },
 };
 
 /** 주간 결과 카드 제목 → 장소 그림 */
