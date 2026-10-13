@@ -1,4 +1,5 @@
 import { josa } from "./josa";
+import { MIND, afflict } from "./mind";
 import type { GameState } from "./types";
 
 // 물리적 상태이상(DESIGN 11절 "상태이상 시스템", 2026-10-13 1차 구현).
@@ -156,6 +157,7 @@ export function wound(s: GameState, p: Part, why: string): "oblivion" | "body" |
   s.injuries[p] = v;
   s.log.push({ text: `【부상】 ${why} — ${josa(PART_NAME[p], "이")} ${LEVEL_NAME[v]}! (${partEffect(s, p)})`, kind: "hurt" });
   s.logCount += 1;
+  if (p === "head" && v < 3) afflict(s, "confusion", MIND.confusionHead, "머리를 맞은 뒤로 생각이 자꾸 흩어진다.");
   if (v >= 3 && p === "head") return "oblivion";
   if (v >= 3 && p === "body") return "body";
   return null;

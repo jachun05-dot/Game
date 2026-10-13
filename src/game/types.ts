@@ -51,6 +51,12 @@ export interface CombatState {
   used: Record<string, number>;
   /** 이번 전투에서 남은 편린(몬스터 id) */
   frags: string[];
+  /** 연속으로 맞은 횟수(분노) */
+  streak?: number;
+  /** 이번 전투에서 HP 20% 이하 공포 판정을 했다 */
+  fearRolled?: boolean;
+  /** 발작: 이번 라운드 적 공격이 모두 치명타 */
+  frenzy?: boolean;
   /** 전쟁의 신 ★3 "피의 함성": 남은 라운드 동안 적 명중 −2 */
   cow?: number;
   /** 흘려내기 등 일시 AC 보너스 */
@@ -214,6 +220,8 @@ export interface GameState {
   prosthetic: Partial<Record<"head" | "body" | "main" | "offhand" | "feet", boolean>>;
   /** 쥐 열병 단계(0~2) */
   disease: number;
+  /** 정신 상태이상(mind.ts). 있으면 걸린 것, known이면 눈치채서 화면에 보인다 */
+  mind: Partial<Record<"fear" | "rage" | "confusion" | "despair", { known: boolean }>>;
   /** 섬기는 신의 신앙심(0~100, faith.ts) */
   piety: number;
   /** 개종으로 버린 신의 저주 */

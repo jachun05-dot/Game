@@ -36,7 +36,9 @@ function townAction(s: GameState): Action {
     if (s.injuries[p] >= 3 && !s.prosthetic[p] && s.gold >= INJ.prostheticCost) return { t: "prosthetic", part: p };
   }
   if (s.disease > 0 && s.inventory.herb > 0) return { t: "herb" };
-  if ((PARTS.some((p) => s.injuries[p] === 2) || s.disease > 0) && s.gold >= INJ.innCost) return { t: "activity", a: "inn" };
+  // 눈치챈 정신 상태이상이 둘 이상이면(조합이 터질 수 있으니) 여관에서 쉰다
+  const minds = Object.values(s.mind).filter((m) => m?.known).length;
+  if ((PARTS.some((p) => s.injuries[p] === 2) || s.disease > 0 || minds >= 2) && s.gold >= INJ.innCost) return { t: "activity", a: "inn" };
   // 미궁 준비물(고기 4, 물약 2) 살 돈은 항상 남겨 둔다
   const supply = Math.max(0, 4 - s.inventory.food) * shopPrice(s, "food") + Math.max(0, 2 - s.inventory.potion) * shopPrice(s, "potion");
   const spare = s.gold - supply;

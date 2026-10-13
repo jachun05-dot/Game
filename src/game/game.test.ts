@@ -13,6 +13,8 @@ import { FAITH } from "./data";
 import { maxHp } from "./core";
 import { injuryHit, injuryRollPenalty, lvl, wound } from "./injury";
 import { weaponOf } from "./gear";
+import { mindSummary } from "./mind";
+import { makeEnemies, startCombat } from "./combat";
 import type { GameState } from "./types";
 
 function reachable(rooms: ReturnType<typeof generateFloor>): Set<number> {
@@ -555,5 +557,64 @@ describe("부상·질병", () => {
       if (s.log.some((l) => l.text.startsWith("【부상】"))) hurt++;
     }
     expect(hurt).toBeGreaterThan(0);
+  });
+});
+
+describe("정신 상태이상", () => {
+  const inDungeon = (seed = 9) => {
+    const s = newRun(seed);
+    apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    s.week = 3;
+    s.phase = "week-result";
+    apply(s, { t: "closeWeek" });
+    return s;
+  };
+  it("걸려도 처음엔 숨겨져 있고, 방을 옮기다 눈치채면 드러난다", () => {
+    let revealed = 0;
+    for (let seed = 1; seed <= 40 && !revealed; seed++) {
+      const s = inDungeon(seed);
+      s.mind.fear = { known: false };
+      expect(mindSummary(s)).toEqual([]);
+      for (let i = 0; i < 30 && s.phase === "dungeon" && !s.mind.fear?.known; i++) {
+        s.dungeon!.pending = null;
+        const nb = s.dungeon!.rooms[s.dungeon!.current].edges[0];
+        apply(s, { t: "move", room: nb });
+        s.combat = null;
+        (s as GameState).phase = "dungeon";
+      }
+      if (s.mind.fear?.known) revealed++;
+    }
+    expect(revealed).toBeGreaterThan(0);
+  });
+  it("두 가지가 겹치면 조합 증상이 터지고 둘 다 드러난다", () => {
+    let combo = 0;
+    for (let seed = 1; seed <= 200 && !combo; seed++) {
+      const s = inDungeon(seed);
+      s.mind.fear = { known: false };
+      s.mind.despair = { known: false };
+      startCombat(s, "dungeon", makeEnemies(s, ["rat"]));
+      if (s.log.some((l) => l.text.startsWith("【무너짐】"))) {
+        combo++;
+        expect(s.mind.fear?.known && s.mind.despair?.known).toBe(true);
+      }
+    }
+    expect(combo).toBeGreaterThan(0);
+  });
+  it("여관에서 쉬면 모두 가라앉는다", () => {
+    const s = newRun(9);
+    apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    s.mind = { rage: { known: true }, confusion: { known: false } };
+    s.gold = 100;
+    apply(s, { t: "activity", a: "inn" });
+    expect(s.mind).toEqual({});
+  });
+  it("머리를 다치면 혼란이 올 수 있다", () => {
+    let got = 0;
+    for (let seed = 1; seed <= 60 && !got; seed++) {
+      const s = inDungeon(seed);
+      wound(s, "head", "테스트");
+      if (s.mind.confusion) got++;
+    }
+    expect(got).toBeGreaterThan(0);
   });
 });

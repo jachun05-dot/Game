@@ -3,6 +3,7 @@ import { BAL, ENCOUNTERS, MANA_FLOOR_MULT, MIN_COMBAT_ROOMS, MONSTERS, RARE_BY_F
 import { check, isDead, kill, log, maxHp, note, remember, rngOf, smod } from "./core";
 import { FRAGMENTS, fragKnown, fragSlots, fragStatText } from "./fragments";
 import { INJ, bleedPerMove, canPeek, moveMult, wound } from "./injury";
+import { MIND, MIND_KEYS, MIND_NAME, afflict, cure, has, noticeCheck, symptom } from "./mind";
 import { FAITH_BAL, addPiety, faithPeek, faithTrapSense, god, power, pray } from "./faith";
 import { beginSettlement, convert } from "./town";
 import { SKILLS } from "./skills";
@@ -205,9 +206,20 @@ export function canMoveTo(s: GameState, id: number): boolean {
 export function moveTo(s: GameState, id: number): void {
   if (!canMoveTo(s, id)) return;
   const dg = d(s);
+  // 혼란: 엉뚱한 길로 샌다
+  const others = currentRoom(s).edges.filter((e) => e !== id);
+  if (others.length && symptom(s, "confusion", MIND.symptom, "가려던 길이 아닌 다른 통로로 들어섰다!", "정신을 차려 보니 생각했던 통로가 아니다.")) {
+    id = others[rngOf(s).int(0, others.length - 1)];
+  }
   dg.prev = dg.current;
   dg.current = id;
   passTime(s, BAL.moveTurns * moveMult(s)); // 발 부상이면 느리다
+  if (isDead(s)) return;
+  // 정신 상태이상: 눈치채기 판정, 절망(탈진·굶주림), 주저앉기
+  noticeCheck(s, smod(s, "per") + smod(s, "int"));
+  if (s.hero.fatigue >= 100) afflict(s, "despair", MIND.despairExhausted, "다리가 무겁다. 이 길 끝에 무엇이 있을지 생각하기도 싫어진다.");
+  if (s.hero.satiety <= 0) afflict(s, "despair", MIND.despairStarving, "빈속이 쓰리다. 무엇을 위해 여기 있는지 모르겠다.");
+  if (symptom(s, "despair", MIND.symptom, "주저앉아 한참을 움직이지 못했다. (2시간)", "잠깐 앉았다가, 정신을 차려 보니 한참이 지나 있었다. (2시간)")) passTime(s, 4);
   if (isDead(s)) return;
   // 출혈(몸통 부상)·쥐 열병
   const { bleed, disease } = bleedPerMove(s);
@@ -547,6 +559,12 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
       const heal = r.dice(1, 4) + 1;
       s.hero.hp = Math.min(maxHp(s), s.hero.hp + heal);
       log(s, `옛 신의 제단 앞에 무릎 꿇었다. 이상하게 마음이 놓인다. HP +${heal}`, "good");
+      // 기도하면 마음 하나가 가라앉는다
+      const calm = MIND_KEYS.find((k) => has(s, k));
+      if (calm) {
+        log(s, s.mind[calm]!.known ? `제단 앞에서 ${josa(MIND_NAME[calm], "이")} 조금씩 풀려 나간다.` : "기도하는 동안 가슴을 누르던 무언가가 풀려 나갔다.", "good");
+        cure(s, calm);
+      }
       if (god(s)) {
         addPiety(s, 5);
         log(s, `${s.hero.faith}의 기척이 가까이 느껴진다. (신앙심 ${s.piety})`, "story");

@@ -35,6 +35,7 @@ function fixRun(s: GameState | null): GameState | null {
   s.injuries ??= { head: 0, body: 0, main: 0, offhand: 0, feet: 0 };
   s.prosthetic ??= {};
   s.disease ??= 0;
+  s.mind ??= {};
   s.inventory.bandage ??= 0;
   s.inventory.herb ??= 0;
   s.faithsKnown ??= s.hero.faith ? [s.hero.faith] : [];

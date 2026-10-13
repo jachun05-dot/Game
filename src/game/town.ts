@@ -2,6 +2,7 @@ import { josa } from "./josa";
 import { BAL, FEED, FIELD_ENCOUNTERS, NAMES, RIVAL_NEWS, RIVALS, RUMORS, STAT_KEYS, STAT_LABEL, TRAININGS } from "./data";
 import { addStat, check, emptyStats, kill, log, maxHp, rngOf, taxDue, topBehavior, yearOf } from "./core";
 import { FRAGMENTS, emptyCodex, fragSlots } from "./fragments";
+import { MIND_KEYS, fadeAfterDungeon } from "./mind";
 import { INJ, LIMBS, PART_NAME, PARTS, emptyInjuries, treatWorst, type Part } from "./injury";
 import { FAITH_BAL, GODS, addPiety, faithManaMult, god, godOf, power, pray, tier } from "./faith";
 import { makeEnemies, startCombat } from "./combat";
@@ -32,6 +33,7 @@ export function newRun(seed: number): GameState {
     injuries: emptyInjuries(),
     prosthetic: {},
     disease: 0,
+    mind: {},
     faithsKnown: [],
     tactics: { potionAt: 35, fleeAt: 0 },
     autoGoal: "explore",
@@ -284,6 +286,11 @@ export function inn(s: GameState): void {
     lines.push(s.disease ? "열이 조금 내렸다. (쥐 열병 경상)" : "열이 내렸다. 쥐 열병이 나았다.");
     healed++;
   }
+  if (MIND_KEYS.some((k) => s.mind[k])) {
+    s.mind = {};
+    lines.push("며칠 푹 자고 나니 머릿속이 맑아졌다. (정신 상태이상 해제)");
+    healed++;
+  }
   if (!healed) lines.push("푹 쉬었다. 딱히 나을 데는 없었다.");
   s.hero.hp = maxHp(s);
   finishWeek(s, { title: "여관", lines, statDelta: {}, goldDelta: -INJ.innCost }, healed > 0);
@@ -395,6 +402,7 @@ export function beginSettlement(s: GameState, o: { mana: number; cleared: boolea
   pray(s, "greed", Math.min(15, Math.floor(gold / 10)));
   if (o.cleared) lines.push(`등급이 올랐다 — 클리어한 섹터 ${s.rank}개.`);
   faithMonthEnd(s, lines);
+  fadeAfterDungeon(s, lines);
   // 경상은 미궁 밖으로 나오면 체력 판정으로 저절로 낫는다
   for (const p of PARTS) {
     if (s.injuries[p] !== 1) continue;

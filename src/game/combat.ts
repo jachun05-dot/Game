@@ -4,6 +4,7 @@ import { actionsPerRound, heroAc, isDead, kill, log, maxHp, note, rngOf, rollPen
 import { FRAGMENTS } from "./fragments";
 import { GODS, faithDmg, faithHit, power, pray } from "./faith";
 import { HEAD_STUN, INJ, canFlee, infect, injuryHit, lvl, noCrit, wound, type Part } from "./injury";
+import { MIND, afflict, comboNow, missPotion, rageDmg, symptom } from "./mind";
 import { activeSkills, passive, SKILLS, type SkillDef } from "./skills";
 import { GEAR, weaponOf } from "./gear";
 
@@ -50,6 +51,8 @@ export function startCombat(s: GameState, context: CombatState["context"], enemi
   log(s, `${josa(describeGroup(enemies), "이")} 나타났다!`, "hurt");
   s.log[s.log.length - 1].mons = enemies.map((e) => e.defId);
   for (const e of enemies) if (!s.codex.seen.includes(e.defId)) s.codex.seen.push(e.defId);
+  // 공포: 보스·이단심문관과 마주치면
+  if (enemies.some((e) => e.defId === "boss" || e.defId === "inquisitor")) afflict(s, "fear", MIND.fearBoss, "그것을 본 순간, 등줄기가 서늘하게 식었다.");
   for (const e of enemies) {
     const def = MONSTERS[e.defId];
     if (def.rare) log(s, `【희귀 개체】 ${def.name} — ${def.note} 놓치기 전에 잡아야 한다! (마석 ${def.mana}G 어치)`, "crit");
@@ -202,15 +205,30 @@ function playerPhase(s: GameState, c: CombatState, opener: Strike | null): "win"
     log(s, "머리가 울려 눈앞이 하얘졌다 — 몸이 움직이지 않는다.", "miss");
     return null;
   }
+  // 정신 상태이상 조합
+  c.frenzy = false;
+  const combo = comboNow(s);
+  if (combo?.name === "무너짐") return null;
+  if (combo?.name === "패닉") return tryFlee(s, c) ? "fled" : null;
+  if (combo?.name === "발작") {
+    c.frenzy = true;
+    for (let k = 0; k < 2 && alive(c).length; k++) {
+      const t = alive(c)[rngOf(s).int(0, alive(c).length - 1)];
+      attack(s, c, t, { ...PLAIN, dmg: 2 });
+    }
+    return alive(c).length === 0 ? "win" : null;
+  }
   const actions = actionsPerRound(s);
   for (let a = 0; a < actions; a++) {
     selfTriggers(s, c);
     const pct = hpPct(s);
     const { potionAt, fleeAt } = s.tactics;
-    if (potionAt > 0 && pct <= potionAt && s.inventory.potion > 0) {
+    if (potionAt > 0 && pct <= potionAt && s.inventory.potion > 0 && !missPotion(s)) {
       drink(s, "전투 중에");
       continue;
     }
+    if (symptom(s, "fear", MIND.symptom, "몸이 얼어붙어 움직이지 않는다!", "손이 떨려 무기를 제대로 쥐지 못했다.")) continue;
+    if (symptom(s, "confusion", MIND.symptom, "엉뚱한 곳을 내리쳤다!", "어디를 노렸는지 순간 헷갈렸다.")) continue;
     if (fleeAt > 0 && pct <= fleeAt) {
       return tryFlee(s, c) ? "fled" : null;
     }
@@ -257,7 +275,7 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
   }
   const crit = !noCrit(s) && (roll === 20 || r.float() * 100 < 5 + smod(s, "luk") + passive(s, "crit"));
   selfInjury(s, def.id, w.stat);
-  const base = r.dice(w.dice[0] * (crit ? 2 : 1), w.dice[1]) + statMod + passive(s, "dmg") + st.dmg + faithDmg(s);
+  const base = r.dice(w.dice[0] * (crit ? 2 : 1), w.dice[1]) + statMod + passive(s, "dmg") + st.dmg + faithDmg(s) + rageDmg(s);
   const dmg = Math.max(1, Math.round(base * st.mult));
   target.hp -= dmg;
   if (crit) note(s, "luk");
@@ -340,18 +358,26 @@ function enemyPhase(s: GameState, c: CombatState): void {
       continue;
     }
     const roll = r.die(20);
-    if (roll === 1 || (roll !== 20 && roll + def.atk - (c.cow ? 2 : 0) < ac)) {
+    if (!c.frenzy && (roll === 1 || (roll !== 20 && roll + def.atk - (c.cow ? 2 : 0) < ac))) {
       note(s, "dex");
       log(s, `${def.name}의 공격을 피했다.`, "miss");
+      c.streak = 0;
       continue;
     }
-    const crit = roll === 20;
+    const crit = roll === 20 || !!c.frenzy; // 발작 중에는 방어를 잊는다
+    c.streak = (c.streak ?? 0) + 1;
     const dmg = Math.max(1, r.dice(def.dice[0] * (crit ? 2 : 1), def.dice[1]));
     s.hero.hp -= dmg;
     log(s, `${josa(def.name, "이")} ${def.attackText}! ${dmg} 피해${crit ? " (치명타!)" : ""}`, "hurt");
     if (s.hero.hp > 0) {
       hitInjury(s, def.id, dmg, crit);
       if (isDead(s)) return;
+      // 분노(연속으로 맞음), 공포(HP 20% 이하)
+      if (c.streak >= MIND.rageStreakHits) afflict(s, "rage", MIND.rageStreak, "이를 악물었다. 머리끝까지 피가 몰린다.");
+      if (!c.fearRolled && s.hero.hp <= maxHp(s) * 0.2) {
+        c.fearRolled = true;
+        afflict(s, "fear", MIND.fearLowHp, "죽음이 바로 옆에 와 있다는 걸 알았다.");
+      }
     }
     if (s.hero.hp <= 0) {
       const grit = activeSkills(s).find((sk) => sk.trigger!.on === "lethal" && !s.tripUsed.includes(sk.id));

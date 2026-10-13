@@ -5,6 +5,7 @@ import { Rng } from "./rng";
 import { passive } from "./skills";
 import { fragStat } from "./fragments";
 import { power } from "./faith";
+import { rageAc, rollMindPenalty } from "./mind";
 import { injuryAc, injuryMaxHp, injuryRollPenalty, offhandAcPenalty } from "./injury";
 import type { DeathCause, GameState, LogKind, StatKey, Stats } from "./types";
 
@@ -38,7 +39,7 @@ export function maxHp(s: GameState): number {
 }
 
 export function heroAc(s: GameState): number {
-  return 10 + smod(s, "dex") + passive(s, "ac") + injuryAc(s) + offhandAcPenalty(s);
+  return 10 + smod(s, "dex") + passive(s, "ac") + injuryAc(s) + offhandAcPenalty(s) + rageAc(s);
 }
 
 export function actionsPerRound(s: GameState): number {
@@ -50,6 +51,7 @@ export function rollPenalty(s: GameState): number {
   let p = 0;
   if (s.hero.satiety <= 0 && !power(s, "hunger", 2)) p -= 2; // 기아/풍요의 신 ★2
   p += injuryRollPenalty(s); // 머리 부상·질병
+  p += rollMindPenalty(s); // 절망
   if (s.hero.fatigue >= 100) p -= 2;
   return p;
 }

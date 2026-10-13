@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { maxHp, heroAc, smod, stat } from "../game/core";
 import { FRAGMENTS, TIER_LABEL, fragSlots, fragStat, fragStatText } from "../game/fragments";
 import { PIETY_TIERS, godOf, tier } from "../game/faith";
+import { MIND_EFFECT, MIND_KEYS, MIND_NAME, known, mindSummary } from "../game/mind";
 import { DISEASE_NAME, INJ, LEVEL_NAME, PARTS, PART_NAME, injurySummary, partEffect } from "../game/injury";
 import { STAT_KEYS, STAT_LABEL } from "../game/data";
 import { GEAR } from "../game/gear";
@@ -368,6 +369,22 @@ export function InjuryCard({ s }: { s: GameState }) {
           <span className="effect">{s.disease === 2 ? "방을 옮길 때마다 HP −2, 판정 −2" : s.disease === 1 ? "방을 옮길 때마다 HP −1" : ""}</span>
         </li>
       </ul>
+      <p className="eyebrow">정신</p>
+      {MIND_KEYS.some((k) => known(s, k)) ? (
+        <ul className="skills">
+          {MIND_KEYS.filter((k) => known(s, k)).map((k) => (
+            <li key={k}>
+              <span className="skill-kind mind">{MIND_NAME[k]}</span>
+              <span className="small dim">{MIND_EFFECT[k]}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="dim small">알아챈 이상은 없다.</p>
+      )}
+      <p className="dim small">
+        정신 상태이상은 걸려도 바로 알 수 없다 — 방을 옮길 때마다 감각·지능으로 눈치채야 보인다. 둘이 겹치면 발작·패닉·무너짐이 터진다. 여관에서 쉬거나 성소에서 기도하면 가라앉고, 미궁을 나오면 저절로 가라앉기도 한다.
+      </p>
       <p className="dim small">
         경상은 미궁에서 나오면 체력 판정으로 저절로 낫는다. 중상·질병은 붕대·탕약·여관이 필요하다. 손·발 결손은 신전 재생 의식({INJ.regenCost}G)이나 대장간 의수·의족({INJ.prostheticCost}G). 머리·몸통 결손은 즉사.
       </p>
@@ -378,8 +395,14 @@ export function InjuryCard({ s }: { s: GameState }) {
 /** 헤더용 부상 요약 */
 export function InjuryTags({ s }: { s: GameState }) {
   const list = injurySummary(s);
-  if (!list.length) return null;
-  return <div className="injury-tags">{list.map((t) => <span key={t} className="injury-tag">{t}</span>)}</div>;
+  const minds = mindSummary(s);
+  if (!list.length && !minds.length) return null;
+  return (
+    <div className="injury-tags">
+      {list.map((t) => <span key={t} className="injury-tag">{t}</span>)}
+      {minds.map((t) => <span key={t} className="injury-tag mind">{t}</span>)}
+    </div>
+  );
 }
 
 /** 편린 등급 아이콘. 등급을 아직 모르는 편린은 hidden으로 — 모양 크기로도 등급이 새지 않게 늘 같은 실루엣을 쓴다. */
