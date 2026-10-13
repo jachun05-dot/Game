@@ -224,6 +224,9 @@ button {
   cursor: pointer;
 }
 .log.tall { height: 230px; }
+/* 몬스터 등장 줄: 로그 안에 몬스터 그림을 바닥선 위에 1배로 세운다 */
+.encounter { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 6px; padding: 6px 4px 4px; margin-bottom: 4px; border-bottom: 1px solid var(--border); animation: fadein 0.4s; }
+.encounter img { image-rendering: pixelated; display: block; }
 .log-line { margin: 2px 0; animation: fadein 0.25s; }
 .log-line.story { color: var(--bright); }
 .log-line.system { color: var(--accent); }

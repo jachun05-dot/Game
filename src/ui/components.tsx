@@ -9,7 +9,7 @@ import { SKILLS } from "../game/skills";
 import type { AutoGoal, GameState } from "../game/types";
 import type { Ctl, Speed } from "./App";
 import { CharacterSheet } from "./CharacterSheet";
-import { CLASS_ART, FRAG_ICON } from "./art";
+import { CLASS_ART, FRAG_ICON, MONSTER_ART } from "./art";
 
 export function Shell({ children, wide }: { children: ReactNode; wide?: boolean }) {
   return <main className={`shell${wide ? " wide" : ""}`}>{children}</main>;
@@ -120,11 +120,25 @@ export function LogView({ ctl, max = 80, tall, fill }: { ctl: Ctl; max?: number;
     <div ref={ref} className={`log${tall ? " tall" : ""}${fill ? " fill" : ""}`} onClick={ctl.revealAll} role="log" aria-live="polite">
       {visible.map((l) => (
         <p key={l.n} className={`log-line ${l.kind}`}>
+          {l.mons && <EncounterFigures ids={l.mons} />}
           {l.text}
         </p>
       ))}
       {ctl.busy && <p className="log-line dim blink">▼</p>}
     </div>
+  );
+}
+
+/** 몬스터 등장 줄 위에 나타난 몬스터를 원래 도트 크기(1배)로 나란히 세운다. 그림이 없는 몬스터는 글로만 */
+function EncounterFigures({ ids }: { ids: string[] }) {
+  const arts = ids.map((id) => MONSTER_ART[id]).filter(Boolean);
+  if (!arts.length) return null;
+  return (
+    <span className="encounter">
+      {arts.map((a, i) => (
+        <img key={i} src={a.src} width={a.w} height={a.h} alt="" />
+      ))}
+    </span>
   );
 }
 
