@@ -5,7 +5,7 @@ import { SKILLS } from "../game/skills";
 import { taxDue } from "../game/core";
 import type { StatKey } from "../game/types";
 import type { Ctl } from "./App";
-import { Card, GearList, HeroHeader, LogView, Shell, SkillList, SpeedBar, StatGrid, TacticsBar, TopBar } from "./components";
+import { Card, GameScreen, GearList, HeroHeader, LogView, SkillList, StatGrid, TacticsBar } from "./components";
 
 const ITEM_INFO = {
   food: { name: "말린 고기", desc: "포만감 +40" },
@@ -19,11 +19,18 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
   const [tab, setTab] = useState<"act" | "shop" | "me">("act");
 
   return (
-    <Shell>
-      <TopBar ctl={ctl} title={`${s.month}월 ${s.week}주차 · 영지`} />
-      <HeroHeader s={s} />
-      <WeekTrack month={s.month} week={s.week} />
-
+    <GameScreen
+      ctl={ctl}
+      title={`${s.month}월 ${s.week}주차 · 영지`}
+      header={
+        <>
+          <HeroHeader s={s} />
+          <WeekTrack month={s.month} week={s.week} />
+        </>
+      }
+      dock={<LogView ctl={ctl} max={20} fill />}
+      dockClass="dock-log"
+    >
       <div className="tabs">
         <button className={tab === "act" ? "on" : ""} onClick={() => setTab("act")}>
           이번 주 할 일
@@ -104,9 +111,7 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
         </div>
       )}
 
-      <LogView ctl={ctl} max={8} />
-      <SpeedBar ctl={ctl} />
-    </Shell>
+    </GameScreen>
   );
 }
 

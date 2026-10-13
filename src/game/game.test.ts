@@ -89,7 +89,7 @@ describe("자동 전투와 기술", () => {
     s.gold = 9999;
     for (const want of ["firstStrike", "sweep", "finisher"]) {
       apply(s, { t: "train", training: "sword", free: ["str", "con"] });
-      expect(s.skills.at(-1)).toBe(want);
+      expect(s.skills[s.skills.length - 1]).toBe(want);
       expect(s.weekResult?.learned).toBe(want);
       apply(s, { t: "closeWeek" });
       if (s.phase !== "town") { s.phase = "town"; s.dungeon = null; s.week = 1; }

@@ -12,7 +12,7 @@ import { DungeonScreen } from "./DungeonScreen";
 import { SettlementScreen } from "./SettlementScreen";
 import { DeadScreen } from "./DeadScreen";
 import { GraveyardScreen } from "./GraveyardScreen";
-import { HeroHeader, LogView, Shell, SpeedBar } from "./components";
+import { GameScreen, HeroHeader, LogView } from "./components";
 
 export type Speed = 1 | 2 | 4 | 8 | 0; // 0 = 즉시
 
@@ -155,13 +155,18 @@ export function App() {
 
 function CatchUpScreen({ ctl }: { ctl: Ctl }) {
   return (
-    <Shell>
-      <HeroHeader s={ctl.s} />
-      <LogView ctl={ctl} tall />
-      <button className="btn ghost" onClick={ctl.revealAll}>
-        넘기기
-      </button>
-      <SpeedBar ctl={ctl} />
-    </Shell>
+    <GameScreen
+      ctl={ctl}
+      title="…"
+      header={<HeroHeader s={ctl.s} />}
+      dock={
+        <button className="btn wide" onClick={ctl.revealAll}>
+          넘기기
+        </button>
+      }
+      dockClass="dock-cta"
+    >
+      <LogView ctl={ctl} fill />
+    </GameScreen>
   );
 }

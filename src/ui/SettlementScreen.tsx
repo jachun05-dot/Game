@@ -1,13 +1,21 @@
 import type { Ctl } from "./App";
-import { Card, HeroHeader, Shell } from "./components";
+import { Card, GameScreen, HeroHeader } from "./components";
 
 export function SettlementScreen({ ctl }: { ctl: Ctl }) {
   const { s, dispatch } = ctl;
   const st = s.settlement!;
   return (
-    <Shell>
-      <p className="eyebrow">{st.month}월 정산</p>
-      <HeroHeader s={s} />
+    <GameScreen
+      ctl={ctl}
+      title={`${st.month}월 정산`}
+      header={<HeroHeader s={s} />}
+      dock={
+        <button className={`btn wide ${st.paid ? "primary" : "danger"}`} onClick={() => dispatch({ t: "closeSettlement" })}>
+          {st.paid ? `${st.month + 1}월로 →` : "관공서로 끌려간다"}
+        </button>
+      }
+      dockClass="dock-cta"
+    >
       <Card title={st.cleared ? "1섹터 클리어!" : "귀환"} className="result">
         {st.lines.map((l, i) => (
           <p key={i}>{l}</p>
@@ -27,9 +35,6 @@ export function SettlementScreen({ ctl }: { ctl: Ctl }) {
           </>
         )}
       </Card>
-      <button className={`btn ${st.paid ? "primary" : "danger"}`} onClick={() => dispatch({ t: "closeSettlement" })}>
-        {st.paid ? `${st.month + 1}월로 →` : "관공서로 끌려간다"}
-      </button>
-    </Shell>
+    </GameScreen>
   );
 }

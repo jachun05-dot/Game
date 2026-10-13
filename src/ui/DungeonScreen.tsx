@@ -4,7 +4,7 @@ import type { PendingChoice } from "../game/dungeon";
 import type { DungeonState } from "../game/types";
 import { BAL } from "../game/data";
 import type { Ctl } from "./App";
-import { Bar, Card, HeroHeader, LogView, Shell, SpeedBar, TacticsBar, TopBar } from "./components";
+import { Bar, GameScreen, HeroHeader, LogView } from "./components";
 
 function fmtTime(turns: number): string {
   const h = Math.max(0, turns) / 2;
@@ -17,31 +17,33 @@ export function DungeonScreen({ ctl }: { ctl: Ctl }) {
   const { s } = ctl;
   const dg = s.dungeon!;
   return (
-    <Shell>
-      <TopBar ctl={ctl} title={`${dg.sector}섹터 ${dg.floor}층 · 미궁`} />
-      <HeroHeader s={s} extra={<span>마석 {dg.mana}G</span>} />
-      <div className="survival">
-        <div>
-          <span className="dim small">남은 시간</span>
-          <Bar value={dg.turnsLeft} max={BAL.weekTurns} tone="tired" />
-          <span className="small num">{fmtTime(dg.turnsLeft)}</span>
-        </div>
-        <div>
-          <span className="dim small">포만감</span>
-          <Bar value={s.hero.satiety} max={100} tone="food" />
-          <span className="small num">{Math.round(s.hero.satiety)}</span>
-        </div>
-        <div>
-          <span className="dim small">피로도</span>
-          <Bar value={s.hero.fatigue} max={100} tone="tired" />
-          <span className="small num">{Math.round(s.hero.fatigue)}</span>
-        </div>
-      </div>
+    <GameScreen
+      ctl={ctl}
+      title={`${dg.sector}섹터 ${dg.floor}층 · 미궁`}
+      header={
+        <>
+          <HeroHeader s={s} extra={<span>마석 {dg.mana}G</span>} />
+          <div className="survival">
+            <div>
+              <span className="dim small">시간 <b className="num">{fmtTime(dg.turnsLeft)}</b></span>
+              <Bar value={dg.turnsLeft} max={BAL.weekTurns} tone="tired" />
+            </div>
+            <div>
+              <span className="dim small">포만감 <b className="num">{Math.round(s.hero.satiety)}</b></span>
+              <Bar value={s.hero.satiety} max={100} tone="food" />
+            </div>
+            <div>
+              <span className="dim small">피로도 <b className="num">{Math.round(s.hero.fatigue)}</b></span>
+              <Bar value={s.hero.fatigue} max={100} tone="tired" />
+            </div>
+          </div>
+        </>
+      }
+      dock={<RoomDock ctl={ctl} />}
+    >
       <FloorMap dg={dg} />
-      <RoomPanel ctl={ctl} />
-      <LogView ctl={ctl} tall />
-      <SpeedBar ctl={ctl} />
-    </Shell>
+      <LogView ctl={ctl} fill />
+    </GameScreen>
   );
 }
 
@@ -73,31 +75,47 @@ const PENDING_OPTIONS: Record<string, { choice: PendingChoice; label: string; pr
   ],
 };
 
-function RoomPanel({ ctl }: { ctl: Ctl }) {
+function RoomDock({ ctl }: { ctl: Ctl }) {
   const { s, dispatch, busy } = ctl;
   const dg = s.dungeon!;
   const room = currentRoom(s);
-  if (busy) return <Card title={ROOM_LABEL[room.type]}>…</Card>;
+  const go = (a: Parameters<typeof dispatch>[0]) => !busy && dispatch(a);
 
   if (dg.pending) {
     return (
-      <Card title={ROOM_LABEL[room.type]} className="decision">
+      <>
+        <p className="dock-title">{ROOM_LABEL[room.type]} — 어떻게 할까?</p>
         <div className="choices">
           {PENDING_OPTIONS[dg.pending.kind]
             .filter((o) => o.choice !== "back" || dg.prev !== null)
             .map((o) => (
-              <button key={o.choice} className={`btn${o.primary ? " primary" : ""}`} onClick={() => dispatch({ t: "pending", choice: o.choice })}>
+              <button key={o.choice} className={`btn${o.primary ? " primary" : ""}`} disabled={busy} onClick={() => go({ t: "pending", choice: o.choice })}>
                 {o.label}
               </button>
             ))}
         </div>
-      </Card>
+      </>
     );
   }
 
   const hpLow = s.hero.hp < maxHp(s) * 0.5;
   return (
-    <Card title={`${ROOM_LABEL[room.type]} — 어디로 갈까?`}>
+    <>
+      <div className="util">
+        <button className="btn small" disabled={busy} onClick={() => go({ t: "camp" })}>
+          야영 8h
+        </button>
+        <button className="btn small" disabled={busy || s.inventory.food <= 0} onClick={() => go({ t: "eat" })}>
+          먹기 {s.inventory.food}
+        </button>
+        <button className={`btn small${hpLow ? " primary" : ""}`} disabled={busy || s.inventory.potion <= 0} onClick={() => go({ t: "potion" })}>
+          물약 {s.inventory.potion}
+        </button>
+        <button className="btn small" disabled={busy || s.inventory.scroll <= 0} onClick={() => go({ t: "scroll" })}>
+          귀환 {s.inventory.scroll}
+        </button>
+      </div>
+      <p className="dock-title">{ROOM_LABEL[room.type]} — 어디로 갈까? <span className="dim small">(한 방 2시간)</span></p>
       <div className="choices">
         {room.edges.map((id) => {
           const nb = dg.rooms[id];
@@ -105,29 +123,13 @@ function RoomPanel({ ctl }: { ctl: Ctl }) {
           const note = id === dg.prev ? "왔던 길" : nb.visited ? "가 본 곳" : "";
           const danger = (nb.known || nb.visited) && !nb.resolved && ["combat", "trap", "boss"].includes(nb.type);
           return (
-            <button key={id} className={`btn path${danger ? " danger" : ""}`} onClick={() => dispatch({ t: "move", room: id })}>
+            <button key={id} className={`btn path${danger ? " risky" : ""}`} disabled={busy} onClick={() => go({ t: "move", room: id })}>
               {label} {note && <span className="dim small">· {note}</span>}
-              <span className="dim small"> · 2시간</span>
             </button>
           );
         })}
       </div>
-      <div className="util">
-        <button className="btn small" onClick={() => dispatch({ t: "camp" })}>
-          야영 (8시간)
-        </button>
-        <button className="btn small" disabled={s.inventory.food <= 0} onClick={() => dispatch({ t: "eat" })}>
-          먹기 ({s.inventory.food})
-        </button>
-        <button className={`btn small${hpLow ? " primary" : ""}`} disabled={s.inventory.potion <= 0} onClick={() => dispatch({ t: "potion" })}>
-          물약 ({s.inventory.potion})
-        </button>
-        <button className="btn small" disabled={s.inventory.scroll <= 0} onClick={() => dispatch({ t: "scroll" })}>
-          귀환 ({s.inventory.scroll})
-        </button>
-      </div>
-      <TacticsBar ctl={ctl} />
-    </Card>
+    </>
   );
 }
 

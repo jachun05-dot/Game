@@ -97,7 +97,7 @@ button {
 .btn.danger { background: var(--danger); color: #1a0806; border-color: var(--danger); font-weight: 600; }
 .btn.ghost { background: transparent; text-align: center; }
 .btn.small { padding: 7px 11px; font-size: 13px; }
-.btn.path.danger { border-left: 3px solid var(--danger); }
+.btn.path.risky { border-left: 3px solid var(--danger); }
 .link { background: none; border: none; color: var(--dim); cursor: pointer; padding: 4px 8px 4px 0; font-size: 16px; }
 
 .chip {
@@ -279,3 +279,82 @@ button {
 .option-skill b { color: var(--violet); }
 .learned { color: var(--bright); border: 1px solid var(--violet); padding: 6px 8px; }
 .learned b { color: var(--violet); }
+
+/* ---------- 고정 화면 틀(2026-10-13): 헤더·도크 고정, 가운데만 스크롤 ---------- */
+html, body, #root { height: 100%; }
+.screen {
+  height: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 16px 0;
+}
+.screen-head { display: flex; flex-direction: column; gap: 6px; flex: none; }
+.screen-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 0;
+}
+.dock {
+  flex: none;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+  padding: 10px 0 calc(12px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  /* 선택지 수가 바뀌어도 위쪽 영역이 흔들리지 않도록 높이를 고정 */
+  height: 248px;
+  overflow-y: auto;
+}
+.dock.dock-cta { height: auto; }
+.dock.dock-log { height: 132px; padding-top: 6px; }
+.dock.dock-log .log { border: none; background: transparent; padding: 0; }
+.dock.waiting .btn:disabled { opacity: 0.35; }
+.dock-title { margin: 0; color: var(--bright); font-size: 13.5px; }
+.dock .choices { gap: 5px; }
+.dock .btn { padding: 9px 12px; }
+.btn.wide { width: 100%; text-align: center; padding: 13px; }
+.log.fill { flex: 1; min-height: 120px; height: auto; }
+
+.topbar { position: relative; flex: none; padding-bottom: 6px; }
+.gear-btn { background: var(--panel-2); border: 1px solid var(--border); padding: 4px 9px; cursor: pointer; color: var(--text); }
+.gear-btn.on { border-color: var(--accent); color: var(--bright); }
+.settings-sheet {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 20;
+  width: min(320px, 100%);
+  background: var(--panel);
+  border: 1px solid var(--accent);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+}
+.settings-sheet .tactics { margin-top: 0; }
+
+/* 얼굴 초상 */
+.hero-head { padding: 8px 10px; }
+.portrait {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  image-rendering: pixelated;
+  background: #2a2117;
+  border: 1px solid var(--border);
+}
+.survival { gap: 10px; }
+.survival b { color: var(--bright); font-weight: 600; }
+.floormap { flex: none; }
+.survival span { white-space: nowrap; }
+.dock .util { margin-top: 0; }
+.dock .util .btn { flex: 1; text-align: center; padding: 7px 4px; }
+.dock { height: 262px; }

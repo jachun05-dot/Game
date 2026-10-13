@@ -2,7 +2,7 @@ import { useState } from "react";
 import { STAT_KEYS, STAT_LABEL } from "../game/data";
 import { SKILLS } from "../game/skills";
 import type { Ctl } from "./App";
-import { Card, HeroHeader, Shell } from "./components";
+import { Card, GameScreen, HeroHeader } from "./components";
 
 export function WeekResultScreen({ ctl }: { ctl: Ctl }) {
   const { s, dispatch } = ctl;
@@ -12,11 +12,17 @@ export function WeekResultScreen({ ctl }: { ctl: Ctl }) {
   const toDungeon = r.week >= 3;
 
   return (
-    <Shell>
-      <p className="eyebrow">
-        {r.month}월 {r.week}주차 결과
-      </p>
-      <HeroHeader s={s} />
+    <GameScreen
+      ctl={ctl}
+      title={`${r.month}월 ${r.week}주차 결과`}
+      header={<HeroHeader s={s} />}
+      dock={
+        <button className="btn primary wide" onClick={() => dispatch({ t: "closeWeek" })}>
+          {toDungeon ? "미궁으로 →" : "다음 주 →"}
+        </button>
+      }
+      dockClass="dock-cta"
+    >
       <Card title={r.title} className="result">
         {r.lines.map((l, i) => (
           <p key={i}>{l}</p>
@@ -59,9 +65,6 @@ export function WeekResultScreen({ ctl }: { ctl: Ctl }) {
           </p>
         ))}
       </Card>
-      <button className="btn primary" onClick={() => dispatch({ t: "closeWeek" })}>
-        {toDungeon ? "미궁으로 →" : "다음 주 →"}
-      </button>
-    </Shell>
+    </GameScreen>
   );
 }

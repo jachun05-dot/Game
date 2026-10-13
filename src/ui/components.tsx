@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { maxHp, heroAc, mod } from "../game/core";
 import { GEAR, STAT_KEYS, STAT_LABEL } from "../game/data";
 import { SKILLS } from "../game/skills";
@@ -31,11 +31,26 @@ export function fmtMod(v: number): string {
   return (v >= 0 ? "+" : "") + v;
 }
 
+/**
+ * 게임 화면 공통 틀: 상단 바 + 고정 헤더 + 가운데 스크롤 영역 + 하단 고정 도크.
+ * 선택지는 도크에 두고, 로그 연출 중에도 숨기지 않고 흐리게만 해서 위치가 흔들리지 않게 한다.
+ */
+export function GameScreen({ ctl, title, header, children, dock, dockClass }: { ctl: Ctl; title: ReactNode; header?: ReactNode; children: ReactNode; dock?: ReactNode; dockClass?: string }) {
+  return (
+    <div className="screen">
+      <TopBar ctl={ctl} title={title} />
+      {header && <div className="screen-head">{header}</div>}
+      <div className="screen-body">{children}</div>
+      {dock && <div className={`dock ${dockClass ?? ""}${ctl.busy ? " waiting" : ""}`}>{dock}</div>}
+    </div>
+  );
+}
+
 export function HeroHeader({ s, extra }: { s: GameState; extra?: ReactNode }) {
   const hp = maxHp(s);
   return (
     <header className="hero-head">
-      <img className="portrait" src="./hero.png" alt="" />
+      <img className="portrait" src="./hero-face.png" alt="" />
       <div className="hero-info">
         <div className="hero-name">
           {s.hero.name} <span className="dim">Lv.{s.hero.level}</span>
@@ -79,7 +94,7 @@ export function GearList({ s }: { s: GameState }) {
 }
 
 /** 로그 패널: shown 개수까지만 보여주고, 누르면 남은 줄을 한 번에 보여준다 */
-export function LogView({ ctl, max = 60, tall }: { ctl: Ctl; max?: number; tall?: boolean }) {
+export function LogView({ ctl, max = 80, tall, fill }: { ctl: Ctl; max?: number; tall?: boolean; fill?: boolean }) {
   const { s, shown } = ctl;
   const ref = useRef<HTMLDivElement>(null);
   const start = s.logCount - s.log.length; // log[0]의 전역 번호
@@ -91,7 +106,7 @@ export function LogView({ ctl, max = 60, tall }: { ctl: Ctl; max?: number; tall?
     ref.current?.scrollTo({ top: ref.current.scrollHeight });
   }, [shown]);
   return (
-    <div ref={ref} className={`log${tall ? " tall" : ""}`} onClick={ctl.revealAll} role="log" aria-live="polite">
+    <div ref={ref} className={`log${tall ? " tall" : ""}${fill ? " fill" : ""}`} onClick={ctl.revealAll} role="log" aria-live="polite">
       {visible.map((l) => (
         <p key={l.n} className={`log-line ${l.kind}`}>
           {l.text}
@@ -120,13 +135,28 @@ export function SpeedBar({ ctl }: { ctl: Ctl }) {
 }
 
 export function TopBar({ ctl, title }: { ctl: Ctl; title: ReactNode }) {
+  const [open, setOpen] = useState(false);
   return (
     <div className="topbar">
-      <button className="link" onClick={ctl.goTitle}>
+      <button className="link" onClick={ctl.goTitle} aria-label="타이틀로">
         ≡
       </button>
       <span className="topbar-title">{title}</span>
-      <span className="dim small">#{(ctl.s.seed >>> 0).toString(36)}</span>
+      <button className={`gear-btn${open ? " on" : ""}`} onClick={() => setOpen(!open)} aria-expanded={open} aria-label="설정">
+        ⚙ <span className="small">{ctl.speed === 0 ? "즉시" : `${ctl.speed}×`}{ctl.auto ? " · 자동" : ""}</span>
+      </button>
+      {open && (
+        <div className="settings-sheet" role="dialog" aria-label="설정">
+          <p className="eyebrow">진행 속도</p>
+          <SpeedBar ctl={ctl} />
+          <p className="eyebrow">전투 방침</p>
+          <TacticsBar ctl={ctl} />
+          <p className="dim small">시드 #{(ctl.s.seed >>> 0).toString(36)}</p>
+          <button className="btn small ghost" onClick={() => setOpen(false)}>
+            닫기
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -141,7 +171,6 @@ export function TacticsBar({ ctl }: { ctl: Ctl }) {
   const next = (steps: number[], v: number) => steps[(steps.indexOf(v) + 1) % steps.length];
   return (
     <div className="tactics">
-      <span className="dim small">전투 방침</span>
       <button className="chip" onClick={() => dispatch({ t: "tactics", tactics: { potionAt: next(POTION_STEPS, potionAt) } })}>
         물약: {potionAt ? `HP ${potionAt}% 이하` : "안 마심"}
       </button>
