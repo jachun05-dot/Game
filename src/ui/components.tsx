@@ -427,11 +427,11 @@ export function SceneBanner({ id, className, children }: { id: string; className
   );
 }
 
-/** 장비 아이콘 칸(32×32 안 가운데, 큰 아이콘은 scale로). 아이콘이 없거나 빈 칸이면 빈 자리만 지킨다 */
+/** 장비 아이콘 칸(최소 32×32, 가운데 정렬. 목걸이처럼 큰 아이콘은 칸이 늘어난다). 아이콘이 없거나 빈 칸이면 빈 자리만 지킨다 */
 export function GearIcon({ id, scale = 1 }: { id?: string | null; scale?: number }) {
   const a = id ? GEAR_ICON[id] : null;
   return (
-    <span className="gear-icon" style={scale !== 1 ? { width: 32 * scale, height: 32 * scale } : undefined}>
+    <span className="gear-icon" style={scale !== 1 ? { minWidth: 32 * scale, minHeight: 32 * scale } : undefined}>
       {a && <img src={a.src} width={a.w * scale} height={a.h * scale} alt="" />}
     </span>
   );

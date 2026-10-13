@@ -96,4 +96,9 @@ export const GEAR_ICON: Record<string, SpriteArt> = {
   pouchbelt: { src: "./gear-pouchbelt.png", w: 29, h: 19 },
   boots: { src: "./gear-boots.png", w: 26, h: 24 },
   swiftboots: { src: "./gear-swiftboots.png", w: 26, h: 24 },
+  boneamulet: { src: "./gear-boneamulet.png", w: 35, h: 52 },
+  prayer: { src: "./gear-prayer.png", w: 28, h: 56 },
+  rustring: { src: "./gear-rustring.png", w: 24, h: 24 },
+  luckring: { src: "./gear-luckring.png", w: 24, h: 26 },
+  vigorring: { src: "./gear-vigorring.png", w: 24, h: 26 },
 };

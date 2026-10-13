@@ -420,3 +420,21 @@ Solid flat magenta background (#FF00FF). No text, no numbers, no frame or border
 ```
 
 결과(2026-10-13): 1차 채택(100격자). 워터마크가 날랜 장화 위에 찍혀 `--keep-watermark` 후, 장화 색(파랑이 낮은 올리브)과 다른 회백색 픽셀 6개를 장화 중간색으로 메움 → `assets/icons/gear_sheet2.png` → `split_sheet.py`로 9개
+
+## 025 — 장신구 5종 (기준 이미지 첨부)
+
+```
+Match the exact art style, outline, palette and pixel scale of the attached reference image.
+
+A sheet of five small pixel art trinket icons for a grim dark-fantasy RPG, classic 16-bit style, in one neat horizontal row, evenly spaced with clear magenta gaps, all drawn at the same scale:
+1. a crude amulet of small carved bones and teeth on a dark cord;
+2. a string of plain wooden prayer beads with a tiny dull gold sun charm (#cf9a44);
+3. a plain rusty iron ring;
+4. a thin dull gold ring set with a tiny four-leaf pattern;
+5. a dark silver ring set with a small dull red stone (#c0564d).
+Muted palette: dark browns, bone, iron grey, tarnished silver; accents only as noted.
+Crisp hard pixel edges, 1-pixel dark outline, no anti-aliasing, no blur, no gradients, no noisy dithering.
+Solid flat magenta background (#FF00FF). No text, no numbers, no frame or border. Square 1:1 image.
+```
+
+결과(2026-10-13): 1차 채택. 이 시트만 **200격자**라 목걸이가 다른 아이콘의 두 배(35×52, 28×56)로 나왔다. 얇은 끈이 마젠타와 섞여 있어 지우면 끈이 사라지므로, 마젠타 낀 어두운 픽셀은 초록값 기준 어두운 갈색으로 **색만 되돌리고**(172개) 배경에 가까운 밝은 것만 투명(109개). 절반 축소(어두운 선 우선)도 해 봤지만 염주 알·태양 부적이 뭉개져 원래 크기를 쓴다 → 장비 아이콘 칸은 최소 32×32에서 늘어나고, 장비 목록 아이콘 열은 36px
