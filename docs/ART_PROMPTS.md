@@ -26,3 +26,39 @@ Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, 
 결과: A안 확정 → `assets/reference/style_reference.png`
 
 결과물 파생: 얼굴 초상 `assets/reference/hero_face.png`(= `public/hero-face.png`, 기준 이미지에서 머리~어깨 30×30 잘라냄) — 게임 화면 헤더에 사용
+
+## 002 — 전사 전신 (기준 이미지 첨부)
+
+지급 장비: 장검(`longsword`), 가죽 갑옷(`leather`).
+
+```
+Match the exact art style, outline, palette and pixel scale of the attached reference image.
+
+Pixel art game sprite of a single character, front-facing 3/4 top-down view, classic 16-bit RPG style.
+A 16-year-old boy from the same grim dark-fantasy island village who has just become a warrior: sturdier and broader-shouldered than a village boy but still young, short-cropped dark hair, a stern, stubborn expression with a small scar on the chin. He wears a plain, scuffed brown leather cuirass reinforced with stitched cowhide patches over a faded linen shirt, leather bracers, patched trousers and worn leather boots. He holds a plain iron longsword pointed down in his right hand. No helmet, no shield, no cape, no ornaments.
+Muted earthy palette of about 16 colors: dark browns, faded ochre, a dull gold accent (#cf9a44) only on the sword's crossguard, desaturated skin tones.
+Crisp hard pixel edges, 1-pixel dark outline, no anti-aliasing, no blur, no gradients, no noisy dithering.
+Same pixel size and character height as the reference: realistic proportions, not chibi.
+Full body, centered, idle standing pose, feet visible, small margin around the character.
+Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, no frame or border. Square 1:1 image.
+```
+
+결과(2026-10-13): 1차 생성본 채택 → `assets/reference/warrior.png`(35×86) = `public/warrior.png`, 얼굴 `warrior_face.png`(30×30, 전신 (4,0)에서 자름) = `public/warrior-face.png`. 직업별 그림 연결은 `src/ui/art.ts`의 `CLASS_ART`
+
+## 003 — 마법사 전신 (기준 이미지 첨부)
+
+지급 장비: 참나무 지팡이(`staff`), 수습생 로브(`robe`, "주머니가 많다"). 지팡이 돌은 UI 기술 색 `--violet`(#9a7bc0)과 맞춘다.
+
+```
+Match the exact art style, outline, palette and pixel scale of the attached reference image.
+
+Pixel art game sprite of a single character, front-facing 3/4 top-down view, classic 16-bit RPG style.
+A 16-year-old boy from the same grim dark-fantasy island village who has just become an apprentice mage: slim and pale, shoulder-length messy black hair, tired but sharp eyes with faint dark circles. He wears a simple, frayed apprentice robe of dull dark brown wool with the hood down, sewn with many small mismatched pockets, a rope belt, and worn sandals. He holds a plain straight oak staff in his right hand, its tip bound with a thin metal band holding a small dull violet stone (#9a7bc0). No hat, no glowing effects, no magic particles, no jewelry.
+Muted earthy palette of about 16 colors: dark browns, faded ochre, a dull gold accent (#cf9a44) only on the staff's metal band, desaturated skin tones.
+Crisp hard pixel edges, 1-pixel dark outline, no anti-aliasing, no blur, no gradients, no noisy dithering.
+Same pixel size and character height as the reference: realistic proportions, not chibi.
+Full body, centered, idle standing pose, feet visible, small margin around the character.
+Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, no frame or border. Square 1:1 image.
+```
+
+결과(2026-10-13): 1차 생성본 채택 → `assets/reference/mage.png`(44×86, 지팡이 포함) = `public/mage.png`, 얼굴 `mage_face.png`(30×30, 전신 (3,0)에서 자름) = `public/mage-face.png`. 후처리 후 머리 위 마젠타 번짐 2픽셀을 손으로 지움(보석 보라색은 유지). 주머니보다는 기운 천 조각으로 나왔지만 톤이 맞아 채택

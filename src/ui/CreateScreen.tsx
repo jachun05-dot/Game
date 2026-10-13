@@ -7,6 +7,7 @@ import { TRAININGS } from "../game/data";
 import { kitItems } from "../game/town";
 import type { Ctl } from "./App";
 import { Bar, Card, Shell, fmtMod } from "./components";
+import { CLASS_ART } from "./art";
 
 export function CreateScreen({ ctl }: { ctl: Ctl }) {
   const { s, meta, dispatch } = ctl;
@@ -78,6 +79,7 @@ export function CreateScreen({ ctl }: { ctl: Ctl }) {
           const c = CLASSES[s.hero.cls];
           return (
             <div className="class-detail">
+              <img className="class-figure" src={CLASS_ART[c.id].full} width={CLASS_ART[c.id].w * 2} height={CLASS_ART[c.id].h * 2} alt="" />
               <p className="small">{c.desc}</p>
               <p className="small">
                 <span className="dim">시작 장비</span> {Object.values(c.start).map((g) => GEAR[g!].name).join(", ")} · <span className="dim">소모품</span> {kitItems(c.items).join(", ")} ·{" "}

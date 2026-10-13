@@ -8,6 +8,7 @@ import { SKILLS } from "../game/skills";
 import type { AutoGoal, GameState } from "../game/types";
 import type { Ctl, Speed } from "./App";
 import { CharacterSheet } from "./CharacterSheet";
+import { CLASS_ART } from "./art";
 
 export function Shell({ children, wide }: { children: ReactNode; wide?: boolean }) {
   return <main className={`shell${wide ? " wide" : ""}`}>{children}</main>;
@@ -55,7 +56,7 @@ export function HeroHeader({ s, extra, onOpen }: { s: GameState; extra?: ReactNo
   const hp = maxHp(s);
   return (
     <header className={`hero-head${onOpen ? " clickable" : ""}`} onClick={onOpen} role={onOpen ? "button" : undefined} aria-label={onOpen ? "캐릭터와 장비 보기" : undefined}>
-      <img className="portrait" src="./hero-face.png" alt="" />
+      <img className="portrait" src={CLASS_ART[s.hero.cls].face} alt="" />
       <div className="hero-info">
         <div className="hero-name">
           {s.hero.name} <span className="dim">{CLASSES[s.hero.cls].name} Lv.{s.hero.level}</span>

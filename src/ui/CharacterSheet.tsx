@@ -5,6 +5,7 @@ import { heroAc, maxHp, smod, stat } from "../game/core";
 import { passive } from "../game/skills";
 import type { Ctl } from "./App";
 import { Card, FragList, SkillList, StatGrid, TacticsBar, fmtMod } from "./components";
+import { CLASS_ART } from "./art";
 
 /** 캐릭터 화면: 장비 9슬롯, 공격·방어 계산 내역, 능력치, 기술, 소지품 */
 export function CharacterSheet({ ctl }: { ctl: Ctl }) {
@@ -29,7 +30,7 @@ export function CharacterSheet({ ctl }: { ctl: Ctl }) {
     <div className="sheet-backdrop" onClick={() => ctl.setSheet(false)}>
       <div className="sheet" role="dialog" aria-label="캐릭터" onClick={(e) => e.stopPropagation()}>
         <div className="sheet-head">
-          <img className="portrait big" src="./hero-face.png" alt="" />
+          <img className="portrait big" src={CLASS_ART[h.cls].face} alt="" />
           <div>
             <div className="hero-name">
               {h.name} <span className="dim">{CLASSES[h.cls].name} Lv.{h.level}</span>
