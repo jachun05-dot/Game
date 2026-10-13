@@ -750,3 +750,39 @@ describe("2섹터", () => {
     expect(t.inventory.banner).toBe(0);
   });
 });
+
+// 퍼징(scripts/fuzz.ts)으로 찾은 버그의 회귀 테스트
+describe("퍼징 회귀", () => {
+  const inDungeon = (seed = 21) => {
+    const s = newRun(seed);
+    apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    s.week = 3;
+    s.phase = "week-result";
+    apply(s, { t: "closeWeek" });
+    return s;
+  };
+  it("체력 장비를 다른 장비로 바꾸면 HP가 새 최대치를 넘지 않는다", () => {
+    const s = inDungeon();
+    s.gear.neck = "prayer";
+    s.hero.hp = maxHp(s);
+    s.combat = null;
+    s.dungeon!.pending = { kind: "gear", item: "boneamulet" };
+    apply(s, { t: "pending", choice: "equip" });
+    expect(s.gear.neck).toBe("boneamulet");
+    expect(s.hero.hp).toBeLessThanOrEqual(maxHp(s));
+  });
+  it("역병의 신 ★3(병든 동안 최대 HP +4)이 병이 나아 꺼지면 HP도 새 최대치로 줄어든다", () => {
+    const s = newRun(23);
+    s.faithsKnown = [FAITH.plague];
+    apply(s, { t: "create", name: "x", candidate: 0, faith: FAITH.plague });
+    s.piety = 95;
+    s.disease = 1;
+    s.inventory.herb = 1;
+    s.hero.hp = maxHp(s);
+    const sickMax = maxHp(s);
+    apply(s, { t: "herb" });
+    expect(s.disease).toBe(0);
+    expect(maxHp(s)).toBe(sickMax - 4);
+    expect(s.hero.hp).toBe(maxHp(s));
+  });
+});
