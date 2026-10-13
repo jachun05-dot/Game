@@ -374,3 +374,67 @@ Solid flat magenta background (#FF00FF). No text, no numbers, no frame or border
 ```
 
 결과(2026-10-13): 1차 채택. 아이콘 시트인데도 **200격자**(2.56px)였다 — 100격자로 복원하면 뭉개진다. 경계가 마젠타와 섞여 있어 투명과 맞닿은 마젠타 계열 픽셀을 3겹 걷어내고, 남은 진한 마젠타만 추가로 지움(차원문 보라는 r−g가 작아 보존). 빈 줄·칸으로 10개로 나눠 `public/room-*.png`(약 30도트). 지도 점(지름 10~14px)에 넣기엔 커서 **갈림길 버튼 왼쪽**에 1배로 쓴다(`RoomIcon`, 모르는 방은 빈칸, 다시 생긴 기척은 적 아이콘)
+
+## 장비 아이콘 공통 규칙
+
+21종을 시트 셋(023 무기·방패 7, 024 방어구 9, 025 장신구 5)으로 나눠 뽑는다. 순서는 `src/game/gear.ts`의 `GEAR` 순서. 시트는 연결 성분으로 나눈다(대각선 무기는 빈 줄로 안 나뉜다) — 분할 스크립트는 아래 023 분할은 `tools/split_sheet.py 시트.png 출력폴더 gear- 이름1,이름2,...`. `public/gear-<id>.png`, `GEAR_ICON`(art.ts), `GearIcon`(32×32 칸 1배): 캐릭터 시트 장비 9칸, 대장간 목록, 미궁 장비 발견 카드(2배). 아이콘 없는 장비는 빈칸.
+
+## 023 — 무기·방패 7종 (기준 이미지 첨부)
+
+```
+Match the exact art style, outline, palette and pixel scale of the attached reference image.
+
+A sheet of seven pixel art equipment icons for a grim dark-fantasy RPG, classic 16-bit style, in one neat horizontal row (or two rows of four and three), evenly spaced with clear magenta gaps, all drawn at the same scale, each a clean single object shown diagonally:
+1. a plain iron short sword with a dull gold crossguard (#cf9a44);
+2. a longer, heavier iron longsword with a leather-wrapped grip;
+3. a thin, narrow dagger with a worn handle;
+4. a plain straight oak staff with a thin metal band and a small dull violet stone (#9a7bc0) at the tip;
+5. a crooked wand carved from a yellowed bone, bound with dark cord;
+6. a round, battered wooden shield with simple planks;
+7. a round wooden shield reinforced with a rusty iron rim and a central iron boss.
+Muted earthy palette: dark browns, iron grey, bone, leather; accents only as noted. Everything looks used, cheap and worn.
+Crisp hard pixel edges, 1-pixel dark outline, no anti-aliasing, no blur, no gradients, no noisy dithering.
+Solid flat magenta background (#FF00FF). No text, no numbers, no frame or border. Square 1:1 image.
+```
+
+결과(2026-10-13): 1차 채택. 이번 시트는 **100격자**(5.12px)였다 — 시트마다 도트 크기를 재고(가로 색 변화 간격의 최빈값) 격자를 고른다. 방패가 워터마크 모서리에 걸쳐 `--keep-watermark`. 연결 성분(8방향)으로 7개 분할, 12픽셀 미만 조각은 가까운 덩어리에 합침 → `assets/icons/gear-*.png`(19~31도트)
+
+## 024 — 방어구 9종 (기준 이미지 첨부)
+
+```
+Match the exact art style, outline, palette and pixel scale of the attached reference image.
+
+A sheet of nine pixel art equipment icons for a grim dark-fantasy RPG, classic 16-bit style, in a neat grid of three rows of three, evenly spaced with clear magenta gaps, all drawn at the same scale, each a clean single object:
+1. a frayed dark brown wool apprentice robe with many small mismatched pockets;
+2. a scuffed brown leather cuirass with stitched cowhide patches;
+3. a rusty, patched chain mail shirt;
+4. a simple soft leather cap;
+5. a dented iron half-helm;
+6. a sturdy plain leather belt with an iron buckle;
+7. a leather belt hung with small herb pouches and a dried sprig;
+8. a pair of worn leather boots;
+9. a pair of light, laced leather boots with a faint green-grey tint, built for running.
+Muted earthy palette: dark browns, iron grey, faded ochre, wool; dull gold (#cf9a44) only on small buckles. Everything looks used, cheap and worn.
+Crisp hard pixel edges, 1-pixel dark outline, no anti-aliasing, no blur, no gradients, no noisy dithering.
+Solid flat magenta background (#FF00FF). No text, no numbers, no frame or border. Square 1:1 image.
+```
+
+결과(2026-10-13): 1차 채택(100격자). 워터마크가 날랜 장화 위에 찍혀 `--keep-watermark` 후, 장화 색(파랑이 낮은 올리브)과 다른 회백색 픽셀 6개를 장화 중간색으로 메움 → `assets/icons/gear_sheet2.png` → `split_sheet.py`로 9개
+
+## 025 — 장신구 5종 (기준 이미지 첨부)
+
+```
+Match the exact art style, outline, palette and pixel scale of the attached reference image.
+
+A sheet of five small pixel art trinket icons for a grim dark-fantasy RPG, classic 16-bit style, in one neat horizontal row, evenly spaced with clear magenta gaps, all drawn at the same scale:
+1. a crude amulet of small carved bones and teeth on a dark cord;
+2. a string of plain wooden prayer beads with a tiny dull gold sun charm (#cf9a44);
+3. a plain rusty iron ring;
+4. a thin dull gold ring set with a tiny four-leaf pattern;
+5. a dark silver ring set with a small dull red stone (#c0564d).
+Muted palette: dark browns, bone, iron grey, tarnished silver; accents only as noted.
+Crisp hard pixel edges, 1-pixel dark outline, no anti-aliasing, no blur, no gradients, no noisy dithering.
+Solid flat magenta background (#FF00FF). No text, no numbers, no frame or border. Square 1:1 image.
+```
+
+결과(2026-10-13): 1차 채택. 이 시트만 **200격자**라 목걸이가 다른 아이콘의 두 배(35×52, 28×56)로 나왔다. 얇은 끈이 마젠타와 섞여 있어 지우면 끈이 사라지므로, 마젠타 낀 어두운 픽셀은 초록값 기준 어두운 갈색으로 **색만 되돌리고**(172개) 배경에 가까운 밝은 것만 투명(109개). 절반 축소(어두운 선 우선)도 해 봤지만 염주 알·태양 부적이 뭉개져 원래 크기를 쓴다 → 장비 아이콘 칸은 최소 32×32에서 늘어나고, 장비 목록 아이콘 열은 36px
