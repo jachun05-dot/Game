@@ -227,3 +227,18 @@ No readable text on the notices, no UI, no frame or border. Square 1:1 image.
 ```
 
 결과(2026-10-13): 1차 생성본 채택(512 이미지, 200격자) → `assets/scenes/tavern_full.png` → 띠 `(12,62)~(191,142)` = `public/scene-tavern.png`. 주간 결과 카드(제목 "탐문")에 건다. 결과 카드 제목 → 장면은 `WEEK_SCENE`(훈련 → 훈련장도 같이). 이 이미지에서 `tools/sprite.py`가 도트 3px 이하일 때 빈 칸을 읽는 버그가 드러나 고침(기존 결과는 픽셀 단위로 그대로)
+
+## 014 — 영지 밖 숲 (기준 이미지 + 훈련장 첨부)
+
+```
+Match the exact art style, outline, palette and pixel scale of the attached images; the second image (a training yard) shows the scene scale and level of detail to follow.
+
+Pixel art game location illustration, classic 16-bit RPG style, wide establishing view, slightly elevated 3/4 view.
+The dark forest just outside a remote island fief in a grim dark-fantasy world: a narrow muddy path leading between twisted bare trees and dense dark undergrowth, moss-covered stones, a broken wooden boundary marker at the edge of the path, thick grey mist between the trunks, and two small glints of eyes watching from the shadows. No people.
+Muted earthy palette of about 20 colors: dark browns, deep moss green, cold grey mist; a tiny dull gold accent (#cf9a44) only on the watching eyes.
+Crisp hard pixel edges, 1-pixel dark outlines, no anti-aliasing, no blur, no gradients, no noisy dithering.
+Keep the path, the boundary marker and the watching eyes within the middle 60% of the height so it reads when cropped to a wide horizontal strip.
+No text, no UI, no frame or border. Square 1:1 image.
+```
+
+결과(2026-10-13): 1차 생성본 채택(512, 200격자) → `assets/scenes/forest_full.png` → 띠 `(10,70)~(189,150)` = `public/scene-forest.png`. 주간 결과 카드(제목 "외부 탐험")에 건다

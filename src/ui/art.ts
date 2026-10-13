@@ -49,6 +49,7 @@ export const FRAG_ICON: SpriteArt[] = [
 export const SCENE_ART: Record<string, SpriteArt> = {
   training: { src: "./scene-training.png", w: 179, h: 80 },
   tavern: { src: "./scene-tavern.png", w: 179, h: 80 },
+  forest: { src: "./scene-forest.png", w: 179, h: 80 },
 };
 
 /** 주간 결과 카드 제목 → 장소 그림 */
