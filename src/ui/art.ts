@@ -58,7 +58,22 @@ export const SCENE_ART: Record<string, SpriteArt> = {
   office: { src: "./scene-office.png", w: 179, h: 100, focus: 0.85 },
   graveyard: { src: "./scene-grave.png", w: 179, h: 80 },
   dungeon1: { src: "./scene-dungeon1.png", w: 179, h: 100 },
+  title: { src: "./scene-title.png", w: 179, h: 160, focus: 0.65 },
 };
 
 /** 주간 결과 카드 제목 → 장소 그림 */
 export const WEEK_SCENE: Record<string, string> = { 훈련: "training", 탐문: "tavern", "외부 탐험": "forest" };
+
+// 미궁 방 종류 아이콘(원래 도트 크기, 갈림길 버튼에 1배). 위험한 방은 붉은색, 계단·차원문은 보라, 보물은 금색 — 지도 테두리 색 규칙과 같다
+export const ROOM_ICON: Record<string, SpriteArt> = {
+  entrance: { src: "./room-entrance.png", w: 31, h: 39 },
+  empty: { src: "./room-empty.png", w: 31, h: 31 },
+  combat: { src: "./room-combat.png", w: 31, h: 31 },
+  trap: { src: "./room-trap.png", w: 32, h: 28 },
+  treasure: { src: "./room-treasure.png", w: 29, h: 23 },
+  record: { src: "./room-record.png", w: 30, h: 26 },
+  shrine: { src: "./room-shrine.png", w: 17, h: 32 },
+  stairs: { src: "./room-stairs.png", w: 32, h: 33 },
+  boss: { src: "./room-boss.png", w: 30, h: 35 },
+  portal: { src: "./room-portal.png", w: 26, h: 33 },
+};

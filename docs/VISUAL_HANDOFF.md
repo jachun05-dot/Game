@@ -42,7 +42,7 @@
 
 ## 5. 지금 있는 그림과 쓰는 곳
 
-연결은 모두 `src/ui/art.ts` 한 곳(`CLASS_ART`, `MONSTER_ART`, `FRAG_ICON`). 원본은 `assets/`, 게임이 쓰는 파일은 `public/`. 프롬프트·후처리 기록은 `docs/ART_PROMPTS.md` 001~011.
+연결은 모두 `src/ui/art.ts` 한 곳(`CLASS_ART`, `MONSTER_ART`, `FRAG_ICON`, `SCENE_ART`). 원본은 `assets/`, 게임이 쓰는 파일은 `public/`. 프롬프트·후처리 기록은 `docs/ART_PROMPTS.md` 001~021.
 
 | 그림 | 파일(`public/`) | 쓰는 곳 |
 |---|---|---|
@@ -50,6 +50,7 @@
 | 직업 얼굴 3종 | `hero-face.png`, `warrior-face.png`, `mage-face.png`(30×30) | 헤더 초상(2배 60px), 캐릭터 시트(3배 90px) |
 | 몬스터 7종 | `mon-{rat,goblin,skeleton,boss,goldrat,jewelgoblin,crystalskel}.png` — 모두 같은 월드 스케일 | 도감 카드 위 무대(모두 2배, 안 본 몬스터는 실루엣), 미궁 로그의 "나타났다" 줄(1배, `LogLine.mons`) |
 | 편린 등급 아이콘 4종 | `frag-1~4.png` | 캐릭터 시트 편린 목록·도감(1배), 미궁 편린 획득 카드(2배). 처음 보는 편린은 늘 같은 실루엣 |
+| 장소 그림 10장 | `scene-{training,tavern,forest,market,smithy,temple,office,grave,dungeon1,title}.png` — 모두 200격자 장면을 띠로 자른 것 | 훈련 카드·주간 결과 카드(훈련/탐문/외부 탐험), 상점가·대장간·신전 카드, 정산 세금 카드, 묘지 화면, 미궁 지도 칸 배경(`dungeon`+섹터), 타이틀 키아트(소년 2배를 위에 세움). `SceneBanner`, 좁은 화면은 `focus` 쪽을 남기고 자른다 |
 
 ## 6. 필요한 그림(우선순위 제안)
 
@@ -57,7 +58,7 @@
 2. ~~몬스터 7종~~ (완료): 쥐, 고블린(비겁, 녹슨 단검), 스켈레톤 병사(뼈 검), 거대한 돌연변이 쥐(1섹터 보스, 소만 한 크기), 희귀 개체 3종 — 마석 먹은 쥐(배가 빛남), 보석 박힌 고블린(보석 박힌 곤봉), 마석 갑옷 스켈레톤(갑옷이 통째로 마석). 설정 문장은 `src/game/data.ts`의 `MONSTERS[].note`
 3. ~~편린 아이콘~~ (등급별 4종 완료): 등급별 4종(하급·중급·상급·보스) 또는 몬스터별 7종. 설정 문장은 `src/game/fragments.ts`의 `flavor`. UI 등급 색: 하급 `--dim`, 중급 `--ok`, 상급 `--accent`, 보스 `--danger`
 4. **방 종류 아이콘**(미궁 지도·선택지): 입구, 빈 방, 적의 기척, 함정, 보물, 기록물, 성소, 계단, 보스, 차원문(`ROOM_LABEL`, `src/game/dungeon.ts`)
-5. **마을 장소 그림**: 직업교관(훈련), 술집(탐문), 영지 밖 숲(외부 탐험), 상점가, 대장간, 신전(편린 지우기), 관공서(세금), 묘지. 원 기획의 장소 목록은 `docs/DESIGN.md` 4절
+5. ~~마을 장소 그림~~ (8곳 + 미궁 1섹터 + 타이틀 완료): 직업교관(훈련), 술집(탐문), 영지 밖 숲(외부 탐험), 상점가, 대장간, 신전(편린 지우기), 관공서(세금), 묘지. 원 기획의 장소 목록은 `docs/DESIGN.md` 4절
 6. **장비 아이콘**: `src/game/gear.ts`의 `GEAR` 21종(9슬롯)
 7. 묘비 카드, 정산 카드 장식, 타이틀 배경 등 분위기용
 
