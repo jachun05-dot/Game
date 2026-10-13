@@ -47,6 +47,8 @@ export interface CombatState {
   bonus: number;
   /** 액티브 기술별 이번 전투 사용 횟수 */
   used: Record<string, number>;
+  /** 이번 전투에서 남은 편린(몬스터 id) */
+  frags: string[];
   /** 흘려내기 등 일시 AC 보너스 */
   guard: { ac: number; rounds: number } | null;
 }
@@ -100,7 +102,9 @@ export type Pending =
   | { kind: "shrine" }
   | { kind: "stairs" }
   | { kind: "portal" }
-  | { kind: "gear"; item: string };
+  | { kind: "gear"; item: string }
+  /** 편린(fragments.ts) — 흡수하거나, 칸이 차 있으면 하나를 깨뜨리고 흡수하거나, 흩어지게 둔다 */
+  | { kind: "frag"; frag: string };
 
 export interface DungeonState {
   sector: number;
@@ -112,6 +116,8 @@ export interface DungeonState {
   /** 들고 있는 마석 가치(G). 귀환해야 환전된다 */
   mana: number;
   pending: Pending | null;
+  /** 지금 선택이 끝나면 이어서 띄울 선택(보스 처치 후 편린 → 장비 등) */
+  queue?: Pending[];
   /** 포만감 0 상태로 지난 턴 수 */
   starvingTurns: number;
   deepestFloor: number;
@@ -183,6 +189,8 @@ export interface GameState {
   gear: Partial<Record<SlotKey, string>>;
   /** 배운 기술 id */
   skills: string[];
+  /** 흡수한 편린(fragments.ts의 id). 칸 수는 fragSlots(level) */
+  fragments: string[];
   tactics: Tactics;
   /** 미궁 한 번 들어갈 때 1회 쓰는 기술 중 이미 쓴 것 */
   tripUsed: string[];

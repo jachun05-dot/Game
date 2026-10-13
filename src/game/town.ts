@@ -1,6 +1,7 @@
 import { josa } from "./josa";
 import { BAL, FEED, FIELD_ENCOUNTERS, NAMES, RIVAL_NEWS, RIVALS, RUMORS, STAT_KEYS, STAT_LABEL, TRAININGS } from "./data";
-import { addStat, emptyStats, kill, log, maxHp, rngOf, taxDue, topBehavior } from "./core";
+import { addStat, emptyStats, kill, log, maxHp, rngOf, taxDue, topBehavior, yearOf } from "./core";
+import { fragSlots } from "./fragments";
 import { makeEnemies, startCombat } from "./combat";
 import { Rng } from "./rng";
 import { CLASSES, type ClassId } from "./classes";
@@ -22,6 +23,7 @@ export function newRun(seed: number): GameState {
     inventory: { food: 0, potion: 0, scroll: 0, heart: 0 },
     gear: {},
     skills: [],
+    fragments: [],
     tactics: { potionAt: 35, fleeAt: 0 },
     tripUsed: [],
     rank: 0,
@@ -164,6 +166,7 @@ export function train(s: GameState, trainingId: string, free: [StatKey, StatKey]
   ];
   if (paidHeart) lines.unshift(`교관이 ${BAL.heartName}을 받아 들고 고개를 끄덕였다. "이제야 진짜 훈련을 시작할 수 있겠군."`);
   if (!learned) lines.push("이 훈련에서 더 배울 기술은 없다. (히든 트레이닝은 준비 중)");
+  if (fragSlots(s.hero.level) > fragSlots(from)) lines.push(`몸에 편린을 담을 자리가 하나 더 생겼다. (편린 칸 ${fragSlots(s.hero.level)})`);
   finishWeek(s, { title: "훈련", lines, statDelta: delta, levelUp: { from, to: s.hero.level }, learned: learned ?? undefined, goldDelta: -cost }, true);
 }
 
@@ -272,7 +275,9 @@ export function beginSettlement(s: GameState, o: { mana: number; cleared: boolea
   if (o.mana > 0) lines.push(`마석을 관공서에서 ${o.mana}G로 환전했다.`);
   else lines.push("가지고 나온 마석이 없다.");
   if (o.cleared) lines.push(`등급이 올랐다 — 클리어한 섹터 ${s.rank}개.`);
-  const tax = taxDue(s);
+  // 세금은 다음 달 1주차에 낸다. 해가 바뀌면 오른다
+  const tax = taxDue(s.month + 1);
+  if (yearOf(s.month + 1) > yearOf(s.month)) lines.push(`해가 바뀐다. 영주가 세금을 올렸다 — ${taxDue(s.month)}G → ${tax}G.`);
   const paid = s.gold >= tax;
   s.settlement = { month: s.month, manaSold: o.mana, tax, goldAfter: paid ? s.gold - tax : s.gold, paid, cleared: o.cleared, forced: o.forced, lines };
   s.phase = "settlement";

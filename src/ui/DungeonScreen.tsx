@@ -4,6 +4,8 @@ import type { PendingChoice } from "../game/dungeon";
 import type { DungeonState } from "../game/types";
 import { BAL } from "../game/data";
 import { GEAR, gearEffect, targetSlot } from "../game/gear";
+import { FRAGMENTS, TIER_LABEL, fragSlots, fragStatText } from "../game/fragments";
+import { SKILLS } from "../game/skills";
 import type { Ctl } from "./App";
 import { Bar, GameScreen, HeroHeader, LogView } from "./components";
 
@@ -101,6 +103,49 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
           </button>
           <button className="btn" disabled={busy} onClick={() => go({ t: "pending", choice: "leave" })}>
             두고 간다
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  if (dg.pending?.kind === "frag") {
+    const id = dg.pending.frag;
+    const f = FRAGMENTS[id];
+    const sk = f.skill ? SKILLS[f.skill] : null;
+    const slots = fragSlots(s.hero.level);
+    const full = s.fragments.length >= slots;
+    return (
+      <>
+        <p className="dock-title">편린이 남았다 — 흡수할까? <span className="dim small">(칸 {s.fragments.length}/{slots})</span></p>
+        <div className="loot-card">
+          <b>
+            {f.name} <span className="dim small">{TIER_LABEL[f.tier]}</span>
+          </b>
+          <span className="accent small">{fragStatText(id)}</span>
+          {sk ? (
+            <span className="small">
+              【{sk.name}】 {sk.kind === "active" ? "자동 발동" : "패시브"} · {sk.desc}
+            </span>
+          ) : (
+            <span className="dim small">특별한 능력은 없다.</span>
+          )}
+          <span className="dim small">{f.flavor}</span>
+        </div>
+        <div className="choices">
+          {!full && (
+            <button className="btn primary" disabled={busy} onClick={() => go({ t: "pending", choice: "absorb" })}>
+              흡수한다
+            </button>
+          )}
+          {full &&
+            s.fragments.map((old, i) => (
+              <button key={i} className="btn" disabled={busy} onClick={() => go({ t: "pending", choice: `swap${i}` })}>
+                {FRAGMENTS[old].name}을(를) 깨뜨리고 흡수 <span className="dim small">· {fragStatText(old)}</span>
+              </button>
+            ))}
+          <button className="btn ghost" disabled={busy} onClick={() => go({ t: "pending", choice: "leave" })}>
+            흩어지게 둔다
           </button>
         </div>
       </>

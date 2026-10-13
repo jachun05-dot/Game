@@ -171,6 +171,8 @@ button {
 .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 8px; }
 .stat-cell { background: var(--panel-2); border: 1px solid var(--border); padding: 6px 8px; display: flex; gap: 6px; align-items: baseline; }
 .stat-cell b { color: var(--bright); }
+.stat-cell b.accent { color: var(--accent); }
+.stat-cell > span:first-child { white-space: nowrap; }
 .mod { color: var(--accent); font-size: 12px; }
 
 .week-track { display: flex; gap: 4px; align-items: center; }
@@ -410,3 +412,10 @@ html, body, #root { height: 100%; }
 .loot-card { display: flex; flex-direction: column; gap: 2px; border: 1px solid var(--accent); background: var(--panel-2); padding: 8px 10px; }
 .loot-card b { color: var(--bright); }
 .settings-backdrop { position: fixed; inset: 0; z-index: 19; }
+
+/* 편린 */
+.frags li.empty { opacity: 0.7; }
+.skill-kind.tier1 { color: var(--dim); }
+.skill-kind.tier2 { color: var(--ok); border-color: var(--ok); }
+.skill-kind.tier3 { color: var(--accent); border-color: var(--accent); }
+.skill-kind.tier4 { color: var(--danger); border-color: var(--danger); }

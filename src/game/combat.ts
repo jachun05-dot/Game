@@ -1,6 +1,7 @@
 import { josa } from "./josa";
 import { BAL, MONSTERS } from "./data";
-import { actionsPerRound, heroAc, isDead, kill, log, maxHp, mod, note, rngOf, rollPenalty } from "./core";
+import { actionsPerRound, heroAc, isDead, kill, log, maxHp, note, rngOf, rollPenalty, smod } from "./core";
+import { FRAGMENTS } from "./fragments";
 import { activeSkills, passive, SKILLS, type SkillDef } from "./skills";
 import { weaponOf } from "./gear";
 import type { CombatState, Enemy, GameState } from "./types";
@@ -40,7 +41,7 @@ const PLAIN: Strike = { hit: 0, dmg: 0, mult: 1, autoHit: false };
 
 /** 전투를 처음부터 끝까지 자동으로 진행한다 */
 export function startCombat(s: GameState, context: CombatState["context"], enemies: Enemy[], opts: { surprise?: boolean } = {}): void {
-  const c: CombatState = { context, enemies, round: 1, loot: 0, bonus: 0, used: {}, guard: null };
+  const c: CombatState = { context, enemies, round: 1, loot: 0, bonus: 0, frags: [], used: {}, guard: null };
   s.combat = c;
   log(s, `${josa(describeGroup(enemies), "이")} 나타났다!`, "hurt");
   for (const e of enemies) {
@@ -114,12 +115,12 @@ function castSpell(s: GameState, c: CombatState, dice: [number, number], all: bo
   const targets = all ? alive(c) : [[...alive(c)].sort((a, b) => a.hp - b.hp)[0]];
   for (const t of targets) {
     const def = MONSTERS[t.defId];
-    const dmg = Math.max(1, r.dice(dice[0], dice[1]) + mod(s.hero.stats.int));
+    const dmg = Math.max(1, r.dice(dice[0], dice[1]) + smod(s, "int"));
     t.hp -= dmg;
     note(s, "int");
     log(s, `${def.name}에게 ${dmg} 피해`, "hit");
     if (t.hp <= 0) {
-      gainLoot(c, def.id);
+      gainLoot(s, c, def.id);
       log(s, `${josa(def.name, "을")} 쓰러뜨렸다.`, "good");
     }
   }
@@ -137,10 +138,16 @@ function escapeRares(s: GameState, c: CombatState): void {
   }
 }
 
-function gainLoot(c: CombatState, defId: string): void {
+function gainLoot(s: GameState, c: CombatState, defId: string): void {
   const def = MONSTERS[defId];
   if (def.rare) c.bonus += def.mana;
   else c.loot += def.mana;
+  // 편린은 미궁 안에서만 맺힌다
+  const f = FRAGMENTS[defId];
+  if (c.context === "dungeon" && f && rngOf(s).chance(f.chance)) {
+    c.frags.push(defId);
+    log(s, `쓰러진 ${def.name}의 몸에서 희미한 빛 조각이 떠오른다 — 편린이다!`, "crit");
+  }
 }
 
 function canUse(c: CombatState, sk: SkillDef): boolean {
@@ -166,7 +173,7 @@ function selfTriggers(s: GameState, c: CombatState): void {
       c.guard = { ac: e.ac, rounds: e.rounds };
       useSkill(s, c, sk, `몸을 지킨다 (AC +${e.ac}, ${e.rounds}라운드)`);
     } else if (e.type === "heal") {
-      const heal = rngOf(s).dice(e.dice[0], e.dice[1]) + (e.plusInt ? Math.max(0, mod(s.hero.stats.int)) : 0);
+      const heal = rngOf(s).dice(e.dice[0], e.dice[1]) + (e.plusInt ? Math.max(0, smod(s, "int")) : 0);
       s.hero.hp = Math.min(maxHp(s), s.hero.hp + heal);
       useSkill(s, c, sk, `상처에 약초를 짓눌렀다 (HP +${heal})`);
     }
@@ -216,7 +223,7 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
   const r = rngOf(s);
   const ac = def.ac - (target.acDown ?? 0);
   const w = weaponOf(s);
-  const statMod = mod(s.hero.stats[w.stat]);
+  const statMod = smod(s, w.stat);
   const roll = r.die(20);
   const bonus = statMod + BAL.proficiency + passive(s, "hit") + st.hit + rollPenalty(s);
   if (!st.autoHit && roll === 1) {
@@ -227,7 +234,7 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
     log(s, `${josa(def.name, "을")} 노렸지만 빗나갔다. (${roll}+${bonus} vs AC ${ac})`, "miss");
     return;
   }
-  const crit = roll === 20 || r.float() * 100 < 5 + mod(s.hero.stats.luk) + passive(s, "crit");
+  const crit = roll === 20 || r.float() * 100 < 5 + smod(s, "luk") + passive(s, "crit");
   const base = r.dice(w.dice[0] * (crit ? 2 : 1), w.dice[1]) + statMod + passive(s, "dmg") + st.dmg;
   const dmg = Math.max(1, Math.round(base * st.mult));
   target.hp -= dmg;
@@ -235,7 +242,7 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
   log(s, `${def.name}에게 ${w.verb} 명중! ${dmg} 피해${crit ? " (치명타!)" : ""}`, crit ? "crit" : "hit");
   if (target.hp <= 0) {
     note(s, w.stat === "int" ? "int" : w.stat === "dex" ? "dex" : "str");
-    gainLoot(c, def.id);
+    gainLoot(s, c, def.id);
     log(s, `${josa(def.name, "을")} 쓰러뜨렸다.`, "good");
   }
 }
@@ -254,7 +261,7 @@ function drink(s: GameState, when: string): void {
 function tryFlee(s: GameState, c: CombatState): boolean {
   const dc = BAL.fleeDcBase + alive(c).length * 2;
   const roll = rngOf(s).die(20);
-  const bonus = mod(s.hero.stats.dex) + passive(s, "flee") + rollPenalty(s);
+  const bonus = smod(s, "dex") + passive(s, "flee") + rollPenalty(s);
   if (roll === 20 || (roll !== 1 && roll + bonus >= dc)) {
     note(s, "dex");
     log(s, `등을 돌려 달아났다! (${roll}+${bonus} vs ${dc})`, "system");

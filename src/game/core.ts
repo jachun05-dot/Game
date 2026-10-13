@@ -3,6 +3,7 @@ import { BAL, FAITH, STAT_KEYS } from "./data";
 import { CLASSES } from "./classes";
 import { Rng } from "./rng";
 import { passive } from "./skills";
+import { fragStat } from "./fragments";
 import type { DeathCause, GameState, LogKind, StatKey, Stats } from "./types";
 
 export function rngOf(s: GameState): Rng {
@@ -14,6 +15,16 @@ export function isDead(s: GameState): boolean {
   return s.phase === "dead";
 }
 
+/** 실제 능력치 = 타고난/훈련 능력치 + 편린 보정 */
+export function stat(s: GameState, key: StatKey): number {
+  return Math.min(BAL.statMax, s.hero.stats[key] + fragStat(s, key));
+}
+
+/** 능력치 보정치 */
+export function smod(s: GameState, key: StatKey): number {
+  return mod(stat(s, key));
+}
+
 export function mod(v: number): number {
   return Math.floor(v / 5);
 }
@@ -21,15 +32,15 @@ export function mod(v: number): number {
 export function maxHp(s: GameState): number {
   // DESIGN 7·8절: CON 보정치가 레벨마다 고정 누적. 기본 HP는 미정이라 임시값.
   const cls = CLASSES[s.hero.cls];
-  return BAL.baseHp + cls.hp + (Math.max(BAL.minHpPerLevel, mod(s.hero.stats.con)) + cls.hpPerLevel) * s.hero.level + passive(s, "hp");
+  return BAL.baseHp + cls.hp + (Math.max(BAL.minHpPerLevel, smod(s, "con")) + cls.hpPerLevel) * s.hero.level + passive(s, "hp");
 }
 
 export function heroAc(s: GameState): number {
-  return 10 + mod(s.hero.stats.dex) + passive(s, "ac");
+  return 10 + smod(s, "dex") + passive(s, "ac");
 }
 
 export function actionsPerRound(s: GameState): number {
-  return 1 + (s.hero.stats.dex >= 35 ? 1 : 0);
+  return 1 + (stat(s, "dex") >= 35 ? 1 : 0);
 }
 
 /** 굶주림·탈진 판정 페널티 */
@@ -43,7 +54,7 @@ export function rollPenalty(s: GameState): number {
 /** d20 + 보정치 vs DC. 자연 1 자동 실패, 자연 20 자동 성공(DESIGN 8절) */
 export function check(s: GameState, stat: StatKey, dc: number): { ok: boolean; roll: number; total: number } {
   const roll = rngOf(s).die(20);
-  const total = roll + mod(s.hero.stats[stat]) + rollPenalty(s) + (stat === "per" ? passive(s, "perception") : 0);
+  const total = roll + smod(s, stat) + rollPenalty(s) + (stat === "per" ? passive(s, "perception") : 0);
   const ok = roll === 20 || (roll !== 1 && total >= dc);
   return { ok, roll, total };
 }
@@ -75,8 +86,14 @@ export function topBehavior(s: GameState): StatKey[] {
   return [...STAT_KEYS].sort((a, b) => s.behavior[b] - s.behavior[a]);
 }
 
-export function taxDue(s: GameState): number {
-  return BAL.taxBase + BAL.taxPerRank * s.rank;
+/** 몇 년차인지(1~12월 = 1년차) */
+export function yearOf(month: number): number {
+  return Math.floor((month - 1) / 12) + 1;
+}
+
+/** 그 달 1주차에 내는 세금. 해가 바뀔 때마다 오른다 */
+export function taxDue(month: number): number {
+  return BAL.taxBase + BAL.taxPerYear * (yearOf(month) - 1);
 }
 
 const CAUSE_TEXT: Record<DeathCause, string> = {

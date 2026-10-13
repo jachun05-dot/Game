@@ -1,7 +1,8 @@
 import { BAL } from "./data";
 import { GEAR, gearScore, targetSlot } from "./gear";
 import { CLASSES } from "./classes";
-import { heroAc, maxHp, mod } from "./core";
+import { fragScore, fragSlots } from "./fragments";
+import { heroAc, maxHp, smod } from "./core";
 import { canTrain, nextSkill, trainCost } from "./town";
 import type { Action } from "./engine";
 import type { GameState } from "./types";
@@ -54,7 +55,7 @@ function dungeonAction(s: GameState): Action | null {
     switch (dg.pending.kind) {
       case "trap":
         if (s.hero.hp <= 4 && dg.prev !== null) return { t: "pending", choice: "back" };
-        return { t: "pending", choice: mod(s.hero.stats.dex) >= 2 ? "disarm" : "force" };
+        return { t: "pending", choice: smod(s, "dex") >= 2 ? "disarm" : "force" };
       case "treasure": return { t: "pending", choice: "open" };
       case "record": return { t: "pending", choice: "read" };
       case "shrine": return { t: "pending", choice: "pray" };
@@ -62,6 +63,13 @@ function dungeonAction(s: GameState): Action | null {
         if (hp < 0.6 || dg.floor >= comfortFloor(s)) return { t: "pending", choice: "stay" };
         return { t: "pending", choice: "descend" };
       case "portal": return { t: "pending", choice: "enter" };
+      case "frag": {
+        // 빈 칸이면 흡수, 꽉 찼으면 가장 약한 편린보다 나을 때만 바꾼다
+        if (s.fragments.length < fragSlots(s.hero.level)) return { t: "pending", choice: "absorb" };
+        const scores = s.fragments.map(fragScore);
+        const worst = scores.indexOf(Math.min(...scores));
+        return { t: "pending", choice: fragScore(dg.pending.frag) > scores[worst] ? `swap${worst}` : "leave" };
+      }
       case "gear": {
         const better = gearScore(dg.pending.item) > gearScore(s.gear[targetSlot(s, dg.pending.item)]);
         const wrongWeapon = GEAR[dg.pending.item].weapon && GEAR[dg.pending.item].weapon!.stat !== (s.hero.cls === "mage" ? "int" : "str");

@@ -13,7 +13,8 @@ export const BAL = {
   trainCostPerLevel: 15,
   maxLevel: 16,
   taxBase: 30,
-  taxPerRank: 40,
+  /** 해가 바뀔 때마다 오르는 세금(1년차 30, 2년차 70, 3년차 110 …) */
+  taxPerYear: 40,
   weekTurns: 336,
   moveTurns: 4,
   campTurns: 16,

@@ -1,12 +1,14 @@
 import { josa } from "./josa";
 import { BAL, ENCOUNTERS, MANA_FLOOR_MULT, MIN_COMBAT_ROOMS, MONSTERS, RARE_BY_FLOOR, RECORDS, ROOM_FLAVOR, TRAP_AMBUSH } from "./data";
-import { check, isDead, kill, log, maxHp, note, remember, rngOf } from "./core";
+import { check, isDead, kill, log, maxHp, note, remember, rngOf, smod } from "./core";
+import { FRAGMENTS, fragSlots, fragStatText } from "./fragments";
+import { SKILLS } from "./skills";
 import { describeGroup, makeEnemies, potionHeal, startCombat } from "./combat";
 import { hungerMult } from "./skills";
 import { GEAR, equip, targetSlot } from "./gear";
 import { beginSettlement } from "./town";
 import type { Rng } from "./rng";
-import type { CombatState, DungeonState, GameState, Room, RoomType } from "./types";
+import type { CombatState, DungeonState, GameState, Pending, Room, RoomType } from "./types";
 
 // DESIGN 11절(텍스트 전환판): 층 = 방 그래프. 필수 경로(방 사슬)를 먼저 만들고
 // 갈림길은 그 경로에 덧붙이기만 해서 구조적으로 막힐 수 없게 한다.
@@ -316,13 +318,26 @@ export type PendingChoice =
   | "pray"
   | "descend" | "stay"
   | "enter"
-  | "equip";
+  | "equip"
+  /** 편린: 빈 칸에 흡수 */
+  | "absorb"
+  /** 편린: n번째 편린을 깨뜨리고 흡수 */
+  | `swap${number}`;
 
 export function resolvePending(s: GameState, choice: PendingChoice): void {
   const dg = s.dungeon;
   if (!dg || !dg.pending || s.phase !== "dungeon") return;
+  resolveOne(s, choice);
+  // 이어지는 선택(보스 처치 후 편린 → 장비 등)
+  if (s.phase === "dungeon" && s.dungeon && !s.dungeon.pending && s.dungeon.queue?.length) {
+    s.dungeon.pending = s.dungeon.queue.shift()!;
+  }
+}
+
+function resolveOne(s: GameState, choice: PendingChoice): void {
+  const dg = s.dungeon!;
   const room = currentRoom(s);
-  const pend = dg.pending;
+  const pend = dg.pending!;
   const kind = pend.kind;
   dg.pending = null;
   const r = rngOf(s);
@@ -368,7 +383,7 @@ export function resolvePending(s: GameState, choice: PendingChoice): void {
     }
     room.resolved = true;
     passTime(s, 1);
-    if (r.die(20) + Math.floor(s.hero.stats.luk / 5) < 6) {
+    if (r.die(20) + smod(s, "luk") < 6) {
       const dmg = r.dice(1, 4);
       s.hero.hp -= dmg;
       log(s, `상자에 독침이 숨겨져 있었다! ${dmg} 피해`, "hurt");
@@ -403,6 +418,11 @@ export function resolvePending(s: GameState, choice: PendingChoice): void {
     } else {
       log(s, `${josa(g.name, "은")} 두고 가기로 했다. (착용하지 않은 물건은 가지고 나갈 수 없다)`);
     }
+    return;
+  }
+
+  if (kind === "frag" && pend.kind === "frag") {
+    resolveFrag(s, pend.frag, choice);
     return;
   }
 
@@ -476,13 +496,50 @@ function rollLoot(s: GameState): string {
 }
 
 function offerGear(s: GameState, id: string): void {
-  const dg = d(s);
   const g = GEAR[id];
   const slot = targetSlot(s, id);
   const cur = s.gear[slot];
   log(s, `${g.name} — ${g.flavor}`, "story");
-  dg.pending = { kind: "gear", item: id };
+  offer(s, { kind: "gear", item: id });
   if (cur) log(s, `(지금 착용: ${GEAR[cur].name})`, "system");
+}
+
+/** 선택지를 띄운다. 이미 다른 선택이 떠 있으면 그 뒤에 줄 세운다 */
+function offer(s: GameState, p: Pending): void {
+  const dg = d(s);
+  if (dg.pending) (dg.queue ??= []).push(p);
+  else dg.pending = p;
+}
+
+/** 전투에서 남은 편린 — 한 전투에 여러 개가 남으면 가장 좋은 것 하나만 붙잡을 수 있다 */
+function offerFrag(s: GameState, frags: string[]): void {
+  if (frags.length === 0) return;
+  const best = [...frags].sort((a, b) => FRAGMENTS[b].tier - FRAGMENTS[a].tier)[0];
+  const f = FRAGMENTS[best];
+  log(s, `${f.name} — ${f.flavor}`, "story");
+  if (frags.length > 1) log(s, "편린이 여럿 떠올랐지만, 손에 잡히는 것은 하나뿐이다.", "system");
+  offer(s, { kind: "frag", frag: best });
+}
+
+function resolveFrag(s: GameState, id: string, choice: PendingChoice): void {
+  const f = FRAGMENTS[id];
+  const slots = fragSlots(s.hero.level);
+  if (choice === "absorb" && s.fragments.length < slots) {
+    s.fragments.push(id);
+  } else if (choice.startsWith("swap")) {
+    const i = Number(choice.slice(4));
+    const old = s.fragments[i];
+    if (old === undefined) return;
+    s.fragments[i] = id;
+    log(s, `${josa(FRAGMENTS[old].name, "을")} 깨뜨렸다. 몸에서 빛이 빠져나간다.`, "system");
+    s.hero.hp = Math.min(s.hero.hp, maxHp(s));
+  } else {
+    log(s, `${josa(f.name, "은")} 손가락 사이로 흩어져 사라졌다.`);
+    return;
+  }
+  const skill = f.skill ? SKILLS[f.skill] : null;
+  remember(s, `${josa(f.name, "을")} 흡수했다.`);
+  log(s, `${josa(f.name, "을")} 흡수했다! ${fragStatText(id)}${skill ? ` · 능력 【${skill.name}】 ${skill.desc}` : ""}`, "good");
 }
 
 export function afterDungeonCombat(s: GameState, outcome: "win" | "fled", c: CombatState): void {
@@ -498,6 +555,7 @@ export function afterDungeonCombat(s: GameState, outcome: "win" | "fled", c: Com
       dg.mana += loot;
       log(s, `쓰러진 적에게서 마석(${loot}G 어치)을 챙겼다.`, "good");
     }
+    offerFrag(s, c.frags);
     if (room.type === "boss") {
       remember(s, "거대한 돌연변이 쥐를 쓰러뜨렸다.");
       log(s, "보스가 쓰러지자 포탈의 빛이 한층 밝아진다.", "story");
@@ -507,6 +565,7 @@ export function afterDungeonCombat(s: GameState, outcome: "win" | "fled", c: Com
       offerGear(s, rollLoot(s));
       return;
     }
+    if (dg.pending) return;
     if (!checkTimeUp(s)) peek(s);
     return;
   }
@@ -521,7 +580,7 @@ export function afterDungeonCombat(s: GameState, outcome: "win" | "fled", c: Com
     log(s, `${josa(describeGroup(left), "을")} 남겨두고 이전 방으로 물러났다.`);
   }
   passTime(s, 1);
-  checkTimeUp(s);
+  if (!checkTimeUp(s)) offerFrag(s, c.frags);
 }
 
 export function camp(s: GameState): void {
@@ -533,7 +592,7 @@ export function camp(s: GameState): void {
   if (isDead(s)) return;
   s.hero.satiety = Math.max(0, s.hero.satiety - 6); // 휴식하면 포만감이 더 빨리 닳는다(DESIGN 11절 트레이드오프)
   s.hero.fatigue = Math.max(0, s.hero.fatigue - 60);
-  const heal = 4 + Math.max(0, Math.floor(s.hero.stats.con / 5));
+  const heal = 4 + Math.max(0, smod(s, "con"));
   s.hero.hp = Math.min(maxHp(s), s.hero.hp + heal);
   log(s, `피로가 풀렸다. HP +${heal}`, "good");
   if (r.chance(0.15)) {

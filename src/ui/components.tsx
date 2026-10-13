@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { maxHp, heroAc, mod } from "../game/core";
+import { maxHp, heroAc, smod, stat } from "../game/core";
+import { FRAGMENTS, TIER_LABEL, fragSlots, fragStat, fragStatText } from "../game/fragments";
 import { STAT_KEYS, STAT_LABEL } from "../game/data";
 import { GEAR } from "../game/gear";
 import { CLASSES } from "../game/classes";
@@ -85,8 +86,10 @@ export function StatGrid({ s }: { s: GameState }) {
       {STAT_KEYS.map((k) => (
         <div key={k} className="stat-cell">
           <span className="dim">{STAT_LABEL[k]}</span>
-          <b>{s.hero.stats[k]}</b>
-          <span className="mod">{fmtMod(mod(s.hero.stats[k]))}</span>
+          <b className={fragStat(s, k) > 0 ? "accent" : ""} title={fragStat(s, k) > 0 ? `편린 +${fragStat(s, k)}` : undefined}>
+            {stat(s, k)}
+          </b>
+          <span className="mod">{fmtMod(smod(s, k))}</span>
         </div>
       ))}
     </div>
@@ -205,5 +208,45 @@ export function SkillList({ s, empty }: { s: GameState; empty?: string }) {
         );
       })}
     </ul>
+  );
+}
+
+/** 흡수한 편린과 남은 칸 */
+export function FragList({ s }: { s: GameState }) {
+  const slots = fragSlots(s.hero.level);
+  const nextAt = (Math.floor(s.hero.level / 3) + 1) * 3;
+  return (
+    <>
+      <ul className="skills frags">
+        {Array.from({ length: slots }, (_, i) => {
+          const id = s.fragments[i];
+          if (!id) {
+            return (
+              <li key={i} className="empty">
+                <span className="skill-kind">빈 칸</span>
+                <span className="dim small">미궁의 몬스터를 쓰러뜨리면 아주 드물게 편린이 남는다.</span>
+              </li>
+            );
+          }
+          const f = FRAGMENTS[id];
+          const sk = f.skill ? SKILLS[f.skill] : null;
+          return (
+            <li key={i}>
+              <span className={`skill-kind tier${f.tier}`}>{TIER_LABEL[f.tier]}</span>
+              <b>{f.name}</b>
+              <span className="accent small">{fragStatText(id)}</span>
+              {sk && (
+                <span className="small">
+                  【{sk.name}】 <span className="dim">{sk.kind === "active" ? "자동 발동 · " : "패시브 · "}{sk.desc}</span>
+                </span>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      <p className="dim small">
+        편린 칸 {s.fragments.length}/{slots} · 레벨 {nextAt}에 한 칸 더 생긴다. 편린으로 오른 능력치는 노란색으로 표시된다.
+      </p>
+    </>
   );
 }

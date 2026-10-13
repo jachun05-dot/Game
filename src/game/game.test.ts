@@ -4,7 +4,10 @@ import { generateFloor } from "./dungeon";
 import { newRun } from "./town";
 import { act, apply } from "./engine";
 import { botAction } from "./bot";
-import { STAT_KEYS, BAL } from "./data";
+import { STAT_KEYS, BAL, MONSTERS } from "./data";
+import { FRAGMENTS, FRAG_MAX_CHANCE, fragSlots } from "./fragments";
+import { stat, taxDue } from "./core";
+import { allSkills } from "./skills";
 import type { GameState } from "./types";
 
 function reachable(rooms: ReturnType<typeof generateFloor>): Set<number> {
@@ -219,5 +222,63 @@ describe("레벨 4 관문", () => {
       if (s.log.some((l) => l.text.includes("마석 심장을 꺼냈다"))) got++;
     }
     expect(got).toBeGreaterThan(0);
+  });
+});
+
+describe("편린", () => {
+  it("드롭 확률은 최대 3%이고, 좋은 몬스터일수록 등급이 높다", () => {
+    for (const f of Object.values(FRAGMENTS)) {
+      expect(f.chance).toBeGreaterThan(0);
+      expect(f.chance).toBeLessThanOrEqual(FRAG_MAX_CHANCE);
+      expect(MONSTERS[f.id]).toBeDefined();
+    }
+    expect(FRAGMENTS.boss.tier).toBeGreaterThan(FRAGMENTS.skeleton.tier);
+    expect(FRAGMENTS.skeleton.tier).toBeGreaterThan(FRAGMENTS.rat.tier);
+    // 능력 있는 편린과 없는 편린이 섞여 있다
+    expect(Object.values(FRAGMENTS).some((f) => f.skill)).toBe(true);
+    expect(Object.values(FRAGMENTS).some((f) => !f.skill)).toBe(true);
+  });
+  it("칸은 레벨 1에 1칸, 3레벨마다 1칸씩 는다", () => {
+    expect([1, 2, 3, 5, 6, 9, 16].map(fragSlots)).toEqual([1, 1, 2, 2, 3, 4, 6]);
+  });
+  it("흡수하면 능력치와 능력이 붙고, 칸이 차면 하나를 깨뜨려야 한다", () => {
+    const s = newRun(5);
+    apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    apply(s, { t: "closeWeek" });
+    s.phase = "week-result";
+    s.week = 3;
+    apply(s, { t: "closeWeek" });
+    expect(s.phase).toBe("dungeon");
+    const dex = stat(s, "dex");
+    s.dungeon!.pending = { kind: "frag", frag: "rat" };
+    apply(s, { t: "pending", choice: "absorb" });
+    expect(s.fragments).toEqual(["rat"]);
+    expect(stat(s, "dex")).toBe(dex + 2);
+    // 1칸이 찼으므로 absorb는 무시되고 흩어진다
+    s.dungeon!.pending = { kind: "frag", frag: "goblin" };
+    apply(s, { t: "pending", choice: "absorb" });
+    expect(s.fragments).toEqual(["rat"]);
+    s.dungeon!.pending = { kind: "frag", frag: "crystalskel" };
+    apply(s, { t: "pending", choice: "swap0" });
+    expect(s.fragments).toEqual(["crystalskel"]);
+    expect(stat(s, "dex")).toBe(dex);
+    expect(allSkills(s)).toContain("fragCrystalBone");
+  });
+  it("봇 플레이에서 실제로 편린이 나온다", () => {
+    let got = 0;
+    for (let seed = 1; seed <= 400 && !got; seed++) {
+      const s = playBot(seed, 20000);
+      if (s.history.some((h) => h.includes("편린을 흡수했다"))) got++;
+    }
+    expect(got).toBeGreaterThan(0);
+  });
+});
+
+describe("세금", () => {
+  it("해가 바뀔 때마다 오른다", () => {
+    expect(taxDue(1)).toBe(BAL.taxBase);
+    expect(taxDue(12)).toBe(BAL.taxBase);
+    expect(taxDue(13)).toBe(BAL.taxBase + BAL.taxPerYear);
+    expect(taxDue(25)).toBe(BAL.taxBase + BAL.taxPerYear * 2);
   });
 });

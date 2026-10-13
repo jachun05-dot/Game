@@ -1,4 +1,5 @@
 import { gearBonus } from "./gear";
+import { fragSkills } from "./fragments";
 import type { GameState } from "./types";
 
 // 기술(DESIGN 7절 "훈련은 기술을 가르쳐준다"): 전투는 자동이므로 플레이어가 누르는 기술은 없다.
@@ -130,25 +131,44 @@ export const SKILLS: Record<string, SkillDef> = {
     desc: "내 HP가 50% 이하가 되면 2라운드 동안 AC +4",
     trigger: { on: "selfBelow", pct: 50 }, effect: { type: "guard", ac: 4, rounds: 2 }, uses: 1,
   },
+  // 편린 능력(fragments.ts) — 훈련으로는 배울 수 없다
+  fragCoward: { id: "fragCoward", name: "비겁자의 감", kind: "passive", desc: "도주 판정 +3, 치명타 확률 +2%", passive: { flee: 3, crit: 2 } },
+  fragGoldNose: { id: "fragGoldNose", name: "마석 냄새", kind: "passive", desc: "감각 판정 +3, 치명타 확률 +3%", passive: { perception: 3, crit: 3 } },
+  fragJewelStab: {
+    id: "fragJewelStab", name: "훔친 손놀림", kind: "active",
+    desc: "전투 시작 시 첫 공격이 명중 +3, 피해 +4",
+    trigger: { on: "start" }, effect: { type: "strike", hit: 3, dmg: 4 }, uses: 1,
+  },
+  fragCrystalBone: { id: "fragCrystalBone", name: "결정 골격", kind: "passive", desc: "AC +2, 최대 HP +5", passive: { ac: 2, hp: 5 } },
+  fragFrenzy: {
+    id: "fragFrenzy", name: "광폭한 이빨", kind: "active",
+    desc: "대상의 HP가 50% 이하일 때 반드시 명중, 피해 ×1.5 (전투당 2회)",
+    trigger: { on: "targetBelow", pct: 50 }, effect: { type: "strike", hit: 0, dmg: 0, dmgMult: 1.5, autoHit: true }, uses: 2,
+  },
 };
+
+/** 배운 기술 + 흡수한 편린의 능력 */
+export function allSkills(s: GameState): string[] {
+  return [...s.skills, ...fragSkills(s)];
+}
 
 export function hasSkill(s: GameState, id: string): boolean {
   return s.skills.includes(id);
 }
 
-/** 배운 패시브 + 착용 장비 보정의 합 */
+/** 배운 패시브 + 편린 능력 + 착용 장비 보정의 합 */
 export function passive(s: GameState, key: Exclude<keyof Passive, "hunger">): number {
   let t = gearBonus(s, key);
-  for (const id of s.skills) t += SKILLS[id]?.passive?.[key] ?? 0;
+  for (const id of allSkills(s)) t += SKILLS[id]?.passive?.[key] ?? 0;
   return t;
 }
 
 export function hungerMult(s: GameState): number {
   let m = 1;
-  for (const id of s.skills) m *= SKILLS[id]?.passive?.hunger ?? 1;
+  for (const id of allSkills(s)) m *= SKILLS[id]?.passive?.hunger ?? 1;
   return m;
 }
 
 export function activeSkills(s: GameState): SkillDef[] {
-  return s.skills.map((id) => SKILLS[id]).filter((d) => d && d.kind === "active");
+  return allSkills(s).map((id) => SKILLS[id]).filter((d) => d && d.kind === "active");
 }

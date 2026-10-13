@@ -5,10 +5,10 @@ import { CLASSES } from "../game/classes";
 import { canTrain, needsHeart, nextSkill, trainCost } from "../game/town";
 import type { GameState } from "../game/types";
 import { SKILLS } from "../game/skills";
-import { taxDue } from "../game/core";
+import { taxDue, yearOf } from "../game/core";
 import type { StatKey } from "../game/types";
 import type { Ctl } from "./App";
-import { Card, GameScreen, GearList, HeroHeader, LogView, SkillList, StatGrid, TacticsBar } from "./components";
+import { Card, GameScreen, GearList, HeroHeader, LogView, FragList, SkillList, StatGrid, TacticsBar } from "./components";
 
 const ITEM_INFO = {
   food: { name: "말린 고기", desc: "포만감 +40" },
@@ -52,7 +52,7 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
           <ActivityButton title="훈련" sub={trainSub(s)} disabled={busy || !canTrain(s)} onClick={() => setTraining(true)} />
           <ActivityButton title="탐문" sub="술집 · 소문을 듣고 잔일을 구한다" disabled={busy} onClick={() => dispatch({ t: "activity", a: "rumor" })} />
           <ActivityButton title="외부 탐험" sub="영지 밖 숲 · 작은 전투, 마석 획득 (위험)" disabled={busy} onClick={() => dispatch({ t: "activity", a: "field" })} />
-          <p className="dim small">다음 달 세금: {taxDue(s)}G (미납 시 처형)</p>
+          <p className="dim small">{yearOf(s.month)}년차 · 다음 달 세금: {taxDue(s.month + 1)}G (미납 시 처형 · 해가 바뀔 때마다 {BAL.taxPerYear}G씩 오른다)</p>
           <button className="btn ghost small" onClick={onGraveyard}>
             묘지 들르기
           </button>
@@ -116,6 +116,9 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
           </Card>
           <Card title="기술">
             <SkillList s={s} />
+          </Card>
+          <Card title="편린">
+            <FragList s={s} />
           </Card>
           <Card title="전투는 자동으로 진행됩니다">
             <p className="dim small">가장 약한 적부터 노리고, 기술은 조건이 맞으면 저절로 발동합니다. 정할 수 있는 건 물약과 도주 시점뿐입니다.</p>

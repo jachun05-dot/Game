@@ -1,24 +1,24 @@
 import { BAL } from "../game/data";
 import { GEAR, SLOTS, gearBonus, gearEffect, weaponOf } from "../game/gear";
 import { CLASSES } from "../game/classes";
-import { heroAc, maxHp, mod } from "../game/core";
+import { heroAc, maxHp, smod, stat } from "../game/core";
 import { passive } from "../game/skills";
 import type { Ctl } from "./App";
-import { Card, SkillList, StatGrid, TacticsBar, fmtMod } from "./components";
+import { Card, FragList, SkillList, StatGrid, TacticsBar, fmtMod } from "./components";
 
 /** 캐릭터 화면: 장비 9슬롯, 공격·방어 계산 내역, 능력치, 기술, 소지품 */
 export function CharacterSheet({ ctl }: { ctl: Ctl }) {
   const { s } = ctl;
   const h = s.hero;
-  const dexMod = mod(h.stats.dex);
+  const dexMod = smod(s, "dex");
   const gearAc = gearBonus(s, "ac");
   const skillAc = passive(s, "ac") - gearAc;
   const w = weaponOf(s);
   const STAT_KO = { str: "힘", dex: "민첩", con: "체력", int: "지능", per: "감각", luk: "행운" } as const;
-  const strMod = mod(h.stats[w.stat]);
+  const strMod = smod(s, w.stat);
   const hitBonus = strMod + BAL.proficiency + passive(s, "hit");
   const dmgBonus = strMod + passive(s, "dmg");
-  const crit = 5 + mod(h.stats.luk) + passive(s, "crit");
+  const crit = 5 + smod(s, "luk") + passive(s, "crit");
 
   const slotItem = (key: keyof typeof s.gear): { name: string; effect: string } | null => {
     const id = s.gear[key];
@@ -82,7 +82,7 @@ export function CharacterSheet({ ctl }: { ctl: Ctl }) {
                 <b>{crit}%</b> + 주사위 20
               </dd>
               <dt>턴당 행동</dt>
-              <dd>{h.stats.dex >= 35 ? "2회 (민첩 35 이상)" : "1회 (민첩 35부터 2회)"}</dd>
+              <dd>{stat(s, "dex") >= 35 ? "2회 (민첩 35 이상)" : "1회 (민첩 35부터 2회)"}</dd>
             </dl>
           </Card>
 
@@ -92,6 +92,10 @@ export function CharacterSheet({ ctl }: { ctl: Ctl }) {
 
           <Card title="기술">
             <SkillList s={s} />
+          </Card>
+
+          <Card title="편린">
+            <FragList s={s} />
           </Card>
 
           <Card title="소지품">
