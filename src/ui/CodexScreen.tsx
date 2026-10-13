@@ -2,7 +2,7 @@ import { ENCOUNTERS, FIELD_ENCOUNTERS, MONSTERS, RARE_BY_FLOOR } from "../game/d
 import { FRAGMENTS, TIER_LABEL, fragStatText } from "../game/fragments";
 import { SKILLS } from "../game/skills";
 import type { Codex } from "../game/types";
-import { Card, Shell } from "./components";
+import { Card, FragIcon, Shell } from "./components";
 import { MONSTER_ART } from "./art";
 
 // 몬스터 도감: 마주친 몬스터만 정보가 열리고, 편린 능력치는 흡수해 본 것만 보인다.
@@ -72,6 +72,7 @@ export function CodexScreen({ codex, onBack }: { codex: Codex; onBack: () => voi
                   {known ? (
                     <>
                       <p className="small">
+                        <FragIcon tier={f.tier} />
                         <span className={`skill-kind tier${f.tier}`}>{TIER_LABEL[f.tier]}</span> <b>{f.name}</b> <span className="accent">{fragStatText(id)}</span>
                       </p>
                       <p className="small">

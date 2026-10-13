@@ -173,3 +173,23 @@ Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, 
 ```
 
 결과(2026-10-13): 1차 생성본 채택 → `assets/monsters/boss.png`(94×87, 소년과 키가 비슷하고 폭은 두 배 이상) = `public/mon-boss.png`. 꼬리가 워터마크 모서리에 걸쳐 `--keep-watermark`로 처리(워터마크는 마젠타 계열이라 배경과 함께 빠짐), 등 위 마젠타 1픽셀 제거. 가슴 상처의 붉은 마석 심장 = 게임의 "거대 쥐의 마석 심장"(레벨 4 훈련 재료)
+
+## 011 — 편린 등급 아이콘 4종 (기준 이미지 첨부)
+
+한 장에 4개를 가로로 그리게 하고 후처리에서 세로 빈 줄로 나눈다. 색은 UI 등급 색과 1:1.
+
+```
+Match the exact art style, outline, palette and pixel scale of the attached reference image.
+
+Pixel art game item icons, classic 16-bit RPG style: four small soul-fragment shards arranged in one horizontal row, evenly spaced, same size, each about one fifth of the image width.
+A "fragment" is a jagged splinter of a dead monster's essence, like a shard of cloudy glass with a faint inner light. From left to right they rise in rank:
+1. a dull, chipped, dusty grey-brown shard (#7d6d52), almost lifeless;
+2. a cleaner shard with a faint muted green core (#86a865);
+3. a sharp, well-formed shard with a dull gold core (#cf9a44) and a thin gold rim;
+4. a large, menacing dark shard with a blood-red core (#c0564d) and tiny cracks, clearly the most powerful.
+Each shard drawn with 3-4 flat pixel shades, no soft glow, no bloom, no particles.
+Crisp hard pixel edges, 1-pixel dark outline, no anti-aliasing, no blur, no gradients, no noisy dithering.
+Solid flat magenta background (#FF00FF). No ground shadow, no text, no numbers, no frame or border. Square 1:1 image.
+```
+
+결과(2026-10-13): 1차 생성본 채택 → `assets/icons/frag-1~4.png`(12×21, 11×24, 12×26, 12×29 — 등급이 오를수록 커진다) = `public/frag-1~4.png`. 캐릭터 시트 편린 목록·도감(1배), 미궁 편린 획득 카드(2배)에 쓴다(`FragIcon`). 처음 보는 편린은 크기로 등급이 새지 않게 늘 하급 모양의 실루엣

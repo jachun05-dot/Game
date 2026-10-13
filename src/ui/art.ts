@@ -35,3 +35,12 @@ export const MONSTER_ART: Record<string, SpriteArt> = {
   crystalskel: { src: "./mon-crystalskel.png", w: 82, h: 92 },
 };
 
+
+// 편린 등급 아이콘(1 하급 · 2 중급 · 3 상급 · 4 보스). 색은 UI 등급 색(--dim/--ok/--accent/--danger)과 같다.
+export const FRAG_ICON: SpriteArt[] = [
+  { src: "", w: 0, h: 0 },
+  { src: "./frag-1.png", w: 12, h: 21 },
+  { src: "./frag-2.png", w: 11, h: 24 },
+  { src: "./frag-3.png", w: 12, h: 26 },
+  { src: "./frag-4.png", w: 12, h: 29 },
+];

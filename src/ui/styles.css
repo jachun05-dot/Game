@@ -418,6 +418,12 @@ html, body, #root { height: 100%; }
 
 /* 편린 */
 .frags li.empty { opacity: 0.7; }
+/* 편린 아이콘: 목록·도감은 1배로 줄 왼쪽에, 미궁 획득 카드는 2배로 카드 왼쪽에 세운다 */
+.frag-icon { image-rendering: pixelated; flex: none; align-self: center; }
+.frag-icon.silhouette { filter: brightness(0) invert(0.35); }
+.codex-frag .frag-icon { vertical-align: middle; margin-right: 6px; }
+.loot-card.has-icon { position: relative; padding-left: 52px; min-height: 74px; }
+.loot-card.has-icon > .frag-icon { position: absolute; left: 14px; top: 10px; }
 .skill-kind.tier1 { color: var(--dim); }
 .skill-kind.tier2 { color: var(--ok); border-color: var(--ok); }
 .skill-kind.tier3 { color: var(--accent); border-color: var(--accent); }

@@ -9,7 +9,7 @@ import { SKILLS } from "../game/skills";
 import type { AutoGoal, GameState } from "../game/types";
 import type { Ctl, Speed } from "./App";
 import { CharacterSheet } from "./CharacterSheet";
-import { CLASS_ART } from "./art";
+import { CLASS_ART, FRAG_ICON } from "./art";
 
 export function Shell({ children, wide }: { children: ReactNode; wide?: boolean }) {
   return <main className={`shell${wide ? " wide" : ""}`}>{children}</main>;
@@ -266,6 +266,7 @@ export function FragList({ s }: { s: GameState }) {
           const sk = f.skill ? SKILLS[f.skill] : null;
           return (
             <li key={i}>
+              <FragIcon tier={f.tier} />
               <span className={`skill-kind tier${f.tier}`}>{TIER_LABEL[f.tier]}</span>
               <b>{f.name}</b>
               <span className="accent small">{fragStatText(id)}</span>
@@ -324,4 +325,11 @@ export function FaithCard({ s }: { s: GameState }) {
       )}
     </>
   );
+}
+
+/** 편린 등급 아이콘. 등급을 아직 모르는 편린은 hidden으로 — 모양 크기로도 등급이 새지 않게 늘 같은 실루엣을 쓴다. */
+export function FragIcon({ tier, scale = 1, hidden }: { tier: number; scale?: number; hidden?: boolean }) {
+  const a = FRAG_ICON[hidden ? 1 : tier];
+  if (!a?.src) return null;
+  return <img className={`frag-icon${hidden ? " silhouette" : ""}`} src={a.src} width={a.w * scale} height={a.h * scale} alt="" />;
 }

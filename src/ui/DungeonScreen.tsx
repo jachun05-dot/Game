@@ -8,7 +8,7 @@ import { FRAGMENTS, TIER_LABEL, fragKnown, fragSlots, fragStatText } from "../ga
 import { SKILLS } from "../game/skills";
 import type { Ctl } from "./App";
 import { josa } from "../game/josa";
-import { Bar, GameScreen, HeroHeader, LogView } from "./components";
+import { Bar, FragIcon, GameScreen, HeroHeader, LogView } from "./components";
 
 function fmtTime(turns: number): string {
   const h = Math.max(0, turns) / 2;
@@ -121,7 +121,8 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
       <>
         <p className="dock-title">편린이 남았다 — 흡수할까? <span className="dim small">(칸 {s.fragments.length}/{slots})</span></p>
         {known ? (
-          <div className="loot-card">
+          <div className="loot-card has-icon">
+            <FragIcon tier={f.tier} scale={2} />
             <b>
               {f.name} <span className="dim small">{TIER_LABEL[f.tier]}</span>
             </b>
@@ -136,7 +137,8 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
             <span className="dim small">{f.flavor}</span>
           </div>
         ) : (
-          <div className="loot-card">
+          <div className="loot-card has-icon">
+            <FragIcon tier={f.tier} scale={2} hidden />
             <b>
               {f.name} <span className="dim small">처음 보는 편린</span>
             </b>
