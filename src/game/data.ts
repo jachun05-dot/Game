@@ -24,6 +24,10 @@ export const BAL = {
   trapDisarmDc: 13,
   fleeDcBase: 10,
   prices: { food: 5, potion: 15, scroll: 45 },
+  /** 층마다 희귀 개체가 나올 확률 */
+  rareChance: 0.008,
+  /** 함정 발견 후 숨은 고블린을 알아채는 감각 DC */
+  ambushSpotDc: 13,
 } as const;
 
 /** 층이 깊을수록 마석 가치가 오른다 */
@@ -50,13 +54,23 @@ export interface MonsterDef {
   /** 쓰러뜨리면 얻는 마석 가치(G) */
   mana: number;
   attackText: string;
+  /** 성향 설명(로그·도감용) */
+  note?: string;
+  /** 희귀 개체: 마석이 층 배율 없이 그대로 들어오고, 몇 라운드 뒤 달아난다 */
+  rare?: boolean;
+  /** 이 라운드가 끝날 때까지 못 잡으면 달아난다 */
+  escapeAfter?: number;
 }
 
 // DESIGN 11절 "1섹터 몬스터(확정)" / "1섹터 보스"
 export const MONSTERS: Record<string, MonsterDef> = {
   rat: { id: "rat", name: "쥐", hp: 4, ac: 12, atk: 2, dice: [1, 4], mana: 5, attackText: "물어뜯었다" },
-  goblin: { id: "goblin", name: "고블린", hp: 7, ac: 12, atk: 3, dice: [1, 6], mana: 9, attackText: "녹슨 단검을 휘둘렀다" },
+  goblin: { id: "goblin", name: "고블린", hp: 7, ac: 12, atk: 3, dice: [1, 6], mana: 9, attackText: "녹슨 단검을 휘둘렀다", note: "비겁하다. 함정 근처에 숨어 있다가 함정을 밟은 상대를 노린다. 함정이 해체되면 달아난다." },
   skeleton: { id: "skeleton", name: "스켈레톤 병사", hp: 10, ac: 13, atk: 3, dice: [1, 8], mana: 15, attackText: "뼈 검을 내리쳤다" },
+  // 희귀 개체 — 층마다 BAL.rareChance 확률로 전투방 하나에 단독 출현
+  goldrat: { id: "goldrat", name: "마석 먹은 쥐", hp: 8, ac: 15, atk: 1, dice: [1, 3], mana: 180, attackText: "번들거리는 이빨로 물었다", rare: true, escapeAfter: 3, note: "마석을 삼켜 배가 빛난다. 겁이 많아 금방 달아난다." },
+  jewelgoblin: { id: "jewelgoblin", name: "보석 박힌 고블린", hp: 12, ac: 15, atk: 3, dice: [1, 4], mana: 200, attackText: "보석 박힌 곤봉을 휘둘렀다", rare: true, escapeAfter: 3, note: "훔친 마석을 몸에 박아 넣었다. 불리하면 바로 달아난다." },
+  crystalskel: { id: "crystalskel", name: "마석 갑옷 스켈레톤", hp: 16, ac: 16, atk: 4, dice: [1, 6], mana: 220, attackText: "마석 박힌 검을 내리쳤다", rare: true, escapeAfter: 4, note: "갑옷이 통째로 마석이다. 오래 머물지 않고 어둠 속으로 사라진다." },
   boss: { id: "boss", name: "거대한 돌연변이 쥐", hp: 18, ac: 13, atk: 4, dice: [1, 8], mana: 60, attackText: "거대한 이빨로 물어뜯었다" },
 };
 
@@ -80,6 +94,17 @@ export const ENCOUNTERS: Record<number, { item: string[]; w: number }[]> = {
     { item: ["rat", "rat", "rat"], w: 1 },
   ],
 };
+
+/** 층마다 전투방 최소 개수(함정이 많아도 몬스터가 줄지 않게) */
+export const MIN_COMBAT_ROOMS = [0, 2, 2, 3];
+/** 함정방에 고블린이 숨어 있을 확률과 마릿수 */
+export const TRAP_AMBUSH: { chance: number; size: [number, number] }[] = [
+  { chance: 0, size: [0, 0] },
+  { chance: 0.2, size: [1, 1] },
+  { chance: 0.3, size: [1, 1] },
+  { chance: 0.4, size: [1, 2] },
+];
+export const RARE_BY_FLOOR = ["", "goldrat", "jewelgoblin", "crystalskel"];
 
 export const FIELD_ENCOUNTERS: { item: string[]; w: number }[] = [
   { item: ["rat"], w: 3 },

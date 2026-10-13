@@ -111,6 +111,9 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
     return (
       <>
         <p className="dock-title">{ROOM_LABEL[room.type]} — 어떻게 할까?</p>
+        {dg.pending.kind === "trap" && room.ambushKnown && room.ambush && (
+          <p className="dim small">고블린 {room.ambush.length}마리가 숨어 있다. 해체하면 달아나고, 밟고 다치면 기습당한다.</p>
+        )}
         <div className="choices">
           {PENDING_OPTIONS[dg.pending.kind]
             .filter((o) => o.choice !== "back" || dg.prev !== null)
@@ -145,7 +148,7 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
       <div className="choices">
         {room.edges.map((id) => {
           const nb = dg.rooms[id];
-          const label = nb.visited || nb.known ? ROOM_LABEL[nb.type] : "???";
+          const label = nb.visited || nb.known ? ROOM_LABEL[nb.type] + (nb.ambushKnown && nb.ambush ? " · 고블린 매복" : "") : "???";
           const note = id === dg.prev ? "왔던 길" : nb.visited ? "가 본 곳" : "";
           const danger = (nb.known || nb.visited) && !nb.resolved && ["combat", "trap", "boss"].includes(nb.type);
           return (

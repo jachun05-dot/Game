@@ -1,5 +1,5 @@
 import { josa } from "./josa";
-import { BAL, ENCOUNTERS, MANA_FLOOR_MULT, MONSTERS, RECORDS, ROOM_FLAVOR } from "./data";
+import { BAL, ENCOUNTERS, MANA_FLOOR_MULT, MIN_COMBAT_ROOMS, MONSTERS, RARE_BY_FLOOR, RECORDS, ROOM_FLAVOR, TRAP_AMBUSH } from "./data";
 import { check, isDead, kill, log, maxHp, note, remember, rngOf } from "./core";
 import { describeGroup, makeEnemies, potionHeal, startCombat } from "./combat";
 import { hungerMult } from "./skills";
@@ -82,15 +82,22 @@ export function generateFloor(r: Rng, floor: number): Room[] {
   };
   const isDeadEnd = (x: Room) => x.edges.length === 1;
   take("treasure", 1, isDeadEnd);
-  take("trap", 1 + floor); // 함정: 층이 깊을수록 증가(웹 데모 규칙 2+층수를 방 수에 맞춰 축소)
+  // 전투방을 먼저 확보한다(함정이 많아져도 몬스터가 줄지 않게, DESIGN 11절 "층이 깊을수록 조우 증가")
+  take("combat", Math.max(MIN_COMBAT_ROOMS[floor], Math.round(free.length * 0.25)));
+  take("trap", 1 + floor); // 함정: 층이 깊을수록 증가
   take("record", r.int(1, 2), isDeadEnd);
   if (r.chance(0.35)) take("shrine", 1);
-  const combats = Math.ceil(free.length * 0.4);
-  take("combat", combats);
 
+  const amb = TRAP_AMBUSH[floor];
   for (const room of rooms) {
     if (room.type === "combat") room.encounter = r.weighted(ENCOUNTERS[floor]);
     if (room.type === "boss") room.encounter = ["boss", ...Array(r.int(2, 3)).fill("rat")];
+    if (room.type === "trap" && r.chance(amb.chance)) room.ambush = Array(r.int(amb.size[0], amb.size[1])).fill("goblin");
+  }
+  // 희귀 개체: 전투방 하나를 차지한다
+  if (r.chance(BAL.rareChance)) {
+    const combatRooms = rooms.filter((x) => x.type === "combat");
+    if (combatRooms.length) r.pick(combatRooms).encounter = [RARE_BY_FLOOR[floor]];
   }
   return rooms;
 }
@@ -214,8 +221,8 @@ function arrive(s: GameState, firstOfFloor: boolean): void {
         return;
       }
       case "trap":
-        arriveTrap(s, room);
-        if (isDead(s) || dg.pending) return;
+        // 매복 전투가 벌어졌으면 전투 뒤처리(afterDungeonCombat)가 엿보기까지 끝낸다
+        if (arriveTrap(s, room) || isDead(s) || dg.pending) return;
         break;
       case "treasure":
       case "record":
@@ -243,41 +250,63 @@ function peek(s: GameState): void {
   }
 }
 
-function arriveTrap(s: GameState, room: Room): void {
+/** 함정방 도착. 매복 전투가 벌어졌으면 true */
+function arriveTrap(s: GameState, room: Room): boolean {
   const dg = d(s);
   if (room.known) {
     log(s, "알고 있던 함정이다. 바닥의 어색한 돌이 보인다.", "system");
+    spotAmbush(s, room);
     dg.pending = { kind: "trap" };
-    return;
+    return false;
   }
   const c = check(s, "per", BAL.trapDetectDc);
   room.known = true;
   if (c.ok) {
     note(s, "per");
     log(s, `${flavor(room, "trap")} 함정을 알아챘다! (감각 ${c.total} vs ${BAL.trapDetectDc})`, "system");
+    spotAmbush(s, room);
     dg.pending = { kind: "trap" };
-    return;
+    return false;
   }
-  springTrap(s, room);
+  return springTrap(s, room);
 }
 
-function springTrap(s: GameState, room: Room): void {
+/** 함정을 알아챈 김에 숨은 고블린도 알아채는지 */
+function spotAmbush(s: GameState, room: Room): void {
+  if (!room.ambush || room.ambushKnown) return;
+  if (check(s, "per", BAL.ambushSpotDc).ok) {
+    room.ambushKnown = true;
+    log(s, `벽 틈에서 눈빛이 번뜩인다 — 고블린 ${room.ambush.length}마리가 함정을 밟기를 기다리고 있다.`, "system");
+  }
+}
+
+/** 함정 작동. 숨어 있던 고블린이 있으면 덮친다(밟아서 다쳤으면 기습). 매복 전투가 벌어졌으면 true */
+function springTrap(s: GameState, room: Room): boolean {
   room.resolved = true;
   const c = check(s, "dex", BAL.trapDodgeDc);
+  let hurt = false;
   if (c.ok) {
     note(s, "dex");
     log(s, `발밑에서 가시가 튀어나왔다 — 아슬아슬하게 피했다! (민첩 ${c.total} vs ${BAL.trapDodgeDc})`, "good");
-    return;
+  } else {
+    const dmg = rngOf(s).dice(1, 6);
+    s.hero.hp -= dmg;
+    log(s, `가시함정을 밟았다! ${dmg} 피해 (민첩 ${c.total} vs ${BAL.trapDodgeDc})`, "hurt");
+    if (s.hero.hp <= 0) {
+      s.hero.hp = 0;
+      kill(s, "trap", "가시함정에 목숨을 잃었다");
+      return false;
+    }
+    note(s, "con");
+    hurt = true;
   }
-  const dmg = rngOf(s).dice(1, 6);
-  s.hero.hp -= dmg;
-  log(s, `가시함정을 밟았다! ${dmg} 피해 (민첩 ${c.total} vs ${BAL.trapDodgeDc})`, "hurt");
-  if (s.hero.hp <= 0) {
-    s.hero.hp = 0;
-    kill(s, "trap", "가시함정에 목숨을 잃었다");
-    return;
-  }
-  note(s, "con");
+  if (!room.ambush) return false;
+  const ids = room.ambush;
+  room.ambush = undefined;
+  if (hurt) log(s, `킥킥거리는 소리 — 숨어 있던 고블린 ${ids.length}마리가 비틀거리는 틈을 노리고 덮친다!`, "hurt");
+  else log(s, `함정을 피하자 숨어 있던 고블린 ${ids.length}마리가 혀를 차며 뛰쳐나온다.`, "hurt");
+  startCombat(s, "dungeon", makeEnemies(s, ids), { surprise: hurt });
+  return true;
 }
 
 export type PendingChoice =
@@ -315,13 +344,17 @@ export function resolvePending(s: GameState, choice: PendingChoice): void {
         note(s, "per");
         room.resolved = true;
         log(s, `함정을 해체했다. (민첩 ${c.total} vs ${BAL.trapDisarmDc})`, "good");
+        if (room.ambush) {
+          log(s, `숨어 있던 고블린 ${room.ambush.length}마리가 겁을 먹고 달아났다. 비겁한 놈들이다.`, "system");
+          room.ambush = undefined;
+        }
       } else {
         log(s, `해체하다 함정이 작동했다! (민첩 ${c.total} vs ${BAL.trapDisarmDc})`, "hurt");
-        springTrap(s, room);
+        if (springTrap(s, room)) return;
       }
     } else {
       log(s, "이를 악물고 함정 위를 지나간다.");
-      springTrap(s, room);
+      if (springTrap(s, room)) return;
     }
     if (!isDead(s)) peek(s);
     return;
@@ -457,7 +490,8 @@ export function afterDungeonCombat(s: GameState, outcome: "win" | "fled", c: Com
   const room = currentRoom(s);
   s.phase = "dungeon";
   const roomFight = room.type === "combat" || room.type === "boss";
-  const loot = Math.round(c.loot * MANA_FLOOR_MULT[dg.floor]);
+  const loot = Math.round(c.loot * MANA_FLOOR_MULT[dg.floor]) + c.bonus;
+  if (c.bonus > 0) remember(s, `희귀 개체를 잡아 마석 ${c.bonus}G 어치를 얻었다.`);
   if (outcome === "win") {
     if (roomFight) room.resolved = true; // 야영 중 기습 전투는 방 사건과 무관
     if (loot > 0) {

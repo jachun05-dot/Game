@@ -39,10 +39,20 @@ interface Strike {
 const PLAIN: Strike = { hit: 0, dmg: 0, mult: 1, autoHit: false };
 
 /** 전투를 처음부터 끝까지 자동으로 진행한다 */
-export function startCombat(s: GameState, context: CombatState["context"], enemies: Enemy[]): void {
-  const c: CombatState = { context, enemies, round: 1, loot: 0, used: {}, guard: null };
+export function startCombat(s: GameState, context: CombatState["context"], enemies: Enemy[], opts: { surprise?: boolean } = {}): void {
+  const c: CombatState = { context, enemies, round: 1, loot: 0, bonus: 0, used: {}, guard: null };
   s.combat = c;
   log(s, `${josa(describeGroup(enemies), "이")} 나타났다!`, "hurt");
+  for (const e of enemies) {
+    const def = MONSTERS[e.defId];
+    if (def.rare) log(s, `【희귀 개체】 ${def.name} — ${def.note} 놓치기 전에 잡아야 한다! (마석 ${def.mana}G 어치)`, "crit");
+  }
+  // 기습: 적이 먼저 한 번 행동한다(함정을 밟은 상대를 노리는 고블린 등)
+  if (opts.surprise) {
+    log(s, "기습! 자세를 잡기도 전에 공격이 들어온다.", "hurt");
+    enemyPhase(s, c);
+    if (isDead(s)) return;
+  }
 
   let opener: Strike | null = null;
   for (const sk of activeSkills(s)) {
@@ -81,6 +91,8 @@ export function startCombat(s: GameState, context: CombatState["context"], enemi
     if (isDead(s)) return;
     enemyPhase(s, c);
     if (isDead(s)) return;
+    escapeRares(s, c);
+    if (alive(c).length === 0) return finish(s, "win");
     c.round += 1;
     if (c.guard && --c.guard.rounds <= 0) c.guard = null;
     if (context === "dungeon") {
@@ -107,10 +119,28 @@ function castSpell(s: GameState, c: CombatState, dice: [number, number], all: bo
     note(s, "int");
     log(s, `${def.name}에게 ${dmg} 피해`, "hit");
     if (t.hp <= 0) {
-      c.loot += def.mana;
+      gainLoot(c, def.id);
       log(s, `${josa(def.name, "을")} 쓰러뜨렸다.`, "good");
     }
   }
+}
+
+/** 희귀 개체는 정해진 라운드가 지나면 달아난다 */
+function escapeRares(s: GameState, c: CombatState): void {
+  for (const e of alive(c)) {
+    const def = MONSTERS[e.defId];
+    if (def.escapeAfter && c.round >= def.escapeAfter) {
+      e.hp = 0;
+      e.fled = true;
+      log(s, `${josa(def.name, "이")} 벽 틈으로 쏙 빠져 달아났다! 마석이 멀어진다…`, "miss");
+    }
+  }
+}
+
+function gainLoot(c: CombatState, defId: string): void {
+  const def = MONSTERS[defId];
+  if (def.rare) c.bonus += def.mana;
+  else c.loot += def.mana;
 }
 
 function canUse(c: CombatState, sk: SkillDef): boolean {
@@ -205,7 +235,7 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
   log(s, `${def.name}에게 ${w.verb} 명중! ${dmg} 피해${crit ? " (치명타!)" : ""}`, crit ? "crit" : "hit");
   if (target.hp <= 0) {
     note(s, w.stat === "int" ? "int" : w.stat === "dex" ? "dex" : "str");
-    c.loot += def.mana;
+    gainLoot(c, def.id);
     log(s, `${josa(def.name, "을")} 쓰러뜨렸다.`, "good");
   }
 }

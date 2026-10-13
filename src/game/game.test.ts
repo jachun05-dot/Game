@@ -163,3 +163,30 @@ describe("직업과 장비", () => {
     expect(offered).toBeGreaterThan(0);
   });
 });
+
+describe("고블린 매복과 희귀 개체", () => {
+  it("희귀 개체는 층마다 1% 이하로 나온다", () => {
+    let floors = 0, rare = 0;
+    for (let seed = 1; seed <= 6000; seed++) for (const f of [1, 2, 3]) {
+      floors++;
+      if (generateFloor(new Rng({ s: seed * 3 + f }), f).some((r) => r.encounter?.some((m) => ["goldrat", "jewelgoblin", "crystalskel"].includes(m)))) rare++;
+    }
+    expect(rare / floors).toBeGreaterThan(0.003);
+    expect(rare / floors).toBeLessThanOrEqual(0.012);
+  });
+  it("층이 깊어도 전투방이 줄지 않는다", () => {
+    for (const f of [1, 2, 3]) {
+      let combat = 0;
+      for (let seed = 1; seed <= 500; seed++) combat += generateFloor(new Rng({ s: seed }), f).filter((r) => r.type === "combat").length;
+      expect(combat / 500).toBeGreaterThanOrEqual([0, 2, 2, 3][f]);
+    }
+  });
+  it("함정을 밟아 다치면 숨은 고블린이 기습한다", () => {
+    let surprised = 0;
+    for (let seed = 1; seed <= 400 && surprised === 0; seed++) {
+      const s = playBot(seed, 3000);
+      if (s.log.some((l) => l.text.startsWith("기습!"))) surprised++;
+    }
+    expect(surprised).toBeGreaterThan(0);
+  });
+});

@@ -33,14 +33,18 @@ export interface Enemy {
   stun?: number;
   /** 약점 간파 등으로 깎인 AC */
   acDown?: number;
+  /** 희귀 개체가 달아났음 */
+  fled?: boolean;
 }
 
 export interface CombatState {
   context: "field" | "dungeon";
   enemies: Enemy[];
   round: number;
-  /** 전투에서 얻은 마석 가치(G) */
+  /** 전투에서 얻은 마석 가치(G, 층 배율 적용 전) */
   loot: number;
+  /** 희귀 개체 마석(층 배율 없이 그대로) */
+  bonus: number;
   /** 액티브 기술별 이번 전투 사용 횟수 */
   used: Record<string, number>;
   /** 흘려내기 등 일시 AC 보너스 */
@@ -82,6 +86,10 @@ export interface Room {
   encounter?: string[];
   /** 전투에서 도망쳤을 때 남은 적 상태 */
   remaining?: Enemy[];
+  /** 함정방에 숨어 있는 고블린(함정을 밟으면 덮친다) */
+  ambush?: string[];
+  /** 숨은 고블린을 알아챘는지 */
+  ambushKnown?: boolean;
   flavor: number;
 }
 
