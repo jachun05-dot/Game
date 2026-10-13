@@ -211,6 +211,8 @@ function elementBonus(s: GameState, el: ElementKey, t: Enemy): number {
   let b = 0;
   if (has(s, "fireHeat")) b += 1 + Math.floor(Math.max(0, smod(s, "str")) / 2);
   if (el === "fire" && has(s, "fireMark")) b += 2;
+  if (el === "frost" && has(s, "frostMark")) b += 2;
+  if (has(s, "frostMark") && (t.stun ?? 0) > 0) b += 2; // 깨뜨리기
   if (el === "fire" && has(s, "fireWill") && hpPct(s) <= 30) b += 3;
   if (el === "earth" && has(s, "earthMark") && MONSTERS[t.defId].hard) b += 3;
   return b;
@@ -467,7 +469,7 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
   const statMod = smod(s, w.stat);
   const roll = r.die(20);
   const held = (target.stun ?? 0) > 0;
-  const magicHit = w.magic ? (held && has(s, "frostEye") ? 2 : 0) + (def.flying && has(s, "boltMark") ? 2 : 0) : 0;
+  const magicHit = w.magic ? (held && has(s, "frostEye") ? 3 : 0) + (def.flying && has(s, "boltMark") ? 2 : 0) : 0;
   const bonus = statMod + BAL.proficiency + passive(s, "hit") + st.hit + rollPenalty(s) + faithHit(s, alive(c).length) + injuryHit(s) + (def.flying && !w.magic ? -2 : 0) + magicHit;
   if (!st.autoHit && roll === 1) {
     log(s, `손이 미끄러졌다! (주사위 1)`, "miss");
@@ -477,9 +479,9 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
     log(s, `${josa(def.name, "을")} 노렸지만 빗나갔다. (${roll}+${bonus} vs AC ${ac})`, "miss");
     return;
   }
-  const crit = !noCrit(s) && (roll === 20 || r.float() * 100 < 5 + smod(s, "luk") + passive(s, "crit") + (w.magic && held && has(s, "frostEye") ? 10 : 0));
+  const crit = !noCrit(s) && (roll === 20 || r.float() * 100 < 5 + smod(s, "luk") + passive(s, "crit") + (w.magic && held && has(s, "frostEye") ? 15 : 0));
   selfInjury(s, def.id, w.magic);
-  const magicDmg = w.magic && s.mainElement === "earth" && has(s, "earthMark") && def.hard ? 3 : 0;
+  const magicDmg = (w.magic && s.mainElement === "earth" && has(s, "earthMark") && def.hard ? 3 : 0) + (w.magic && held && has(s, "frostMark") ? 2 : 0);
   const base = (w.magic ? rollDice(s, w.dice[0] * (crit ? 2 : 1), w.dice[1]) : r.dice(w.dice[0] * (crit ? 2 : 1), w.dice[1])) + magicDmg + statMod + passive(s, "dmg") + st.dmg + faithDmg(s) + rageDmg(s) + abyssEdge(s, s.hero.hp / maxHp(s)).dmg;
   const dmg = Math.max(1, Math.round(base * st.mult));
   target.hp -= dmg;
@@ -496,7 +498,7 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
       burn(s, target, 2);
       log(s, `【불씨】 ${def.name}에게 불이 옮겨붙었다.`, "skill");
     }
-    if (has(s, "frostTouch") && r.chance(freezeChance(s, 0.15))) {
+    if (has(s, "frostTouch") && r.chance(freezeChance(s, 0.25))) {
       freeze(target);
       log(s, `【서리 손끝】 ${josa(def.name, "이")} 얼어붙었다.`, "skill");
     }
