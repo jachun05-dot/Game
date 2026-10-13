@@ -10,7 +10,7 @@ import { SKILLS } from "../game/skills";
 import type { AutoGoal, GameState } from "../game/types";
 import type { Ctl, Speed } from "./App";
 import { CharacterSheet } from "./CharacterSheet";
-import { CLASS_ART } from "./art";
+import { CLASS_ART, FRAG_ICON, MONSTER_ART, SCENE_ART } from "./art";
 
 export function Shell({ children, wide }: { children: ReactNode; wide?: boolean }) {
   return <main className={`shell${wide ? " wide" : ""}`}>{children}</main>;
@@ -122,11 +122,25 @@ export function LogView({ ctl, max = 80, tall, fill }: { ctl: Ctl; max?: number;
     <div ref={ref} className={`log${tall ? " tall" : ""}${fill ? " fill" : ""}`} onClick={ctl.revealAll} role="log" aria-live="polite">
       {visible.map((l) => (
         <p key={l.n} className={`log-line ${l.kind}`}>
+          {l.mons && <EncounterFigures ids={l.mons} />}
           {l.text}
         </p>
       ))}
       {ctl.busy && <p className="log-line dim blink">▼</p>}
     </div>
+  );
+}
+
+/** 몬스터 등장 줄 위에 나타난 몬스터를 원래 도트 크기(1배)로 나란히 세운다. 그림이 없는 몬스터는 글로만 */
+function EncounterFigures({ ids }: { ids: string[] }) {
+  const arts = ids.map((id) => MONSTER_ART[id]).filter(Boolean);
+  if (!arts.length) return null;
+  return (
+    <span className="encounter">
+      {arts.map((a, i) => (
+        <img key={i} src={a.src} width={a.w} height={a.h} alt="" />
+      ))}
+    </span>
   );
 }
 
@@ -268,6 +282,7 @@ export function FragList({ s }: { s: GameState }) {
           const sk = f.skill ? SKILLS[f.skill] : null;
           return (
             <li key={i}>
+              <FragIcon tier={f.tier} />
               <span className={`skill-kind tier${f.tier}`}>{TIER_LABEL[f.tier]}</span>
               <b>{f.name}</b>
               <span className="accent small">{fragStatText(id)}</span>
@@ -365,4 +380,22 @@ export function InjuryTags({ s }: { s: GameState }) {
   const list = injurySummary(s);
   if (!list.length) return null;
   return <div className="injury-tags">{list.map((t) => <span key={t} className="injury-tag">{t}</span>)}</div>;
+}
+
+/** 편린 등급 아이콘. 등급을 아직 모르는 편린은 hidden으로 — 모양 크기로도 등급이 새지 않게 늘 같은 실루엣을 쓴다. */
+export function FragIcon({ tier, scale = 1, hidden }: { tier: number; scale?: number; hidden?: boolean }) {
+  const a = FRAG_ICON[hidden ? 1 : tier];
+  if (!a?.src) return null;
+  return <img className={`frag-icon${hidden ? " silhouette" : ""}`} src={a.src} width={a.w * scale} height={a.h * scale} alt="" />;
+}
+
+/** 장소 그림 띠. 2배 정수 확대, 가운데 정렬로 좁은 화면에서는 양옆만 잘린다. 장식이라 대체 텍스트는 비운다 */
+export function SceneBanner({ id }: { id: string }) {
+  const a = SCENE_ART[id];
+  if (!a) return null;
+  return (
+    <div className="scene" style={{ height: a.h * 2 }}>
+      <img src={a.src} width={a.w * 2} height={a.h * 2} style={{ marginLeft: -a.w }} alt="" />
+    </div>
+  );
 }

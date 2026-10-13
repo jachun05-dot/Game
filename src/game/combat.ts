@@ -48,6 +48,7 @@ export function startCombat(s: GameState, context: CombatState["context"], enemi
   const c: CombatState = { context, enemies, round: 1, loot: 0, bonus: 0, frags: [], used: {}, guard: null };
   s.combat = c;
   log(s, `${josa(describeGroup(enemies), "이")} 나타났다!`, "hurt");
+  s.log[s.log.length - 1].mons = enemies.map((e) => e.defId);
   for (const e of enemies) if (!s.codex.seen.includes(e.defId)) s.codex.seen.push(e.defId);
   for (const e of enemies) {
     const def = MONSTERS[e.defId];

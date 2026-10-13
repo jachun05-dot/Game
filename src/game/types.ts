@@ -23,6 +23,8 @@ export type LogKind = "normal" | "hit" | "crit" | "miss" | "hurt" | "system" | "
 export interface LogLine {
   text: string;
   kind: LogKind;
+  /** 몬스터 등장 줄: 나타난 몬스터 id(화면에서 그림으로 보여 준다) */
+  mons?: string[];
 }
 
 export interface Enemy {

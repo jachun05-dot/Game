@@ -29,7 +29,23 @@ export const MONSTER_ART: Record<string, SpriteArt> = {
   rat: { src: "./mon-rat.png", w: 36, h: 22 },
   goblin: { src: "./mon-goblin.png", w: 63, h: 69 },
   skeleton: { src: "./mon-skeleton.png", w: 62, h: 83 },
+  boss: { src: "./mon-boss.png", w: 94, h: 87 },
   goldrat: { src: "./mon-goldrat.png", w: 36, h: 24 },
   jewelgoblin: { src: "./mon-jewelgoblin.png", w: 60, h: 71 },
+  crystalskel: { src: "./mon-crystalskel.png", w: 82, h: 92 },
 };
 
+
+// 편린 등급 아이콘(1 하급 · 2 중급 · 3 상급 · 4 보스). 색은 UI 등급 색(--dim/--ok/--accent/--danger)과 같다.
+export const FRAG_ICON: SpriteArt[] = [
+  { src: "", w: 0, h: 0 },
+  { src: "./frag-1.png", w: 12, h: 21 },
+  { src: "./frag-2.png", w: 11, h: 24 },
+  { src: "./frag-3.png", w: 12, h: 26 },
+  { src: "./frag-4.png", w: 12, h: 29 },
+];
+
+// 장소 그림(띠 모양, 원래 도트 크기). 화면에서는 2배로 키우고 좁은 화면에서는 양옆이 잘린다.
+export const SCENE_ART: Record<string, SpriteArt> = {
+  training: { src: "./scene-training.png", w: 179, h: 80 },
+};

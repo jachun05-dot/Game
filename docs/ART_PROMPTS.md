@@ -143,3 +143,72 @@ Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, 
 ```
 
 결과(2026-10-13): 1차 생성본 채택 → `assets/monsters/jewelgoblin.png`(60×71) = `public/mon-jewelgoblin.png`. 기본 고블린과 같은 자리(손가락 사이) 마젠타 3픽셀만 투명 처리
+
+## 009 — 마석 갑옷 스켈레톤 (기준 이미지 + 스켈레톤 첨부)
+
+```
+Match the exact art style, outline, palette and pixel scale of the first attached reference image. Use the second attached image (a skeleton soldier) as the base creature.
+
+Pixel art game sprite of the same skeleton soldier species, 3/4 view facing left, classic 16-bit RPG style. It is an adult-sized skeleton: its skull is clearly higher than the reference boy's head; fill about 95% of the image height.
+This rare skeleton wears armor made entirely of rough, faceted mana stone: a chest plate, pauldrons and a helm of cold teal-cyan crystal (#5fb3a8), and it holds a bone sword with crystal shards grown along the blade. Faint teal light inside the empty eye sockets.
+Keep the muted earthy bone palette of the base skeleton; the teal crystal is the only cold color, drawn with 3-4 flat pixel shades, no soft light, no bloom.
+Crisp hard pixel edges, 1-pixel dark outline, no anti-aliasing, no blur, no gradients, no noisy dithering.
+Full body, centered, feet visible, small margin around it.
+Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, no frame or border. Square 1:1 image.
+```
+
+결과(2026-10-13): 채택 → `assets/monsters/crystalskel.png`(82×92, 소년보다 머리 하나 큼 — "95% 높이" 지시가 먹혔다) = `public/mon-crystalskel.png`. 이번 생성본은 1024×1024(도트 10.24px, 격자는 똑같이 100)였고 `tools/sprite.py`가 그대로 처리했다. 넓은 청록 갑옷이 팔레트에서 튀어 청록 채도 −30%·명도 −8%, 뼈는 기본 스켈레톤 평균색에 맞춰 채널 보정(R×1.09, G×1.11, B×1.22)
+
+## 010 — 거대한 돌연변이 쥐, 1섹터 보스 (기준 이미지 + 쥐 첨부)
+
+```
+Match the exact art style, outline, palette and pixel scale of the first attached reference image. Use the second attached image (a small dungeon rat) as the base species.
+
+Pixel art game sprite of a single boss creature, 3/4 side view facing left, classic 16-bit RPG style, same pixel size as the reference. A monstrous mutated rat the size of a calf, so large it fills about 95% of the image width; the reference boy would only reach its shoulder.
+Hunched and bloated, patchy grey-brown fur over swollen tumorous lumps, bald scarred skin, a split ear, too many crooked yellow teeth in a jaw that hangs open, small mad red eyes, thick scaly tail curling behind it, claws like hooks. A dull reddish mana stone heart pulses faintly through a tear in its chest.
+Muted earthy palette of about 16 colors: dark browns, ash grey, desaturated pink on the skin, dull blood red (#c0564d) only on the eyes and the heart.
+Crisp hard pixel edges, 1-pixel dark outline, no anti-aliasing, no blur, no gradients, no noisy dithering.
+Full body, centered, small margin around it.
+Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, no frame or border. Square 1:1 image.
+```
+
+결과(2026-10-13): 1차 생성본 채택 → `assets/monsters/boss.png`(94×87, 소년과 키가 비슷하고 폭은 두 배 이상) = `public/mon-boss.png`. 꼬리가 워터마크 모서리에 걸쳐 `--keep-watermark`로 처리(워터마크는 마젠타 계열이라 배경과 함께 빠짐), 등 위 마젠타 1픽셀 제거. 가슴 상처의 붉은 마석 심장 = 게임의 "거대 쥐의 마석 심장"(레벨 4 훈련 재료)
+
+## 011 — 편린 등급 아이콘 4종 (기준 이미지 첨부)
+
+한 장에 4개를 가로로 그리게 하고 후처리에서 세로 빈 줄로 나눈다. 색은 UI 등급 색과 1:1.
+
+```
+Match the exact art style, outline, palette and pixel scale of the attached reference image.
+
+Pixel art game item icons, classic 16-bit RPG style: four small soul-fragment shards arranged in one horizontal row, evenly spaced, same size, each about one fifth of the image width.
+A "fragment" is a jagged splinter of a dead monster's essence, like a shard of cloudy glass with a faint inner light. From left to right they rise in rank:
+1. a dull, chipped, dusty grey-brown shard (#7d6d52), almost lifeless;
+2. a cleaner shard with a faint muted green core (#86a865);
+3. a sharp, well-formed shard with a dull gold core (#cf9a44) and a thin gold rim;
+4. a large, menacing dark shard with a blood-red core (#c0564d) and tiny cracks, clearly the most powerful.
+Each shard drawn with 3-4 flat pixel shades, no soft glow, no bloom, no particles.
+Crisp hard pixel edges, 1-pixel dark outline, no anti-aliasing, no blur, no gradients, no noisy dithering.
+Solid flat magenta background (#FF00FF). No ground shadow, no text, no numbers, no frame or border. Square 1:1 image.
+```
+
+결과(2026-10-13): 1차 생성본 채택 → `assets/icons/frag-1~4.png`(12×21, 11×24, 12×26, 12×29 — 등급이 오를수록 커진다) = `public/frag-1~4.png`. 캐릭터 시트 편린 목록·도감(1배), 미궁 편린 획득 카드(2배)에 쓴다(`FragIcon`). 처음 보는 편린은 크기로 등급이 새지 않게 늘 하급 모양의 실루엣
+
+## 장소 그림 공통 규칙
+
+배경이 있는 장면이라 마젠타를 쓰지 않는다. Gemini는 1024×1024에 **200격자**(도트 5.12px)로 그려 주므로 `python3 tools/sprite.py 입력 출력 --grid 200 --keep-watermark`로 복원한다(장면에는 마젠타가 없고, 워터마크 모서리를 지우면 구멍이 나므로 남긴다). 복원본 전체는 `assets/scenes/*_full.png`에 보관하고, 가운데를 **179×80 띠**로 잘라 `public/scene-*.png`로 쓴다(워터마크는 잘리는 아래 모서리에 있어 자연히 빠진다). 화면에서는 2배(358×160), 좁은 화면에서는 가운데 기준으로 양옆이 잘린다(`SceneBanner`, `SCENE_ART`). 장면 속 인물은 원경이라 캐릭터 스프라이트의 절반쯤(약 50도트) 크기로 나온다 — 장면끼리만 맞추면 된다. 프롬프트에 "중요한 요소는 가운데 60% 높이 안에"를 넣는다.
+
+## 012 — 훈련장 (기준 이미지 첨부)
+
+```
+Match the exact art style, outline, palette and pixel scale of the attached reference image.
+
+Pixel art game location illustration, classic 16-bit RPG style, wide establishing view of a small scene, slightly elevated 3/4 view.
+A grim, poor training yard on a remote island fief in a dark-fantasy world: a muddy fenced yard behind a crude timber hall, battered wooden practice dummies wrapped in straw and rope, a weapon rack with dull wooden swords and a few chipped iron blades, a scarred old veteran instructor with a grey beard and a missing eye standing by the rack with his arms crossed. Overcast grey sky, puddles, a crow on the fence. No other people.
+Muted earthy palette of about 20 colors: dark browns, faded ochre, wet grey stone, dull gold accent (#cf9a44) only on small details like a buckle or a lantern.
+Crisp hard pixel edges, 1-pixel dark outlines, no anti-aliasing, no blur, no gradients, no noisy dithering. Same pixel size as the reference: the instructor is about the same height as the reference boy.
+The composition must read clearly when cropped to a wide horizontal strip through the middle (keep the important elements in the middle 60% of the height).
+No text, no UI, no frame or border. Square 1:1 image.
+```
+
+결과(2026-10-13): 1차 생성본 채택 → `assets/scenes/training_full.png`(200×200) → 띠 `(14,46)~(193,126)` = `public/scene-training.png`(179×80). 훈련 카드(`TrainingPanel`) 맨 위에 건다
