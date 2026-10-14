@@ -149,11 +149,6 @@ export function App() {
           codexFrom.current = "title";
           setView("codex");
         }}
-        onImport={(run, m) => {
-          setS(run);
-          setMeta(m);
-          setShown(run?.logCount ?? 0);
-        }}
       />
     );
   }

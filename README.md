@@ -21,4 +21,4 @@ bun scripts/sim-report.ts 200   # 81조합 밸런스 시뮬레이션(docs/HANDOF
 
 - `src/game/` — UI와 무관한 순수 게임 로직. `engine.ts`의 `act(state, action)`이 유일한 진입점이고, 랜덤은 상태에 저장되는 시드 RNG라 같은 시드·같은 선택이면 같은 결과가 나온다.
 - `src/game/bot.ts` — "자동 결정" 옵션과 밸런스 시뮬레이션이 함께 쓰는 정책.
-- `src/ui/` — React 화면. 저장은 브라우저 localStorage(내보내기/가져오기 지원).
+- `src/ui/` — React 화면. 저장은 브라우저 localStorage에만(텍스트 내보내기·가져오기는 2026-10-14에 없앰).

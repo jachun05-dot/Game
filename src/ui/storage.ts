@@ -81,17 +81,3 @@ export function buryTomb(m: Meta, t: Tomb): Meta {
   const faiths = [...new Set([...m.faiths, ...t.faithsUnlocked])];
   return { ...m, graveyard: [t, ...m.graveyard].slice(0, 200), faiths };
 }
-
-export function exportSave(run: GameState | null, meta: Meta): string {
-  return JSON.stringify({ app: "ddd", v: 1, run, meta });
-}
-
-export function importSave(text: string): { run: GameState | null; meta: Meta } | null {
-  try {
-    const d = JSON.parse(text);
-    if (d?.app !== "ddd" || d.v !== 1) return null;
-    return { run: fixRun(d.run ?? null), meta: fixMeta(d.meta) };
-  } catch {
-    return null;
-  }
-}
