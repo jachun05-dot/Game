@@ -510,3 +510,17 @@ html, body, #root { height: 100%; }
 .tomb-notes{text-align:left;border-top:1px solid #4d4230;margin-top:10px;padding-top:8px}
 .tomb-notes p{margin:3px 0}
 .tomb-notes-title{color:var(--bright);font-size:12.5px;letter-spacing:.06em;margin-bottom:4px!important}
+.fold-toggle{all:unset;cursor:pointer;color:var(--accent);font-size:13px;padding:4px 0}
+.fold-toggle:focus-visible{outline:2px solid var(--accent)}
+.dummy{display:flex;flex-direction:column;gap:8px;margin:8px 0}
+.dummy-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.dummy-head>div:first-child{display:flex;flex-direction:column}
+.dummy-total{font-size:30px;color:var(--bright);line-height:1.1}
+.dummy-rounds{display:flex;flex-direction:column;gap:3px;font-size:12.5px}
+.dummy-round{display:grid;grid-template-columns:28px 1fr 40px;gap:8px;align-items:center}
+.dummy-src{display:grid;grid-template-columns:minmax(0,7.5em) 1fr 40px;gap:8px;align-items:center}
+.dummy-src>span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dummy-round .num,.dummy-src .num{text-align:right}
+.dummy-bar{height:8px;background:var(--panel-2);border:1px solid var(--border);overflow:hidden}
+.dummy-bar>span{display:block;height:100%;background:var(--accent)}
+.option-skill b.accent{color:var(--accent)}

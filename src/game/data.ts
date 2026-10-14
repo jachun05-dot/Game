@@ -106,6 +106,8 @@ export interface MonsterDef {
   rare?: boolean;
   /** 이 라운드가 끝날 때까지 못 잡으면 달아난다 */
   escapeAfter?: number;
+  /** 훈련소 허수아비: 공격하지 않는다(도감·조우에 없음) */
+  dummy?: boolean;
 }
 
 // DESIGN 11절 "1섹터 몬스터(확정)" / "1섹터 보스"
@@ -131,6 +133,10 @@ export const MONSTERS: Record<string, MonsterDef> = {
   manawraith: { id: "manawraith", name: "마석 갑주 망령", wound: { head: 3, body: 2 }, hard: true, hp: 22, ac: 17, atk: 4, dice: [1, 6], mana: 500, rare: true, escapeAfter: 4, attackText: "마석 갑주로 들이받았다", note: "갑주가 통째로 마석이다. 오래 머물지 않는다." },
   harpyqueen: { id: "harpyqueen", name: "하피 여왕", wound: { head: 3, body: 2, main: 1, offhand: 1, feet: 1 }, hp: 28, ac: 15, atk: 5, dice: [1, 8], mana: 40, flying: true, scream: 0.25, elite: true, attackText: "날카로운 발톱을 내리꽂았다", note: "하피들의 여왕. 비명이 머릿속을 헤집는다. 깃털 망토를 두르고 있다." },
   general: { id: "general", name: "끝나지 않은 전쟁의 장군", wound: { head: 2, body: 3, main: 2, offhand: 2, feet: 2 }, hard: true, hp: 28, ac: 15, atk: 4, dice: [1, 8], mana: 120, charge: true, rally: true, fearHit: 0.2, attackText: "유령 군마 위에서 장검을 내리쳤다", note: "유령 군마를 탄 망령 장군. 3라운드마다 진군 명령을 내린다." },
+  // 훈련소 허수아비(dummy.ts): 복사한 상태에서만 등장한다
+  dummy: { id: "dummy", name: "짚 허수아비", hp: 30, ac: 13, atk: 0, dice: [1, 1], mana: 0, dummy: true, attackText: "흔들렸다" },
+  dummyPack: { id: "dummyPack", name: "작은 허수아비", hp: 10, ac: 12, atk: 0, dice: [1, 1], mana: 0, dummy: true, attackText: "흔들렸다" },
+  dummyArmor: { id: "dummyArmor", name: "갑옷 허수아비", hp: 30, ac: 15, atk: 0, dice: [1, 1], mana: 0, dummy: true, hard: true, attackText: "흔들렸다" },
   boss: { id: "boss", name: "거대한 돌연변이 쥐", wound: { head: 2, body: 2, main: 2, offhand: 2, feet: 2 }, hp: 18, ac: 13, atk: 4, dice: [1, 8], mana: 60, attackText: "거대한 이빨로 물어뜯었다" },
 };
 

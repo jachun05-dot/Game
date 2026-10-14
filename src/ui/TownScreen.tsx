@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { DUMMY_ROUNDS, DUMMY_SCENARIOS, dummyAfterTraining, dummyTest, type DummyReport, type DummyScenario } from "../game/dummy";
 import { BAL, STAT_KEYS, STAT_LABEL, TRAININGS } from "../game/data";
 import { GEAR, SLOTS, gearEffect, hasShield, targetSlot } from "../game/gear";
 import { CLASSES } from "../game/classes";
@@ -25,6 +26,7 @@ const ITEM_INFO = {
 export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => void }) {
   const { s, dispatch, busy } = ctl;
   const [training, setTraining] = useState(false);
+  const [dummy, setDummy] = useState(false);
   const [tab, setTab] = useState<"act" | "shop" | "me">("act");
   const [erase, setErase] = useState<number | null>(null);
 
@@ -64,7 +66,7 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
         </div>
       )}
 
-      {tab === "act" && !training && !s.heretic && (
+      {tab === "act" && !training && !dummy && !s.heretic && (
         <div className="stack">
           <p className="dim small">한 주에 한 가지 일을 합니다. 쇼핑은 시간이 들지 않습니다.{s.week === 3 && " 다음 주는 미궁이 열립니다 — 준비물을 챙기세요."}</p>
           <ActivityButton title="훈련" sub={trainSub(s)} disabled={busy || !canTrain(s)} onClick={() => setTraining(true)} />
@@ -76,6 +78,7 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
             disabled={busy || s.gold < INJ.innCost}
             onClick={() => dispatch({ t: "activity", a: "inn" })}
           />
+          <ActivityButton title="훈련소 허수아비" sub={`시간이 들지 않는다 · ${DUMMY_ROUNDS}라운드 동안 준 피해를 잰다`} disabled={busy} onClick={() => setDummy(true)} />
           <p className="dim small">{yearOf(s.month)}년차 · 다음 달 세금: {taxDue(s.month + 1)}G (미납 시 처형 · 해가 바뀔 때마다 {BAL.taxPerYear}G씩 오른다)</p>
           <div className="row">
             <button className="btn ghost small" onClick={onGraveyard}>
@@ -89,6 +92,7 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
       )}
 
       {tab === "act" && training && <TrainingPanel ctl={ctl} onClose={() => setTraining(false)} />}
+      {tab === "act" && dummy && !s.heretic && <DummyPanel s={s} onClose={() => setDummy(false)} />}
 
       {tab === "shop" && s.heretic && <p className="hurt small">현상수배 중이라 상점가·대장간·신전에 들어갈 수 없다.</p>}
 
@@ -255,11 +259,104 @@ function ActivityButton({ title, sub, disabled, onClick }: { title: string; sub:
   );
 }
 
+/** 훈련소 허수아비: 지금 상태로 10라운드 동안 준 피해(복사본에서 200번 평균) */
+function DummyPanel({ s, onClose }: { s: GameState; onClose: () => void }) {
+  const [scen, setScen] = useState<DummyScenario>("single");
+  const r = useMemo(() => dummyTest(s, scen), [s, scen]);
+  return (
+    <Card title="훈련소 허수아비">
+      <p className="dim small">허수아비를 {DUMMY_ROUNDS}라운드 동안 친다. 쓰러지면 바로 다시 일어서지만, 전투마다 쓸 수 있는 횟수가 정해진 기술은 다시 채워지지 않는다. {r.runs}번 쳐 본 평균이다(실제 게임에는 아무 영향이 없다).</p>
+      <div className="chips">
+        {(Object.keys(DUMMY_SCENARIOS) as DummyScenario[]).map((k) => (
+          <button key={k} className={`chip${scen === k ? " on" : ""}`} onClick={() => setScen(k)}>
+            {DUMMY_SCENARIOS[k].name}
+          </button>
+        ))}
+      </div>
+      <p className="dim small">{DUMMY_SCENARIOS[scen].desc}</p>
+      <DummyResult r={r} />
+      <p className="dim small">허수아비는 반격하지 않는다 — 맞아야 발동하는 기술(맞받아치기·방패 반격 등)과 HP가 깎여야 강해지는 기술은 여기서 잡히지 않는다.</p>
+      <button className="btn ghost small" onClick={onClose}>
+        돌아가기
+      </button>
+    </Card>
+  );
+}
+
+function DummyResult({ r }: { r: DummyReport }) {
+  const top = Math.max(1, ...r.perRound);
+  return (
+    <div className="dummy">
+      <div className="dummy-head">
+        <div>
+          <span className="dim small">{DUMMY_ROUNDS}라운드 총 피해</span>
+          <b className="dummy-total num">{Math.round(r.total)}</b>
+        </div>
+        <div className="small">
+          <div>
+            첫 라운드 <b className="num">{Math.round(r.perRound[0])}</b>
+          </div>
+          <div className="dim">
+            쓰러뜨림 {r.kills.toFixed(1)} · 명중 {Math.round(r.hitRate * 100)}% · 치명타 {Math.round(r.critRate * 100)}%
+          </div>
+        </div>
+      </div>
+      <div className="dummy-rounds" aria-label="라운드별 피해">
+        {r.perRound.map((v, i) => (
+          <div key={i} className="dummy-round">
+            <span className="dim">{i + 1}R</span>
+            <span className="dummy-bar">
+              <span style={{ width: `${(v / top) * 100}%` }} />
+            </span>
+            <span className="num">{v.toFixed(1)}</span>
+          </div>
+        ))}
+      </div>
+      <p className="eyebrow">어디서 나온 피해인가</p>
+      <div className="dummy-rounds">
+        {r.bySource.map((x) => (
+          <div key={x.id} className="dummy-src">
+            <span>{x.name}</span>
+            <span className="dummy-bar">
+              <span style={{ width: `${(x.dmg / Math.max(1, r.total)) * 100}%` }} />
+            </span>
+            <span className="num">{Math.round((x.dmg / Math.max(1, r.total)) * 100)}%</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** 훈련 화면: 각 훈련을 받았다고 치고 허수아비 딜이 얼마나 달라지는지(열 때 한 번 잰다) */
+function useTrainingPreview(s: GameState, ids: string[]): Record<string, { single: string; pack: string }> | null {
+  const [out, setOut] = useState<Record<string, { single: string; pack: string }> | null>(null);
+  useEffect(() => {
+    setOut(null);
+    const timer = setTimeout(() => {
+      const runs = 120;
+      const base = { single: dummyTest(s, "single", runs).total, pack: dummyTest(s, "pack", runs).total };
+      const fmt = (now: number, after: DummyReport | null) => {
+        if (!after) return "";
+        const d = Math.round(((after.total - now) / Math.max(1, now)) * 100);
+        return `${Math.round(now)}→${Math.round(after.total)} (${d >= 0 ? "+" : ""}${d}%)`;
+      };
+      const res: Record<string, { single: string; pack: string }> = {};
+      for (const id of ids) res[id] = { single: fmt(base.single, dummyAfterTraining(s, id, [], "single", runs)), pack: fmt(base.pack, dummyAfterTraining(s, id, [], "pack", runs)) };
+      setOut(res);
+    }, 30);
+    return () => clearTimeout(timer);
+  }, [s, ids.join(",")]);
+  return out;
+}
+
 function TrainingPanel({ ctl, onClose }: { ctl: Ctl; onClose: () => void }) {
   const { s, dispatch } = ctl;
   const allowed = TRAININGS.filter((x) => CLASSES[s.hero.cls].trainings.includes(x.id));
   const [tid, setTid] = useState(allowed[0].id);
   const [free, setFree] = useState<StatKey[]>([]);
+  const [showTable, setShowTable] = useState(false);
+  const preview = useTrainingPreview(s, allowed.map((x) => x.id));
   const t = TRAININGS.find((x) => x.id === tid)!;
   const sk = nextSkill(s, tid);
   const gate = gateOf(s);
@@ -284,7 +381,10 @@ function TrainingPanel({ ctl, onClose }: { ctl: Ctl; onClose: () => void }) {
       {basic && !s.skills.includes(basic) && (
         <p className="small accent">첫 훈련: 어느 훈련을 받든 기본기 【{SKILLS[basic].name}】을(를) 함께 배운다 — {SKILLS[basic].desc}</p>
       )}
-      <LevelTable s={s} selected={tid} onPick={setTid} />
+      <button className="fold-toggle" aria-expanded={showTable} onClick={() => setShowTable((v) => !v)}>
+        {showTable ? "▾" : "▸"} 훈련 레벨표 {showTable ? "접기" : "펼치기"}
+      </button>
+      {showTable && <LevelTable s={s} selected={tid} onPick={setTid} />}
       <div className="stack tight">
         {allowed.map((x) => {
           const xs = nextSkill(s, x.id);
@@ -303,6 +403,10 @@ function TrainingPanel({ ctl, onClose }: { ctl: Ctl; onClose: () => void }) {
                 ) : (
                   <span className="dim">{hasLevelTable(x.id) ? (next >= 10 ? "10레벨 이후 기술은 3섹터와 함께 열린다" : "이 레벨에는 이 훈련으로 배울 기술이 없다") : "이 훈련의 기술은 모두 배웠다"}</span>
                 )}
+              </span>
+              <span className="option-skill small dim">
+                허수아비 {DUMMY_ROUNDS}라운드 딜:{" "}
+                {!preview ? "재는 중…" : preview[x.id]?.single ? <>1개 <b className="accent">{preview[x.id].single}</b> · 3개 <b className="accent">{preview[x.id].pack}</b></> : "—"}
               </span>
             </button>
           );

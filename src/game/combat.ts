@@ -10,7 +10,7 @@ import { GEAR, weaponOf } from "./gear";
 import { MARK_FOR_SKILL, SKILL_LEVEL, type ElementKey } from "./elements";
 
 const GEAR_IS_WEAPON = (id: string) => !!GEAR[id]?.weapon;
-import type { CombatState, Enemy, GameState } from "./types";
+import type { CombatState, DamageMeter, Enemy, GameState } from "./types";
 import { afterDungeonCombat, isNight, passTime } from "./dungeon";
 import { afterFieldCombat } from "./town";
 
@@ -32,6 +32,16 @@ export function describeGroup(enemies: Enemy[]): string {
     .join(", ");
 }
 
+/** 적에게 피해를 준다(허수아비 측정 중이면 출처별·라운드별로 기록) */
+function dealt(c: CombatState, t: Enemy, dmg: number, src: string): void {
+  t.hp -= dmg;
+  const m = c.meter;
+  if (!m) return;
+  m.by[src] = (m.by[src] ?? 0) + dmg;
+  const i = m.base + c.round - 1;
+  m.rounds[i] = (m.rounds[i] ?? 0) + dmg;
+}
+
 export function alive(c: CombatState): Enemy[] {
   return c.enemies.filter((e) => e.hp > 0);
 }
@@ -45,13 +55,15 @@ interface Strike {
   crit?: boolean;
   /** 맞으면 n라운드 행동 불가(분쇄 일격) */
   stun?: number;
+  /** 피해 출처(허수아비 측정용 기술 id) */
+  src?: string;
 }
 
 const PLAIN: Strike = { hit: 0, dmg: 0, mult: 1, autoHit: false };
 
 /** 전투를 처음부터 끝까지 자동으로 진행한다 */
-export function startCombat(s: GameState, context: CombatState["context"], enemies: Enemy[], opts: { surprise?: boolean } = {}): void {
-  const c: CombatState = { context, enemies, round: 1, loot: 0, bonus: 0, frags: [], used: {}, guard: null };
+export function startCombat(s: GameState, context: CombatState["context"], enemies: Enemy[], opts: { surprise?: boolean; meter?: DamageMeter; limit?: number; used?: Record<string, number> } = {}): void {
+  const c: CombatState = { context, enemies, round: 1, loot: 0, bonus: 0, frags: [], used: opts.used ?? {}, guard: null, meter: opts.meter, limit: opts.limit };
   s.combat = c;
   c.logFrom = s.logCount;
   c.hpStart = s.hero.hp;
@@ -108,7 +120,7 @@ export function startCombat(s: GameState, context: CombatState["context"], enemi
       // 기선 제압·돌격 등이 겹치면 합친다
       opener = opener
         ? { hit: opener.hit + e.hit, dmg: opener.dmg + e.dmg, mult: Math.max(opener.mult, e.dmgMult ?? 1), autoHit: opener.autoHit || !!e.autoHit }
-        : { hit: e.hit, dmg: e.dmg, mult: e.dmgMult ?? 1, autoHit: !!e.autoHit };
+        : { hit: e.hit, dmg: e.dmg, mult: e.dmgMult ?? 1, autoHit: !!e.autoHit, src: sk.id };
       useSkill(s, c, sk);
     } else if (e.type === "weaken") {
       const target = [...alive(c)].sort((a, b) => MONSTERS[b.defId].ac - MONSTERS[a.defId].ac || b.hp - a.hp)[0];
@@ -126,7 +138,7 @@ export function startCombat(s: GameState, context: CombatState["context"], enemi
       useSkill(s, c, sk, `함성을 지르며 자세를 낮춘다 (AC +${e.ac}, ${e.rounds}라운드)`);
     } else if (e.type === "spell") {
       useSkill(s, c, sk, e.text);
-      castSpell(s, c, e.dice, e.all);
+      castSpell(s, c, e.dice, e.all, sk.id);
       if (alive(c).length === 0) return finish(s, "win");
     } else if (e.type === "espell") {
       // 각인으로 늘어난 횟수만큼 전투 시작 때 거듭 쏜다
@@ -155,7 +167,7 @@ export function startCombat(s: GameState, context: CombatState["context"], enemi
       const t = [...alive(c)].sort((a, b) => a.hp - b.hp)[0];
       const def = MONSTERS[t.defId];
       const dmg = Math.max(1, rngOf(s).dice(e.dice[0], e.dice[1]) + Math.max(smod(s, "str"), smod(s, "dex")));
-      t.hp -= dmg;
+      dealt(c, t, dmg, sk.id);
       t.stolen = true;
       log(s, `${def.name}에게 ${dmg} 피해`, "hit");
       if (t.hp <= 0) {
@@ -169,7 +181,7 @@ export function startCombat(s: GameState, context: CombatState["context"], enemi
     }
   }
 
-  for (let round = 0; round < MAX_ROUNDS; round++) {
+  for (let round = 0; round < (c.limit ?? MAX_ROUNDS); round++) {
     const outcome = playerPhase(s, c, opener);
     opener = null;
     if (outcome) return finish(s, outcome);
@@ -206,13 +218,13 @@ function strongest(c: CombatState): Enemy {
 }
 
 /** 주문: 반드시 명중, 피해 = 주사위 + 지능 보정 */
-function castSpell(s: GameState, c: CombatState, dice: [number, number], all: boolean): void {
+function castSpell(s: GameState, c: CombatState, dice: [number, number], all: boolean, src: string): void {
   const r = rngOf(s);
   const targets = all ? alive(c) : [[...alive(c)].sort((a, b) => a.hp - b.hp)[0]];
   for (const t of targets) {
     const def = MONSTERS[t.defId];
     const dmg = Math.max(1, r.dice(dice[0], dice[1]) + smod(s, "int") + spellBonus(s));
-    t.hp -= dmg;
+    dealt(c, t, dmg, src);
     note(s, "int");
     log(s, `${def.name}에게 ${dmg} 피해`, "hit");
     if (t.hp <= 0) {
@@ -282,7 +294,7 @@ function elementHit(s: GameState, c: CombatState, t: Enemy, sk: SkillDef, half =
   const sides = e.vary ? r.pick([4, 6, 8, 10]) : e.dice[1];
   let dmg = rollDice(s, e.dice[0], sides) + smod(s, "int") + spellBonus(s) + elementBonus(s, e.el, t) + (e.hardBonus && def.hard ? e.hardBonus : 0);
   dmg = Math.max(1, half ? Math.floor(dmg / 2) : dmg);
-  t.hp -= dmg;
+  dealt(c, t, dmg, sk.id);
   note(s, "int");
   const extra: string[] = [];
   if (t.hp > 0) {
@@ -345,7 +357,7 @@ function burnTick(s: GameState, c: CombatState): void {
     if (!e.burn || e.burn.rounds <= 0) continue;
     const def = MONSTERS[e.defId];
     const dmg = r.dice(1, 3) + e.burn.bonus;
-    e.hp -= dmg;
+    dealt(c, e, dmg, "burn");
     e.burn.rounds -= 1;
     log(s, `${josa(def.name, "이")} 불길 속에서 몸부림친다. ${dmg} 피해`, "hit");
     if (e.hp <= 0) {
@@ -373,7 +385,7 @@ function plagueTick(s: GameState, c: CombatState): void {
     if (!e.sick) continue;
     const def = MONSTERS[e.defId];
     const dmg = r.dice(1, 3);
-    e.hp -= dmg;
+    dealt(c, e, dmg, "plague");
     log(s, `${josa(def.name, "이")} 병으로 몸부림친다. ${dmg} 피해`, "hit");
     if (e.hp <= 0) {
       gainLoot(s, c, def.id, e.stolen);
@@ -395,6 +407,7 @@ function escapeRares(s: GameState, c: CombatState): void {
 }
 
 function gainLoot(s: GameState, c: CombatState, defId: string, stolen = false): void {
+  if (c.context === "dummy") return;
   const def = MONSTERS[defId];
   const mana = stolen ? Math.round(def.mana * 1.5) : def.mana; // 손버릇
   if (def.rare) c.bonus += mana;
@@ -490,10 +503,10 @@ function playerPhase(s: GameState, c: CombatState, opener: Strike | null): "win"
     const sweep = activeSkills(s).find((sk) => sk.trigger!.on === "enemiesAtLeast" && foes.length >= (sk.trigger as { n: number }).n && canUse(s, c, sk));
     if (sweep && sweep.effect!.type === "sweep") {
       useSkill(s, c, sweep, "칼을 크게 휘둘러 모두를 벤다");
-      for (const foe of foes) attack(s, c, foe, { ...PLAIN, mult: sweep.effect!.dmgMult });
+      for (const foe of foes) attack(s, c, foe, { ...PLAIN, mult: sweep.effect!.dmgMult, src: sweep.id });
     } else if (sweep && sweep.effect!.type === "spell") {
       useSkill(s, c, sweep, sweep.effect!.text);
-      castSpell(s, c, sweep.effect!.dice, sweep.effect!.all);
+      castSpell(s, c, sweep.effect!.dice, sweep.effect!.all, sweep.id);
     } else if (sweep && sweep.effect!.type === "espell") {
       useSkill(s, c, sweep, sweep.effect!.text);
       castElement(s, c, sweep.id);
@@ -511,7 +524,7 @@ function playerPhase(s: GameState, c: CombatState, opener: Strike | null): "win"
       if (fin && fin.effect!.type === "strike") {
         const e = fin.effect!;
         useSkill(s, c, fin, `${josa(def.name, "을")} 노린다`);
-        strike = { hit: e.hit, dmg: e.dmg, mult: e.dmgMult ?? 1, autoHit: !!e.autoHit, stun: e.stun, crit: e.crit };
+        strike = { hit: e.hit, dmg: e.dmg, mult: e.dmgMult ?? 1, autoHit: !!e.autoHit, stun: e.stun, crit: e.crit, src: fin.id };
       }
       attack(s, c, target, strike);
     }
@@ -529,6 +542,7 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
   const roll = r.die(20);
   const held = (target.stun ?? 0) > 0;
   const magicHit = w.magic ? (held && has(s, "frostEye") ? 3 : 0) + (def.flying && has(s, "boltMark") ? 2 : 0) : 0;
+  if (c.meter) c.meter.swings++;
   const bonus = statMod + BAL.proficiency + passive(s, "hit") + st.hit + rollPenalty(s) + faithHit(s, alive(c).length) + injuryHit(s) + (def.flying && !w.magic ? -2 : 0) + magicHit;
   if (!st.autoHit && roll === 1) {
     log(s, `손이 미끄러졌다! (주사위 1)`, "miss");
@@ -539,7 +553,11 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
     return;
   }
   const crit = !noCrit(s) && (!!st.crit || roll === 20 || r.float() * 100 < 5 + smod(s, "luk") + passive(s, "crit") + (w.magic && held && has(s, "frostEye") ? 15 : 0));
-  selfInjury(s, def.id, w.magic);
+  if (c.meter) {
+    c.meter.hits++;
+    if (crit) c.meter.crits++;
+  }
+  if (c.context !== "dummy") selfInjury(s, def.id, w.magic);
   // 각인: 마력탄 강화(불 +3, 서리 +2, 번개 +2, 대지 +2·단단한 적 +3)
   const magicDmg = w.magic
     ? (has(s, "casterMark") ? 2 : 0) + (has(s, "earthMark") ? 2 + (def.hard ? 3 : 0) : 0) + (has(s, "fireMark") ? 3 : 0) + (has(s, "frostMark") ? 2 + (held ? 3 : 0) : 0) + (has(s, "boltMark") ? 2 : 0)
@@ -547,7 +565,7 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
   const fury = has(s, "berserkMark") && hpPct(s) <= 50 ? 3 : 0; // 광전의 각인
   const base = (w.magic ? rollDice(s, w.dice[0] * (crit ? critMult(s) : 1), w.dice[1]) : r.dice(w.dice[0] * (crit ? critMult(s) : 1), w.dice[1])) + magicDmg + fury + statMod + passive(s, "dmg") + st.dmg + faithDmg(s) + rageDmg(s) + abyssEdge(s, s.hero.hp / maxHp(s)).dmg;
   const dmg = Math.max(1, Math.round(base * st.mult));
-  target.hp -= dmg;
+  dealt(c, target, dmg, st.src ?? "attack");
   if (crit) note(s, "luk");
   log(s, `${def.name}에게 ${w.verb} 명중! ${dmg} 피해${crit ? " (치명타!)" : ""}`, crit ? "crit" : "hit");
   // 역병의 신 ★2 "전염"
@@ -572,7 +590,7 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
     if (others.length) {
       const o = r.pick(others);
       const half = Math.max(1, Math.floor(dmg / 2));
-      o.hp -= half;
+      dealt(c, o, half, "boltMark");
       log(s, `【번개의 각인】 마력탄이 ${MONSTERS[o.defId].name}에게 튀었다. ${half} 피해`, "hit");
       if (o.hp <= 0) {
         gainLoot(s, c, o.defId, o.stolen);
@@ -593,7 +611,7 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
     const chain = SKILLS.chainSlash;
     if (has(s, "chainSlash") && canUse(s, c, chain) && alive(c).length) {
       useSkill(s, c, chain, "멈추지 않고 다음 적을 벤다");
-      attack(s, c, [...alive(c)].sort((a, b) => a.hp - b.hp)[0], PLAIN);
+      attack(s, c, [...alive(c)].sort((a, b) => a.hp - b.hp)[0], { ...PLAIN, src: "chainSlash" });
     }
   }
 }
@@ -621,7 +639,7 @@ function counter(s: GameState, c: CombatState, e: Enemy, skillId: string | null,
   if (e.hp <= 0 || isDead(s)) return;
   if (skillId) useSkill(s, c, SKILLS[skillId], text);
   else log(s, text, "skill");
-  attack(s, c, e, { ...PLAIN, dmg: bonus });
+  attack(s, c, e, { ...PLAIN, dmg: bonus, src: skillId ?? "counter" });
 }
 
 /** 때리다 자기 손을 다친다: 맨손이면 중간 확률, 단단한 몬스터면 낮은 확률(마력탄은 제외) */
@@ -688,6 +706,7 @@ function enemyPhase(s: GameState, c: CombatState): void {
   const ac = heroAc(s) + (c.guard?.ac ?? 0);
   for (const e of attackers) {
     const def = MONSTERS[e.defId];
+    if (def.dummy) continue;
     if (e.stun && e.stun > 0) {
       e.stun -= 1;
       log(s, `${josa(def.name, "이")} 비틀거리며 공격하지 못한다.`, "miss");
@@ -781,6 +800,7 @@ function enemyPhase(s: GameState, c: CombatState): void {
 function finish(s: GameState, outcome: "win" | "fled"): void {
   const c = s.combat!;
   s.combat = null;
+  if (c.context === "dummy") return; // 허수아비: 보상·신앙·기록 없음
   if (outcome === "win") foldEasyFight(s, c);
   // 신앙심: 전쟁의 신은 여럿과 싸워 이기는 것을 좋아하고 도주를 싫어한다
   if (outcome === "win" && c.enemies.length >= 2) pray(s, "war", 3);

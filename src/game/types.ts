@@ -54,8 +54,20 @@ export interface Enemy {
   stolen?: boolean;
 }
 
+/** 허수아비 측정용 피해 기록. rounds의 칸 = 측정 시작부터 센 라운드 */
+export interface DamageMeter {
+  by: Record<string, number>;
+  rounds: number[];
+  /** 이번 전투 앞에 이미 지난 라운드 수 */
+  base: number;
+  swings: number;
+  hits: number;
+  crits: number;
+}
+
 export interface CombatState {
-  context: "field" | "dungeon";
+  /** dummy: 훈련소 허수아비(dummy.ts) — 복사한 상태에서만 쓰고 보상·기록이 없다 */
+  context: "field" | "dungeon" | "dummy";
   enemies: Enemy[];
   round: number;
   /** 전투에서 얻은 마석 가치(G, 층 배율 적용 전) */
@@ -89,6 +101,10 @@ export interface CombatState {
   /** 로그 접기: 이 전투가 시작된 로그 번호(등장 줄)와 시작 HP */
   logFrom?: number;
   hpStart?: number;
+  /** 허수아비: 이 라운드 수까지만 싸운다 */
+  limit?: number;
+  /** 허수아비: 준 피해 기록(출처별·라운드별) */
+  meter?: DamageMeter;
 }
 
 /** 자동 결정의 미궁 목표: 구석구석 탐험 / 빠르게 다음 층 / 파밍(전투·상자 위주) */

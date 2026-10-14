@@ -37,7 +37,7 @@ function whereFound(id: string): string {
 }
 
 export function CodexScreen({ codex, onBack }: { codex: Codex; onBack: () => void }) {
-  const ids = [...ORDER, ...Object.keys(MONSTERS).filter((id) => !ORDER.includes(id) && !MONSTERS[id].human)];
+  const ids = [...ORDER, ...Object.keys(MONSTERS).filter((id) => !ORDER.includes(id) && !MONSTERS[id].human && !MONSTERS[id].dummy)];
   const seen = ids.filter((id) => codex.seen.includes(id)).length;
   return (
     <Shell>

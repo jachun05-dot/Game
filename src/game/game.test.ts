@@ -17,6 +17,7 @@ import { BRANCH_SKILLS, ELEMENT_SKILLS, STYLE_SKILLS } from "./elements";
 import { SKILLS, activeSkills, passive } from "./skills";
 import { mindSummary } from "./mind";
 import { makeEnemies, startCombat } from "./combat";
+import { dummyAfterTraining, dummyTest } from "./dummy";
 import type { GameState } from "./types";
 
 function reachable(rooms: ReturnType<typeof generateFloor>): Set<number> {
@@ -985,5 +986,41 @@ describe("묘비 사망 요약", () => {
     apply(t, { t: "create", name: "y", candidate: 0, faith: null });
     kill(t, "tax");
     expect(t.tomb!.notes!.facts.some((f) => f.startsWith("세금 "))).toBe(true);
+  });
+});
+
+describe("훈련소 허수아비", () => {
+  it("복사본에서만 싸우고(진짜 상태 그대로), 같은 상태면 같은 결과, 출처별 합 = 총 피해", () => {
+    const s = newRun(81);
+    apply(s, { t: "pickClass", cls: "mage" });
+    apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    s.skills.push("magicMissile", "fireArrow");
+    const before = JSON.stringify(s);
+    const a = dummyTest(s, "pack", 40);
+    const b = dummyTest(s, "pack", 40);
+    expect(JSON.stringify(s)).toBe(before);
+    expect(a.total).toBeGreaterThan(0);
+    expect(a.total).toBe(b.total);
+    expect(a.perRound.length).toBe(10);
+    const sum = a.bySource.reduce((x, y) => x + y.dmg, 0);
+    expect(Math.abs(sum - a.total)).toBeLessThan(1e-6);
+    expect(a.bySource.some((x) => x.id === "fireArrow")).toBe(true);
+    // 전투당 1회 기술은 허수아비가 다시 일어나도 10라운드에 한 번만
+    const arrows = a.bySource.find((x) => x.id === "fireArrow")!.dmg;
+    expect(arrows).toBeLessThan(a.total);
+  });
+  it("특수 훈련(3→4)을 받았다고 치면 고른 갈래의 딜이 크게 오른다", () => {
+    const s = newRun(82);
+    apply(s, { t: "pickClass", cls: "warrior" });
+    apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    s.month = 3;
+    s.hero.level = 3;
+    s.skills.push("firstStrike", "sharpEdge", "riposte");
+    s.inventory.heart = 1;
+    const now = dummyTest(s, "single", 80).total;
+    const glad = dummyAfterTraining(s, "glad", [], "single", 80)!;
+    expect(glad).not.toBeNull();
+    expect(glad.total).toBeGreaterThan(now * 1.3);
+    expect(s.hero.level).toBe(3);
   });
 });
