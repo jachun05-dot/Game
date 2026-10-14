@@ -366,7 +366,8 @@ export function useHerb(s: GameState): void {
 /** 상점가 가격(탐욕/채무의 신 ★1: 반값) */
 /** 상점가 값: 탐욕의 신 ★1이면 반값, 현상수배 중이면 암시장이라 두 배 */
 export function shopPrice(s: GameState, item: keyof typeof BAL.prices): number {
-  const base = power(s, "greed", 1) ? Math.ceil(BAL.prices[item] / 2) : BAL.prices[item];
+  const listed = Math.ceil(BAL.prices[item] * (s.priceIndex ?? 1));
+  const base = power(s, "greed", 1) ? Math.ceil(listed / 2) : listed;
   return s.heretic ? base * BLACK_MARKET_MULT : base;
 }
 
@@ -399,7 +400,7 @@ export { targetSlot };
 
 export function sell(s: GameState, item: keyof typeof BAL.prices): void {
   if (s.phase !== "town" || s.heretic || s.inventory[item] <= 0) return;
-  s.gold += Math.floor(BAL.prices[item] / 2);
+  s.gold += Math.floor((BAL.prices[item] * (s.priceIndex ?? 1)) / 2);
   s.inventory[item] -= 1;
 }
 
@@ -531,6 +532,13 @@ export function closeSettlement(s: GameState): void {
   if (s.phase !== "settlement" || !st || st.inquisition) return;
   s.settlement = null;
   s.month += 1;
+  // 물가: 매달 상점가 값이 조금씩 오른다
+  const [lo, hi] = BAL.inflation;
+  if (hi > 0) {
+    const up = lo + rngOf(s).float() * (hi - lo);
+    s.priceIndex = (s.priceIndex ?? 1) * (1 + up);
+    log(s, `상점가 물가가 ${Math.round(up * 100)}% 올랐다. (처음보다 ×${s.priceIndex.toFixed(2)})`, "system");
+  }
   s.week = 1;
   if (!st.paid) {
     kill(s, "tax");

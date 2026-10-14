@@ -26,6 +26,8 @@ export const BAL = {
   trainCostBase: 0,
   /** 레벨 4부터의 훈련비(레벨당). 0이면 레벨 1~3과 같은 식 — 초반(1섹터)은 싸게, 뒤로 갈수록 비싸게 */
   trainCostLate: 0,
+  /** 매달 상점가 물가가 오르는 폭 [최소, 최대](0.05 = 5%). [0, 0]이면 오르지 않는다 */
+  inflation: [0, 0] as [number, number],
   /** 특수 훈련(이 레벨 → 다음 레벨) 수련비 */
   specialTrainFee: {} as Record<number, number>,
   weekTurns: 336,
