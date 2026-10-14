@@ -238,6 +238,10 @@ export const TRAININGS: { id: string; name: string; desc: string; stats: [StatKe
   // 전사 방향 훈련(elements.ts STYLE_SKILLS): 배우는 기술은 레벨마다 정해져 있다
   { id: "guard", name: "수호 훈련", desc: "전사 전용. 방패를 들고 버티는 법", stats: ["str", "con"], skills: [] },
   { id: "glad", name: "검투 훈련", desc: "전사 전용. 빈틈을 찌르고 받아치는 법", stats: ["str", "dex"], skills: [] },
+  // 모험가 갈래(elements.ts BRANCH_SKILLS)
+  { id: "fighter", name: "전사형 훈련", desc: "모험가. 칼로 싸우는 법", stats: ["str", "con"], skills: [] },
+  { id: "caster", name: "마법사형 훈련", desc: "모험가. 여러 원소의 잡다한 주문", stats: ["int", "per"], skills: [] },
+  { id: "rogue", name: "민첩형 훈련", desc: "모험가. 먼저 찌르고 급소를 노리는 법", stats: ["dex", "luk"], skills: [] },
   { id: "berserk", name: "광전 훈련", desc: "전사 전용. 피를 보면 더 세게 휘두르는 법", stats: ["str", "str"], skills: [] },
 ];
 

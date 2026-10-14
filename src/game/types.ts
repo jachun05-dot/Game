@@ -45,6 +45,8 @@ export interface Enemy {
   hitDown?: { n: number; rounds: number };
   /** 감전(뇌격): 남은 라운드 동안 50% 확률로 행동 실패 */
   shock?: number;
+  /** 손버릇으로 찔렀다(쓰러뜨리면 마석 ×1.5) */
+  stolen?: boolean;
 }
 
 export interface CombatState {
@@ -77,6 +79,8 @@ export interface CombatState {
   halfDmg?: boolean;
   /** 광란: 남은 라운드 동안 라운드마다 한 번 더 공격 */
   rampage?: number;
+  /** 연막: 이 전투의 도주 보너스 */
+  smoke?: number;
 }
 
 /** 자동 결정의 미궁 목표: 구석구석 탐험 / 빠르게 다음 층 / 파밍(전투·상자 위주) */

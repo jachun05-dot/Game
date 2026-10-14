@@ -96,19 +96,19 @@ describe("자동 전투와 기술", () => {
     s.month = 2; // 첫 달에는 훈련 불가
     return s;
   }
-  it("훈련할 때마다 그 훈련의 기술을 순서대로 배운다", () => {
+  it("모험가는 갈래를 받아 오른 레벨에 정해진 기술을 배우고, 첫 훈련 때 섬광 가루를 함께 배운다", () => {
     const s = hero();
     s.gold = 9999;
     s.inventory.heart = 1; // 레벨 3→4 관문
-    for (const want of ["firstStrike", "sweep", "finisher"]) {
-      apply(s, { t: "train", training: "sword", free: ["str", "con"] });
-      expect(s.skills[s.skills.length - 1]).toBe(want);
+    for (const want of ["swordHand", "sweep", "fighterMark"]) {
+      apply(s, { t: "train", training: "fighter", free: ["str", "con"] });
       expect(s.weekResult?.learned).toBe(want);
       apply(s, { t: "closeWeek" });
       if (s.phase !== "town") { s.phase = "town"; s.dungeon = null; s.week = 1; }
     }
-    apply(s, { t: "train", training: "sword", free: ["str", "con"] });
-    expect(s.weekResult?.learned).toBeUndefined();
+    expect(s.skills).toContain("flashPowder");
+    apply(s, { t: "train", training: "rogue", free: ["dex", "con"] });
+    expect(s.weekResult?.learned).toBe("shadowStep"); // 5레벨 민첩형 칸
   });
   it("숲 전투는 입력 없이 한 번에 끝난다", () => {
     for (let seed = 1; seed <= 50; seed++) {
@@ -215,7 +215,7 @@ describe("레벨 4 관문", () => {
     s.month = 2;
     const up = () => {
       s.gold = 999;
-      apply(s, { t: "train", training: "sword", free: ["str", "con"] });
+      apply(s, { t: "train", training: "fighter", free: ["str", "con"] });
       s.phase = "town";
       s.weekResult = null;
     };
@@ -362,10 +362,10 @@ describe("시작 조건", () => {
       expect(s.gold).toBe(0);
       expect(s.inventory.food + s.inventory.potion).toBeGreaterThan(0);
       s.gold = 999;
-      apply(s, { t: "train", training: s.hero.cls === "mage" ? "fire" : s.hero.cls === "warrior" ? "glad" : "sword", free: ["str", "con"] });
+      apply(s, { t: "train", training: s.hero.cls === "mage" ? "fire" : s.hero.cls === "warrior" ? "glad" : "fighter", free: ["str", "con"] });
       expect(s.hero.level).toBe(1);
       s.month = 2;
-      apply(s, { t: "train", training: s.hero.cls === "mage" ? "fire" : s.hero.cls === "warrior" ? "glad" : "sword", free: ["str", "con"] });
+      apply(s, { t: "train", training: s.hero.cls === "mage" ? "fire" : s.hero.cls === "warrior" ? "glad" : "fighter", free: ["str", "con"] });
       expect(s.hero.level).toBe(2);
     }
   });
@@ -745,10 +745,10 @@ describe("2섹터", () => {
     t.month = 5;
     t.hero.level = 6;
     t.gold = 999;
-    apply(t, { t: "train", training: "sword", free: ["str", "con"] });
+    apply(t, { t: "train", training: "fighter", free: ["str", "con"] });
     expect(t.hero.level).toBe(6);
     t.inventory.banner = 1;
-    apply(t, { t: "train", training: "sword", free: ["str", "con"] });
+    apply(t, { t: "train", training: "fighter", free: ["str", "con"] });
     expect(t.hero.level).toBe(7);
     expect(t.inventory.banner).toBe(0);
   });
@@ -884,5 +884,20 @@ describe("전사 방향 훈련", () => {
     s.gear.offhand = "shield";
     expect(activeSkills(s).some((k) => k.id === "shieldBash")).toBe(true);
     expect(passive(s, "ac")).toBe(acNo + 1 + 1); // 나무 방패 AC +1, 방패술 +1
+  });
+});
+
+describe("모험가 갈래", () => {
+  it("숏소드는 힘과 민첩 중 높은 쪽으로 다루고, 지팡이를 들면 지능 마력탄", () => {
+    const s = newRun(51);
+    apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    s.hero.stats.str = 10;
+    s.hero.stats.dex = 20;
+    expect(weaponOf(s).stat).toBe("dex");
+    s.hero.stats.str = 25;
+    expect(weaponOf(s).stat).toBe("str");
+    s.gear.main = "staff";
+    expect(weaponOf(s).stat).toBe("int");
+    expect(weaponOf(s).magic).toBe(true);
   });
 });

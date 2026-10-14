@@ -40,6 +40,8 @@ export interface Weapon {
   verb: string;
   /** 마력탄(지팡이): 근접 페널티·자기 부상이 없다 */
   magic?: boolean;
+  /** 힘과 민첩 중 높은 쪽으로 다룬다(숏소드) */
+  finesse?: boolean;
 }
 
 export interface GearDef {
@@ -63,7 +65,7 @@ export interface GearDef {
 
 export const GEAR: Record<string, GearDef> = {
   // 무기(오른손)
-  shortsword: { id: "shortsword", name: "숏소드", slot: "main", bonus: {}, weapon: { dice: [1, 6], stat: "str", verb: "칼을 휘둘러" }, price: 20, flavor: "모험가 등록소에서 받는 표준 한손검." },
+  shortsword: { id: "shortsword", name: "숏소드", slot: "main", bonus: {}, weapon: { dice: [1, 6], stat: "str", verb: "칼을 휘둘러", finesse: true }, price: 20, flavor: "모험가 등록소에서 받는 표준 한손검. 힘이나 민첩 중 나은 쪽으로 다룬다." },
   longsword: { id: "longsword", name: "장검", slot: "main", bonus: {}, weapon: { dice: [1, 8], stat: "str", verb: "장검을 내리쳐" }, price: 70, flavor: "무겁지만 한 번 들어가면 깊다." },
   dagger: { id: "dagger", name: "가는 단검", slot: "main", bonus: { crit: 5 }, weapon: { dice: [1, 4], stat: "dex", verb: "단검을 찔러 넣어" }, loot: 3, flavor: "급소를 노리기 좋다. 민첩으로 다룬다." },
   staff: { id: "staff", name: "참나무 지팡이", slot: "main", bonus: {}, weapon: { dice: [1, 4], stat: "int", verb: "마력탄을 날려" }, price: 40, flavor: "마력을 모아 쏘는 수습생의 지팡이. 지능으로 다룬다." },
@@ -150,7 +152,9 @@ export function weaponOf(s: GameState): Weapon {
   if (mainLost(s)) return FISTS; // 오른손 결손(의수 없음)
   const w = (id && GEAR[id]?.weapon) || FISTS;
   // 마법사의 지팡이(지능 마력탄): 근접 페널티·자기 부상이 없다
-  return w.stat === "int" ? { ...w, magic: true } : w;
+  if (w.stat === "int") return { ...w, magic: true };
+  if (w.finesse && s.hero.stats.dex > s.hero.stats.str) return { ...w, stat: "dex" };
+  return w;
 }
 
 /** 쓸 수 있는 방패를 들고 있나(무기가 아닌 왼손 장비, 왼손 중상·결손이면 못 씀) */

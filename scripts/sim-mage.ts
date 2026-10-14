@@ -15,8 +15,8 @@ const GOAL = (process.env.GOAL ?? "explore") as AutoGoal;
 const NAME: Record<ElementKey, string> = { fire: "화염", frost: "서리", bolt: "번개", earth: "대지" };
 
 import { PLANS as plans } from "./plans";
-import { ELEMENT_SKILLS, STYLE_SKILLS } from "../src/game/elements";
-const LINE_OF: Record<string, string> = Object.fromEntries(Object.entries({ ...ELEMENT_SKILLS, ...STYLE_SKILLS }).flatMap(([line, tb]) => Object.values(tb).map((id) => [id, line])));
+import { BRANCH_SKILLS, ELEMENT_SKILLS, STYLE_SKILLS } from "../src/game/elements";
+const LINE_OF: Record<string, string> = Object.fromEntries(Object.entries({ ...ELEMENT_SKILLS, ...STYLE_SKILLS, ...BRANCH_SKILLS }).flatMap(([line, tb]) => Object.values(tb).map((id) => [id, line])));
 
 type Row = {
   id: string; kind: string; label: string; n: number;
@@ -92,7 +92,7 @@ plans.filter((p) => !only || only.some((o) => p.id.startsWith(o))).forEach((plan
       if (s.phase === "dead" && s.tomb!.months <= m1 + 6) row.dead6++;
     }
     // 실제로 배운 원소 기술 수(어느 속성인지)
-    if (plan.cls === "mage" || plan.cls === "warrior") {
+    {
       for (const id of s.skills) { const line = LINE_OF[id]; if (line) row.learned[line] = (row.learned[line] ?? 0) + 1; }
       const m = s.mainElement ?? "없음";
       row.main[m] = (row.main[m] ?? 0) + 1;

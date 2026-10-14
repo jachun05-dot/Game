@@ -507,7 +507,7 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
     }
     if (choice === "disarm") {
       passTime(s, 1);
-      const c = check(s, "dex", BAL.trapDisarmDc, (power(s, "trap", 1) ? 3 : 0) + (s.skills.includes("earthLevel") ? 3 : 0));
+      const c = check(s, "dex", BAL.trapDisarmDc, (power(s, "trap", 1) ? 3 : 0) + (s.skills.includes("earthLevel") || s.skills.includes("trapHand") ? 3 : 0));
       if (c.ok) {
         note(s, "per");
         room.resolved = true;

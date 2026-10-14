@@ -41,6 +41,8 @@ interface Strike {
   dmg: number;
   mult: number;
   autoHit: boolean;
+  /** 반드시 치명타(급소 찌르기) */
+  crit?: boolean;
   /** 맞으면 n라운드 행동 불가(분쇄 일격) */
   stun?: number;
 }
@@ -132,6 +134,26 @@ export function startCombat(s: GameState, context: CombatState["context"], enemi
       target.stun = Math.max(target.stun ?? 0, e.rounds);
       if (e.half) c.halfDmg = true;
       useSkill(s, c, sk, `${e.text} — ${josa(MONSTERS[target.defId].name, "이")} 움직이지 못한다`);
+    } else if (e.type === "rampage") {
+      c.rampage = Math.max(c.rampage ?? 0, e.rounds);
+      useSkill(s, c, sk, e.text);
+    } else if (e.type === "smoke") {
+      for (const foe of alive(c)) foe.stun = Math.max(foe.stun ?? 0, e.rounds);
+      c.smoke = e.flee;
+      useSkill(s, c, sk, e.text);
+    } else if (e.type === "steal") {
+      useSkill(s, c, sk, e.text);
+      const t = [...alive(c)].sort((a, b) => a.hp - b.hp)[0];
+      const def = MONSTERS[t.defId];
+      const dmg = Math.max(1, rngOf(s).dice(e.dice[0], e.dice[1]) + Math.max(smod(s, "str"), smod(s, "dex")));
+      t.hp -= dmg;
+      t.stolen = true;
+      log(s, `${def.name}에게 ${dmg} 피해`, "hit");
+      if (t.hp <= 0) {
+        gainLoot(s, c, def.id, t.stolen);
+        log(s, `${josa(def.name, "을")} 쓰러뜨렸다.`, "good");
+      }
+      if (alive(c).length === 0) return finish(s, "win");
     } else if (e.type === "burnAll") {
       for (const foe of alive(c)) burn(s, foe, e.rounds);
       useSkill(s, c, sk, e.text);
@@ -180,12 +202,12 @@ function castSpell(s: GameState, c: CombatState, dice: [number, number], all: bo
   const targets = all ? alive(c) : [[...alive(c)].sort((a, b) => a.hp - b.hp)[0]];
   for (const t of targets) {
     const def = MONSTERS[t.defId];
-    const dmg = Math.max(1, r.dice(dice[0], dice[1]) + smod(s, "int"));
+    const dmg = Math.max(1, r.dice(dice[0], dice[1]) + smod(s, "int") + spellBonus(s));
     t.hp -= dmg;
     note(s, "int");
     log(s, `${def.name}에게 ${dmg} 피해`, "hit");
     if (t.hp <= 0) {
-      gainLoot(s, c, def.id);
+      gainLoot(s, c, def.id, t.stolen);
       log(s, `${josa(def.name, "을")} 쓰러뜨렸다.`, "good");
     }
   }
@@ -220,6 +242,16 @@ function rollDice(s: GameState, n: number, sides: number): number {
   return has(s, "boltLuck") && r.chance(Math.max(0, smod(s, "dex")) * 0.1) ? Math.max(a, r.dice(n, sides)) : a;
 }
 
+/** 모든 주문 공통 추가 피해(모험가 마법사형: 마력 감응 +1, 주문꾼의 각인 +3) */
+function spellBonus(s: GameState): number {
+  return (has(s, "manaSense") ? 1 : 0) + (has(s, "casterMark") ? 3 : 0);
+}
+
+/** 치명타 피해 주사위 배수(행운의 일격 ×3) */
+function critMult(s: GameState): number {
+  return has(s, "luckyStrike") ? 3 : 2;
+}
+
 /** 원소별 추가 피해(열기·불의 각인·타오르는 의지·대지의 각인) */
 function elementBonus(s: GameState, el: ElementKey, t: Enemy): number {
   let b = 0;
@@ -239,7 +271,7 @@ function elementHit(s: GameState, c: CombatState, t: Enemy, sk: SkillDef, half =
   const r = rngOf(s);
   const def = MONSTERS[t.defId];
   const sides = e.vary ? r.pick([4, 6, 8, 10]) : e.dice[1];
-  let dmg = rollDice(s, e.dice[0], sides) + smod(s, "int") + elementBonus(s, e.el, t) + (e.hardBonus && def.hard ? e.hardBonus : 0);
+  let dmg = rollDice(s, e.dice[0], sides) + smod(s, "int") + spellBonus(s) + elementBonus(s, e.el, t) + (e.hardBonus && def.hard ? e.hardBonus : 0);
   dmg = Math.max(1, half ? Math.floor(dmg / 2) : dmg);
   t.hp -= dmg;
   note(s, "int");
@@ -264,7 +296,7 @@ function elementHit(s: GameState, c: CombatState, t: Enemy, sk: SkillDef, half =
   }
   log(s, `${def.name}에게 ${dmg} 피해${half ? " (튐)" : ""}${extra.length ? ` — ${extra.join(", ")}` : ""}`, "hit");
   if (t.hp <= 0) {
-    gainLoot(s, c, def.id);
+    gainLoot(s, c, def.id, t.stolen);
     log(s, `${josa(def.name, "을")} 쓰러뜨렸다.`, "good");
   }
 }
@@ -308,7 +340,7 @@ function burnTick(s: GameState, c: CombatState): void {
     e.burn.rounds -= 1;
     log(s, `${josa(def.name, "이")} 불길 속에서 몸부림친다. ${dmg} 피해`, "hit");
     if (e.hp <= 0) {
-      gainLoot(s, c, def.id);
+      gainLoot(s, c, def.id, e.stolen);
       log(s, `${josa(def.name, "이")} 타 버렸다.`, "good");
     }
   }
@@ -335,7 +367,7 @@ function plagueTick(s: GameState, c: CombatState): void {
     e.hp -= dmg;
     log(s, `${josa(def.name, "이")} 병으로 몸부림친다. ${dmg} 피해`, "hit");
     if (e.hp <= 0) {
-      gainLoot(s, c, def.id);
+      gainLoot(s, c, def.id, e.stolen);
       log(s, `${josa(def.name, "이")} 병으로 쓰러졌다.`, "good");
     }
   }
@@ -353,10 +385,11 @@ function escapeRares(s: GameState, c: CombatState): void {
   }
 }
 
-function gainLoot(s: GameState, c: CombatState, defId: string): void {
+function gainLoot(s: GameState, c: CombatState, defId: string, stolen = false): void {
   const def = MONSTERS[defId];
-  if (def.rare) c.bonus += def.mana;
-  else c.loot += def.mana;
+  const mana = stolen ? Math.round(def.mana * 1.5) : def.mana; // 손버릇
+  if (def.rare) c.bonus += mana;
+  else c.loot += mana;
   s.codex.kills[defId] = (s.codex.kills[defId] ?? 0) + 1;
   // 초원의 짐승은 고기를 남긴다(늑대·군마)
   if (["wolf", "alphawolf", "warhorse"].includes(defId) && rngOf(s).chance(0.25)) {
@@ -376,8 +409,7 @@ function gainLoot(s: GameState, c: CombatState, defId: string): void {
 
 function canUse(s: GameState, c: CombatState, sk: SkillDef): boolean {
   // 특화(각인): 그 레벨표의 액티브는 전투당 1회 더
-  const mark = MARK_FOR_SKILL[sk.id];
-  const extra = mark && s.skills.includes(mark) ? 1 : 0;
+  const extra = (MARK_FOR_SKILL[sk.id] ?? []).some((m) => s.skills.includes(m)) ? 1 : 0;
   return (c.used[sk.id] ?? 0) < (sk.uses ?? 1) + extra;
 }
 
@@ -470,7 +502,7 @@ function playerPhase(s: GameState, c: CombatState, opener: Strike | null): "win"
       if (fin && fin.effect!.type === "strike") {
         const e = fin.effect!;
         useSkill(s, c, fin, `${josa(def.name, "을")} 노린다`);
-        strike = { hit: e.hit, dmg: e.dmg, mult: e.dmgMult ?? 1, autoHit: !!e.autoHit, stun: e.stun };
+        strike = { hit: e.hit, dmg: e.dmg, mult: e.dmgMult ?? 1, autoHit: !!e.autoHit, stun: e.stun, crit: e.crit };
       }
       attack(s, c, target, strike);
     }
@@ -497,14 +529,14 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
     log(s, `${josa(def.name, "을")} 노렸지만 빗나갔다. (${roll}+${bonus} vs AC ${ac})`, "miss");
     return;
   }
-  const crit = !noCrit(s) && (roll === 20 || r.float() * 100 < 5 + smod(s, "luk") + passive(s, "crit") + (w.magic && held && has(s, "frostEye") ? 15 : 0));
+  const crit = !noCrit(s) && (!!st.crit || roll === 20 || r.float() * 100 < 5 + smod(s, "luk") + passive(s, "crit") + (w.magic && held && has(s, "frostEye") ? 15 : 0));
   selfInjury(s, def.id, w.magic);
   // 각인: 마력탄 강화(불 +3, 서리 +2, 번개 +2, 대지 +2·단단한 적 +3)
   const magicDmg = w.magic
-    ? (has(s, "earthMark") ? 2 + (def.hard ? 3 : 0) : 0) + (has(s, "fireMark") ? 3 : 0) + (has(s, "frostMark") ? 2 + (held ? 3 : 0) : 0) + (has(s, "boltMark") ? 2 : 0)
+    ? (has(s, "casterMark") ? 2 : 0) + (has(s, "earthMark") ? 2 + (def.hard ? 3 : 0) : 0) + (has(s, "fireMark") ? 3 : 0) + (has(s, "frostMark") ? 2 + (held ? 3 : 0) : 0) + (has(s, "boltMark") ? 2 : 0)
     : 0;
   const fury = has(s, "berserkMark") && hpPct(s) <= 50 ? 3 : 0; // 광전의 각인
-  const base = (w.magic ? rollDice(s, w.dice[0] * (crit ? 2 : 1), w.dice[1]) : r.dice(w.dice[0] * (crit ? 2 : 1), w.dice[1])) + magicDmg + fury + statMod + passive(s, "dmg") + st.dmg + faithDmg(s) + rageDmg(s) + abyssEdge(s, s.hero.hp / maxHp(s)).dmg;
+  const base = (w.magic ? rollDice(s, w.dice[0] * (crit ? critMult(s) : 1), w.dice[1]) : r.dice(w.dice[0] * (crit ? critMult(s) : 1), w.dice[1])) + magicDmg + fury + statMod + passive(s, "dmg") + st.dmg + faithDmg(s) + rageDmg(s) + abyssEdge(s, s.hero.hp / maxHp(s)).dmg;
   const dmg = Math.max(1, Math.round(base * st.mult));
   target.hp -= dmg;
   if (crit) note(s, "luk");
@@ -534,14 +566,14 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
       o.hp -= half;
       log(s, `【번개의 각인】 마력탄이 ${MONSTERS[o.defId].name}에게 튀었다. ${half} 피해`, "hit");
       if (o.hp <= 0) {
-        gainLoot(s, c, o.defId);
+        gainLoot(s, c, o.defId, o.stolen);
         log(s, `${josa(MONSTERS[o.defId].name, "을")} 쓰러뜨렸다.`, "good");
       }
     }
   }
   if (target.hp <= 0) {
     note(s, w.magic ? w.stat : w.stat === "dex" ? "dex" : "str");
-    gainLoot(s, c, def.id);
+    gainLoot(s, c, def.id, target.stolen);
     log(s, `${josa(def.name, "을")} 쓰러뜨렸다.`, "good");
     if (power(s, "war", 2)) s.hero.hp = Math.min(maxHp(s), s.hero.hp + 2); // 전쟁의 신 ★2
     if (has(s, "bloodThirst")) {
@@ -613,7 +645,7 @@ function tryFlee(s: GameState, c: CombatState): boolean {
   }
   const dc = BAL.fleeDcBase + alive(c).length * 2;
   const roll = rngOf(s).die(20);
-  const bonus = smod(s, "dex") + passive(s, "flee") + rollPenalty(s);
+  const bonus = smod(s, "dex") + passive(s, "flee") + rollPenalty(s) + (c.smoke ?? 0);
   if (roll === 20 || (roll !== 1 && roll + bonus >= dc)) {
     note(s, "dex");
     log(s, `등을 돌려 달아났다! (${roll}+${bonus} vs ${dc})`, "system");

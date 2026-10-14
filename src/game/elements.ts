@@ -49,9 +49,27 @@ export const STYLE_SKILLS: Record<StyleKey, Record<number, string>> = {
   berserk: { 2: "roughPower", 3: "wideSweep", 4: "berserkMark", 5: "charge", 6: "bloodThirst", 7: "frenzy", 8: "painless", 9: "smash" },
 };
 
-/** 레벨표가 있는 훈련(마법사 원소·전사 방향) */
-const LEVEL_TABLES: Record<string, Record<number, string>> = { ...ELEMENT_SKILLS, ...STYLE_SKILLS };
-const MARK_OF_LINE: Record<string, string> = { ...Object.fromEntries(ELEMENT_KEYS.map((k) => [k, ELEMENTS[k].mark])), ...Object.fromEntries(STYLE_KEYS.map((k) => [k, STYLES[k].mark])) };
+// ── 모험가 훈련(2026-10-14): 전사형(힘·체력)·마법사형(지능·감각)·민첩형(민첩·행운). 전문 직업보다 좁고 얕다 ──
+export type BranchKey = "fighter" | "caster" | "rogue";
+export const BRANCH_KEYS: BranchKey[] = ["fighter", "caster", "rogue"];
+export const BRANCHES: Record<BranchKey, { name: string; mark: string }> = {
+  fighter: { name: "전사형", mark: "fighterMark" },
+  caster: { name: "마법사형", mark: "casterMark" },
+  rogue: { name: "민첩형", mark: "shadowMark" },
+};
+export const BRANCH_SKILLS: Record<BranchKey, Record<number, string>> = {
+  fighter: { 2: "swordHand", 3: "sweep", 4: "fighterMark", 5: "parry", 6: "tough", 7: "doubleSlash", 8: "toughMuscle", 9: "finisher" },
+  caster: { 2: "manaSense", 3: "magicMissile", 4: "casterMark", 5: "fireBurst", 6: "firstAid", 7: "frostPrison", 8: "keenSense", 9: "boltChain" },
+  rogue: { 2: "lightStep", 3: "pickpocket", 4: "shadowMark", 5: "shadowStep", 6: "trapHand", 7: "smoke", 8: "luckyStrike", 9: "vitalStab" },
+};
+
+/** 레벨표가 있는 훈련(마법사 원소·전사 방향·모험가 갈래) */
+const LEVEL_TABLES: Record<string, Record<number, string>> = { ...ELEMENT_SKILLS, ...STYLE_SKILLS, ...BRANCH_SKILLS };
+const MARK_OF_LINE: Record<string, string> = {
+  ...Object.fromEntries(ELEMENT_KEYS.map((k) => [k, ELEMENTS[k].mark])),
+  ...Object.fromEntries(STYLE_KEYS.map((k) => [k, STYLES[k].mark])),
+  ...Object.fromEntries(BRANCH_KEYS.map((k) => [k, BRANCHES[k].mark])),
+};
 
 export function hasLevelTable(trainingId: string): boolean {
   return trainingId in LEVEL_TABLES;
@@ -62,7 +80,8 @@ export function levelSkill(trainingId: string, toLevel: number): string | null {
   return LEVEL_TABLES[trainingId]?.[toLevel] ?? null;
 }
 
-/** 이 기술을 전투당 1회 더 쓰게 해 주는 각인(그 레벨표의 특화 패시브) */
-export const MARK_FOR_SKILL: Record<string, string> = Object.fromEntries(
-  Object.entries(LEVEL_TABLES).flatMap(([line, table]) => Object.values(table).filter((id) => id !== MARK_OF_LINE[line]).map((id) => [id, MARK_OF_LINE[line]])),
-);
+/** 이 기술을 전투당 1회 더 쓰게 해 주는 각인들(그 기술이 들어 있는 레벨표의 특화 패시브) */
+export const MARK_FOR_SKILL: Record<string, string[]> = {};
+for (const [line, table] of Object.entries(LEVEL_TABLES)) {
+  for (const id of Object.values(table)) if (id !== MARK_OF_LINE[line]) (MARK_FOR_SKILL[id] ??= []).push(MARK_OF_LINE[line]);
+}

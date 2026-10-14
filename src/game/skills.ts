@@ -19,7 +19,11 @@ export type Trigger =
   | { on: "react" };
 
 export type SkillEffect =
-  | { type: "strike"; hit: number; dmg: number; dmgMult?: number; autoHit?: boolean; stun?: number }
+  | { type: "strike"; hit: number; dmg: number; dmgMult?: number; autoHit?: boolean; stun?: number; crit?: boolean }
+  /** 손버릇: 반드시 맞는 찌르기, 그 적을 쓰러뜨리면 마석 ×1.5 */
+  | { type: "steal"; dice: [number, number]; text: string }
+  /** 연막: 적 전원 행동 불가 + 그 전투 도주 보너스 */
+  | { type: "smoke"; rounds: number; flee: number; text: string }
   | { type: "sweep"; dmgMult: number }
   | { type: "guard"; ac: number; rounds: number }
   | { type: "weaken"; ac: number }
@@ -273,6 +277,25 @@ Object.assign(SKILLS, {
   painless: { id: "painless", name: "고통 무시", kind: "passive", desc: "부상의 명중·판정 페널티 절반, 공포에 걸리지 않는다" },
   smash: { id: "smash", name: "분쇄 일격", kind: "active", desc: "전투당 1회, 반드시 맞는 일격(피해 ×2), 1라운드 넘어뜨린다", trigger: { on: "targetBelow", pct: 100 }, effect: { type: "strike", hit: 0, dmg: 0, dmgMult: 2, autoHit: true, stun: 1 }, uses: 1 },
 } satisfies Record<string, SkillDef>);
+// 모험가 갈래 기술(elements.ts의 BRANCH_SKILLS). 휩쓸기·흘려내기·질긴 몸·마무리 일격·마력 화살·불꽃 폭발·
+// 응급 처치 지식·얼음 감옥·연쇄 번개·가벼운 발은 위의 기존 기술을 쓴다
+Object.assign(SKILLS, {
+  swordHand: { id: "swordHand", name: "검 다루기", kind: "passive", desc: "명중 +1, 피해 +1", passive: { hit: 1, dmg: 1 } },
+  fighterMark: { id: "fighterMark", name: "칼잡이의 각인", kind: "passive", desc: "최대 HP +6, 명중 +2, 피해 +3, 전사형 액티브 전투당 +1회", passive: { hp: 6, hit: 2, dmg: 3 } },
+  doubleSlash: { id: "doubleSlash", name: "이중 베기", kind: "active", desc: "전투당 1회, 첫 라운드에 두 번 공격", trigger: { on: "start" }, effect: { type: "rampage", rounds: 1, text: "칼을 두 번 연달아 휘두른다" }, uses: 1 },
+  toughMuscle: { id: "toughMuscle", name: "강인함", kind: "passive", desc: "최대 HP +4, 피해 +1", passive: { hp: 4, dmg: 1 } },
+  manaSense: { id: "manaSense", name: "마력 감응", kind: "passive", desc: "주문 피해 +1, 감각 판정 +2", passive: { perception: 2 } },
+  casterMark: { id: "casterMark", name: "주문꾼의 각인", kind: "passive", desc: "최대 HP +5, 주문 피해 +3, 지팡이 마력탄 피해 +2, 마법사형 액티브 전투당 +1회", passive: { hp: 5 } },
+  keenSense: { id: "keenSense", name: "예리한 감각", kind: "passive", desc: "명중 +1, 치명타 확률 +3%, 함정 발견 +2", passive: { hit: 1, crit: 3, perception: 2 } },
+  pickpocket: { id: "pickpocket", name: "손버릇", kind: "active", desc: "전투 시작 시 가장 약한 적에게 반드시 맞는 찌르기(1d6 + 힘·민첩 중 높은 보정), 그 적을 쓰러뜨리면 마석 ×1.5", trigger: { on: "start" }, effect: { type: "steal", dice: [1, 6], text: "슬쩍 다가가 찌른다" }, uses: 1 },
+  shadowMark: { id: "shadowMark", name: "그림자의 각인", kind: "passive", desc: "최대 HP +5, AC +2, 치명타 확률 +10%, 민첩형 액티브 전투당 +1회", passive: { hp: 5, ac: 2, crit: 10 } },
+  shadowStep: { id: "shadowStep", name: "그림자 걸음", kind: "active", desc: "전투 시작 시 첫 공격이 반드시 맞고 피해 ×1.5", trigger: { on: "start" }, effect: { type: "strike", hit: 0, dmg: 0, dmgMult: 1.5, autoHit: true }, uses: 1 },
+  trapHand: { id: "trapHand", name: "함정 감각", kind: "passive", desc: "함정 발견·앞방 엿보기 +3, 함정 해체 +3", passive: { perception: 3 } },
+  smoke: { id: "smoke", name: "연막", kind: "active", desc: "전투 시작 시 적 전원 1라운드 행동 불가, 그 전투 도주 +5", trigger: { on: "start" }, effect: { type: "smoke", rounds: 1, flee: 5, text: "연기 속으로 몸을 감춘다" }, uses: 1 },
+  luckyStrike: { id: "luckyStrike", name: "행운의 일격", kind: "passive", desc: "치명타 피해 주사위 ×3(원래 ×2)" },
+  vitalStab: { id: "vitalStab", name: "급소 찌르기", kind: "active", desc: "HP 50% 이하인 적에게 반드시 맞는 치명타(전투당 1회)", trigger: { on: "targetBelow", pct: 50 }, effect: { type: "strike", hit: 0, dmg: 0, autoHit: true, crit: true }, uses: 1 },
+} satisfies Record<string, SkillDef>);
+
 // "고통 무시": 공포 면역
 mindResist.push((s, k) => (k === "fear" && s.skills.includes("painless") ? 0 : 1));
 
