@@ -32,6 +32,11 @@ export function botAction(s: GameState): Action | null {
 }
 
 function townAction(s: GameState): Action {
+  // 현상수배 중: 3·4주차에 암시장(두 배 값)에서 고기·물약을 챙긴다
+  if (s.heretic && s.week >= 3) {
+    if (s.inventory.food < 4 && s.gold >= shopPrice(s, "food")) return { t: "buy", item: "food" };
+    if (s.inventory.potion < 2 && s.gold >= shopPrice(s, "potion")) return { t: "buy", item: "potion" };
+  }
   // 4주차: 준비는 3주차에 마쳤으니 바로 미궁으로
   if (s.week >= 4) return { t: "enterDungeon" };
   if (s.heretic) return { t: "activity", a: "field" };

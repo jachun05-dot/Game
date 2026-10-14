@@ -4,7 +4,7 @@ import { BAL, STAT_KEYS, STAT_LABEL, TRAININGS } from "../game/data";
 import { GEAR, SLOTS, gearEffect, hasShield, targetSlot } from "../game/gear";
 import { CLASSES } from "../game/classes";
 import { hasLevelTable } from "../game/elements";
-import { canTrain, gateOf, nextSkill, shopPrice, trainCost } from "../game/town";
+import { BLACK_MARKET_MULT, canTrain, gateOf, nextSkill, shopPrice, trainCost } from "../game/town";
 import type { GameState } from "../game/types";
 import { SKILLS } from "../game/skills";
 import { FRAGMENTS, fragStatText } from "../game/fragments";
@@ -48,7 +48,7 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
           이번 주 할 일
         </button>
         <button className={tab === "shop" ? "on" : ""} onClick={() => setTab("shop")}>
-          상점가 · 대장간 · 신전
+          {s.heretic ? "암시장" : "상점가 · 대장간 · 신전"}
         </button>
         <button className={tab === "me" ? "on" : ""} onClick={() => setTab("me")}>
           모험가
@@ -61,7 +61,7 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
         <div className="stack">
           <Card title="현상수배 중" className="warn">
             <p className="small">성당 문에 당신의 얼굴이 그려진 수배서가 붙어 있다. 마을 안으로는 들어갈 수 없다 — 영지 외곽만 다닐 수 있다.</p>
-            <p className="dim small">숲의 마석은 밀수꾼에게 반값에 넘기고, 사냥한 짐승으로 말린 고기를 만든다. 세금은 걷히지 않는다. 미궁에서는 이단심문관이 뒤를 쫓는다.</p>
+            <p className="dim small">숲의 마석은 밀수꾼에게 반값에 넘기고, 사냥한 짐승으로 말린 고기를 만든다. 고기·물약은 외곽의 암시장에서 {BLACK_MARKET_MULT}배 값에 살 수 있다(암시장 탭). 세금은 걷히지 않는다. 미궁에서는 이단심문관이 뒤를 쫓는다.</p>
           </Card>
           <ActivityButton title="외부 탐험" sub="영지 밖 숲 · 작은 전투, 마석(반값)과 말린 고기" disabled={busy} onClick={() => dispatch({ t: "activity", a: "field" })} />
           <ActivityButton title="성당에 자수한다" sub={`${josa(s.hero.faith ?? "옛 신", "을")} 부정하고 마을로 돌아간다 (신앙을 잃는다, 시간은 들지 않는다)`} disabled={busy} onClick={() => dispatch({ t: "surrender" })} />
@@ -96,7 +96,29 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
       {tab === "act" && s.week < 4 && training && <TrainingPanel ctl={ctl} onClose={() => setTraining(false)} />}
       {tab === "act" && s.week < 4 && dummy && !s.heretic && <DummyPanel s={s} onClose={() => setDummy(false)} />}
 
-      {tab === "shop" && s.heretic && <p className="hurt small">현상수배 중이라 상점가·대장간·신전에 들어갈 수 없다.</p>}
+      {tab === "shop" && s.heretic && (
+        <div className="stack">
+          <Card title="암시장">
+            <p className="dim small">현상수배 중이라 상점가·대장간·신전에는 들어갈 수 없다. 영지 외곽의 밀수꾼이 같은 물건을 {BLACK_MARKET_MULT}배 값에 넘겨준다.</p>
+            {(Object.keys(ITEM_INFO) as (keyof typeof ITEM_INFO)[]).map((k) => (
+              <div key={k} className="shop-row">
+                <div>
+                  <b>{ITEM_INFO[k].name}</b> <span className="dim small">{ITEM_INFO[k].desc}</span>
+                  <div className="dim small">보유 {s.inventory[k]}개</div>
+                </div>
+                <button className="btn small" disabled={s.gold < shopPrice(s, k)} onClick={() => dispatch({ t: "buy", item: k })}>
+                  {shopPrice(s, k)}G
+                </button>
+              </div>
+            ))}
+          </Card>
+          {s.week >= 4 && (
+            <button className="btn primary wide" disabled={busy} onClick={() => dispatch({ t: "enterDungeon" })}>
+              준비 끝 — 미궁으로 들어간다 →
+            </button>
+          )}
+        </div>
+      )}
 
       {tab === "shop" && !s.heretic && (
         <div className="stack">
@@ -262,7 +284,7 @@ function DungeonPrep({ s, busy, onShop, onEnter }: { s: GameState; busy: boolean
   return (
     <div className="stack">
       <Card title="4주차 — 미궁이 열렸다">
-        <p className="small">들어가면 7일 동안 나올 수 없다(귀환 주문서 제외). {s.heretic ? "현상수배 중이라 상점에는 들를 수 없다." : "모자란 것이 있으면 상점가·대장간에 먼저 들르자. 쇼핑은 시간이 들지 않는다."}</p>
+        <p className="small">들어가면 7일 동안 나올 수 없다(귀환 주문서 제외). {s.heretic ? `현상수배 중이라 상점가 대신 외곽의 암시장(${BLACK_MARKET_MULT}배 값)에 들를 수 있다.` : "모자란 것이 있으면 상점가·대장간에 먼저 들르자. 쇼핑은 시간이 들지 않는다."}</p>
         <p className="small">
           챙긴 것: 말린 고기 <b>{inv.food}</b> · 치료 물약 <b>{inv.potion}</b> · 귀환 주문서 <b>{inv.scroll}</b>
           {inv.bandage > 0 && <> · 붕대 <b>{inv.bandage}</b></>}
@@ -270,11 +292,9 @@ function DungeonPrep({ s, busy, onShop, onEnter }: { s: GameState; busy: boolean
         </p>
         {inv.food < 3 && <p className="small warn">말린 고기가 적다 — 일주일을 버티기 어렵다.</p>}
       </Card>
-      {!s.heretic && (
-        <button className="btn" disabled={busy} onClick={onShop}>
-          상점가 · 대장간 들르기
-        </button>
-      )}
+      <button className="btn" disabled={busy} onClick={onShop}>
+        {s.heretic ? "암시장 들르기" : "상점가 · 대장간 들르기"}
+      </button>
       <button className="btn primary wide" disabled={busy} onClick={onEnter}>
         미궁으로 들어간다 →
       </button>

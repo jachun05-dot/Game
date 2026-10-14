@@ -359,12 +359,17 @@ export function useHerb(s: GameState): void {
 }
 
 /** 상점가 가격(탐욕/채무의 신 ★1: 반값) */
+/** 상점가 값: 탐욕의 신 ★1이면 반값, 현상수배 중이면 암시장이라 두 배 */
 export function shopPrice(s: GameState, item: keyof typeof BAL.prices): number {
-  return power(s, "greed", 1) ? Math.ceil(BAL.prices[item] / 2) : BAL.prices[item];
+  const base = power(s, "greed", 1) ? Math.ceil(BAL.prices[item] / 2) : BAL.prices[item];
+  return s.heretic ? base * BLACK_MARKET_MULT : base;
 }
 
+/** 현상수배 중 암시장 값 배율 */
+export const BLACK_MARKET_MULT = 2;
+
 export function buy(s: GameState, item: keyof typeof BAL.prices): void {
-  if (s.phase !== "town" || s.heretic) return;
+  if (s.phase !== "town") return;
   const price = shopPrice(s, item);
   if (s.gold < price) return;
   s.gold -= price;

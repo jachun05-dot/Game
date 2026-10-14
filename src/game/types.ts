@@ -116,6 +116,8 @@ export interface Tactics {
   potionAt: number;
   /** HP가 이 %이하면 도주를 시도한다(0 = 끝까지 싸움) */
   fleeAt: number;
+  /** 미궁에서 배가 고프면 식량을 알아서 먹는다(없으면 켜짐) */
+  autoEat?: boolean;
 }
 
 export type RoomType =

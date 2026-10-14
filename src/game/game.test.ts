@@ -448,7 +448,10 @@ describe("신앙", () => {
     const potions = s.inventory.potion;
     apply(s, { t: "buy", item: "potion" });
     apply(s, { t: "activity", a: "rumor" });
-    expect(s.inventory.potion).toBe(potions); // 상점가를 쓸 수 없다
+    expect(s.inventory.potion).toBe(potions + 1); // 상점가 대신 암시장: 두 배 값
+    expect(s.gold).toBe(999 - BAL.prices.potion * 2);
+    apply(s, { t: "buyGear", id: "shield" });
+    expect(s.gear.offhand).toBeUndefined(); // 대장간은 여전히 못 쓴다
     expect(s.phase).toBe("town");
     apply(s, { t: "surrender" });
     expect(s.heretic).toBe(false);
@@ -1136,5 +1139,22 @@ describe("4주차 준비", () => {
     expect(s.inventory.potion).toBe(potions + 1);
     apply(s, { t: "enterDungeon" });
     expect(s.phase).toBe("dungeon");
+  });
+});
+
+describe("자동 식사", () => {
+  it("미궁에서 포만감이 20 이하가 되면 고기를 알아서 먹고, 끄면 먹지 않는다", () => {
+    const s = newRun(98);
+    apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    enterDungeon(s);
+    s.inventory.food = 2;
+    s.hero.satiety = 21;
+    apply(s, { t: "camp" });
+    expect(s.inventory.food).toBe(1);
+    expect(s.hero.satiety).toBeGreaterThan(20);
+    apply(s, { t: "tactics", tactics: { autoEat: false } });
+    s.hero.satiety = 5;
+    apply(s, { t: "camp" });
+    expect(s.inventory.food).toBe(1);
   });
 });

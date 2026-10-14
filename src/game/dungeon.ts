@@ -901,6 +901,16 @@ export function camp(s: GameState): void {
   checkTimeUp(s);
 }
 
+/** 미궁에서 배가 고프면 알아서 먹는다(행동이 끝날 때마다, 전투 중 제외). 기아/풍요의 신도는 굶주림이 오고서야 */
+export const AUTO_EAT_AT = 20;
+export function autoEat(s: GameState): void {
+  if (s.phase !== "dungeon" || !s.dungeon || s.combat || s.inventory.food <= 0 || s.tactics.autoEat === false) return;
+  const at = god(s) === "hunger" ? 0 : AUTO_EAT_AT;
+  if (s.hero.satiety > at) return;
+  log(s, "배가 고파 말린 고기를 꺼냈다.", "system");
+  eat(s);
+}
+
 export function eat(s: GameState): void {
   if (!s.dungeon || s.inventory.food <= 0 || s.combat) return;
   if (s.hero.satiety >= 80) pray(s, "hunger", -3);

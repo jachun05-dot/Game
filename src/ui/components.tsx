@@ -11,6 +11,7 @@ import { SKILLS, skillWorks } from "../game/skills";
 import { hasLevelTable, levelSkill } from "../game/elements";
 import { TRAININGS } from "../game/data";
 import { hasShield, weaponOf } from "../game/gear";
+import { AUTO_EAT_AT } from "../game/dungeon";
 import { BRANCH_SKILLS } from "../game/elements";
 import type { AutoGoal, GameState } from "../game/types";
 import type { Ctl, Speed } from "./App";
@@ -273,6 +274,9 @@ export function TacticsBar({ ctl }: { ctl: Ctl }) {
       </button>
       <button className="chip" onClick={() => dispatch({ t: "tactics", tactics: { fleeAt: next(FLEE_STEPS, fleeAt) } })}>
         도주: {fleeAt ? `HP ${fleeAt}% 이하` : "끝까지 싸움"}
+      </button>
+      <button className={`chip${s.tactics.autoEat !== false ? " on" : ""}`} onClick={() => dispatch({ t: "tactics", tactics: { autoEat: s.tactics.autoEat === false } })} title={`미궁에서 포만감이 ${AUTO_EAT_AT} 이하가 되면 말린 고기를 알아서 먹는다`}>
+        식사: {s.tactics.autoEat !== false ? "배고프면 알아서" : "직접"}
       </button>
     </div>
   );

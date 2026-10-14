@@ -1,4 +1,4 @@
-import { camp, drinkPotion, eat, enterDungeon, moveTo, resolvePending, useScroll, type PendingChoice } from "./dungeon";
+import { autoEat, camp, drinkPotion, eat, enterDungeon, moveTo, resolvePending, useScroll, type PendingChoice } from "./dungeon";
 import { answerInquisition, surrender, regen, prosthetic, useBandage, useHerb, buy, buyGear, closeSettlement, closeWeek, createHero, doActivity, eraseFrag, pickClass, rerollCandidates, sell, setTactics, train } from "./town";
 import { maxHp } from "./core";
 import type { ClassId } from "./classes";
@@ -51,6 +51,7 @@ export function act(prev: GameState, a: Action): GameState {
 /** 복사 없이 제자리에서 적용(시뮬레이션용) */
 export function apply(s: GameState, a: Action): void {
   run(s, a);
+  autoEat(s);
   // 최대 HP가 줄어드는 길(병이 나아 역병의 신 ★3이 꺼짐, 신앙 포기·하락, 장비 교체 등)이 많아
   // 행동이 끝날 때마다 현재 HP를 새 최대치로 한 번 맞춘다.
   if (s.phase !== "create" && s.phase !== "dead" && s.hero.hp > maxHp(s)) s.hero.hp = maxHp(s);
