@@ -133,8 +133,12 @@ export function createHero(s: GameState, name: string, candidate: number, faith:
 }
 
 export function trainCost(s: GameState): number {
-  const per = s.hero.level >= 4 && BAL.trainCostLate > 0 ? BAL.trainCostLate : BAL.trainCostPerLevel;
-  return per * s.hero.level + (BAL.specialTrainFee[s.hero.level] ?? 0);
+  const lv = s.hero.level;
+  const base =
+    lv >= 4 && BAL.trainCostLate > 0 ? BAL.trainCostLate * lv
+    : BAL.trainCostBase > 0 ? BAL.trainCostBase + BAL.trainCostPerLevel * (lv - 1)
+    : BAL.trainCostPerLevel * lv;
+  return base + (BAL.specialTrainFee[lv] ?? 0);
 }
 
 /** 레벨 3→4 훈련은 1섹터 보스의 마석 심장이 있어야 한다 */

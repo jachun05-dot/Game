@@ -22,7 +22,9 @@ export const BAL = {
   taxRank: [0, 0, 0, 0] as number[],
   /** 섹터별 마석 환전 배율(희귀 개체 포함) */
   manaSectorMult: [1, 1, 1, 1] as number[],
-  /** 레벨 4부터의 훈련비(레벨당). 0이면 trainCostPerLevel 그대로 — 초반(1섹터)은 싸게, 뒤로 갈수록 비싸게 */
+  /** 0보다 크면 레벨 1~3 훈련비 = trainCostBase + trainCostPerLevel × (레벨 − 1) (첫 훈련 값이 trainCostBase) */
+  trainCostBase: 0,
+  /** 레벨 4부터의 훈련비(레벨당). 0이면 레벨 1~3과 같은 식 — 초반(1섹터)은 싸게, 뒤로 갈수록 비싸게 */
   trainCostLate: 0,
   /** 특수 훈련(이 레벨 → 다음 레벨) 수련비 */
   specialTrainFee: {} as Record<number, number>,
