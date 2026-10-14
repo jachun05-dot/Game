@@ -497,3 +497,8 @@ html, body, #root { height: 100%; }
 .skills li.off { opacity: 0.7; }
 .skill-kind.warn { color: var(--danger); border-color: var(--danger); }
 .lvtable .line-icon { display: block; image-rendering: pixelated; margin-bottom: 2px; }
+
+/* 접힌 전투 요약 줄 / 펼친 세부 줄 */
+.log-line.fold-sum button { all: unset; cursor: pointer; }
+.log-line.fold-sum button:focus-visible { outline: 2px solid var(--accent); }
+.log-line.folded { padding-left: 10px; border-left: 1px solid var(--border); font-size: 12.5px; }

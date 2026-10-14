@@ -934,3 +934,26 @@ describe("기술 점검", () => {
     });
   }
 });
+
+describe("전투 로그 접기", () => {
+  it("다치지 않고 이긴 평범한 전투는 세부 줄을 접고 요약 한 줄을 남긴다, 희귀 개체 전투는 접지 않는다", () => {
+    const s = newRun(61);
+    apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    s.week = 3;
+    s.phase = "week-result";
+    apply(s, { t: "closeWeek" });
+    s.hero.hp = 999;
+    s.combat = null;
+    s.skills.push("fireArrow");
+    startCombat(s, "dungeon", makeEnemies(s, ["rat", "rat"]));
+    const sum = s.log.find((l) => l.foldOf !== undefined);
+    expect(sum).toBeTruthy();
+    expect(s.log.filter((l) => l.fold === sum!.foldOf).length).toBe(sum!.foldN);
+    expect(s.log.some((l) => l.mons && l.fold === undefined)).toBe(true); // 등장 줄은 그대로
+    s.combat = null;
+    s.phase = "dungeon";
+    const before = s.log.filter((l) => l.foldOf !== undefined).length;
+    startCombat(s, "dungeon", makeEnemies(s, ["goldrat"]));
+    expect(s.log.filter((l) => l.foldOf !== undefined).length).toBe(before);
+  });
+});

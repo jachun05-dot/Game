@@ -25,6 +25,11 @@ export interface LogLine {
   kind: LogKind;
   /** 몬스터 등장 줄: 나타난 몬스터 id(화면에서 그림으로 보여 준다) */
   mons?: string[];
+  /** 접힌 전투의 세부 줄(이 번호의 요약 줄을 누르면 펼쳐진다) */
+  fold?: number;
+  /** 접힌 전투의 요약 줄: 접힌 번호와 줄 수 */
+  foldOf?: number;
+  foldN?: number;
 }
 
 export interface Enemy {
@@ -81,6 +86,9 @@ export interface CombatState {
   rampage?: number;
   /** 연막: 이 전투의 도주 보너스 */
   smoke?: number;
+  /** 로그 접기: 이 전투가 시작된 로그 번호(등장 줄)와 시작 HP */
+  logFrom?: number;
+  hpStart?: number;
 }
 
 /** 자동 결정의 미궁 목표: 구석구석 탐험 / 빠르게 다음 층 / 파밍(전투·상자 위주) */

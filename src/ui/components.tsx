@@ -114,22 +114,37 @@ export function GearList({ s }: { s: GameState }) {
 export function LogView({ ctl, max = 80, tall, fill }: { ctl: Ctl; max?: number; tall?: boolean; fill?: boolean }) {
   const { s, shown } = ctl;
   const ref = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState<number[]>([]); // 펼친 전투(접힌 번호)
   const start = s.logCount - s.log.length; // log[0]의 전역 번호
   const visible = s.log
     .map((l, i) => ({ ...l, n: start + i }))
-    .filter((l) => l.n < shown)
+    .filter((l) => l.n < shown && (l.fold === undefined || open.includes(l.fold)))
     .slice(-max);
   useEffect(() => {
     ref.current?.scrollTo({ top: ref.current.scrollHeight });
   }, [shown]);
   return (
     <div ref={ref} className={`log${tall ? " tall" : ""}${fill ? " fill" : ""}`} onClick={ctl.revealAll} role="log" aria-live="polite">
-      {visible.map((l) => (
-        <p key={l.n} className={`log-line ${l.kind}`}>
-          {l.mons && <EncounterFigures ids={l.mons} />}
-          {l.text}
-        </p>
-      ))}
+      {visible.map((l) =>
+        l.foldOf !== undefined ? (
+          <p key={l.n} className={`log-line ${l.kind} fold-sum`}>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpen((o) => (o.includes(l.foldOf!) ? o.filter((x) => x !== l.foldOf) : [...o, l.foldOf!]));
+              }}
+            >
+              {l.text} <span className="dim">({open.includes(l.foldOf) ? "접기 ▾" : `${l.foldN}줄 펼치기 ▸`})</span>
+            </button>
+          </p>
+        ) : (
+          <p key={l.n} className={`log-line ${l.kind}${l.fold !== undefined ? " folded" : ""}`}>
+            {l.mons && <EncounterFigures ids={l.mons} />}
+            {l.text}
+          </p>
+        ),
+      )}
       {ctl.busy && <p className="log-line dim blink">▼</p>}
     </div>
   );

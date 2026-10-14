@@ -53,6 +53,8 @@ const PLAIN: Strike = { hit: 0, dmg: 0, mult: 1, autoHit: false };
 export function startCombat(s: GameState, context: CombatState["context"], enemies: Enemy[], opts: { surprise?: boolean } = {}): void {
   const c: CombatState = { context, enemies, round: 1, loot: 0, bonus: 0, frags: [], used: {}, guard: null };
   s.combat = c;
+  c.logFrom = s.logCount;
+  c.hpStart = s.hero.hp;
   log(s, `${josa(describeGroup(enemies), "이")} 나타났다!`, "hurt");
   s.log[s.log.length - 1].mons = enemies.map((e) => e.defId);
   for (const e of enemies) if (!s.codex.seen.includes(e.defId)) s.codex.seen.push(e.defId);
@@ -596,6 +598,24 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
   }
 }
 
+/**
+ * 로그 접기: 피해 없이 이긴 평범한 전투는 등장 줄만 남기고 세부를 접어 요약 한 줄로 보여 준다
+ * (화면에서 요약 줄을 누르면 펼쳐진다). 희귀·정예·보스·이단심문관·편린이 나온 전투는 접지 않는다.
+ */
+function foldEasyFight(s: GameState, c: CombatState): void {
+  if (c.logFrom === undefined || s.hero.hp < (c.hpStart ?? 0) || c.frags.length) return;
+  if (c.enemies.some((e) => { const d = MONSTERS[e.defId]; return d.rare || d.elite || d.human || e.defId === "boss" || e.defId === "general"; })) return;
+  const n = s.logCount - c.logFrom; // 등장 줄 포함
+  if (n < 4 || n > s.log.length) return; // 세부가 3줄 이상일 때만 접는다
+  const lines = s.log.slice(s.log.length - n + 1);
+  for (const l of lines) l.fold = c.logFrom;
+  const used = Object.keys(c.used).map((id) => SKILLS[id]?.name).filter(Boolean);
+  log(s, `→ 다치지 않고 정리했다${used.length ? ` — ${used.join(" · ")}` : ""}`, "good");
+  const sum = s.log[s.log.length - 1];
+  sum.foldOf = c.logFrom;
+  sum.foldN = lines.length;
+}
+
 /** 반응 기술(맞받아치기·흘려내기·방패 반격)의 반격 한 번 */
 function counter(s: GameState, c: CombatState, e: Enemy, skillId: string | null, text: string, bonus = 0): void {
   if (e.hp <= 0 || isDead(s)) return;
@@ -761,6 +781,7 @@ function enemyPhase(s: GameState, c: CombatState): void {
 function finish(s: GameState, outcome: "win" | "fled"): void {
   const c = s.combat!;
   s.combat = null;
+  if (outcome === "win") foldEasyFight(s, c);
   // 신앙심: 전쟁의 신은 여럿과 싸워 이기는 것을 좋아하고 도주를 싫어한다
   if (outcome === "win" && c.enemies.length >= 2) pray(s, "war", 3);
   if (outcome === "fled") pray(s, "war", -3);

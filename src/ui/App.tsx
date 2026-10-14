@@ -78,7 +78,14 @@ export function App() {
       setShown(total);
       return;
     }
-    const t = window.setTimeout(() => setShown((n) => Math.min(total, n + 1)), LINE_MS / speed);
+    // 접힌 전투의 세부 줄은 기다리지 않고 건너뛴다
+    const start = (s?.logCount ?? 0) - (s?.log.length ?? 0);
+    const folded = (k: number) => s?.log[k - start]?.fold !== undefined;
+    const t = window.setTimeout(() => setShown((n) => {
+      let k = n + 1;
+      while (k < total && folded(k)) k++;
+      return Math.min(total, k);
+    }), LINE_MS / speed);
     return () => window.clearTimeout(t);
   }, [busy, shown, total, speed]);
 
