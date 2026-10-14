@@ -130,6 +130,6 @@
 3. (선택) **특화 각인 아이콘** — 4레벨 특화 10종(불의 각인·서리의 각인·번개의 각인·대지의 각인, 수호의 각인·검투의 각인·광전의 각인, 칼잡이의 각인·주문꾼의 각인·그림자의 각인). 기술 목록에서 쓸 수 있게 `SKILL_ICON`(새 목록)으로 등록하면 게임플레이 세션이 화면에 연결한다
 
 ### 2섹터에서 아직 그림이 없는 것
-4. **몬스터 6종**: 이단심문관 `inquisitor`(사람 — 성당의 이단 사냥꾼, 철퇴), 금빛 털 늑대 `goldwolf`, 마석 깃털 하피 `manaharpy`, 마석 갑주 망령 `manawraith`, 하피 여왕 `harpyqueen`(정예, 하피보다 큼), 끝나지 않은 전쟁의 장군 `general`(2섹터 보스, 망령 군마를 탄 장군 느낌). 설정 문장은 `src/game/data.ts`의 `MONSTERS[].note`
+4. ~~**몬스터 6종**~~ (완료 2026-10-14, 플레이 링크에 배포함)
 5. **미궁 2섹터 장면** `scene-dungeon2.png` — 잊힌 전쟁터의 초원(무너진 참호·녹슨 깃발). `SCENE_ART`에 `dungeon2` 한 줄이면 미궁 지도 배경에 바로 나온다(코드가 `dungeon${섹터}`를 찾음)
 6. **2섹터 장비 아이콘 10종**: wraithspear(망령의 녹슨 창), warbanner(녹슨 군기 방패), harpycharm(하피 깃털 부적), horseshoe(군마의 편자 장화), battlering(전장의 반지), wolfhide(늑대 가죽 갑옷), steelsword(강철 장검), steelshield(강철 방패), oakstaff(마력이 깃든 지팡이), queencloak(하피 여왕의 깃털 망토). 이름·설명은 `src/game/gear.ts`
