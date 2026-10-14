@@ -76,6 +76,10 @@ const PENDING_OPTIONS: Record<string, { choice: PendingChoice; label: string; pr
     { choice: "descend", label: "아래층으로 내려간다", primary: true },
     { choice: "stay", label: "이 층을 더 둘러본다" },
   ],
+  lostScroll: [
+    { choice: "use", label: "주문서를 찢고 돌아간다 (마석을 챙겨 귀환)", primary: true },
+    { choice: "stay", label: "두고, 1층을 더 둘러본다" },
+  ],
   portal: [
     { choice: "enter", label: "차원문으로 들어간다", primary: true },
     { choice: "return", label: "여기까지 — 마석을 챙겨 돌아간다" },
@@ -180,6 +184,9 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
     return (
       <>
         <p className="dock-title">{ROOM_LABEL[room.type]} — 어떻게 할까?</p>
+        {dg.pending.kind === "lostScroll" && (
+          <p className="dim small">첫 미궁에서는 2층으로 내려갈 수 없다. 주문서는 여기 그대로 있으니, 1층을 더 돌다가 다시 와서 써도 된다. 쓰지 않으면 시간이 다 될 때까지 1층에 머문다.</p>
+        )}
         {dg.pending.kind === "portal" && dg.sector === 1 && (
           <p className="dim small">들어가면 2섹터 — 잊힌 전쟁터의 초원. 남은 시간이 두 배가 된다({fmtTime(dg.turnsLeft)} → {fmtTime(dg.turnsLeft * 2)}). 돌아가도 1섹터 클리어는 인정된다.</p>
         )}

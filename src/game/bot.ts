@@ -139,6 +139,9 @@ function dungeonAction(s: GameState): Action | null {
       case "shrine": return { t: "pending", choice: goal === "rush" && hp >= 0.8 ? "leave" : "pray" };
       case "stairs":
         return { t: "pending", choice: wantDescend(s) ? "descend" : "stay" };
+      // 첫 미궁: 1층을 다 돌았거나 많이 다쳤으면 떨어진 주문서로 돌아간다
+      case "lostScroll":
+        return { t: "pending", choice: floorDone(s) || hp < 0.5 ? "use" : "stay" };
       case "portal": {
         // 1섹터 차원문: 2섹터를 감당할 만하면 넘어가고, 아니면 마석을 들고 돌아간다
         if (dg.sector >= 2) return { t: "pending", choice: "enter" };
@@ -220,7 +223,7 @@ function nextStep(s: GameState): number | null {
   const seen = (id: number) => dg.rooms[id].known || dg.rooms[id].visited;
   const first = (pred: (id: number) => boolean) => order.find((id) => id !== start && pred(id)) ?? null;
   const goal = goalOf(s);
-  const exitOk = dg.floor < floorLimit(s) || dg.rooms.some((r) => r.type === "portal");
+  const exitOk = dg.floor < floorLimit(s) || dg.rooms.some((r) => r.type === "portal") || !!dg.first;
   const exitRoom = () => first((id) => ["stairs", "portal"].includes(dg.rooms[id].type) && seen(id));
   const boss = () => first((id) => (dg.rooms[id].type === "boss" && !dg.rooms[id].resolved && seen(id)) || (dg.rooms[id].type === "portal" && seen(id)));
 

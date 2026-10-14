@@ -135,6 +135,7 @@ export function enterDungeon(s: GameState): void {
     pending: null,
     starvingTurns: 0,
     deepestFloor: 1,
+    ...(s.month === 1 ? { first: true } : {}),
   };
   s.phase = "dungeon";
   log(s, `— ${s.month}월 4주차. 미궁 1섹터에 들어섰다. (남은 시간 ${BAL.weekTurns}턴 = 7일)`, "system");
@@ -280,6 +281,15 @@ function arrive(s: GameState, firstOfFloor: boolean): void {
   if (room.type === "entrance") {
     if (firstVisit) log(s, flavor(s, room, dg.floor === 1 && firstOfFloor ? "entrance" : "arrival"), "story");
     room.known = true;
+  } else if (room.type === "stairs" && dg.first && dg.sector === 1 && dg.floor === 1) {
+    // 첫 미궁: 아래층은 아직 무리다. 대신 누군가 떨어뜨린 귀환 주문서가 있다
+    room.known = true;
+    if (firstVisit) {
+      log(s, flavor(s, room, "stairs"), "story");
+      log(s, "계단 아래에서 차가운 바람과 낯선 숨소리가 올라온다. 다리가 굳어 한 발짝도 내려갈 수 없다 — 첫 미궁은 여기까지다.", "story");
+      log(s, "계단 옆 돌 틈에 누군가 떨어뜨린 귀환 주문서 한 장이 끼어 있다. 찢으면 곧장 미궁 입구로 돌아간다.", "good");
+    } else log(s, "떨어진 귀환 주문서는 그 자리에 그대로 있다.", "story");
+    dg.pending = { kind: "lostScroll" };
   } else if (room.type === "stairs" || room.type === "portal") {
     room.known = true;
     log(s, flavor(s, room, room.type), "story");
@@ -445,6 +455,8 @@ export type PendingChoice =
   | "read"
   | "pray"
   | "descend" | "stay"
+  /** 첫 미궁 1층 계단: 떨어진 귀환 주문서를 쓴다 */
+  | "use"
   /** 심연의 신 ★1: 꺼진 바닥으로 뛰어내리기 */
   | "jump"
   /** 차원문: 돌아가기 / 전쟁의 흔적: 조사 */
@@ -656,6 +668,17 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
     } else {
       log(s, "성당의 눈을 떠올리고, 제단을 지나쳤다.");
     }
+    return;
+  }
+
+  if (kind === "lostScroll") {
+    if (choice !== "use") {
+      log(s, "주문서는 그 자리에 두고, 이 층을 더 둘러보기로 했다.");
+      return;
+    }
+    pray(s, "abyss", -5);
+    log(s, "주인 잃은 귀환 주문서를 찢었다. 빛과 함께 미궁 입구로 돌아왔다.", "system");
+    leaveDungeon(s, { cleared: false, forced: false });
     return;
   }
 

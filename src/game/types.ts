@@ -165,6 +165,8 @@ export type Pending =
   | { kind: "shrine" }
   | { kind: "relic" }
   | { kind: "stairs" }
+  /** 첫 미궁의 1층 계단: 내려갈 수 없고, 떨어진 귀환 주문서를 쓸지 고른다 */
+  | { kind: "lostScroll" }
   | { kind: "portal" }
   | { kind: "gear"; item: string }
   /** 편린(fragments.ts) — 흡수하거나, 칸이 차 있으면 하나를 깨뜨리고 흡수하거나, 흩어지게 둔다 */
@@ -189,6 +191,8 @@ export interface DungeonState {
   clock?: number;
   /** 리젠 판정까지 쌓인 턴 */
   respawnClock?: number;
+  /** 이번 삶의 첫 미궁(1월): 2층으로 내려갈 수 없다 */
+  first?: boolean;
 }
 
 export type Activity = "train" | "rumor" | "field" | "inn";

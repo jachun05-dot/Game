@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Rng } from "./rng";
-import { generateFloor } from "./dungeon";
+import { enterDungeon, generateFloor } from "./dungeon";
 import { newRun } from "./town";
 import { act, apply } from "./engine";
 import { botAction } from "./bot";
@@ -1022,5 +1022,40 @@ describe("훈련소 허수아비", () => {
     expect(glad).not.toBeNull();
     expect(glad.total).toBeGreaterThan(now * 1.3);
     expect(s.hero.level).toBe(3);
+  });
+});
+
+describe("첫 미궁의 계단", () => {
+  const toStairs = (month: number) => {
+    const s = newRun(91);
+    apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    s.month = month;
+    enterDungeon(s);
+    const dg = s.dungeon!;
+    const stairs = dg.rooms.findIndex((r) => r.type === "stairs");
+    const before = dg.rooms.findIndex((r) => r.edges.includes(stairs));
+    dg.current = before;
+    dg.rooms[before].visited = true;
+    dg.pending = null;
+    s.combat = null;
+    apply(s, { t: "move", room: stairs });
+    return s;
+  };
+  it("1월 미궁: 1층 계단에서 내려갈 수 없고, 떨어진 주문서를 쓰면 돌아간다(가진 주문서는 그대로)", () => {
+    const s = toStairs(1);
+    expect(s.dungeon!.pending?.kind).toBe("lostScroll");
+    apply(s, { t: "pending", choice: "descend" as never });
+    expect(s.dungeon!.floor).toBe(1);
+    const s2 = toStairs(1);
+    const scrolls = s2.inventory.scroll;
+    apply(s2, { t: "pending", choice: "use" });
+    expect(s2.phase).toBe("settlement");
+    expect(s2.inventory.scroll).toBe(scrolls);
+  });
+  it("2월부터는 평소처럼 계단을 내려간다", () => {
+    const s = toStairs(2);
+    expect(s.dungeon!.pending?.kind).toBe("stairs");
+    apply(s, { t: "pending", choice: "descend" });
+    expect(s.dungeon!.floor).toBe(2);
   });
 });
