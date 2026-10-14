@@ -19,13 +19,13 @@ export const BAL = {
   /** 해가 바뀔 때마다 오르는 세금(1년차 30, 2년차 70, 3년차 110 …) */
   taxPerYear: 40,
   /** 등급(클리어한 섹터 수)에 따라 더 붙는 세금: 이름난 모험가에게 영주가 더 걷는다 */
-  taxRank: [0, 120, 250, 400, 600] as number[],
+  taxRank: [0, 120, 250, 400, 600, 800] as number[],
   /** 섹터별 마석 환전 배율 */
-  manaSectorMult: [1, 1, 0.35, 0.3, 0.8] as number[],
+  manaSectorMult: [1, 1, 0.35, 0.3, 0.8, 0.8] as number[],
   /** 섹터별 희귀 개체 마석 배율(3섹터부터 큰 한 방이 재미라 덜 깎는다) */
-  rareSectorMult: [1, 1, 0.35, 0.6, 0.6] as number[],
+  rareSectorMult: [1, 1, 0.35, 0.6, 0.6, 0.6] as number[],
   /** 차원문을 넘을 때 남은 시간 배율(넘어서 들어가는 섹터별). 1→2는 ×2, 2→3·3→4는 ×1.5(굶주림이 주된 사인이 되지 않게) */
-  portalTimeMult: [1, 1, 2, 1.5, 1.5] as number[],
+  portalTimeMult: [1, 1, 2, 1.5, 1.5, 1.5] as number[],
   /** 3섹터 클리어 뒤 4섹터 숏컷으로 들어갈 때 남은 시간(일반 경로로 4섹터에 닿을 때의 중간값 근처) */
   shortcutTurns: 360,
   /** 끝없는 미궁 마석 배율(층 배율과 곱한다) */
@@ -43,7 +43,7 @@ export const BAL = {
   /** 미궁의 청소부: 이 층에 도착한 뒤 예고 1·2, 나타남 턴(48 = 하루). 보통 한 층 탐색은 50~100턴 */
   sweeperTurns: [96, 120, 144] as [number, number, number],
   /** 청소부를 쓰러뜨린 보상 마석(섹터별, 섹터 배율 적용 안 함) */
-  sweeperMana: [0, 400, 800, 1200, 1600] as number[],
+  sweeperMana: [0, 400, 800, 1200, 1600, 2000] as number[],
   /** 매달 상점가 물가가 오르는 폭 [최소, 최대](0.05 = 5%). [0, 0]이면 오르지 않는다 */
   inflation: [0.05, 0.1] as [number, number],
   /** 특수 훈련(이 레벨 → 다음 레벨) 수련비 */
@@ -57,7 +57,7 @@ export const BAL = {
   trapDodgeDc: 12,
   trapDisarmDc: 13,
   fleeDcBase: 10,
-  prices: { food: 5, potion: 6, scroll: 45, bandage: 25, herb: 25, whetstone: 15, antidote: 10, salve: 25, firewood: 10 },
+  prices: { food: 5, potion: 6, scroll: 45, bandage: 25, herb: 25, whetstone: 15, antidote: 10, salve: 25, firewood: 10, rope: 25 },
   /** 대장간 부식 수리비(단계별, 그 슬롯을 새것처럼). 물가를 따라 오른다 */
   repairCost: [0, 15, 40, 80],
   /** 3섹터 침수 방 비율(층별), 3층 침수 방 중 깊은 물 비율 */
@@ -71,6 +71,10 @@ export const BAL = {
   poolChance: 0.2,
   /** 4섹터 가스 주머니: 환기시키며 기다리는 턴(2시간) */
   gasWaitTurns: 4,
+  /** 5섹터: 함정방이 벼랑길일 확률(층별), 나머지 함정의 꺼진 바닥 확률(1층부터), 벼랑 위 전투방 비율(층별) */
+  ledgeChance: [0, 0.3, 0.5, 0.5],
+  pitChance5: 0.5,
+  cliffChance: [0, 0.3, 0.5, 0.5],
   /** 치료 물약 회복량 = 2d4 + 이 값 */
   potionBase: 6,
   /** 이 레벨에서 다음 레벨로 가는 훈련은 보스 증표가 있어야 받을 수 있다 */
@@ -207,6 +211,25 @@ export interface MonsterDef {
   lurk?: boolean;
   /** 보스: 3라운드마다 불꽃 숨, HP 50% 아래면 동굴 무너뜨리기(한 번)·공격이 냉기로 */
   furnace?: boolean;
+  // ── 5섹터(combat.ts) ──
+  /** 명중했을 때 붙잡을 확률(다음 라운드 행동 불가, 벼랑 위면 끌려 떨어질 수 있다) */
+  grab?: number;
+  /** 허기 공격: 명중하면 포만감 −, 상대가 굶주렸으면(포만감 30 이하) 명중 +2 */
+  hungerHit?: number;
+  /** 들숨(어둠)에만 나온다 */
+  nightOnly?: boolean;
+  /** 명중했을 때 벼랑에서 밀쳐 떨어뜨릴 확률(벼랑 위 전투방에서만) */
+  pushOff?: number;
+  /** 응시: 라운드마다 이 확률로 절망 */
+  gaze?: number;
+  /** 쓰러뜨리면 이 확률로 그 방 바닥이 꺼진다 */
+  sinkhole?: number;
+  /** 쓰러뜨리면 이 확률로 말린 고기 */
+  meat?: number;
+  /** 삼킴(정예): 라운드마다 이 확률로 포만감 −15, 굶주린(포만감 0) 상대에게 피해 +3 */
+  devour?: number;
+  /** 심연의 아귀: 붙잡힌 상대를 3라운드마다 깨문다·촉수가 다시 자란다·HP 절반 아래면 광란 */
+  maw?: boolean;
 }
 
 // DESIGN 11절 "1섹터 몬스터(확정)" / "1섹터 보스"
@@ -263,6 +286,20 @@ export const MONSTERS: Record<string, MonsterDef> = {
   cartmimic: { id: "cartmimic", name: "광차 미믹", wound: { feet: 3, body: 2, main: 1, offhand: 1 }, hp: 76, ac: 18, atk: 12, dice: [2, 8], mana: 80, elite: true, charge: true, deathBlast: true, hard: true, attackText: "녹슨 입을 벌려 덮쳤다", note: "레일 위의 녹슨 광차가 사실은 입이다. 배 속에 화약을 품고 있다." },
   furnacemother: { id: "furnacemother", name: "화로 어미 도롱뇽", wound: { head: 2, body: 3, main: 2, offhand: 2, feet: 2 }, hp: 255, ac: 18, atk: 12, dice: [2, 8], mana: 220, burn: 0.25, heat: "fire", furnace: true, attackText: "타오르는 꼬리를 내리쳤다", note: "불과 얼음의 경계에 사는 불도롱뇽들의 어미. 3라운드마다 불꽃을 뿜고, 몰리면 동굴을 무너뜨린다. 반쪽은 얼어 있다." },
   sweeper4: { id: "sweeper4", name: "갱도의 청소부", hp: 520, ac: 28, atk: 18, dice: [4, 10], mana: 0, hard: true, fearHit: 0.3, hidden: true, wound: { head: 2, body: 3, main: 2, offhand: 2, feet: 2 }, attackText: "녹슨 광차들을 이은 몸으로 밀어붙였다", note: "녹슨 광차를 여럿 이어 붙인 몸으로 레일을 따라 온다. 계단 아래까지는 따라오지 않는다." },
+  // ── 5섹터: 바닥없는 균열 ──
+  riftbat: { id: "riftbat", name: "균열 박쥐 떼", wound: { head: 3, main: 2, offhand: 2, body: 1 }, hp: 18, ac: 17, atk: 10, dice: [1, 8], mana: 20, flying: true, scream: 0.08, attackText: "어둠 속에서 떼로 할퀴었다", note: "균열의 벽에 매달려 산다. 반향음이 머릿속을 어지럽힌다." },
+  tendril: { id: "tendril", name: "그림자 촉수", wound: { feet: 3, main: 2, body: 2, offhand: 1 }, hp: 46, ac: 17, atk: 11, dice: [2, 6], mana: 40, grab: 0.25, nocturnal: true, statue: true, attackText: "휘감아 조였다", note: "벽 틈에서 뻗어 나와 붙잡는다. 어둠이 짙을수록 정확하다. 벼랑 위에서 붙잡히면 끌려 떨어진다." },
+  hungerwraith: { id: "hungerwraith", name: "굶주린 망령", wound: { body: 3, main: 2, offhand: 2, head: 1 }, hp: 52, ac: 17, atk: 11, dice: [2, 8], mana: 45, hungerHit: 8, nightOnly: true, meat: 0.15, attackText: "허기진 입으로 물어뜯었다", note: "굶주림이 형체를 얻은 것. 먹어도 먹어도 배가 차지 않는다. 균열이 숨을 들이쉴 때만 기어 나온다." },
+  ledgespider: { id: "ledgespider", name: "벼랑 거미", wound: { feet: 3, main: 2, body: 2 }, hp: 48, ac: 18, atk: 11, dice: [2, 8], mana: 42, pushOff: 0.15, attackText: "긴 다리로 밀쳐냈다", note: "벼랑에 거꾸로 붙어 산다. 디딘 자리를 흔들어 떨어뜨린다." },
+  voideye: { id: "voideye", name: "공허 눈", wound: { head: 3, body: 2 }, hp: 38, ac: 20, atk: 12, dice: [2, 6], mana: 48, flying: true, gaze: 0.2, attackText: "시선으로 꿰뚫었다", note: "바닥 없는 틈에서 떠오른 눈. 마주 보면 다 부질없어진다." },
+  riftworm: { id: "riftworm", name: "균열 벌레", wound: { feet: 3, body: 2, main: 1, offhand: 1 }, hp: 66, ac: 19, atk: 11, dice: [2, 8], mana: 60, hard: true, sinkhole: 0.3, attackText: "바위를 갈아 먹던 턱으로 물었다", note: "바위를 먹고 다닌다. 쓰러진 자리의 바닥이 꺼지기도 한다." },
+  fallenheap: { id: "fallenheap", name: "낙하 잔해 덩어리", wound: { head: 2, body: 3, main: 1, offhand: 1, feet: 1 }, hp: 74, ac: 20, atk: 12, dice: [2, 10], mana: 70, hard: true, statue: true, attackText: "녹슨 창과 뼈 더미로 내리쳤다", note: "위에서 떨어진 뼈·녹슨 창·석상 조각이 엉겨 움직인다. 쥐의 이빨, 장군의 휘장, 균모의 포자가 그 속에 섞여 있다." },
+  scalebat: { id: "scalebat", name: "마석 비늘 박쥐", wound: { head: 3, main: 1 }, hp: 22, ac: 20, atk: 6, dice: [1, 6], mana: 1100, rare: true, escapeAfter: 3, flying: true, attackText: "마석 비늘로 할퀴었다", note: "비늘이 마석이다. 금세 어둠으로 달아난다." },
+  manaeye: { id: "manaeye", name: "마석 눈동자", wound: { head: 3, body: 1 }, hp: 28, ac: 21, atk: 6, dice: [1, 6], mana: 1200, rare: true, escapeAfter: 3, gaze: 0.1, flying: true, attackText: "마석 빛으로 쏘아보았다", note: "눈동자가 통째로 마석이다. 금세 감겨 사라진다." },
+  shellworm: { id: "shellworm", name: "마석 껍질 균열 벌레", wound: { feet: 3, body: 2 }, hp: 44, ac: 22, atk: 6, dice: [1, 8], mana: 1350, rare: true, escapeAfter: 4, hard: true, attackText: "마석 껍질로 들이받았다", note: "껍질이 마석 광맥이다. 오래 버티면 바위 속으로 파고든다." },
+  hungermother: { id: "hungermother", name: "허기의 어미", wound: { body: 3, main: 2, offhand: 2, head: 2, feet: 1 }, hp: 90, ac: 18, atk: 12, dice: [2, 8], mana: 90, elite: true, devour: 0.25, hungerHit: 10, attackText: "모든 것을 삼키려 덤벼들었다", note: "굶주린 망령들이 서로를 삼키다 하나로 뭉쳤다. 기아/풍요의 신이 남긴 가장 짙은 흔적. 허리에 낡은 그릇을 차고 있다." },
+  abyssmaw: { id: "abyssmaw", name: "심연의 아귀", wound: { head: 2, body: 3, main: 2, offhand: 2, feet: 2 }, hp: 280, ac: 19, atk: 13, dice: [2, 10], mana: 260, grab: 0.3, hungerHit: 10, maw: true, attackText: "끝없는 입을 벌려 덮쳤다", note: "균열 맨 밑바닥, 틈 위 바위에 뿌리박은 거대한 입. 붙잡은 것을 깨물고, 촉수는 다시 자라며, 몰리면 미친 듯이 삼킨다." },
+  sweeper5: { id: "sweeper5", name: "바닥의 청소부", hp: 540, ac: 30, atk: 20, dice: [4, 10], mana: 0, hard: true, fearHit: 0.3, hidden: true, wound: { head: 2, body: 3, main: 2, offhand: 2, feet: 2 }, attackText: "떨어진 것들을 쓸어 담는 손으로 훑었다", note: "떨어진 것을 치우는 손. 바닥에 오래 머무는 것도 떨어진 것으로 여긴다. 아래층까지는 따라오지 않는다." },
   // 훈련소 허수아비(dummy.ts): 복사한 상태에서만 등장한다
   dummy: { id: "dummy", name: "짚 허수아비", hp: 30, ac: 13, atk: 0, dice: [1, 1], mana: 0, dummy: true, attackText: "흔들렸다" },
   dummyPack: { id: "dummyPack", name: "작은 허수아비", hp: 10, ac: 12, atk: 0, dice: [1, 1], mana: 0, dummy: true, attackText: "흔들렸다" },
@@ -306,6 +343,27 @@ export const RARE_BY_FLOOR = ["", "goldrat", "jewelgoblin", "crystalskel"];
 /** 섹터별 조우표(1섹터 = ENCOUNTERS) */
 export const SECTOR_ENCOUNTERS: Record<number, Record<number, { item: string[]; w: number }[]>> = {
   1: ENCOUNTERS,
+  5: {
+    1: [
+      { item: ["riftbat", "riftbat", "riftbat", "riftbat"], w: 2 },
+      { item: ["tendril"], w: 2 },
+      { item: ["tendril", "riftbat", "riftbat", "riftbat"], w: 1 },
+      { item: ["riftbat", "riftbat", "riftbat"], w: 1 },
+    ],
+    2: [
+      { item: ["hungerwraith"], w: 2 },
+      { item: ["hungerwraith", "hungerwraith"], w: 1 },
+      { item: ["tendril", "tendril"], w: 2 },
+      { item: ["voideye", "riftbat", "riftbat", "riftbat"], w: 1 },
+      { item: ["riftworm"], w: 2 },
+    ],
+    3: [
+      { item: ["riftworm", "tendril"], w: 2 },
+      { item: ["fallenheap"], w: 2 },
+      { item: ["hungerwraith", "hungerwraith", "voideye"], w: 1 },
+      { item: ["voideye", "voideye"], w: 2 },
+    ],
+  },
   4: {
     1: [
       { item: ["emberbat", "emberbat", "emberbat"], w: 2 },
@@ -376,18 +434,20 @@ export const SECTOR_ENCOUNTERS: Record<number, Record<number, { item: string[]; 
   },
 };
 /** 섹터별 마석 희귀 개체(층마다 BAL.rareChance) */
-export const SECTOR_RARES: Record<number, string[]> = { 1: RARE_BY_FLOOR, 2: ["", "goldwolf", "manaharpy", "manawraith"], 3: ["", "pearlleech", "sporecap", "shellsnail"], 4: ["", "goldbat", "manabeetle", "frostspirit"] };
+export const SECTOR_RARES: Record<number, string[]> = { 1: RARE_BY_FLOOR, 2: ["", "goldwolf", "manaharpy", "manawraith"], 3: ["", "pearlleech", "sporecap", "shellsnail"], 4: ["", "goldbat", "manabeetle", "frostspirit"], 5: ["", "scalebat", "manaeye", "shellworm"] };
 /** 섹터별 정예 희귀 개체(마석 대신 고유 보상) */
 export const SECTOR_ELITES: Record<number, { id: string; escort: string[]; floors: number[]; reward: string }> = {
   2: { id: "harpyqueen", escort: ["harpy", "harpy"], floors: [2, 3], reward: "queencloak" },
   3: { id: "drownedchoir", escort: ["shroudmold", "shroudmold"], floors: [2, 3], reward: "choirbell" },
   4: { id: "cartmimic", escort: ["emberbat", "emberbat"], floors: [1, 2], reward: "hingeshield" },
+  5: { id: "hungermother", escort: ["hungerwraith", "hungerwraith"], floors: [2, 3], reward: "twofacebowl" },
 };
 /** 섹터별 보스 무리 */
 export function bossGroup(sector: number, r: { int: (a: number, b: number) => number }): string[] {
   if (sector === 2) return ["general", "wraith", "wraith"];
   if (sector === 3) return ["mycomother", "mold", "mold"];
   if (sector === 4) return ["furnacemother", "salamander", "salamander"];
+  if (sector === 5) return ["abyssmaw", "tendril", "tendril"];
   return ["boss", ...Array(r.int(2, 3)).fill("rat")];
 }
 /** 섹터별 보스 증표(처음 쓰러뜨릴 때 한 번만) — 이 레벨에서 다음 레벨로 가는 훈련의 대가 */
@@ -400,12 +460,13 @@ export const TROPHIES: { sector: number; item: "heart" | "banner" | "spore" | "s
   { sector: 5, item: "fang", name: "아귀의 검은 이빨", gateLevel: 15 },
 ];
 /** 섹터 이름(차원문을 넘을 때·화면 제목) */
-export const SECTOR_NAME: Record<number, string> = { 1: "지하 감옥", 2: "잊힌 전쟁터의 초원", 3: "물에 잠긴 사원", 4: "불타는 광산 갱도" };
+export const SECTOR_NAME: Record<number, string> = { 1: "지하 감옥", 2: "잊힌 전쟁터의 초원", 3: "물에 잠긴 사원", 4: "불타는 광산 갱도", 5: "바닥없는 균열" };
 /** 야영 중 기습하는 무리 */
 export function campAmbush(sector: number, floor: number): string[] {
   if (sector === 2) return floor >= 2 ? ["wolf", "wolf"] : ["wolf"];
   if (sector === 3) return floor >= 2 ? ["leech", "leech"] : ["plaguerat", "plaguerat", "plaguerat"];
   if (sector === 4) return floor >= 3 ? ["frostwraith"] : ["emberbat", "emberbat", "emberbat"];
+  if (sector === 5) return floor >= 2 ? ["tendril"] : ["riftbat", "riftbat", "riftbat"];
   return floor >= 2 ? ["rat", "rat"] : ["rat"];
 }
 
@@ -622,6 +683,39 @@ export const MINE_RECORDS = [
   "\"얼음 광맥 너머는 이 세계가 아니다. 거기서 캐낸 마석은 손을 얼린다.\"",
   "\"광부들은 떠났다. 남은 것은 광차와, 광차인 척하는 것들뿐이다.\"",
   "\"짝을 잃은 신이 하늘에 앉은 뒤로, 재앙의 신은 땅속에서 경고만 보낸다.\"",
+];
+
+/** 5섹터 방 묘사 */
+SECTOR_FLAVOR[5] = {
+  arrival: ["차원문을 빠져나오자 발밑이 없다 — 벼랑에 붙은 좁은 길이다. 바람이 아래로 빨려 든다.", "위쪽 틈으로 희미한 빛이 내려온다. 아래는 검기만 하다."],
+  empty: [
+    "벼랑에 붙은 좁은 길. 돌 하나가 굴러떨어지는데, 떨어지는 소리가 끝내 들리지 않는다.",
+    "거대한 뿌리와 쇠사슬로 엮은 다리가 흔들린다.",
+    "위에서 떨어진 것들이 쌓여 있다. 녹슨 창, 부러진 방패, 누군가의 뼈.",
+    "벽에 손톱으로 긁은 자국이 빽빽하다.",
+    "바람이 멎었다가, 다시 아래로 빨려 든다. 균열이 숨을 쉰다.",
+    "빛이 닿지 않는다. 손으로 벽을 짚으며 걷는다.",
+  ],
+  combat: ["벽 틈에서 무언가 뻗어 나온다.", "어둠 속에서 날갯짓 소리가 여럿 겹친다.", "배고픈 신음이 아래에서 올라온다."],
+  trap: ["돌이 헐겁다. 발을 디디면 무너질 것 같다.", "벽에서 돌 부스러기가 계속 떨어진다."],
+  pit: ["바닥이 얇다. 아래가 비어 있다.", "발밑에서 찬바람이 올라온다. 바닥 없는 틈이다."],
+  ledge: ["발 하나 디딜 만한 벼랑길이 이어진다. 아래는 끝이 없다.", "벼랑에 박힌 쇠말뚝을 따라 좁은 길이 나 있다."],
+  treasure: ["벼랑 틈에 걸린 배낭이 있다. 주인은 떨어졌을 것이다.", "떨어진 것들 사이에 낡은 상자가 박혀 있다."],
+  record: ["벼랑 벽에 손톱으로 새긴 글이 있다.", "떨어진 자가 남긴 낙서가 바위에 가득하다."],
+  shrine: ["벼랑에 매달린 작은 제단. 성당의 상징과는 다르다.", "떨어진 석상 하나가 바로 서 있다. 누군가 세워 놓았다."],
+  plenty: ["돌을 깎아 만든 그릇이 놓인 제단. 한쪽은 넘치고 한쪽은 비어 있다.", "풍요와 기아의 두 얼굴을 새긴 제단이다."],
+  stairs: ["벼랑을 따라 아래로 이어지는 쇠사슬 사다리가 있다."],
+  boss: ["틈 위에 걸린 바위에 거대한 입이 뿌리박고 있다. 그림자 촉수들이 그 둘레를 기어 다닌다."],
+  portal: ["균열 맨 밑바닥, 바위 위에서 차원문이 일렁인다. 그 너머에서 성가가 들린다."],
+};
+
+/** 5섹터 기록물: 떨어진 자들의 낙서(진엔딩 단서) */
+export const RIFT_RECORDS = [
+  "\"떨어지면서 알았다. 셉터는 문을 여는 것이 아니라 닫아 두는 것이다.\"",
+  "\"유일한 자는 신이 아니다. 신들을 문 너머로 쫓아낸 것이다.\"",
+  "\"차원문의 성소에서 영주를 보았다. 그는 늙지 않았다. 사람의 눈이 아니었다.\"",
+  "\"굶주림의 신과 풍요의 신은 여기서 갈라졌다. 한쪽은 위로, 한쪽은 아래로.\"",
+  "\"열여섯 살만 들어갈 수 있는 이유를 알았다. 아직 무엇에도 묶이지 않은 나이라서다.\"",
 ];
 
 /** 2섹터 기록물: 신들의 전쟁 */

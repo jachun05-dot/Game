@@ -150,6 +150,8 @@ function invariants(s: GameState): string[] {
     if (dg.endless && dg.rooms.some((r) => r.type === "trap" || r.type === "treasure" || r.type === "record" || r.type === "shrine" || r.type === "altar" || r.flooded)) e.push("끝없는 미궁에 함정·상자·기록물·성소·물");
     if (dg.sector !== 3 && dg.rooms.some((r) => r.flooded || r.type === "altar")) e.push("3섹터가 아닌데 물·제단");
     if (dg.sector !== 4 && dg.rooms.some((r) => r.hot || r.ice || r.pool || r.type === "magazine")) e.push("4섹터가 아닌데 갱도 방");
+    if (dg.sector !== 5 && dg.rooms.some((r) => r.cliff || r.type === "plenty" || r.trapKind === "ledge")) e.push("5섹터가 아닌데 벼랑·제단");
+    if ((dg.trapStock ?? 0) > 2 || (dg.songHp ?? 0) > 10) e.push(`★5 범위 ${dg.trapStock}/${dg.songHp}`);
     // 출구(계단·보스·차원문)는 언제나 지금 방에서 닿을 수 있어야 한다(낙반이 필수 경로를 끊지 않는다)
     {
       const seen = new Set([dg.current]);
@@ -170,12 +172,13 @@ function invariants(s: GameState): string[] {
 
 function setup(s: GameState, scen: string) {
   const r = new Rng({ s: s.seed + 99 });
-  if (scen === "strong" || scen === "s2" || scen === "s3" || scen === "s4") {
-    s.hero.level = scen === "s4" ? 11 : scen === "s3" ? 9 : scen === "s2" ? 6 : 5;
-    s.rank = scen === "s4" ? 3 : scen === "s3" ? 2 : 1;
+  if (scen === "strong" || scen === "s2" || scen === "s3" || scen === "s4" || scen === "s5") {
+    s.hero.level = scen === "s5" ? 14 : scen === "s4" ? 11 : scen === "s3" ? 9 : scen === "s2" ? 6 : 5;
+    s.rank = scen === "s5" ? 4 : scen === "s4" ? 3 : scen === "s3" ? 2 : 1;
     s.month = 4;
-    s.trophies = scen === "s4" ? ["heart", "banner", "spore"] : scen === "s3" ? ["heart", "banner"] : ["heart"];
-    if (scen === "s3" || scen === "s4") for (const k of STAT_KEYS) s.hero.stats[k] += scen === "s4" ? 9 : 6;
+    s.trophies = scen === "s5" ? ["heart", "banner", "spore", "scale"] : scen === "s4" ? ["heart", "banner", "spore"] : scen === "s3" ? ["heart", "banner"] : ["heart"];
+    if (scen === "s3" || scen === "s4" || scen === "s5") for (const k of STAT_KEYS) s.hero.stats[k] += scen === "s5" ? 12 : scen === "s4" ? 9 : 6;
+    if (scen === "s5" && s.hero.faith) s.piety = 190;
     for (const k of STAT_KEYS) s.hero.stats[k] += 6;
     s.inventory.potion += 5;
     s.inventory.food += 6;
@@ -184,14 +187,15 @@ function setup(s: GameState, scen: string) {
     s.fragments = [pick(ids), pick(ids)];
     s.hero.hp = maxHp(s);
   }
-  if (scen === "s2" || scen === "s3" || scen === "s4") {
-    // 미궁으로 바로 들어가 2·3·4섹터 1층에 세운다
-    const sec = scen === "s4" ? 4 : scen === "s3" ? 3 : 2;
+  if (scen === "s2" || scen === "s3" || scen === "s4" || scen === "s5") {
+    // 미궁으로 바로 들어가 2·3·4·5섹터 1층에 세운다
+    const sec = scen === "s5" ? 5 : scen === "s4" ? 4 : scen === "s3" ? 3 : 2;
     if (sec === 3) { s.inventory.antidote = 2; s.inventory.whetstone = 1; s.inventory.food += 4; }
-    if (sec === 4) {
+    if (sec === 5) { s.inventory.rope = 2; s.inventory.food += 8; s.inventory.potion += 4; }
+    if (sec >= 4) {
       const lines = CLASS_DEFS[s.hero.cls].trainings.filter(hasLevelTable);
       s.skills = [];
-      for (let lv = 2; lv <= 11; lv++) { const id = levelSkill(pick(lines), lv); if (id && !s.skills.includes(id)) s.skills.push(id); }
+      for (let lv = 2; lv <= s.hero.level; lv++) { const id = levelSkill(pick(lines), lv); if (id && !s.skills.includes(id)) s.skills.push(id); }
       s.hero.hp = maxHp(s);
     }
     if (sec === 4) { s.inventory.salve = 2; s.inventory.firewood = 2; s.inventory.powder = 1; s.inventory.food += 6; s.inventory.potion += 3; }
@@ -213,7 +217,8 @@ function setup(s: GameState, scen: string) {
     s.skills = [];
     for (let lv = 2; lv <= 16; lv++) { const id = levelSkill(pick(lines), lv); if (id && !s.skills.includes(id)) s.skills.push(id); }
     s.hero.level = 16;
-    s.rank = 3;
+    s.rank = 4;
+    if (s.hero.faith) s.piety = 190;
     for (const k of STAT_KEYS) s.hero.stats[k] += 10;
     s.hero.hp = maxHp(s);
     s.inventory.potion += 5;
@@ -262,7 +267,7 @@ for (let i = 0; i < N; i++) {
     apply(s, { t: "pickClass", cls });
     apply(s, { t: "autoGoal", goal });
     apply(s, { t: "create", name: "퍼즈", candidate: 0, faith });
-    const scen = SCEN === "mix" ? pick(["", "s2", "s3", "s4", "late", "heretic", "hurt", "strong"]) : SCEN;
+    const scen = SCEN === "mix" ? pick(["", "s2", "s3", "s4", "s5", "late", "heretic", "hurt", "strong"]) : SCEN;
     setup(s, scen);
     let prevLevel = s.hero.level, prevRank = s.rank;
     for (; step < MAX_ACTIONS && s.phase !== "dead" && s.month <= 24; step++) {
@@ -321,6 +326,8 @@ for (let i = 0; i < N; i++) {
   if (s.rank >= 3) hit("3섹터 클리어");
   if (s.dungeon?.sector === 4 || s.rank >= 4) hit("4섹터 도달");
   if (s.rank >= 4) hit("4섹터 클리어");
+  if (s.dungeon?.sector === 5 || s.rank >= 5) hit("5섹터 도달");
+  if (s.rank >= 5) hit("5섹터 클리어");
   if (s.rank > 0) cleared++;
   if (VERBOSE && i % 100 === 0) console.error(`${i}/${N} ${((Date.now() - t0) / 1000).toFixed(0)}s`);
 }

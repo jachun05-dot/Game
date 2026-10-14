@@ -31,7 +31,7 @@ export function DungeonScreen({ ctl }: { ctl: Ctl }) {
   return (
     <GameScreen
       ctl={ctl}
-      title={dg.endless ? `끝없는 미궁 ${dg.floor}층` : `${dg.sector}섹터 ${dg.floor}층 · ${dg.sector === 4 ? (stagnant(s) ? "고임" : "바람") : dg.sector === 3 ? (highTide(s) ? "밀물" : "썰물") : dg.sector === 2 ? (isNight(s) ? "밤" : "낮") : "미궁"}`}
+      title={dg.endless ? `끝없는 미궁 ${dg.floor}층` : `${dg.sector}섹터 ${dg.floor}층 · ${dg.sector === 5 ? (isNight(s) ? "들숨" : "날숨") : dg.sector === 4 ? (stagnant(s) ? "고임" : "바람") : dg.sector === 3 ? (highTide(s) ? "밀물" : "썰물") : dg.sector === 2 ? (isNight(s) ? "밤" : "낮") : "미궁"}`}
       header={
         <>
           <HeroHeader s={s} onOpen={() => ctl.setSheet(true)} extra={<span>마석 {dg.mana}G</span>} />
@@ -94,6 +94,15 @@ const PENDING_OPTIONS: Record<string, { choice: PendingChoice; label: string; pr
   relic: [
     { choice: "search", label: "녹슨 무기 더미를 뒤진다 (1시간)", primary: true },
     { choice: "leave", label: "죽은 자들의 물건은 건드리지 않는다" },
+  ],
+  plenty: [
+    { choice: "offer", label: "말린 고기 하나를 바친다", primary: true },
+    { choice: "leave", label: "그냥 지나간다" },
+  ],
+  ledge: [
+    { choice: "careful", label: "벽에 붙어 조심히 건넌다 (2시간 더, 민첩 DC 10)", primary: true },
+    { choice: "force", label: "그냥 건넌다 (민첩 DC 14)" },
+    { choice: "back", label: "왔던 길로 물러난다" },
   ],
   magazine: [
     { choice: "search", label: "화약고를 뒤진다 (1시간)", primary: true },
@@ -241,6 +250,12 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
         )}
         {dg.pending.kind === "record" && dg.sector === 3 && <p className="dim small">물에 불은 경전이다. 말리면서 읽어야 해서 4시간이 걸린다.</p>}
         {dg.pending.kind === "trap" && MINE_TRAP_NOTE[room.trapKind ?? ""] && <p className="dim small">{MINE_TRAP_NOTE[room.trapKind!]}</p>}
+        {dg.pending.kind === "trap" && room.trapKind === "ledge" && (
+          <p className="dim small">발 하나 디딜 만한 벼랑길. 떨어지면 아래층으로(3층이면 바닥 없는 틈으로) 떨어진다.{isNight(s) ? " 들숨이라 어둡다(판정 −2)." : ""}</p>
+        )}
+        {dg.pending.kind === "plenty" && (
+          <p className="dim small">고기를 바치면 반반: 풍요의 얼굴(포만감 100, HP +10) 또는 기아의 얼굴(포만감 −30, 이 층에서 피해 +2).{godOf(s.hero.faith)?.key === "hunger" ? " 기아/풍요의 신도는 원하는 얼굴을 고른다(풍요, 신앙심 +3)." : ""} 가진 고기 {s.inventory.food}개.</p>
+        )}
         {dg.pending.kind === "magazine" && (
           <p className="dim small">화약통(큰 전투가 시작될 때 알아서 던진다)이나 장비·장부가 나온다. 공기가 고여 있을 때 뒤지면 폭발할 수 있다.{godOf(s.hero.faith)?.key === "trap" ? " 재앙의 신도는 기도할 수 있다(신앙심 +3)." : ""}</p>
         )}
@@ -257,7 +272,12 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
           <p className="dim small">고블린 {room.ambush.length}마리가 숨어 있다. 해체하면 달아나고, 밟고 다치면 기습당한다.</p>
         )}
         <div className="choices">
-          {PENDING_OPTIONS[dg.pending.kind]
+          {dg.pending.kind === "trap" && room.trapKind === "ledge" && s.inventory.rope > 0 && (
+            <button className="btn" disabled={busy} onClick={() => go({ t: "pending", choice: "rope" })}>
+              밧줄을 건다 <span className="dim small">· 반드시 건넌다 (남은 밧줄 {s.inventory.rope})</span>
+            </button>
+          )}
+          {PENDING_OPTIONS[dg.pending.kind === "trap" && room.trapKind === "ledge" ? "ledge" : dg.pending.kind]
             .filter((o) => o.choice !== "back" || dg.prev !== null)
             .filter((o) => dg.pending!.kind !== "altar" || o.choice !== "pray" || godOf(s.hero.faith)?.key === "plague")
             .filter((o) => dg.pending!.kind !== "magazine" || o.choice !== "pray" || godOf(s.hero.faith)?.key === "trap")
@@ -267,7 +287,7 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
                 {dg.pending!.kind === "record" && o.choice === "read" && dg.sector === 3 ? "말리며 읽는다 (4시간)" : dg.pending!.kind === "trap" && o.choice === "disarm" && MINE_DISARM[room.trapKind ?? ""] ? MINE_DISARM[room.trapKind!] : o.label}
               </button>
             ))}
-          {dg.pending.kind === "trap" && room.trapKind === "pit" && power(s, "abyss", 1) && dg.floor < 3 && (
+          {dg.pending.kind === "trap" && (room.trapKind === "pit" || room.trapKind === "ledge") && power(s, "abyss", 1) && (dg.floor < 3 || power(s, "abyss", 5)) && (
             <button className="btn" disabled={busy} onClick={() => go({ t: "pending", choice: "jump" })}>
               심연으로 뛰어내린다 <span className="dim small">· 아래층 지름길 (1d6 피해)</span>
             </button>
@@ -333,7 +353,7 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
           const nb = dg.rooms[id];
           const label = nb.visited || nb.known ? (nb.respawned && !nb.resolved ? "새로운 기척" : ROOM_LABEL[nb.type]) + (nb.ambushKnown && nb.ambush ? " · 고블린 매복" : "") : "???";
           const seen = nb.visited || nb.known;
-          const water = seen && nb.flooded ? (nb.deep ? "깊은 물" : highTide(s) ? "물에 잠김(느림)" : "물에 잠김") : seen && nb.ice ? "얼음 구역(냉기)" : seen && nb.hot ? (stagnant(s) ? "뜨거운 방(화상 위험)" : "뜨거운 방") : seen && nb.pool ? "지하수" : "";
+          const water = seen && nb.flooded ? (nb.deep ? "깊은 물" : highTide(s) ? "물에 잠김(느림)" : "물에 잠김") : seen && nb.ice ? "얼음 구역(냉기)" : seen && nb.hot ? (stagnant(s) ? "뜨거운 방(화상 위험)" : "뜨거운 방") : seen && nb.pool ? "지하수" : seen && nb.cliff ? "벼랑 위" : "";
           const note = [id === dg.prev ? "왔던 길" : nb.visited ? "가 본 곳" : "", water].filter(Boolean).join(" · ");
           const danger = (nb.known || nb.visited) && !nb.resolved && ["combat", "trap", "boss"].includes(nb.type);
           return (

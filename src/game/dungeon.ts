@@ -1,5 +1,5 @@
 import { josa } from "./josa";
-import { BAL, MANA_FLOOR_MULT, MINE_RECORDS, MIN_COMBAT_ROOMS, MONSTERS, PLAGUE_RECORDS, RECORDS, ROOM_FLAVOR, SECTOR_ELITES, SECTOR_ENCOUNTERS, SECTOR_FLAVOR, SECTOR_NAME, SECTOR_RARES, TRAP_AMBUSH, TROPHIES, WAR_RECORDS, bossGroup, campAmbush } from "./data";
+import { BAL, MANA_FLOOR_MULT, MINE_RECORDS, RIFT_RECORDS, MIN_COMBAT_ROOMS, MONSTERS, PLAGUE_RECORDS, RECORDS, ROOM_FLAVOR, SECTOR_ELITES, SECTOR_ENCOUNTERS, SECTOR_FLAVOR, SECTOR_NAME, SECTOR_RARES, TRAP_AMBUSH, TROPHIES, WAR_RECORDS, bossGroup, campAmbush } from "./data";
 import { check, isDead, kill, log, maxHp, note, remember, rngOf, smod } from "./core";
 import { FRAGMENTS, fragKnown, fragSlots, fragStatText } from "./fragments";
 import { INJ, bleedPerMove, canPeek, moveMult, wound } from "./injury";
@@ -14,6 +14,7 @@ import { campHealMult, clearCorrosion, corrode, leaveHazards, paraFires, poisonA
 import { fragSkills } from "./fragments";
 import { resetSweeper, sweeperId, sweeperStep, sweeperTick } from "./sweeper";
 import { blastDamage, burnAfterFight, burnWound, campWarmth, chill, easeBurn, stagnant, warm, windy } from "./fire";
+import { darkSight, fallGearMult, ledgeBonus } from "./rift";
 import { ENDLESS_BOSS_EVERY, ENDLESS_NAME, ENDLESS_SECTOR, LAST_SECTOR, endlessGroup, endlessManaMult, generateEndlessFloor } from "./endless";
 import type { Rng } from "./rng";
 import type { CombatState, DungeonState, GameState, Pending, Room, RoomType } from "./types";
@@ -35,12 +36,13 @@ export const ROOM_LABEL: Record<RoomType, string> = {
   relic: "전쟁의 흔적",
   altar: "공양 제단",
   magazine: "버려진 화약고",
+  plenty: "풍요의 제단",
 };
 
 /** 지도 노드 위 짧은 라벨 */
 export const ROOM_SHORT: Record<RoomType, string> = {
   entrance: "입구", empty: "빈방", combat: "적", trap: "함정", treasure: "보물",
-  record: "기록", shrine: "성소", stairs: "계단", boss: "보스", portal: "문", relic: "흔적", altar: "제단", magazine: "화약",
+  record: "기록", shrine: "성소", stairs: "계단", boss: "보스", portal: "문", relic: "흔적", altar: "제단", magazine: "화약", plenty: "풍요",
 };
 
 export function generateFloor(r: Rng, floor: number, sector = 1): Room[] {
@@ -97,11 +99,12 @@ export function generateFloor(r: Rng, floor: number, sector = 1): Room[] {
   take("treasure", 1, isDeadEnd);
   // 전투방을 먼저 확보한다(함정이 많아져도 몬스터가 줄지 않게, DESIGN 11절 "층이 깊을수록 조우 증가")
   take("combat", Math.max(MIN_COMBAT_ROOMS[floor], Math.round(free.length * 0.25)));
-  take("trap", (sector === 4 ? 2 : 1) + floor); // 함정: 층이 깊을수록 증가(4섹터는 함정이 주인공 — 하나 더)
+  take("trap", (sector >= 4 ? 2 : 1) + floor); // 함정: 층이 깊을수록 증가(4·5섹터는 하나 더 — 함정·벼랑이 주인공)
   take("record", r.int(1, 2), isDeadEnd);
   if (sector === 2) take("relic", r.int(1, 2)); // 전쟁의 흔적
   if (sector === 3) take("altar", r.int(1, 2)); // 공양 제단
   if (sector === 4) take("magazine", 1); // 버려진 화약고
+  if (sector === 5 && floor >= 2 && r.chance(0.6)) take("plenty", 1); // 풍요의 제단
   if (r.chance(0.35)) take("shrine", 1);
 
   // 고블린 매복은 1섹터에만(2섹터에는 고블린이 없다)
@@ -114,6 +117,7 @@ export function generateFloor(r: Rng, floor: number, sector = 1): Room[] {
   // 2·3층에는 꺼진 바닥(떨어지면 아래층으로, 3층은 깊은 틈)
   if (floor >= 2 && sector !== 4) for (const room of rooms) if (room.type === "trap" && r.chance(BAL.pitChance)) room.trapKind = "pit";
   if (sector === 4) mineTraps(r, rooms, floor, new Set(main.map((x) => x.id)));
+  if (sector === 5) riftFloor(r, rooms, floor);
   // 희귀 개체: 전투방 하나를 차지한다
   if (r.chance(BAL.rareChance)) {
     const combatRooms = rooms.filter((x) => x.type === "combat");
@@ -128,6 +132,17 @@ export function generateFloor(r: Rng, floor: number, sector = 1): Room[] {
   if (sector === 3) floodFloor(r, rooms, floor);
   if (sector === 4) mineRooms(r, rooms, floor);
   return rooms;
+}
+
+/** 5섹터: 함정방은 벼랑길(층별 30/50/50%) 아니면 꺼진 바닥(1층부터 50%), 전투방 일부는 벼랑 위(벼랑 거미) */
+function riftFloor(r: Rng, rooms: Room[], floor: number): void {
+  for (const room of rooms) {
+    if (room.type === "trap") room.trapKind = r.chance(BAL.ledgeChance[floor] ?? 0.5) ? "ledge" : r.chance(BAL.pitChance5) ? "pit" : "spike";
+    if (room.type === "combat" && r.chance(BAL.cliffChance[floor] ?? 0.5)) {
+      room.cliff = true;
+      if (r.chance(0.4) && !room.encounter?.some((m) => MONSTERS[m].rare || MONSTERS[m].elite)) room.encounter = floor === 1 ? ["ledgespider"] : floor === 2 ? ["ledgespider", "ledgespider"] : ["ledgespider", "tendril"];
+    }
+  }
 }
 
 /** 4섹터 함정 5종: 낙반(곁가지에만 — 필수 경로는 막지 않는다)·폭주 광차·가스 주머니·증기 분출·얇은 얼음 */
@@ -200,6 +215,12 @@ export function enterDungeon(s: GameState, shortcut = false): void {
     ...(s.month === 1 ? { first: true } : {}),
   };
   s.phase = "dungeon";
+  // 기아/풍요의 신 ★5: 배를 채우고 고기 2개를 챙겨 들어간다
+  if (power(s, "hunger", 5)) {
+    s.hero.satiety = 100;
+    s.inventory.food += 2;
+    log(s, `【${GODS.hunger.name}】 풍요의 얼굴 — 배가 가득 차고, 짐 속에 말린 고기 2개가 늘어 있다.`, "skill");
+  }
   if (sc) log(s, `— ${s.month}월 4주차. 3섹터까지 아는 길을 단숨에 지나, 곧장 4섹터 ${SECTOR_NAME[4]}로 내려왔다. (남은 시간 ${Math.round(BAL.shortcutTurns / 2)}시간)`, "system");
   else log(s, `— ${s.month}월 4주차. 미궁 1섹터에 들어섰다. (남은 시간 ${BAL.weekTurns}턴 = 7일)`, "system");
   arrive(s, true);
@@ -223,6 +244,7 @@ export function passTime(s: GameState, turns: number): void {
   const wasHigh = highTide(s);
   const wasStill = stagnant(s);
   dg.clock = (dg.clock ?? 0) + turns;
+  if (dg.sector === 5 && !dg.endless && isNight(s) !== wasNight) log(s, isNight(s) ? "균열이 숨을 들이쉰다. 바람이 아래로 빨려 들고 빛이 사라진다. (들숨 — 어둠)" : "균열이 숨을 내쉰다. 위에서 희미한 빛이 내려온다. (날숨)", "system");
   if (dg.sector === 2 && isNight(s) !== wasNight) log(s, isNight(s) ? "해가 졌다. 풀숲 너머에서 늑대 울음이 번진다. (밤)" : "동이 튼다. 바람이 풀을 눕힌다. (낮)", "system");
   if (dg.sector === 4 && !dg.endless && stagnant(s) !== wasStill) log(s, stagnant(s) ? "갱도의 바람이 멎었다. 공기가 고여 1·2층이 끓기 시작한다. (고임)" : "갱도로 바람이 빨려 든다. 가스가 빠지고, 깊은 곳은 얼어붙는다. (바람)", "system");
   if (dg.sector === 3 && !dg.endless && highTide(s) !== wasHigh) log(s, highTide(s) ? "물이 차오른다. 잠긴 방들의 수면이 가슴께까지 올라왔다. (밀물)" : "물이 빠져나간다. 잠겨 있던 바닥이 드러난다. (썰물)", "system");
@@ -240,7 +262,7 @@ export function passTime(s: GameState, turns: number): void {
   }
   if (h.satiety <= 0) {
     dg.starvingTurns += turns;
-    if (dg.starvingTurns >= BAL.starveLimitTurns) {
+    if (dg.starvingTurns >= BAL.starveLimitTurns && !power(s, "hunger", 5)) { // 기아/풍요의 신 ★5: 아사하지 않는다
       kill(s, "starve");
       return;
     }
@@ -310,6 +332,8 @@ export function moveTo(s: GameState, id: number): void {
     } else warm(s, 1);
   }
   if (s.disease > 0) pray(s, "plague", 1); // 역병의 신은 병을 앓은 채 버티는 것을 좋아한다
+  // 두 얼굴의 그릇: 배부르면 방을 옮길 때마다 HP +1
+  if (s.hero.satiety >= 70 && gearHas(s, (g) => g.twoFace).length && s.hero.hp < maxHp(s)) s.hero.hp += 1;
   // 정신 상태이상: 눈치채기 판정, 절망(탈진·굶주림), 주저앉기
   noticeCheck(s, smod(s, "per") + smod(s, "int"));
   if (s.hero.fatigue >= 100) afflict(s, "despair", MIND.despairExhausted, "다리가 무겁다. 이 길 끝에 무엇이 있을지 생각하기도 싫어진다.");
@@ -385,7 +409,7 @@ function swim(s: GameState): boolean {
 /** 2섹터부터 낮·밤이 있다(12시간마다 바뀜) */
 export function isNight(s: GameState): boolean {
   const dg = s.dungeon;
-  if (!dg || dg.sector !== 2) return false; // 낮·밤은 2섹터(초원)에만 — 1섹터와 끝없는 미궁은 땅속
+  if (!dg || dg.endless || (dg.sector !== 2 && dg.sector !== 5)) return false; // 2섹터 낮·밤, 5섹터 균열의 숨(들숨 = 어둠) — 나머지는 땅속
   return Math.floor((dg.clock ?? 0) / BAL.dayNightTurns) % 2 === 1;
 }
 
@@ -444,6 +468,12 @@ function arrive(s: GameState, firstOfFloor: boolean): void {
           if (day.length < ids.length) log(s, "밤이라 하피들은 둥지로 돌아가고 없다.", "system");
           ids = day.length ? day : ["wolf"];
         }
+        // 굶주린 망령은 들숨(어둠)에만
+        if (!isNight(s) && !room.remaining && ids.some((m) => MONSTERS[m].nightOnly)) {
+          const lit = ids.filter((m) => !MONSTERS[m].nightOnly);
+          log(s, "날숨의 빛 아래, 굶주린 것들은 틈 속으로 숨어 있다.", "system");
+          ids = lit.length ? lit : ["tendril"];
+        }
         const enemies = room.remaining ?? makeEnemies(s, ids);
         room.remaining = undefined;
         startCombat(s, "dungeon", enemies);
@@ -459,6 +489,7 @@ function arrive(s: GameState, firstOfFloor: boolean): void {
       case "relic":
       case "altar":
       case "magazine":
+      case "plenty":
         room.known = true;
         log(s, flavor(s, room, room.type), "story");
         dg.pending = { kind: room.type };
@@ -475,7 +506,7 @@ function peek(s: GameState): void {
   for (const id of currentRoom(s).edges) {
     const nb = dg.rooms[id];
     if (nb.known) continue;
-    if (check(s, "per", BAL.peekDc, faithPeek(s) - (isNight(s) ? 2 : 0)).ok) {
+    if (check(s, "per", BAL.peekDc, faithPeek(s) - (isNight(s) && !darkSight(s) ? 2 : 0)).ok) {
       nb.known = true;
       note(s, "per");
       log(s, `앞쪽 통로 너머의 낌새를 읽었다 — ${ROOM_LABEL[nb.type]}.`, "system");
@@ -486,6 +517,25 @@ function peek(s: GameState): void {
 /** 함정방 도착. 매복 전투가 벌어졌으면 true */
 function arriveTrap(s: GameState, room: Room): boolean {
   const dg = d(s);
+  // 벼랑길: 숨은 함정이 아니라 보이는 위험
+  if (room.trapKind === "ledge") {
+    room.known = true;
+    log(s, flavor(s, room, "ledge"), "story");
+    dg.pending = { kind: "trap" };
+    return false;
+  }
+  // 재앙의 신 ★5 "재앙의 주인": 함정을 가방에 넣는다(최대 2)
+  if (power(s, "trap", 5) && (dg.trapStock ?? 0) < 2) {
+    room.known = true;
+    room.resolved = true;
+    dg.trapStock = (dg.trapStock ?? 0) + 1;
+    log(s, `【${GODS.trap.name}】 재앙의 주인 — 발밑의 함정을 그대로 뜯어 가방에 넣었다. (함정 ${dg.trapStock}/2)`, "skill");
+    if (room.ambush) {
+      log(s, "숨어 있던 것들이 혀를 차며 물러났다.", "system");
+      room.ambush = undefined;
+    }
+    return false;
+  }
   if (room.known) {
     log(s, MINE_TRAP[room.trapKind ?? ""] ? `알고 있던 함정이다 — ${MINE_TRAP[room.trapKind!].name}.` : "알고 있던 함정이다. 바닥의 어색한 돌이 보인다.", "system");
     spotAmbush(s, room);
@@ -534,9 +584,11 @@ function fall(s: GameState): boolean {
   const dg = d(s);
   const r = rngOf(s);
   const deep = dg.floor >= 3;
-  const dmg = Math.max(1, Math.round(r.dice(deep ? 3 : 2, 6) * faithFallMult(s) * (s.skills.includes("trapMaster") ? 0.5 : 1)));
+  const mult = faithFallMult(s) * (s.skills.includes("trapMaster") ? 0.5 : 1) * fallGearMult(s);
+  const dmg = mult <= 0 ? 0 : Math.max(1, Math.round(r.dice(deep ? 3 : 2, 6) * mult));
   s.hero.hp -= dmg;
-  log(s, deep ? `바닥이 꺼졌다 — 끝이 보이지 않는 틈으로 미끄러져 내려갔다! ${dmg} 피해` : `바닥이 꺼졌다 — 아래층으로 곤두박질쳤다! ${dmg} 피해`, "hurt");
+  log(s, deep ? `끝이 보이지 않는 틈으로 미끄러져 내려갔다! ${dmg} 피해` : `아래층으로 곤두박질쳤다! ${dmg} 피해`, "hurt");
+  if (deep && dg.sector === 5) afflict(s, "despair", 0.2, "끝없는 틈을 들여다보고 말았다. 바닥이 없다는 걸 알아 버렸다.");
   if (s.hero.hp <= 0 && power(s, "abyss", 4)) {
     s.hero.hp = 1;
     log(s, `【${GODS.abyss.name}】 떨어지는 자의 축복 — 바닥에 부딪히기 직전, 몸이 깃털처럼 가벼워졌다. (HP 1)`, "skill");
@@ -556,7 +608,7 @@ function fall(s: GameState): boolean {
   }
   dg.floor += 1;
   dg.deepestFloor = Math.max(dg.deepestFloor, dg.floor);
-  dg.rooms = generateFloor(r, dg.floor, dg.sector);
+  dg.rooms = dg.endless ? generateEndlessFloor(r, dg.floor) : generateFloor(r, dg.floor, dg.sector);
   resetSweeper(dg);
   dg.current = 0;
   dg.prev = null;
@@ -564,6 +616,36 @@ function fall(s: GameState): boolean {
   if (dg.floor === 3) remember(s, "미궁 3층까지 떨어졌다.");
   if (!isDead(s)) arrive(s, true);
   return true;
+}
+
+/** 심연의 신: 꺼진 바닥·벼랑에서 일부러 뛰어내린다. 1·2층은 아래층, 3층은 ★5면 보스방 앞 바위에 내려선다 */
+function abyssJump(s: GameState, room: Room): void {
+  const dg = d(s);
+  const r = rngOf(s);
+  room.resolved = true;
+  const dmg = power(s, "abyss", 5) ? 0 : r.dice(1, 6);
+  s.hero.hp = Math.max(1, s.hero.hp - dmg);
+  log(s, `심연을 향해 스스로 몸을 던졌다.${dmg ? ` 착지가 거칠다. ${dmg} 피해` : " 바닥이 어디인지 알고 있다."}`, "story");
+  pray(s, "abyss", 5);
+  if (dg.floor >= 3) {
+    const boss = dg.rooms.find((x) => x.type === "boss");
+    const ledge = boss ? dg.rooms.find((x) => x.edges.includes(boss.id) && x.type !== "portal") : undefined;
+    if (ledge) {
+      dg.prev = dg.current;
+      dg.current = ledge.id;
+      log(s, "바닥 없는 틈을 미끄러져 내려가, 보스방 앞 바위에 내려섰다.", "system");
+      arrive(s, false);
+    }
+    return;
+  }
+  dg.floor += 1;
+  dg.deepestFloor = Math.max(dg.deepestFloor, dg.floor);
+  dg.rooms = dg.endless ? generateEndlessFloor(r, dg.floor) : generateFloor(r, dg.floor, dg.sector);
+  resetSweeper(dg);
+  dg.current = 0;
+  dg.prev = null;
+  log(s, `— ${dg.floor}층에 내려섰다.`, "system");
+  arrive(s, true);
 }
 
 /** 함정 작동. 숨어 있던 고블린이 있으면 덮친다(밟아서 다쳤으면 기습). 매복 전투가 벌어졌으면 true */
@@ -584,11 +666,11 @@ function springTrap(s: GameState, room: Room): boolean {
     const dmg = Math.max(1, Math.round(rngOf(s).dice(1, 6) * (s.skills.includes("trapMaster") ? 0.5 : 1))); // 함정 장인: 절반
     s.hero.hp -= dmg;
     const sec = d(s).sector;
-    const name = sec === 3 ? "산성 웅덩이" : sec === 2 ? "녹슨 곰덫" : "가시함정";
+    const name = sec === 5 ? "무너지는 돌길" : sec === 3 ? "산성 웅덩이" : sec === 2 ? "녹슨 곰덫" : "가시함정";
     log(s, `${josa(name, "을")} 밟았다! ${dmg} 피해 (민첩 ${c.total} vs ${BAL.trapDodgeDc})`, "hurt");
     if (s.hero.hp <= 0) {
       s.hero.hp = 0;
-      kill(s, "trap", sec === 3 ? "산성 웅덩이에 빠져 목숨을 잃었다" : sec === 2 ? "녹슨 곰덫에 걸려 목숨을 잃었다" : "가시함정에 목숨을 잃었다");
+      kill(s, "trap", sec === 5 ? "무너지는 돌길에 휩쓸려 목숨을 잃었다" : sec === 3 ? "산성 웅덩이에 빠져 목숨을 잃었다" : sec === 2 ? "녹슨 곰덫에 걸려 목숨을 잃었다" : "가시함정에 목숨을 잃었다");
       if (isDead(s)) return false;
     }
     note(s, "con");
@@ -717,6 +799,10 @@ export type PendingChoice =
   | `convert${number}`
   /** 편린: 빈 칸에 흡수 */
   | "absorb"
+  /** 5섹터 벼랑길: 조심히 건넌다 / 밧줄 / 풍요의 제단: 고기를 바친다 */
+  | "careful"
+  | "rope"
+  | "offer"
   /** 편린: n번째 편린을 깨뜨리고 흡수 */
   | `swap${number}`;
 
@@ -738,7 +824,38 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
   dg.pending = null;
   const r = rngOf(s);
 
-  if (kind === "trap" && choice === "jump" && room.trapKind === "pit" && power(s, "abyss", 1) && dg.floor < 3) {
+  if (kind === "trap" && room.trapKind === "ledge" && choice !== "back") {
+    if (choice === "jump" && power(s, "abyss", 1) && (dg.floor < 3 || power(s, "abyss", 5))) return abyssJump(s, room);
+    // 밧줄: 자동 성공 / 조심히: 이동 시간 두 배, 민첩 DC 10 / 그냥: 민첩 DC 14
+    if (choice === "rope" && s.inventory.rope > 0) {
+      s.inventory.rope -= 1;
+      room.resolved = true;
+      passTime(s, 1);
+      log(s, `쇠말뚝에 밧줄을 걸고 벼랑길을 건넜다. (남은 밧줄 ${s.inventory.rope})`, "good");
+      if (!isDead(s) && !checkTimeUp(s)) peek(s);
+      return;
+    }
+    const careful = choice !== "force";
+    if (careful) passTime(s, BAL.moveTurns);
+    if (isDead(s) || !s.dungeon) return;
+    const dc = careful ? 10 : 14;
+    const c = check(s, "dex", dc, ledgeBonus(s, isNight(s)));
+    if (c.ok) {
+      note(s, "dex");
+      room.resolved = true;
+      log(s, `${careful ? "벽에 몸을 붙이고 한 발씩" : "망설이지 않고"} 벼랑길을 건넜다. (민첩 ${c.total} vs ${dc})`, "good");
+      pray(s, "abyss", 2);
+      if (!checkTimeUp(s)) peek(s);
+      return;
+    }
+    log(s, `발밑의 돌이 무너졌다! (민첩 ${c.total} vs ${dc})`, "hurt");
+    room.resolved = true;
+    fall(s);
+    return;
+  }
+
+  if (kind === "trap" && choice === "jump" && room.trapKind === "pit" && power(s, "abyss", 1) && (dg.floor < 3 || power(s, "abyss", 5))) {
+    if (dg.floor >= 3) return abyssJump(s, room);
     // 심연의 신 ★1: 꺼진 바닥으로 일부러 뛰어내린다(아래층 지름길)
     room.resolved = true;
     const dmg = r.dice(1, 6);
@@ -747,7 +864,7 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
     pray(s, "abyss", 5);
     dg.floor += 1;
     dg.deepestFloor = Math.max(dg.deepestFloor, dg.floor);
-    dg.rooms = generateFloor(r, dg.floor, dg.sector);
+    dg.rooms = dg.endless ? generateEndlessFloor(r, dg.floor) : generateFloor(r, dg.floor, dg.sector);
     resetSweeper(dg);
     dg.current = 0;
     dg.prev = null;
@@ -903,6 +1020,29 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
     return;
   }
 
+  if (kind === "plenty") {
+    room.resolved = true;
+    if (choice !== "offer" || s.inventory.food <= 0) {
+      log(s, "제단을 그냥 지나쳤다.");
+      return;
+    }
+    passTime(s, 1);
+    s.inventory.food -= 1;
+    // 기아/풍요의 신도는 원하는 얼굴(풍요)을 고른다
+    const plenty = god(s) === "hunger" || r.chance(0.5);
+    if (god(s) === "hunger") addPiety(s, 3);
+    if (plenty) {
+      s.hero.satiety = 100;
+      s.hero.hp = Math.min(maxHp(s), s.hero.hp + 10);
+      log(s, "고기를 바치자 넘치는 쪽 그릇이 빛난다 — 풍요의 얼굴. 배가 가득 차고 몸이 따뜻해진다. (포만감 100, HP +10)", "good");
+    } else {
+      s.hero.satiety = Math.max(0, s.hero.satiety - 30);
+      dg.famineFloor = dg.floor;
+      log(s, "고기를 바치자 빈 쪽 그릇이 입을 벌린다 — 기아의 얼굴. 배가 꺼지는 대신 손이 거칠어진다. (포만감 −30, 이 층에서 피해 +2)", "hurt");
+    }
+    return;
+  }
+
   if (kind === "magazine") {
     room.resolved = true;
     if (choice === "pray" && god(s) === "trap") {
@@ -978,7 +1118,7 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
       if (isDead(s) || !s.dungeon) return;
       s.recordsRead += 1;
       note(s, "int");
-      const list = wet ? PLAGUE_RECORDS : dg.sector === 4 ? MINE_RECORDS : RECORDS;
+      const list = wet ? PLAGUE_RECORDS : dg.sector === 5 ? RIFT_RECORDS : dg.sector === 4 ? MINE_RECORDS : RECORDS;
       log(s, list[(room.flavor + s.recordsRead) % list.length], "story");
       // 4섹터 갱도 지도: 이 층 함정방 하나가 지도에 드러난다
       const hidden = dg.sector === 4 ? dg.rooms.find((x) => x.type === "trap" && !x.known) : undefined;
@@ -1244,6 +1384,15 @@ export function afterDungeonCombat(s: GameState, outcome: "win" | "fled", c: Com
     if (roomFight) {
       room.resolved = true; // 야영 중 기습 전투는 방 사건과 무관
       room.respawned = false;
+      // 균열 벌레가 바위를 파먹은 자리: 바닥이 꺼진다(다음에 지나갈 때 꺼진 바닥)
+      const sink = c.enemies.find((e) => MONSTERS[e.defId].sinkhole && !e.fled);
+      if (sink && room.type === "combat" && dg.sector === 5 && !dg.endless && rngOf(s).chance(MONSTERS[sink.defId].sinkhole!)) {
+        room.type = "trap";
+        room.trapKind = "pit";
+        room.known = true;
+        room.resolved = false;
+        log(s, `${josa(MONSTERS[sink.defId].name, "이")} 파먹은 바닥이 금 가며 내려앉는다. 다음에 지날 때는 조심해야 한다.`, "system");
+      }
     }
     if (loot > 0) {
       dg.mana += loot;
@@ -1270,11 +1419,11 @@ export function afterDungeonCombat(s: GameState, outcome: "win" | "fled", c: Com
       } else if (t) {
         log(s, `이번에는 ${t.name} 같은 것은 남지 않았다.`, "system");
       }
-      if (dg.sector >= 2 && dg.sector <= 4) {
+      if (dg.sector >= 2 && dg.sector <= 5) {
         s.recordsRead += 1;
-        const list = dg.sector === 4 ? MINE_RECORDS : dg.sector === 3 ? PLAGUE_RECORDS : WAR_RECORDS;
+        const list = dg.sector === 5 ? RIFT_RECORDS : dg.sector === 4 ? MINE_RECORDS : dg.sector === 3 ? PLAGUE_RECORDS : WAR_RECORDS;
         log(s, list[(s.recordsRead + room.flavor) % list.length], "story");
-        log(s, `(${dg.sector === 4 ? "어미의 둥지에 깔린 광산 장부" : dg.sector === 3 ? "균모의 뿌리에 감겨 있던 기도문" : "장군의 안장 주머니에서 나온 기록"} — 읽은 기록물 ${s.recordsRead}개)`, "system");
+        log(s, `(${dg.sector === 5 ? "아귀의 이빨 사이에 낀 낙서 조각" : dg.sector === 4 ? "어미의 둥지에 깔린 광산 장부" : dg.sector === 3 ? "균모의 뿌리에 감겨 있던 기도문" : "장군의 안장 주머니에서 나온 기록"} — 읽은 기록물 ${s.recordsRead}개)`, "system");
       }
       log(s, "보스가 지키던 자리에서 무언가 반짝인다.", "system");
       offerGear(s, rollLoot(s));
@@ -1288,6 +1437,12 @@ export function afterDungeonCombat(s: GameState, outcome: "win" | "fled", c: Com
   const left = c.enemies.filter((e) => e.hp > 0);
   if (roomFight) room.remaining = left;
   dg.mana += loot;
+  // 5섹터: 벼랑에서 붙잡혀 끌려가거나 밀려 떨어졌다 — 전투는 끝나고 아래로(남은 적은 따라오지 않는다)
+  if (c.dragged) {
+    fall(s);
+    if (!isDead(s) && s.dungeon && !s.combat && !checkTimeUp(s)) offerFrag(s, c.frags);
+    return;
+  }
   if (dg.prev !== null) {
     const back = dg.prev;
     dg.prev = dg.current;
@@ -1322,6 +1477,8 @@ export function camp(s: GameState): void {
     let ids = dg.endless ? endlessGroup(r, dg.floor).slice(0, 2) : campAmbush(dg.sector, dg.floor);
     if (ids.includes("leech") && !currentRoom(s).flooded) ids = ["plaguerat", "plaguerat", "plaguerat"]; // 거머리는 물에 잠긴 방에만
     if (ids.includes("frostwraith") && !currentRoom(s).ice) ids = ["emberbat", "emberbat"]; // 서리 계열은 얼음 구역에만
+    // 5섹터 들숨에는 굶주린 망령이 기어 나온다(기아/풍요의 신 ★5면 먼저 덤비지 않는다)
+    if (dg.sector === 5 && !dg.endless && dg.floor >= 2 && isNight(s) && !power(s, "hunger", 5)) ids = ["hungerwraith", "hungerwraith"];
     startCombat(s, "dungeon", makeEnemies(s, ids));
     return;
   }
@@ -1394,6 +1551,11 @@ function readRecord(s: GameState, room: Room, list: string[], where: string): vo
 /** 시와 노래의 신 ★4 "영웅담": 기록물을 읽을 때마다 이 미궁 동안 명중·판정 +1(최대 3) */
 function saga(s: GameState): void {
   const dg = s.dungeon;
+  // 시와 노래의 신 ★5 "노래가 된 이름": 기록물마다 이 미궁 동안 최대 HP +1(최대 10)
+  if (dg && power(s, "song", 5) && (dg.songHp ?? 0) < 10) {
+    dg.songHp = (dg.songHp ?? 0) + 1;
+    log(s, `【${GODS.song.name}】 노래가 된 이름 — 이 미궁 동안 최대 HP +${dg.songHp}`, "skill");
+  }
   if (!dg || !power(s, "song", 4) || (dg.saga ?? 0) >= 3) return;
   dg.saga = (dg.saga ?? 0) + 1;
   log(s, `【${GODS.song.name}】 영웅담 — 읽은 이야기가 몸에 붙는다. (이 미궁 동안 명중·판정 +${dg.saga})`, "skill");

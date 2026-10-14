@@ -115,6 +115,15 @@
 
 게임플레이 세션이 새 기능을 넣을 때마다 여기에 그림·모양 작업을 적는다. 끝낸 항목은 ~~취소선~~으로 남겨 두면 된다.
 
+### 2026-10-15 — 5섹터 "바닥없는 균열"
+5섹터가 들어갔다(기획 `docs/SECTOR5_DRAFT.md`, 이름·설명은 `src/game/data.ts`·`gear.ts`). 그림이 없으면 글자만 나온다.
+
+33. **몬스터 13종** (우선) — `MONSTER_ART`: 균열 박쥐 떼 `riftbat`, 그림자 촉수 `tendril`, 굶주린 망령 `hungerwraith`(사람 아님 — 굶주림이 형체를 얻은 것), 벼랑 거미 `ledgespider`, 공허 눈 `voideye`, 균열 벌레 `riftworm`, 낙하 잔해 덩어리 `fallenheap`(1~4섹터 몬스터의 잔해가 엉긴 것), 희귀 마석 비늘 박쥐 `scalebat`·마석 눈동자 `manaeye`·마석 껍질 균열 벌레 `shellworm`(색 바꾸기 가능), 정예 허기의 어미 `hungermother`, 보스 심연의 아귀 `abyssmaw`(큰 그림 — 틈 위 바위에 뿌리박은 거대한 입과 촉수), 히든 바닥의 청소부 `sweeper5`
+34. **미궁 5섹터 장면** `scene-dungeon5.png` — 바닥 없는 균열(벼랑길·뿌리와 쇠사슬 다리·아래는 검게). 날숨/들숨 두 톤이면 좋다. `SCENE_ART`에 `dungeon5`
+35. **풍요의 제단 방 아이콘** `plenty` — `ROOM_ICON`(지도 노드 `.map-node.t-plenty`)
+36. **5섹터 장비 아이콘 9종**: abyssblade, voidstaff, shadowhide, lanternhelm, clawboots, batcloak, voidring, ghoulfang, twofacebowl / 소모품 밧줄 `rope`, 증표 "아귀의 검은 이빨"
+37. (선택) 상태: 미궁 제목의 "들숨·날숨", 갈림길 버튼의 "벼랑 위", 벼랑길 선택 카드(밧줄·조심히·그냥·뛰어내리기)가 지금은 글자뿐
+
 ### 2026-10-14 — 4섹터 "불타는 광산 갱도"
 4섹터가 들어갔다(기획 `docs/SECTOR4_DRAFT.md`, 이름·설명은 `src/game/data.ts`·`gear.ts`). 그림이 없으면 글자만 나온다.
 

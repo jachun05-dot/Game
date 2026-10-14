@@ -28,11 +28,12 @@ const ITEM_INFO = {
   whetstone: { name: "숫돌", desc: "가장 심하게 삭은 장비를 한 단계 손본다 (3섹터)" },
   salve: { name: "화상 연고", desc: "화상 입은 부위 하나를 한 단계 (4섹터)" },
   firewood: { name: "장작", desc: "야영할 때 불을 피워 냉기 0 + 동상 한 단계 (4섹터)" },
+  rope: { name: "밧줄", desc: "벼랑길을 반드시 건넌다 (5섹터)" },
 } as const;
 
 /** 3섹터 소모품은 2섹터를 클리어했거나 가지고 있을 때만 보여 준다 */
 function shopItems(s: GameState): (keyof typeof ITEM_INFO)[] {
-  const need: Partial<Record<keyof typeof ITEM_INFO, number>> = { antidote: 2, whetstone: 2, salve: 3, firewood: 3 };
+  const need: Partial<Record<keyof typeof ITEM_INFO, number>> = { antidote: 2, whetstone: 2, salve: 3, firewood: 3, rope: 4 };
   return (Object.keys(ITEM_INFO) as (keyof typeof ITEM_INFO)[]).filter((k) => s.rank >= (need[k] ?? 0) || s.inventory[k] > 0);
 }
 
@@ -325,7 +326,8 @@ function DungeonPrep({ s, busy, onShop, onEnter }: { s: GameState; busy: boolean
           {inv.whetstone > 0 && <> · 숫돌 <b>{inv.whetstone}</b></>}
           {inv.salve > 0 && <> · 화상 연고 <b>{inv.salve}</b></>}
           {inv.firewood > 0 && <> · 장작 <b>{inv.firewood}</b></>}
-          {inv.powder > 0 && <> · 화약통 <b>{inv.powder}</b></>} · 소지금 <b>{s.gold}G</b>
+          {inv.powder > 0 && <> · 화약통 <b>{inv.powder}</b></>}
+          {inv.rope > 0 && <> · 밧줄 <b>{inv.rope}</b></>} · 소지금 <b>{s.gold}G</b>
         </p>
         {inv.food < 3 && <p className="small warn">말린 고기가 적다 — 일주일을 버티기 어렵다.</p>}
         {s.hero.hp < maxHp(s) && <p className="small warn">HP {s.hero.hp}/{maxHp(s)} — 다 차지 않은 채 들어간다. (여관은 1~3주에만 쓸 수 있다. 물약을 넉넉히 챙기자)</p>}

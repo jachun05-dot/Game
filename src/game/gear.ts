@@ -95,6 +95,17 @@ export interface GearDef {
   chillHit?: boolean;
   /** 낙반·폭발·광차 피해 배율 */
   blastRes?: number;
+  // ── 5섹터 ──
+  /** 붙잡힐 확률 배율 */
+  grabRes?: number;
+  /** 들숨(어둠) 페널티 무시 */
+  darkSight?: boolean;
+  /** 벼랑길 판정 + */
+  ledge?: number;
+  /** 추락 피해 배율 */
+  fallRes?: number;
+  /** 두 얼굴의 그릇: 포만감 70 이상이면 방을 옮길 때 HP +1, 30 이하면 피해 +2 */
+  twoFace?: boolean;
   flavor: string;
 }
 
@@ -140,6 +151,16 @@ export const GEAR: Record<string, GearDef> = {
   steelsword: { id: "steelsword", name: "강철 장검", slot: "main", bonus: {}, weapon: { dice: [1, 10], stat: "str", verb: "강철 장검을 내리쳐" }, price: 160, rank: 1, flavor: "등급을 올린 모험가에게만 파는 칼." },
   steelshield: { id: "steelshield", name: "강철 방패", slot: "offhand", bonus: { ac: 2 }, price: 110, rank: 1, flavor: "가볍고 단단하다." },
   oakstaff: { id: "oakstaff", name: "마력이 깃든 지팡이", slot: "main", bonus: { hit: 1 }, weapon: { dice: [1, 8], stat: "int", verb: "짙은 마력탄을 날려" }, price: 150, rank: 1, flavor: "차원문 너머의 나무로 깎았다." },
+  // ── 5섹터(바닥없는 균열) ──
+  abyssblade: { id: "abyssblade", name: "심연강 장검", slot: "main", bonus: { hit: 1 }, weapon: { dice: [2, 6], stat: "str", verb: "심연강 장검을 내리쳐" }, price: 900, rank: 4, flavor: "균열 바닥에서 건진 검은 쇠로 벼렸다." },
+  voidstaff: { id: "voidstaff", name: "공허 수정 지팡이", slot: "main", bonus: { hit: 1 }, weapon: { dice: [2, 6], stat: "int", verb: "공허의 마력을 쏘아" }, price: 900, rank: 4, flavor: "속이 빈 수정. 그 안에서 무언가 끝없이 떨어진다." },
+  shadowhide: { id: "shadowhide", name: "그림자 가죽 갑옷", slot: "body", bonus: { ac: 5 }, grabRes: 0.5, price: 1100, rank: 4, flavor: "미끄러운 그림자 가죽. 촉수가 잘 붙잡지 못한다." },
+  lanternhelm: { id: "lanternhelm", name: "이끼 등불 투구", slot: "head", bonus: { ac: 2 }, darkSight: true, price: 480, rank: 4, flavor: "빛나는 이끼를 채운 등불. 균열이 숨을 들이쉬어도 앞이 보인다." },
+  clawboots: { id: "clawboots", name: "갈고리 장화", slot: "feet", bonus: { flee: 2 }, ledge: 4, price: 360, rank: 4, flavor: "앞코에 갈고리를 달았다. 벼랑길에서 미끄러지지 않는다." },
+  batcloak: { id: "batcloak", name: "박쥐 날개 망토", slot: "neck", bonus: { flee: 2 }, fallRes: 0.5, loot: 2, sector: 5, flavor: "떨어질 때 펼치면 바람을 받는다." },
+  voidring: { id: "voidring", name: "공허 눈 반지", slot: "ring", bonus: { perception: 1 }, mindRes: { despair: 0.5 }, loot: 2, sector: 5, flavor: "닫힌 눈을 새긴 반지. 바닥을 들여다봐도 덜 무너진다." },
+  ghoulfang: { id: "ghoulfang", name: "아귀 이빨 단검", slot: "main", bonus: { crit: 6 }, weapon: { dice: [1, 10], stat: "dex", verb: "아귀 이빨을 찔러 넣어" }, loot: 1, sector: 5, flavor: "아귀의 이빨을 갈아 만들었다. 민첩으로 다룬다." },
+  twofacebowl: { id: "twofacebowl", name: "두 얼굴의 그릇", slot: "waist", bonus: {}, twoFace: true, flavor: "한쪽은 넘치고 한쪽은 비어 있는 그릇. 배부르면 몸이 낫고, 굶주리면 손이 거칠어진다." },
   // ── 4섹터(불타는 광산 갱도) ──
   fireleather: { id: "fireleather", name: "내화 가죽 갑옷", slot: "body", bonus: { ac: 4 }, burnRes: 0.5, price: 380, rank: 3, flavor: "불에 그을려도 타지 않게 무두질했다. 화상 확률이 절반." },
   furcoat: { id: "furcoat", name: "털 안감 외투", slot: "body", bonus: { ac: 3 }, coldRes: 0.5, price: 320, rank: 3, flavor: "안쪽에 두꺼운 털을 댔다. 냉기가 절반만 스민다." },
@@ -203,6 +224,11 @@ export function gearEffect(id: string): string {
   if (g.stagnantHit) parts.push(`고임 때 명중 +${g.stagnantHit}`);
   if (g.chillHit) parts.push("맞힌 적 명중 −1");
   if (g.blastRes) parts.push("낙반·폭발·광차 피해 절반");
+  if (g.grabRes) parts.push("붙잡힐 확률 절반");
+  if (g.darkSight) parts.push("어둠(들숨) 페널티 없음");
+  if (g.ledge) parts.push(`벼랑길 판정 +${g.ledge}`);
+  if (g.fallRes) parts.push("추락 피해 절반");
+  if (g.twoFace) parts.push("배부르면 방마다 HP +1, 굶주리면 피해 +2");
   return parts.join(" · ");
 }
 
@@ -215,7 +241,8 @@ export function gearScore(id: string | undefined): number {
   if (g.weapon) v += g.weapon.dice[1] * g.weapon.dice[0];
   v += Object.values(g.stats ?? {}).reduce((a, x) => a + x, 0) * 2 + (g.lifeSaves ?? 0) * 20;
   v += (g.corrodeRes !== undefined ? 1 : 0) + (g.poisonRes ? 2 : 0) + (g.moldRes ? 2 : 0) + (g.wade ? 2 : 0) + (g.swim ? 1 : 0) + (g.critHeal ? 2 : 0) + (g.tideHit ? 1 : 0)
-    + (g.burnRes ? 2 : 0) + (g.coldRes ? 2 : 0) + (g.noHardSelf ? 1 : 0) + (g.trapFind ? 1 : 0) + (g.trapDodge ? 1 : 0) + (g.gasSense ? 1 : 0) + (g.stagnantHit ? 1 : 0) + (g.chillHit ? 1 : 0) + (g.blastRes ? 2 : 0);
+    + (g.burnRes ? 2 : 0) + (g.coldRes ? 2 : 0) + (g.noHardSelf ? 1 : 0) + (g.trapFind ? 1 : 0) + (g.trapDodge ? 1 : 0) + (g.gasSense ? 1 : 0) + (g.stagnantHit ? 1 : 0) + (g.chillHit ? 1 : 0) + (g.blastRes ? 2 : 0)
+    + (g.grabRes ? 2 : 0) + (g.darkSight ? 1 : 0) + (g.ledge ? 2 : 0) + (g.fallRes ? 2 : 0) + (g.twoFace ? 3 : 0);
   return v;
 }
 

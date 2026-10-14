@@ -12,11 +12,11 @@ import type { DungeonState, GameState } from "./types";
  *  끝없는 미궁은 마지막 섹터 다음 섹터로 친다 */
 export function nextFloorLevel(sector: number, floor: number): number {
   const sec = sector === ENDLESS_SECTOR ? LAST_SECTOR + 1 : sector;
-  return (sec - 1) * 3 + floor * 2 + 1;
+  return Math.min(BAL.maxLevel, (sec - 1) * 3 + floor * 2 + 1); // 최대 레벨(16)에서 자른다 — 5섹터 2·3층에서도 머무르면 밀어낸다
 }
 
 export function sweeperId(sector: number): string {
-  return sector >= 4 ? "sweeper4" : sector === 3 ? "sweeper3" : sector === 2 ? "sweeper2" : "sweeper1";
+  return sector >= 5 ? "sweeper5" : sector === 4 ? "sweeper4" : sector === 3 ? "sweeper3" : sector === 2 ? "sweeper2" : "sweeper1";
 }
 
 /** 이 층에서 청소부 시계가 도는가 */

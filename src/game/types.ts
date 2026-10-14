@@ -122,6 +122,14 @@ export interface CombatState {
   pain?: number;
   /** 화로 어미가 동굴을 무너뜨렸다(한 번) */
   caveIn?: boolean;
+  /** 5섹터 붙잡기: 다음 라운드 행동 불가 */
+  grabbed?: boolean;
+  /** 심연의 아귀: 다시 자란 촉수 수, 다시 자랄 라운드 */
+  regrow?: { count: number; at: number[] };
+  /** 끝나지 않는 전쟁(전쟁의 신 ★5): 쌓인 피해 보너스 */
+  warStack?: number;
+  /** 벼랑에서 끌려 떨어졌다(전투가 끝나고 아래로) */
+  dragged?: boolean;
 }
 
 /** 자동 결정의 미궁 목표: 구석구석 탐험 / 빠르게 다음 층 / 파밍(전투·상자 위주) */
@@ -153,7 +161,9 @@ export type RoomType =
   /** 3섹터: 공양 제단(조사하면 낡은 장비·독·역병의 신 기록물, 역병의 신도는 기도) */
   | "altar"
   /** 4섹터: 버려진 화약고(조사하면 화약통·낡은 장비·재앙의 신 기록물, 재앙의 신도는 기도) */
-  | "magazine";
+  | "magazine"
+  /** 5섹터: 풍요의 제단(고기를 바치면 풍요 또는 기아의 얼굴) */
+  | "plenty";
 
 export interface Room {
   id: number;
@@ -173,7 +183,7 @@ export interface Room {
   /** 함정방에 숨어 있는 고블린(함정을 밟으면 덮친다) */
   ambush?: string[];
   /** 함정 종류(기본 가시함정, pit = 꺼진 바닥: 떨어지면 아래층으로). 4섹터: collapse 낙반·cart 폭주 광차·gas 가스 주머니·steam 증기 분출·ice 얇은 얼음 */
-  trapKind?: "spike" | "pit" | "collapse" | "cart" | "gas" | "steam" | "ice";
+  trapKind?: "spike" | "pit" | "collapse" | "cart" | "gas" | "steam" | "ice" | "ledge";
   /** 숨은 고블린을 알아챘는지 */
   ambushKnown?: boolean;
   /** 비웠던 전투방에 몬스터가 다시 들어왔다(마석 절반) */
@@ -187,6 +197,8 @@ export interface Room {
   hot?: boolean;
   ice?: boolean;
   pool?: boolean;
+  /** 5섹터: 벼랑 위 전투방(벼랑 거미가 살고, 붙잡히거나 밀리면 아래로 떨어진다) */
+  cliff?: boolean;
   flavor: number;
 }
 
@@ -198,6 +210,7 @@ export type Pending =
   | { kind: "relic" }
   | { kind: "altar" }
   | { kind: "magazine" }
+  | { kind: "plenty" }
   | { kind: "stairs" }
   /** 첫 미궁의 1층 계단: 내려갈 수 없고, 떨어진 귀환 주문서를 쓸지 고른다 */
   | { kind: "lostScroll" }
@@ -247,6 +260,12 @@ export interface DungeonState {
   cartCharge?: number;
   /** 3섹터 클리어 뒤 숏컷으로 곧장 4섹터에 들어왔다 */
   shortcut?: boolean;
+  /** 5섹터 풍요의 제단 "기아의 얼굴": 이 층(번호)에서 피해 +2 */
+  famineFloor?: number;
+  /** 재앙의 신 ★5 "재앙의 주인": 가방에 넣은 함정(최대 2) */
+  trapStock?: number;
+  /** 시와 노래의 신 ★5 "노래가 된 이름": 이 미궁 동안 최대 HP +(최대 10) */
+  songHp?: number;
 }
 
 export type Activity = "train" | "rumor" | "field" | "inn";
@@ -321,7 +340,7 @@ export interface GameState {
   gold: number;
   /** heart: 1섹터 보스가 남기는 "거대 쥐의 마석 심장"(레벨 3→4 훈련 대가) */
   /** banner: 2섹터 "장군의 녹슨 휘장", spore: 3섹터 "균모의 포자낭". whetstone 숫돌(부식), antidote 해독초(독·마비) */
-  inventory: { food: number; potion: number; scroll: number; heart: number; banner: number; spore: number; scale: number; fang: number; salve: number; firewood: number; powder: number; bandage: number; herb: number; whetstone: number; antidote: number };
+  inventory: { food: number; potion: number; scroll: number; heart: number; banner: number; spore: number; scale: number; fang: number; salve: number; firewood: number; powder: number; rope: number; bandage: number; herb: number; whetstone: number; antidote: number };
   /** 이미 얻은 보스 증표(섹터마다 한 번만 나온다) */
   trophies: string[];
   /** 착용 장비(슬롯 → gear.ts의 GEAR id) */

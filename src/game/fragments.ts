@@ -73,6 +73,20 @@ export const FRAGMENTS: Record<string, FragmentDef> = {
   cartmimic: { id: "cartmimic", name: "광차 미믹의 편린", tier: 3, chance: 0.03, stats: { str: 4, dex: 2 }, skill: "fragMimic", flavor: "무언가인 척하는 법을 안다. 첫 일격은 아무도 모른다." },
   furnacemother: { id: "furnacemother", name: "화로 어미 도롱뇽의 편린", tier: 4, chance: 0.03, stats: { con: 6, str: 4, int: 2 }, skill: "fragTwoBloods", flavor: "한쪽은 타오르고 한쪽은 얼어 있다. 불도 얼음도 몸을 다 가져가지는 못한다." },
   sweeper4: { id: "sweeper4", name: "갱도의 청소부의 편린", tier: 4, chance: 0.03, stats: { str: 5, con: 5, dex: 3 }, flavor: "녹슨 레일의 진동. 멈추지 않고 나아가는 법." },
+  // 5섹터
+  riftbat: { id: "riftbat", name: "균열 박쥐 떼의 편린", tier: 1, chance: 0.02, stats: { per: 2, dex: 1 }, skill: "fragEcho", flavor: "어둠 속에서 소리가 모양을 그린다." },
+  tendril: { id: "tendril", name: "그림자 촉수의 편린", tier: 2, chance: 0.015, stats: { str: 3 }, skill: "fragWrap", flavor: "손끝이 길게 늘어나는 느낌. 붙잡는 법을 안다." },
+  hungerwraith: { id: "hungerwraith", name: "굶주린 망령의 편린", tier: 2, chance: 0.015, stats: { con: 3, str: 1 }, skill: "fragEndureHunger", flavor: "배 속이 비어도 덜 괴롭다." },
+  ledgespider: { id: "ledgespider", name: "벼랑 거미의 편린", tier: 2, chance: 0.015, stats: { dex: 3 }, skill: "fragSpiderFeet", flavor: "발끝이 벽에 달라붙는다." },
+  voideye: { id: "voideye", name: "공허 눈의 편린", tier: 2, chance: 0.015, stats: { int: 2, per: 2 }, skill: "fragFaceVoid", flavor: "바닥을 마주 봐도 눈을 돌리지 않는다." },
+  riftworm: { id: "riftworm", name: "균열 벌레의 편린", tier: 3, chance: 0.02, stats: { con: 5, str: 2 }, skill: "fragRockTooth", flavor: "이가 바위처럼 단단해진다. 단단한 것을 쳐도 손이 버틴다." },
+  fallenheap: { id: "fallenheap", name: "낙하 잔해 덩어리의 편린", tier: 3, chance: 0.02, stats: { con: 6 }, skill: "fragFallen", flavor: "떨어진 것들의 무게. 떨어져도 덜 부서진다." },
+  scalebat: { id: "scalebat", name: "마석 비늘 박쥐의 편린", tier: 3, chance: 0.03, stats: { luk: 6, dex: 3 }, skill: "fragGoldHunter", flavor: "마석 비늘이 피부에 돋는다." },
+  manaeye: { id: "manaeye", name: "마석 눈동자의 편린", tier: 3, chance: 0.03, stats: { per: 6, int: 3 }, skill: "fragGoldNose", flavor: "마석 냄새가 눈에 보인다." },
+  shellworm: { id: "shellworm", name: "마석 껍질 균열 벌레의 편린", tier: 3, chance: 0.03, stats: { con: 7, str: 2 }, skill: "fragManaArmor", flavor: "마석 껍질이 등을 덮는다." },
+  hungermother: { id: "hungermother", name: "허기의 어미의 편린", tier: 3, chance: 0.03, stats: { con: 5, str: 3 }, skill: "fragDevour", flavor: "쓰러뜨린 것의 기운이 배를 채운다." },
+  abyssmaw: { id: "abyssmaw", name: "심연의 아귀의 편린", tier: 4, chance: 0.03, stats: { str: 6, con: 6 }, skill: "fragEndlessHunger", flavor: "끝없는 허기가 힘이 된다." },
+  sweeper5: { id: "sweeper5", name: "바닥의 청소부의 편린", tier: 4, chance: 0.03, stats: { str: 5, con: 5, dex: 3, per: 3 }, flavor: "떨어진 것들을 쓸어 담던 손. 머물지 않는 법." },
   boss: { id: "boss", name: "거대한 돌연변이 쥐의 편린", tier: 4, chance: 0.03, stats: { str: 4, con: 4, dex: 1 }, skill: "fragFrenzy", flavor: "붉게 고동친다. 이빨이 근질거린다." },
 };
 

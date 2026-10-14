@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Rng } from "./rng";
-import { enterDungeon, generateFloor, passTime } from "./dungeon";
+import { enterDungeon, generateFloor, isNight, passTime } from "./dungeon";
 import { canTrain, newRun, trainCost } from "./town";
 import { ENDLESS_SECTOR, endlessPool, generateEndlessFloor } from "./endless";
 import { CLASSES } from "./classes";
@@ -1308,7 +1308,7 @@ describe("끝없는 미궁", () => {
     s.hero.level = 12;
     enterDungeon(s);
     const dg = s.dungeon!;
-    dg.sector = 4;
+    dg.sector = 5;
     dg.floor = 3;
     dg.pending = { kind: "portal" };
     s.combat = null;
@@ -1331,13 +1331,13 @@ describe("끝없는 미궁", () => {
     expect(s.dungeon!.turnsLeft).toBe(150);
     expect(s.rank).toBe(2);
   });
-  it("4섹터 차원문으로 들어가면 끝없는 미궁 1층: 함정·상자·기록물 없이 전투·빈 방·계단뿐", () => {
+  it("5섹터 차원문으로 들어가면 끝없는 미궁 1층: 함정·상자·기록물 없이 전투·빈 방·계단뿐", () => {
     const s = toEndless();
     const dg = s.dungeon!;
     expect(dg.endless).toBe(true);
     expect(dg.sector).toBe(ENDLESS_SECTOR);
     expect(dg.floor).toBe(1);
-    expect(s.rank).toBe(4);
+    expect(s.rank).toBe(5);
     expect(dg.rooms.every((r) => ["entrance", "combat", "empty", "stairs"].includes(r.type))).toBe(true);
   });
   it("계단은 끝없이 이어지고, 깊을수록 몬스터가 강하며, 5층마다 보스가 계단 앞을 지킨다", () => {
@@ -1346,7 +1346,7 @@ describe("끝없는 미궁", () => {
       const rooms = generateEndlessFloor(r, n);
       expect(rooms.filter((x) => x.type === "stairs").length).toBe(1);
       expect(rooms.some((x) => x.type === "trap" || x.type === "treasure")).toBe(false);
-      const bossy = rooms.some((x) => x.encounter?.some((m) => ["boss", "harpyqueen", "general", "mycomother", "furnacemother"].includes(m)));
+      const bossy = rooms.some((x) => x.encounter?.some((m) => ["boss", "harpyqueen", "general", "mycomother", "furnacemother", "abyssmaw"].includes(m)));
       expect(bossy).toBe(n % 5 === 0);
     }
     const s = toEndless();
@@ -1587,5 +1587,108 @@ describe("4섹터: 불타는 광산 갱도", () => {
       expect(FRAGMENTS[id]).toBeDefined();
     }
     expect((MONSTERS.mold as unknown as Record<string, unknown>).fireWeak).toBeUndefined();
+  });
+});
+
+describe("5섹터: 바닥없는 균열", () => {
+  const hero = (seed = 601) => {
+    const s = newRun(seed);
+    apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    s.month = 30;
+    return s;
+  };
+  it("층 생성: 함정 2+층수(벼랑길·꺼진 바닥), 벼랑 위 전투방, 보스는 심연의 아귀", () => {
+    const r = new Rng({ s: 21 });
+    let ledges = 0, cliffs = 0, plenty = 0;
+    for (let i = 0; i < 60; i++) {
+      for (const floor of [1, 2, 3]) {
+        const rooms = generateFloor(r, floor, 5);
+        expect(reachable(rooms).size).toBe(rooms.length);
+        for (const t of rooms.filter((x) => x.type === "trap")) expect(["ledge", "pit", "spike"]).toContain(t.trapKind);
+        ledges += rooms.filter((x) => x.trapKind === "ledge").length;
+        cliffs += rooms.filter((x) => x.cliff).length;
+        plenty += rooms.filter((x) => x.type === "plenty").length;
+        for (const x of rooms) if (x.encounter?.includes("ledgespider")) expect(x.cliff).toBe(true);
+        if (floor === 3) expect(rooms.find((x) => x.type === "boss")!.encounter![0]).toBe("abyssmaw");
+      }
+    }
+    expect(ledges).toBeGreaterThan(0);
+    expect(cliffs).toBeGreaterThan(0);
+    expect(plenty).toBeGreaterThan(0);
+  });
+  it("벼랑길: 밧줄을 걸면 반드시 건넌다", () => {
+    const s = hero();
+    enterDungeon(s);
+    const dg = s.dungeon!;
+    dg.sector = 5;
+    const room = dg.rooms[dg.current];
+    room.type = "trap";
+    room.trapKind = "ledge";
+    dg.pending = { kind: "trap" };
+    s.inventory.rope = 1;
+    apply(s, { t: "pending", choice: "rope" });
+    expect(s.inventory.rope).toBe(0);
+    expect(room.resolved).toBe(true);
+    expect(s.dungeon!.floor).toBe(1);
+  });
+  it("균열의 숨: 5섹터도 12시간마다 들숨(어둠)", () => {
+    const s = hero(602);
+    enterDungeon(s);
+    s.dungeon!.sector = 5;
+    s.dungeon!.clock = 0;
+    expect(isNight(s)).toBe(false);
+    s.dungeon!.clock = BAL.dayNightTurns;
+    expect(isNight(s)).toBe(true);
+  });
+  it("신앙 ★5는 4섹터를 클리어해야, 신앙심 180", () => {
+    const s = hero(603);
+    s.faithsKnown = [FAITH.mob];
+    s.hero.faith = FAITH.mob;
+    s.piety = 190;
+    s.rank = 3;
+    expect(tier(s)).toBe(4);
+    s.rank = 4;
+    expect(tier(s)).toBe(5);
+  });
+  it("기아/풍요의 신 ★5: 굶주려도 아사하지 않는다", () => {
+    const s = hero(604);
+    s.faithsKnown = [FAITH.starve];
+    s.hero.faith = FAITH.starve;
+    s.piety = 190;
+    s.rank = 4;
+    enterDungeon(s);
+    s.inventory.food = 0;
+    s.hero.satiety = 0;
+    passTime(s, BAL.starveLimitTurns + 10);
+    expect(s.phase).toBe("dungeon");
+  });
+  it("5섹터 몬스터는 사람이 아니고 편린이 있다", () => {
+    for (const id of ["riftbat", "tendril", "hungerwraith", "ledgespider", "voideye", "riftworm", "fallenheap", "hungermother", "abyssmaw"]) {
+      expect(MONSTERS[id].human).toBeFalsy();
+      expect(FRAGMENTS[id]).toBeDefined();
+    }
+  });
+});
+
+describe("퍼징 회귀(2026-10-15)", () => {
+  it("끝없는 미궁에서 균열 벌레를 쓰러뜨려도 바닥이 꺼지지 않는다(꺼진 바닥으로 떨어지면 층 생성이 깨졌다)", () => {
+    const s = newRun(701);
+    apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    s.month = 30;
+    s.hero.level = 16;
+    enterDungeon(s);
+    const dg = s.dungeon!;
+    dg.sector = ENDLESS_SECTOR;
+    dg.endless = true;
+    dg.rooms = generateEndlessFloor(new Rng({ s: 5 }), 1);
+    s.hero.hp = 9999;
+    for (let i = 0; i < 30; i++) {
+      s.combat = null;
+      const room = dg.rooms[dg.current];
+      room.type = "combat";
+      room.resolved = false;
+      startCombat(s, "dungeon", makeEnemies(s, ["riftworm"]).map((e) => ({ ...e, hp: 1 })));
+      expect(dg.rooms.every((r) => r.type !== "trap")).toBe(true);
+    }
   });
 });

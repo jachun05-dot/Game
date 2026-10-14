@@ -37,11 +37,12 @@ export function mod(v: number): number {
 export function maxHp(s: GameState): number {
   // DESIGN 7·8절: CON 보정치가 레벨마다 고정 누적. 기본 HP는 미정이라 임시값.
   const cls = CLASSES[s.hero.cls];
-  return Math.max(1, BAL.baseHp + cls.hp + (Math.max(BAL.minHpPerLevel, smod(s, "con")) + cls.hpPerLevel) * s.hero.level + passive(s, "hp") + injuryMaxHp(s) + faithMaxHp(s) - (s.bloodPrice ? 5 : 0));
+  return Math.max(1, BAL.baseHp + cls.hp + (Math.max(BAL.minHpPerLevel, smod(s, "con")) + cls.hpPerLevel) * s.hero.level + passive(s, "hp") + injuryMaxHp(s) + faithMaxHp(s) - (s.bloodPrice ? 5 : 0) + (s.dungeon?.songHp ?? 0));
 }
 
 export function heroAc(s: GameState): number {
-  return 10 + smod(s, "dex") + passive(s, "ac") + injuryAc(s) + offhandAcPenalty(s) + rageAc(s) + abyssEdge(s, s.hero.hp / maxHp(s)).ac;
+  return 10 + smod(s, "dex") + passive(s, "ac") + injuryAc(s) + offhandAcPenalty(s) + rageAc(s) + abyssEdge(s, s.hero.hp / maxHp(s)).ac
+    + (power(s, "greed", 5) && s.dungeon ? Math.min(3, Math.floor(s.dungeon.mana / 1000)) : 0); // 탐욕의 신 ★5 "황금의 몸"
 }
 
 export function actionsPerRound(s: GameState): number {

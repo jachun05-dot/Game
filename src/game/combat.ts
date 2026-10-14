@@ -9,6 +9,7 @@ import { activeSkills, passive, skillWorks, SKILLS, type SkillDef } from "./skil
 import { GEAR, gearHas, hasShield, weaponCorrosion, weaponOf } from "./gear";
 import { corrode, moldAfflict, paraFires, paralyze, poisonAfflict, poisonOf } from "./hazards";
 import { blastDamage, burnWound, chill, stagnant, windy } from "./fire";
+import { grabMult } from "./rift";
 import { MARK_FOR_SKILL, SKILL_LEVEL, type ElementKey } from "./elements";
 
 const GEAR_IS_WEAPON = (id: string) => !!GEAR[id]?.weapon;
@@ -107,6 +108,16 @@ export function startCombat(s: GameState, context: CombatState["context"], enemi
     if (mineOpening(s, c)) return;
     if (alive(c).length === 0) return finish(s, "win");
   }
+  // 재앙의 신 ★5 "재앙의 주인": 가방에 넣은 함정 하나를 터뜨린다
+  if (context === "dungeon" && (s.dungeon?.trapStock ?? 0) > 0 && alive(c).length) {
+    s.dungeon!.trapStock! -= 1;
+    const t = strongest(c);
+    const dmg = rngOf(s).dice(2, 6);
+    dealt(c, t, dmg, "trap5");
+    log(s, `【${GODS.trap.name}】 재앙의 주인 — 가방에서 꺼낸 함정이 ${MONSTERS[t.defId].name}의 발밑에서 터졌다. ${dmg} 피해 (남은 함정 ${s.dungeon!.trapStock})`, "skill");
+    if (t.hp <= 0) killed(s, c, t);
+    if (alive(c).length === 0) return finish(s, "win");
+  }
   // 재앙의 신 ★4 "함정 다루기": 챙겨 둔 함정을 적 하나에게 터뜨린다
   if (context === "dungeon" && s.dungeon?.trapCharge && alive(c).length) {
     s.dungeon.trapCharge = false;
@@ -120,8 +131,11 @@ export function startCombat(s: GameState, context: CombatState["context"], enemi
     }
     if (alive(c).length === 0) return finish(s, "win");
   }
-  // 망각의 신 ★3 "망각의 장막"
-  if (power(s, "oblivion", 3)) {
+  // 망각의 신 ★5 "완전한 망각": 2라운드(보스·정예 1라운드) / ★3 "망각의 장막": 1라운드
+  if (power(s, "oblivion", 5)) {
+    for (const foe of alive(c)) foe.stun = (foe.stun ?? 0) + (bossy(foe) ? 1 : 2);
+    log(s, `【${GODS.oblivion.name}】 완전한 망각 — 적들이 당신이 거기 있다는 것을 잊었다.`, "skill");
+  } else if (power(s, "oblivion", 3)) {
     for (const foe of alive(c)) foe.stun = (foe.stun ?? 0) + 1;
     log(s, `【${GODS.oblivion.name}】 망각의 장막 — 적들이 잠시 당신이 거기 있다는 것을 잊었다.`, "skill");
   }
@@ -254,6 +268,7 @@ export function startCombat(s: GameState, context: CombatState["context"], enemi
     if (isDead(s)) return;
     enemyPhase(s, c);
     if (isDead(s)) return;
+    if (c.dragged) return finish(s, "fled"); // 벼랑에서 끌려 떨어졌다
     c.halfDmg = false;
     if (c.rampage) c.rampage -= 1;
     if (c.halfRounds) c.halfRounds -= 1;
@@ -550,6 +565,7 @@ function enemyHitBonus(s: GameState, c: CombatState, e: Enemy): number {
   if (def.nocturnal && isNight(s)) b += 1;
   if (def.water && inWater(s)) b += 1; // 물이 높을 때 잠긴 방의 물짐승
   if (has2(s, "shadowBody")) b -= 1; // 그림자 몸
+  if (def.hungerHit && s.hero.satiety <= 30) b += 2; // 굶주린 상대에게 허기가 꽂힌다
   if ((def.heat === "fire" && stagnant(s)) || (def.heat === "frost" && windy(s))) b += 1; // 4섹터 환기
   if (!def.rally && c.rally) b += c.rally;
   return b;
@@ -682,12 +698,101 @@ function roundEnd(s: GameState, c: CombatState): void {
     }
   }
   if (has2(s, "fragRegen") && s.hero.hp < maxHp(s)) s.hero.hp = Math.min(maxHp(s), s.hero.hp + 1);
+  if (riftRoundEnd(s, c)) return;
   // 균모의 편린 "균사 재생"
   if (has2(s, "fragMycelium") && s.hero.hp < maxHp(s)) s.hero.hp = Math.min(maxHp(s), s.hero.hp + (s.disease > 0 ? 2 : 1));
 }
 
 function has2(s: GameState, id: string): boolean {
   return s.skills.includes(id) || s.fragments.some((f) => FRAGMENTS[f]?.skill === id);
+}
+
+/** 5섹터·★5 피해 보너스: 기아의 얼굴(이 층 +2), 두 얼굴의 그릇(굶주리면 +2), 끝없는 허기, 끝나지 않는 전쟁 */
+function riftDmg(s: GameState, c: CombatState): number {
+  const dg = s.dungeon;
+  return (dg && dg.famineFloor === dg.floor && dg.sector === 5 ? 2 : 0)
+    + (s.hero.satiety <= 30 && gearHas(s, (g) => g.twoFace).length ? 2 : 0)
+    + (has2(s, "fragEndlessHunger") && hpPct(s) <= 50 ? (s.hero.satiety <= 0 ? 5 : 3) : 0)
+    + (c.warStack ?? 0);
+}
+
+/** 5섹터 몬스터가 명중했을 때: 허기 공격, 붙잡기, 밀쳐 떨어뜨리기(벼랑 위) */
+function riftHit(s: GameState, c: CombatState, e: Enemy): void {
+  const def = MONSTERS[e.defId];
+  const r = rngOf(s);
+  const dg = s.dungeon;
+  if (def.hungerHit) {
+    s.hero.satiety = Math.max(0, s.hero.satiety - def.hungerHit);
+    log(s, `허기가 옮아온다. 배 속이 텅 빈다. (포만감 −${def.hungerHit})`, "hurt");
+  }
+  const onCliff = !!dg && c.context === "dungeon" && (dg.rooms[dg.current]?.cliff || (dg.sector === 5 && dg.rooms[dg.current]?.type === "boss"));
+  if (def.grab && r.chance(def.grab * grabMult(s, !!def.maw))) {
+    c.grabbed = true;
+    log(s, `${josa(def.name, "이")} 몸을 휘감았다! (다음 라운드 행동 불가)`, "hurt");
+    if (onCliff) {
+      const ck = check(s, "dex", 12);
+      if (!ck.ok) {
+        log(s, `휘감긴 채 벼랑 끝으로 끌려간다 — 발이 허공을 디뎠다! (민첩 ${ck.total} vs 12)`, "hurt");
+        c.dragged = true;
+        return;
+      }
+    }
+  }
+  if (def.pushOff && onCliff && r.chance(def.pushOff) && !power(s, "abyss", 5)) {
+    const ck = check(s, "dex", 12);
+    if (!ck.ok) {
+      log(s, `${josa(def.name, "이")} 발 디딘 바위를 흔들었다 — 벼랑 아래로 떨어진다! (민첩 ${ck.total} vs 12)`, "hurt");
+      c.dragged = true;
+    } else log(s, `벼랑 끝에서 간신히 버텼다. (민첩 ${ck.total} vs 12)`, "system");
+  }
+}
+
+/** 5섹터·★5 라운드 끝: 응시(절망), 삼킴(포만감), 아귀의 깨물기·촉수 재생·광란, 끝나지 않는 전쟁. 죽었으면 true */
+function riftRoundEnd(s: GameState, c: CombatState): boolean {
+  const r = rngOf(s);
+  for (const e of alive(c)) {
+    const def = MONSTERS[e.defId];
+    if (def.gaze && (e.stun ?? 0) <= 0 && r.chance(def.gaze)) afflict(s, "despair", 1, `${def.name}과 눈이 마주쳤다. 바닥이 보이지 않는다.`);
+    if (def.devour && r.chance(def.devour)) {
+      s.hero.satiety = Math.max(0, s.hero.satiety - 15);
+      log(s, `${josa(def.name, "이")} 주위의 모든 것을 삼킨다. 배가 꺼진다. (포만감 −15)`, "hurt");
+    }
+    if (def.maw) {
+      const max = e.hpMax ?? def.hp;
+      // 광란에 들어서면 AC −2(한 번)
+      if (e.hp <= max / 2 && !(e.acDown && e.acDown >= 2)) {
+        e.acDown = (e.acDown ?? 0) + 2;
+        log(s, `${josa(def.name, "이")} 굶주린 광란에 빠졌다! 미친 듯이 삼키지만 빈틈이 생긴다. (공격 2번, AC −2)`, "hurt");
+      }
+      // 붙잡힌 상대를 3라운드마다 깨문다
+      if (c.round % 3 === 0 && c.grabbed) {
+        const dmg = r.dice(2, 10);
+        s.hero.hp -= dmg;
+        const keep = power(s, "hunger", 2);
+        if (!keep) s.hero.satiety = Math.max(0, s.hero.satiety - 20);
+        log(s, `${josa(def.name, "이")} 붙잡힌 몸을 통째로 깨물었다! ${dmg} 피해${keep ? "" : " (포만감 −20)"}`, "hurt");
+        if (s.hero.hp <= 0) {
+          s.hero.hp = 0;
+          kill(s, "single", `${def.name}에게 삼켜졌다`);
+          if (isDead(s)) return true;
+        }
+      }
+    }
+  }
+  // 다시 자라는 촉수
+  if (c.regrow?.at.includes(c.round) && c.enemies.some((x) => MONSTERS[x.defId].maw && x.hp > 0)) {
+    c.regrow.at = c.regrow.at.filter((x) => x !== c.round);
+    c.regrow.count += 1;
+    const t: Enemy = { uid: s.nextUid++, defId: "tendril", hp: MONSTERS.tendril.hp };
+    c.enemies.push(t);
+    log(s, "끊어진 자리에서 그림자 촉수가 다시 자라난다!", "hurt");
+  }
+  // 전쟁의 신 ★5 "끝나지 않는 전쟁": 적이 셋 이상이면 라운드마다 피해 +2(최대 +6)
+  if (power(s, "war", 5) && alive(c).length >= 3 && (c.warStack ?? 0) < 6) {
+    c.warStack = (c.warStack ?? 0) + 2;
+    log(s, `【${GODS.war.name}】 끝나지 않는 전쟁 — 피가 끓는다. (피해 +${c.warStack})`, "skill");
+  }
+  return false;
 }
 
 /** 희귀 개체는 정해진 라운드가 지나면 달아난다 */
@@ -719,6 +824,17 @@ function gainLoot(s: GameState, c: CombatState, defId: string, stolen = false): 
   if (s.hero.satiety <= 0 && power(s, "hunger", 4)) {
     s.hero.satiety = 20;
     log(s, `【${GODS.hunger.name}】 굶주린 자의 식탁 — 쓰러진 것의 기운으로 허기를 달랬다. (포만감 +20)`, "skill");
+  }
+  // 굶주린 망령: 삼킨 것을 토해 낸다(말린 고기)
+  if (def.meat && rngOf(s).chance(def.meat)) {
+    s.inventory.food += 1;
+    log(s, `${josa(def.name, "이")} 삼켰던 것을 토해 냈다. 아직 먹을 만한 말린 고기 1개. (말린 고기 ${s.inventory.food})`, "good");
+  }
+  if (has2(s, "fragDevour")) s.hero.satiety = Math.min(100, s.hero.satiety + 5); // 삼키는 입
+  // 심연의 아귀가 있으면 쓰러진 촉수가 2라운드 뒤 다시 자란다(전투당 2번)
+  if (defId === "tendril" && c.enemies.some((x) => MONSTERS[x.defId].maw && x.hp > 0)) {
+    c.regrow ??= { count: 0, at: [] };
+    if (c.regrow.count + c.regrow.at.length < 2) c.regrow.at.push(c.round + 2);
   }
   // 광차 미믹: 쓰러지면 배 속 화약이 터진다
   if (def.deathBlast) {
@@ -794,6 +910,12 @@ function selfTriggers(s: GameState, c: CombatState): void {
 }
 
 function playerPhase(s: GameState, c: CombatState, opener: Strike | null): "win" | "fled" | null {
+  // 붙잡혔다: 이번 라운드 행동 불가
+  if (c.grabbed) {
+    c.grabbed = false;
+    log(s, "휘감긴 몸을 빼내느라 아무것도 하지 못했다.", "miss");
+    return null;
+  }
   // 머리 중상: 라운드마다 기절
   if (lvl(s, "head") >= 2 && rngOf(s).chance(HEAD_STUN)) {
     log(s, "머리가 울려 눈앞이 하얘졌다 — 몸이 움직이지 않는다.", "miss");
@@ -911,7 +1033,7 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
     : 0;
   const fury = has(s, "berserkMark") && hpPct(s) <= 50 ? 3 : 0; // 광전의 각인
   const base = (w.magic ? rollDice(s, w.dice[0] * (crit ? critMult(s) : 1), w.dice[1]) : r.dice(w.dice[0] * (crit ? critMult(s) : 1), w.dice[1])) + magicDmg + fury + statMod + passive(s, "dmg") + st.dmg + faithDmg(s) + rageDmg(s) + abyssEdge(s, s.hero.hp / maxHp(s)).dmg + wc.dmg + (c.lastStand ? 3 : 0)
-    + (c.pain ?? 0) + (has(s, "berserkSeal") && hpPct(s) <= 50 ? 5 : 0) + (w.magic && has(s, "fireAvatar") ? 4 : 0);
+    + (c.pain ?? 0) + (has(s, "berserkSeal") && hpPct(s) <= 50 ? 5 : 0) + (w.magic && has(s, "fireAvatar") ? 4 : 0) + riftDmg(s, c);
   const dmg = Math.max(1, Math.round(base * st.mult));
   dealt(c, target, dmg, st.src ?? "attack");
   if (crit) note(s, "luk");
@@ -925,7 +1047,7 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
     }
   }
   // 역병의 신 ★2 "전염"
-  if (target.hp > 0 && !target.sick && s.disease > 0 && power(s, "plague", 2) && r.chance(0.25)) {
+  if (target.hp > 0 && !target.sick && s.disease > 0 && power(s, "plague", 2) && (r.chance(0.25) || (s.disease >= 2 && power(s, "plague", 5)))) {
     target.sick = true;
     log(s, `【${GODS.plague.name}】 ${josa(def.name, "이")} 병에 옮았다.`, "skill");
   }
@@ -1010,7 +1132,7 @@ function selfInjury(s: GameState, defId: string, magic?: boolean): void {
   const r = rngOf(s);
   const fists = weaponOf(s).verb === "주먹을 휘둘러";
   if (fists && r.chance(INJ.fistSelf)) wound(s, "main", "맨주먹으로 내리치다 손을 다쳤다");
-  else if (MONSTERS[defId]?.hard && !gearHas(s, (g) => g.noHardSelf).length && r.chance(INJ.hardSelf)) wound(s, "main", `${MONSTERS[defId].name}의 단단한 몸을 치다 손목이 꺾였다`);
+  else if (MONSTERS[defId]?.hard && !gearHas(s, (g) => g.noHardSelf).length && !has2(s, "fragRockTooth") && r.chance(INJ.hardSelf)) wound(s, "main", `${MONSTERS[defId].name}의 단단한 몸을 치다 손목이 꺾였다`);
 }
 
 /** 맞았을 때 부상 확률 배율: 수호의 각인·흔들리지 않는 자·산의 뼈·백전노장 절반, 노련함 −25% */
@@ -1082,12 +1204,20 @@ function tryFlee(s: GameState, c: CombatState): boolean {
     return true;
   }
   log(s, `도망치려 했지만 막혔다! (${roll}+${bonus} vs ${dc})`, "miss");
+  // 5섹터 보스방(틈 위의 전장): 도주에 실패하면 30% 바닥 없는 틈으로
+  const dg = s.dungeon;
+  if (dg && dg.sector === 5 && !dg.endless && dg.rooms[dg.current]?.type === "boss" && rngOf(s).chance(0.3)) {
+    log(s, "물러서다 바위 끝을 디뎠다 — 몸이 틈 아래로 미끄러진다!", "hurt");
+    c.dragged = true;
+    return true;
+  }
   return false;
 }
 
 function enemyPhase(s: GameState, c: CombatState): void {
   const r = rngOf(s);
-  const attackers = alive(c);
+  // 심연의 아귀 광란: HP 절반 아래면 두 번 공격
+  const attackers = alive(c).flatMap((e) => (MONSTERS[e.defId].maw && e.hp <= (e.hpMax ?? MONSTERS[e.defId].hp) / 2 ? [e, e] : [e]));
   let ac = heroAc(s) + (c.guard?.ac ?? 0);
   // 왼손 마비: 이번 라운드 방패를 들지 못한다
   if (hasShield(s) && paraFires(s, "offhand")) {
@@ -1145,6 +1275,7 @@ function enemyPhase(s: GameState, c: CombatState): void {
     if (c.fury) dmg += c.fury.taken; // 광폭화 대가
     if (c.halfDmg || (c.halfRounds ?? 0) > 0 || (has(s, "guardAvatar") && hpPct(s) <= 25)) dmg = Math.max(1, Math.ceil(dmg / 2)); // 성벽·불굴
     if (def.drain) dmg += 1; // 피를 빤다
+    if (def.devour && s.hero.satiety <= 0) dmg += 3; // 허기의 어미: 굶주린 상대에게
     s.hero.hp -= dmg;
     // 포자 갑옷(때린 적이 기침)
     if (has2(s, "fragSporeArmor") && r.chance(0.1)) e.stun = Math.max(e.stun ?? 0, 1);
@@ -1163,6 +1294,9 @@ function enemyPhase(s: GameState, c: CombatState): void {
     log(s, `${josa(def.name, "이")} ${charge ? "돌진해 " : ""}${def.attackText}! ${dmg} 피해${crit ? " (치명타!)" : ""}`, "hurt");
     if (s.hero.hp > 0) {
       hitInjury(s, def.id, dmg, crit, e);
+      if (isDead(s)) return;
+      riftHit(s, c, e);
+      if (c.dragged) return;
       if (isDead(s)) return;
       // 비명(혼란)·함성(공포)
       if (def.scream) afflict(s, "confusion", def.scream, `${def.name}의 비명이 머릿속을 긁고 지나간다.`);
@@ -1226,8 +1360,8 @@ function enemyPhase(s: GameState, c: CombatState): void {
         continue;
       }
       s.hero.hp = 0;
-      const cause = attackers.length >= 2 ? "mob" : "single";
-      kill(s, cause, cause === "mob" ? `${describeGroup(attackers)}에게 둘러싸여 쓰러졌다` : `${def.name}에게 쓰러졌다`);
+      const cause = new Set(attackers).size >= 2 ? "mob" : "single";
+      kill(s, cause, cause === "mob" ? `${describeGroup([...new Set(attackers)])}에게 둘러싸여 쓰러졌다` : `${def.name}에게 쓰러졌다`);
       return;
     }
     note(s, "con");

@@ -357,7 +357,7 @@ export function FaithCard({ s }: { s: GameState }) {
       ) : (
         <>
           <p className="small">
-            <b>{g.name}</b> <span className="dim">· {g.align}</span> <span className="accent">{"★".repeat(t)}{"☆".repeat(Math.max(0, (s.rank >= FAITH_BAL.tier4Rank ? 4 : 3) - t))}</span>
+            <b>{g.name}</b> <span className="dim">· {g.align}</span> <span className="accent">{"★".repeat(t)}{"☆".repeat(Math.max(0, (s.rank >= FAITH_BAL.tier5Rank ? 5 : s.rank >= FAITH_BAL.tier4Rank ? 4 : 3) - t))}</span>
           </p>
           <div className="faith-line">
             <span className="small dim">신앙심</span>
@@ -368,7 +368,7 @@ export function FaithCard({ s }: { s: GameState }) {
             {g.powers.map((p, i) => (
               <li key={i} className={t > i ? "" : "empty"}>
                 <span className={`skill-kind${t > i ? " active" : ""}`}>★{i + 1} · {PIETY_TIERS[i]}</span>
-                <span className={`small${t > i ? "" : " dim"}`}>{p}{i === 3 && s.rank < FAITH_BAL.tier4Rank ? " (3섹터를 클리어하면 열린다 — 신앙심 상한도 200으로)" : ""}</span>
+                <span className={`small${t > i ? "" : " dim"}`}>{p}{i === 3 && s.rank < FAITH_BAL.tier4Rank ? " (3섹터를 클리어하면 열린다 — 신앙심 상한도 200으로)" : i === 4 && s.rank < FAITH_BAL.tier5Rank ? " (4섹터를 클리어하면 열린다)" : ""}</span>
               </li>
             ))}
           </ul>

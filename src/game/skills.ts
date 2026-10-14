@@ -273,6 +273,25 @@ Object.assign(SKILLS, {
   fragTwoBloods: { id: "fragTwoBloods", name: "두 개의 피", kind: "passive", desc: "화상·동상 부위가 결손까지 가지 않는다(중상에서 멈춤)" },
 } satisfies Record<string, SkillDef>);
 
+// 편린 능력(5섹터). 벼랑·추락·허기·절망은 rift.ts·combat.ts가 id로 처리
+Object.assign(SKILLS, {
+  fragEcho: { id: "fragEcho", name: "반향", kind: "passive", desc: "어둠(들숨) 엿보기 페널티 없음" },
+  fragWrap: {
+    id: "fragWrap", name: "휘감기", kind: "active", desc: "전투 시작 시 가장 강한 적이 1라운드 행동 불가",
+    trigger: { on: "start" }, effect: { type: "stunOne", rounds: 1, text: "그림자가 뻗어 나가 휘감는다 —" }, uses: 1,
+  },
+  fragEndureHunger: { id: "fragEndureHunger", name: "허기 견디기", kind: "passive", desc: "포만감 소모 −20%", passive: { hunger: 0.8 } },
+  fragSpiderFeet: { id: "fragSpiderFeet", name: "거미 발", kind: "passive", desc: "벼랑길 판정 +3" },
+  fragFaceVoid: { id: "fragFaceVoid", name: "마주 보기", kind: "passive", desc: "절망에 걸릴 확률 절반" },
+  fragRockTooth: { id: "fragRockTooth", name: "바위 이빨", kind: "passive", desc: "단단한 적을 쳐도 자기 손을 다치지 않는다" },
+  fragFallen: { id: "fragFallen", name: "떨어진 것들", kind: "passive", desc: "추락 피해 절반" },
+  fragDevour: { id: "fragDevour", name: "삼키는 입", kind: "passive", desc: "적을 쓰러뜨리면 포만감 +5" },
+  fragEndlessHunger: { id: "fragEndlessHunger", name: "끝없는 허기", kind: "passive", desc: "HP 50% 이하일 때 피해 +3(굶주리면 +5)" },
+} satisfies Record<string, SkillDef>);
+
+// "마주 보기": 절망 확률 절반
+mindResist.push((s, k) => (k === "despair" && fragSkills(s).includes("fragFaceVoid") ? 0.5 : 1));
+
 // 마법사 원소 기술(elements.ts의 레벨표). 효과 처리는 combat.ts
 const E = (el: ElementKey, defs: Record<string, Omit<SkillDef, "el">>) => Object.fromEntries(Object.entries(defs).map(([k, v]) => [k, { ...v, el }]));
 Object.assign(SKILLS, E("fire", {
