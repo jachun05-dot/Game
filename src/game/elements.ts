@@ -20,10 +20,10 @@ export const ELEMENTS: Record<ElementKey, { name: string; stat: StatKey; mark: s
 
 /** 원소 수련을 받아 이 레벨이 되면 배우는 기술(10레벨은 3섹터와 함께 예정) */
 export const ELEMENT_SKILLS: Record<ElementKey, Record<number, string>> = {
-  fire: { 2: "fireEmber", 3: "fireArrow", 4: "fireMark", 5: "fireBlast", 6: "fireHeat", 7: "fireSea", 8: "fireWill", 9: "fireBlaze" },
-  frost: { 2: "frostCalm", 3: "frostArrow", 4: "frostMark", 5: "frostArmor", 6: "frostTouch", 7: "frostPrison", 8: "frostEye", 9: "frostStorm" },
-  bolt: { 2: "boltStep", 3: "boltArrow", 4: "boltMark", 5: "boltChain", 6: "boltStatic", 7: "boltStrike", 8: "boltLuck", 9: "boltOvercharge" },
-  earth: { 2: "earthSkin", 3: "earthSling", 4: "earthMark", 5: "earthWall", 6: "earthLevel", 7: "earthPrison", 8: "earthRoot", 9: "earthQuake" },
+  fire: { 2: "fireEmber", 3: "fireArrow", 4: "fireMark", 5: "fireBlast", 6: "fireHeat", 7: "fireSea", 8: "fireWill", 9: "fireBlaze", 10: "fireSeal", 11: "fireLance", 12: "fireBody", 13: "fireMeteor", 14: "fireBlood", 15: "firePhoenix", 16: "fireAvatar" },
+  frost: { 2: "frostCalm", 3: "frostArrow", 4: "frostMark", 5: "frostArmor", 6: "frostTouch", 7: "frostPrison", 8: "frostEye", 9: "frostStorm", 10: "frostSeal", 11: "frostLance", 12: "frostBlood", 13: "frostZero", 14: "frostCool", 15: "frostWard", 16: "frostAvatar" },
+  bolt: { 2: "boltStep", 3: "boltArrow", 4: "boltMark", 5: "boltChain", 6: "boltStatic", 7: "boltStrike", 8: "boltLuck", 9: "boltOvercharge", 10: "boltSeal", 11: "boltThunder", 12: "boltSense", 13: "boltFall", 14: "boltReflect", 15: "boltStorm", 16: "boltAvatar" },
+  earth: { 2: "earthSkin", 3: "earthSling", 4: "earthMark", 5: "earthWall", 6: "earthLevel", 7: "earthPrison", 8: "earthRoot", 9: "earthQuake", 10: "earthSeal", 11: "earthLance", 12: "earthBone", 13: "earthWrath", 14: "earthHeart", 15: "earthSlide", 16: "earthAvatar" },
 };
 
 export function isElement(id: string): id is ElementKey {
@@ -44,9 +44,9 @@ export const STYLES: Record<StyleKey, { name: string; mark: string }> = {
   berserk: { name: "광전", mark: "berserkMark" },
 };
 export const STYLE_SKILLS: Record<StyleKey, Record<number, string>> = {
-  guard: { 2: "tough", 3: "shieldBash", 4: "guardMark", 5: "holdFast", 6: "shieldCraft", 7: "shieldCounter", 8: "ironBody", 9: "grit" },
-  glad: { 2: "sharpEdge", 3: "riposte", 4: "gladMark", 5: "parryCounter", 6: "lightStep", 7: "chainSlash", 8: "readGap", 9: "finisher" },
-  berserk: { 2: "roughPower", 3: "wideSweep", 4: "berserkMark", 5: "charge", 6: "bloodThirst", 7: "frenzy", 8: "painless", 9: "smash" },
+  guard: { 2: "tough", 3: "shieldBash", 4: "guardMark", 5: "holdFast", 6: "shieldCraft", 7: "shieldCounter", 8: "ironBody", 9: "grit", 10: "guardSeal", 11: "shieldCharge", 12: "unshaken", 13: "rampart", 14: "steelWill", 15: "lastGuard", 16: "guardAvatar" },
+  glad: { 2: "sharpEdge", 3: "riposte", 4: "gladMark", 5: "parryCounter", 6: "lightStep", 7: "chainSlash", 8: "readGap", 9: "finisher", 10: "gladSeal", 11: "swordDance", 12: "arenaSense", 13: "oneFlash", 14: "flowWater", 15: "deathDance", 16: "gladAvatar" },
+  berserk: { 2: "roughPower", 3: "wideSweep", 4: "berserkMark", 5: "charge", 6: "bloodThirst", 7: "frenzy", 8: "painless", 9: "smash", 10: "berserkSeal", 11: "greatCleave", 12: "burningBlood", 13: "berserkFury", 14: "painPower", 15: "doomStrike", 16: "berserkAvatar" },
 };
 
 // ── 모험가 훈련(2026-10-14): 전사형(힘·체력)·마법사형(지능·감각)·민첩형(민첩·행운). 전문 직업보다 좁고 얕다 ──
@@ -58,9 +58,9 @@ export const BRANCHES: Record<BranchKey, { name: string; mark: string }> = {
   rogue: { name: "민첩형", mark: "shadowMark" },
 };
 export const BRANCH_SKILLS: Record<BranchKey, Record<number, string>> = {
-  fighter: { 2: "swordHand", 3: "sweep", 4: "fighterMark", 5: "parry", 6: "tough", 7: "doubleSlash", 8: "toughMuscle", 9: "finisher" },
-  caster: { 2: "manaSense", 3: "magicMissile", 4: "casterMark", 5: "fireBurst", 6: "firstAid", 7: "frostPrison", 8: "keenSense", 9: "boltChain" },
-  rogue: { 2: "lightStep", 3: "pickpocket", 4: "shadowMark", 5: "shadowStep", 6: "trapHand", 7: "smoke", 8: "luckyStrike", 9: "vitalStab" },
+  fighter: { 2: "swordHand", 3: "sweep", 4: "fighterMark", 5: "parry", 6: "tough", 7: "doubleSlash", 8: "toughMuscle", 9: "finisher", 10: "fighterSeal", 11: "spinSlash", 12: "veteran", 13: "duel", 14: "battleSense", 15: "counterStance", 16: "fighterAvatar" },
+  caster: { 2: "manaSense", 3: "magicMissile", 4: "casterMark", 5: "fireBurst", 6: "firstAid", 7: "frostPrison", 8: "keenSense", 9: "boltChain", 10: "casterSeal", 11: "elemArrow", 12: "scholar", 13: "elemStorm", 14: "manaShield", 15: "blink", 16: "casterAvatar" },
+  rogue: { 2: "lightStep", 3: "pickpocket", 4: "shadowMark", 5: "shadowStep", 6: "trapHand", 7: "smoke", 8: "luckyStrike", 9: "vitalStab", 10: "shadowSeal", 11: "poisonBlade", 12: "trapMaster", 13: "assassinate", 14: "shadowBody", 15: "vanish", 16: "rogueAvatar" },
 };
 
 /** 레벨표가 있는 훈련(마법사 원소·전사 방향·모험가 갈래) */
@@ -86,8 +86,17 @@ for (const table of Object.values(LEVEL_TABLES)) {
   for (const [lv, id] of Object.entries(table)) SKILL_LEVEL[id] = Math.min(SKILL_LEVEL[id] ?? 99, Number(lv));
 }
 
-/** 이 기술을 전투당 1회 더 쓰게 해 주는 각인들(그 기술이 들어 있는 레벨표의 특화 패시브) */
+/** 특수 훈련 레벨(보스 증표): 4·10·16 짝수 = 특화 패시브(각인·낙인·화신), 7·13 홀수 = 특화 액티브(13은 궁극기) */
+export const SPECIAL_LEVELS = [4, 7, 10, 13, 16];
+/** 궁극기 레벨: 각인·낙인으로 횟수가 늘지 않는다 */
+export const ULTIMATE_LEVEL = 13;
+
+/** 이 기술을 전투당 1회 더 쓰게 해 주는 특화들: 그 레벨표의 각인(4)·낙인(10), 마법사형 화신(16 "대마도사의 길")은 한 번 더 */
 export const MARK_FOR_SKILL: Record<string, string[]> = {};
 for (const [line, table] of Object.entries(LEVEL_TABLES)) {
-  for (const id of Object.values(table)) if (id !== MARK_OF_LINE[line]) (MARK_FOR_SKILL[id] ??= []).push(MARK_OF_LINE[line]);
+  const boosters = [MARK_OF_LINE[line], table[10], ...(line === "caster" ? [table[16]] : [])].filter(Boolean);
+  for (const [lv, id] of Object.entries(table)) {
+    if (Number(lv) === ULTIMATE_LEVEL || boosters.includes(id)) continue;
+    for (const b of boosters) if (!(MARK_FOR_SKILL[id] ??= []).includes(b)) MARK_FOR_SKILL[id].push(b);
+  }
 }

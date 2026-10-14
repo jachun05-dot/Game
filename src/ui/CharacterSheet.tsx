@@ -122,6 +122,9 @@ export function CharacterSheet({ ctl }: { ctl: Ctl }) {
               {s.dungeon ? ` · 마석 ${s.dungeon.mana}G 어치` : ""}
               {s.inventory.heart > 0 ? ` · ${BAL.heartName} ${s.inventory.heart}` : ""}
               {s.inventory.banner > 0 ? ` · 장군의 녹슨 휘장 ${s.inventory.banner}` : ""}
+              {s.inventory.spore > 0 ? ` · 균모의 포자낭 ${s.inventory.spore}` : ""}
+              {s.inventory.antidote > 0 ? ` · 해독초 ${s.inventory.antidote}` : ""}
+              {s.inventory.whetstone > 0 ? ` · 숫돌 ${s.inventory.whetstone}` : ""}
             </p>
             <p className="dim small">읽은 기록물 {s.recordsRead}개</p>
           </Card>

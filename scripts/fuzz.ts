@@ -14,6 +14,8 @@ import { generateFloor } from "../src/game/dungeon";
 import { MONSTERS } from "../src/game/data";
 import { FRAGMENTS } from "../src/game/fragments";
 import { Rng } from "../src/game/rng";
+import { CLASSES as CLASS_DEFS } from "../src/game/classes";
+import { hasLevelTable, levelSkill } from "../src/game/elements";
 import { pietyCap } from "../src/game/faith";
 import { ENDLESS_SECTOR, LAST_SECTOR } from "../src/game/endless";
 import type { AutoGoal, GameState, StatKey } from "../src/game/types";
@@ -188,6 +190,26 @@ function setup(s: GameState, scen: string) {
     dg.prev = null;
     dg.turnsLeft = 300;
   }
+  if (scen === "late") {
+    // 고레벨: 2~16레벨 기술을 직업 갈래에서 무작위로 받은 채 3섹터로
+    const lines = CLASS_DEFS[s.hero.cls].trainings.filter(hasLevelTable);
+    s.skills = [];
+    for (let lv = 2; lv <= 16; lv++) { const id = levelSkill(pick(lines), lv); if (id && !s.skills.includes(id)) s.skills.push(id); }
+    s.hero.level = 16;
+    s.rank = 3;
+    for (const k of STAT_KEYS) s.hero.stats[k] += 10;
+    s.hero.hp = maxHp(s);
+    s.inventory.potion += 5;
+    s.inventory.food += 10;
+    s.week = 3;
+    s.phase = "week-result";
+    apply(s, { t: "closeWeek" });
+    apply(s, { t: "enterDungeon" });
+    const dg = s.dungeon!;
+    dg.sector = 3;
+    dg.rooms = generateFloor(r, 1, 3);
+    dg.turnsLeft = 400;
+  }
   if (scen === "heretic" && s.hero.faith) s.heretic = true;
   if (scen === "hurt") {
     for (const p of PARTS) if (p !== "head" && p !== "body") s.injuries[p] = r.int(0, 3);
@@ -223,7 +245,7 @@ for (let i = 0; i < N; i++) {
     apply(s, { t: "pickClass", cls });
     apply(s, { t: "autoGoal", goal });
     apply(s, { t: "create", name: "퍼즈", candidate: 0, faith });
-    const scen = SCEN === "mix" ? pick(["", "s2", "s3", "heretic", "hurt", "strong"]) : SCEN;
+    const scen = SCEN === "mix" ? pick(["", "s2", "s3", "late", "heretic", "hurt", "strong"]) : SCEN;
     setup(s, scen);
     let prevLevel = s.hero.level, prevRank = s.rank;
     for (; step < MAX_ACTIONS && s.phase !== "dead" && s.month <= 24; step++) {

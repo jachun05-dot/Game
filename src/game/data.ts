@@ -43,7 +43,7 @@ export const BAL = {
   /** 매달 상점가 물가가 오르는 폭 [최소, 최대](0.05 = 5%). [0, 0]이면 오르지 않는다 */
   inflation: [0.05, 0.1] as [number, number],
   /** 특수 훈련(이 레벨 → 다음 레벨) 수련비 */
-  specialTrainFee: { 6: 600, 9: 1000 } as Record<number, number>,
+  specialTrainFee: { 6: 600, 9: 1000, 12: 1500, 15: 2000 } as Record<number, number>,
   weekTurns: 336,
   moveTurns: 4,
   campTurns: 16,
@@ -325,10 +325,13 @@ export function bossGroup(sector: number, r: { int: (a: number, b: number) => nu
   return ["boss", ...Array(r.int(2, 3)).fill("rat")];
 }
 /** 섹터별 보스 증표(처음 쓰러뜨릴 때 한 번만) — 이 레벨에서 다음 레벨로 가는 훈련의 대가 */
-export const TROPHIES: { sector: number; item: "heart" | "banner" | "spore"; name: string; gateLevel: number }[] = [
+export const TROPHIES: { sector: number; item: "heart" | "banner" | "spore" | "scale" | "fang"; name: string; gateLevel: number }[] = [
   { sector: 1, item: "heart", name: "거대 쥐의 마석 심장", gateLevel: 3 },
   { sector: 2, item: "banner", name: "장군의 녹슨 휘장", gateLevel: 6 },
   { sector: 3, item: "spore", name: "균모의 포자낭", gateLevel: 9 },
+  // 4·5섹터는 아직 없다: 증표를 얻을 수 없으니 레벨 13·16 훈련은 그 섹터가 생길 때까지 닫혀 있다
+  { sector: 4, item: "scale", name: "화로 어미의 불씨 비늘", gateLevel: 12 },
+  { sector: 5, item: "fang", name: "아귀의 검은 이빨", gateLevel: 15 },
 ];
 /** 섹터 이름(차원문을 넘을 때·화면 제목) */
 export const SECTOR_NAME: Record<number, string> = { 1: "지하 감옥", 2: "잊힌 전쟁터의 초원", 3: "물에 잠긴 사원" };

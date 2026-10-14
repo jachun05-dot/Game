@@ -41,6 +41,8 @@ function fixRun(s: GameState | null): GameState | null {
   s.inventory.bandage ??= 0;
   s.inventory.herb ??= 0;
   s.inventory.spore ??= 0;
+  s.inventory.scale ??= 0;
+  s.inventory.fang ??= 0;
   s.inventory.whetstone ??= 0;
   s.inventory.antidote ??= 0;
   s.faithsKnown ??= s.hero.faith ? [s.hero.faith] : [];

@@ -15,7 +15,7 @@ import { FAITH } from "./data";
 import { maxHp } from "./core";
 import { injuryHit, injuryRollPenalty, lvl, wound } from "./injury";
 import { weaponOf } from "./gear";
-import { BRANCH_SKILLS, ELEMENT_SKILLS, STYLE_SKILLS } from "./elements";
+import { BRANCH_SKILLS, ELEMENT_SKILLS, MARK_FOR_SKILL, STYLE_SKILLS } from "./elements";
 import { SKILLS, activeSkills, passive } from "./skills";
 import { mindSummary } from "./mind";
 import { makeEnemies, startCombat } from "./combat";
@@ -1470,5 +1470,52 @@ describe("3섹터: 물에 잠긴 사원", () => {
     }
     expect(endlessPool()).not.toContain("mycomother");
     expect(endlessPool()).not.toContain("sweeper3");
+  });
+});
+
+describe("직업 기술 10~16레벨", () => {
+  const tables = [...Object.values(ELEMENT_SKILLS), ...Object.values(STYLE_SKILLS), ...Object.values(BRANCH_SKILLS)];
+  it("10갈래 모두 2~16레벨이 채워져 있고, 짝수는 패시브·홀수는 액티브", () => {
+    for (const tb of tables) {
+      for (let lv = 2; lv <= 16; lv++) {
+        const id = tb[lv];
+        expect(SKILLS[id], `${lv} ${id}`).toBeDefined();
+        expect(SKILLS[id].kind).toBe(lv % 2 === 0 ? "passive" : "active");
+      }
+    }
+  });
+  it("각인·낙인이 갈래 액티브를 1회씩 더(합쳐 +2), 궁극기는 늘지 않는다", () => {
+    expect(MARK_FOR_SKILL.fireLance).toEqual(["fireMark", "fireSeal"]);
+    expect(MARK_FOR_SKILL.fireMeteor).toBeUndefined();
+    expect(MARK_FOR_SKILL.elemArrow).toContain("casterAvatar");
+  });
+  it("12→13·15→16 훈련은 4·5섹터 증표가 있어야(아직 없는 섹터)", () => {
+    const s = newRun(401);
+    apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    s.month = 30;
+    s.gold = 99999;
+    s.hero.level = 12;
+    expect(canTrain(s)).toBe(false);
+    s.inventory.scale = 1;
+    expect(canTrain(s)).toBe(true);
+    expect(trainCost(s)).toBe(40 * 12 + 1500);
+    s.hero.level = 14;
+    expect(canTrain(s)).toBe(true);
+    s.hero.level = 15;
+    expect(canTrain(s)).toBe(false);
+  });
+  it("최후의 방어: 이 악물기를 미궁마다 두 번", () => {
+    const s = newRun(402);
+    apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    enterDungeon(s);
+    s.skills = ["grit", "lastGuard"];
+    let saves = 0;
+    for (let i = 0; i < 6 && s.phase !== "dead"; i++) {
+      s.combat = null;
+      s.hero.hp = 1;
+      startCombat(s, "dungeon", makeEnemies(s, ["general", "general", "general"]));
+      saves = s.tripUsed.filter((x) => x === "grit").length;
+    }
+    expect(saves).toBe(2);
   });
 });

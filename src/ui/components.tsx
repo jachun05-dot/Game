@@ -501,7 +501,11 @@ export function GearIcon({ id, scale = 1 }: { id?: string | null; scale?: number
 }
 
 /** 특수 훈련 레벨(보스 재료가 드는 훈련) */
-export const SPECIAL_LEVELS = [4, 7, 10];
+export { SPECIAL_LEVELS } from "../game/elements";
+import { SPECIAL_LEVELS, ULTIMATE_LEVEL } from "../game/elements";
+const LEVELS_2_16 = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+/** 특수 훈련 칸 이름 */
+const SPECIAL_KIND: Record<number, string> = { 4: "각인", 7: "특화", 10: "낙인", 13: "궁극기", 16: "화신" };
 
 /**
  * 직업 훈련 레벨표: 줄은 레벨, 칸은 훈련. 배운 칸 · 이번에 고를 수 있는 칸 · 놓친 칸 · 앞으로의 칸을 구분한다.
@@ -527,17 +531,17 @@ export function LevelTable({ s, selected, onPick }: { s: GameState; selected?: s
           </tr>
         </thead>
         <tbody>
-          {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((lv) => {
+          {LEVELS_2_16.map((lv) => {
             const special = SPECIAL_LEVELS.includes(lv);
             return (
               <tr key={lv} className={`${special ? "special" : ""}${lv === next ? " now" : ""}`}>
                 <th>
                   {lv}
-                  <span className="lv-kind">{special ? "특화" : lv % 2 === 0 ? "패시브" : "액티브"}</span>
+                  <span className="lv-kind">{special ? SPECIAL_KIND[lv] : lv % 2 === 0 ? "패시브" : "액티브"}</span>
                 </th>
                 {lines.map((line) => {
                   const id = levelSkill(line, lv);
-                  if (!id) return <td key={line} className="lt-future dim">{lv === 10 ? "3섹터" : "—"}</td>;
+                  if (!id) return <td key={line} className="lt-future dim">—</td>;
                   const sk = SKILLS[id];
                   const learned = s.skills.includes(id);
                   const state = learned ? "lt-learned" : lv === next ? "lt-next" : lv <= s.hero.level ? "lt-missed" : "lt-future";
@@ -562,7 +566,7 @@ export function LevelTable({ s, selected, onPick }: { s: GameState; selected?: s
         </tbody>
       </table>
       <p className="dim small lv-legend">
-        <span className="lg-learned">✓ 배움</span> · <span className="lg-next">이번 훈련</span> · <span className="lg-missed">놓침</span> · 🛡 방패가 있어야 발동. 짝수 레벨은 패시브, 홀수 레벨은 액티브, 4·7·10레벨은 보스 재료가 드는 특화.
+        <span className="lg-learned">✓ 배움</span> · <span className="lg-next">이번 훈련</span> · <span className="lg-missed">놓침</span> · 🛡 방패가 있어야 발동. 짝수 레벨은 패시브, 홀수 레벨은 액티브, 4·7·10·13·16레벨은 보스 증표가 드는 특화(각인·낙인은 그 갈래 액티브를 전투당 1회씩 더, {ULTIMATE_LEVEL}레벨 궁극기는 전투당 1회).
       </p>
     </div>
   );
@@ -573,7 +577,7 @@ export function BuildSummary({ s }: { s: GameState }) {
   const lines = CLASSES[s.hero.cls].trainings.filter(hasLevelTable);
   const parts = lines
     .map((line) => {
-      const ids = [2, 3, 4, 5, 6, 7, 8, 9, 10].map((lv) => levelSkill(line, lv)).filter((x): x is string => !!x);
+      const ids = LEVELS_2_16.map((lv) => levelSkill(line, lv)).filter((x): x is string => !!x);
       const n = ids.filter((id) => s.skills.includes(id)).length;
       const marked = SPECIAL_LEVELS.some((lv) => {
         const id = levelSkill(line, lv);

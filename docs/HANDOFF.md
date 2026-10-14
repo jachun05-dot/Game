@@ -27,7 +27,7 @@
 - `docs/DESIGN.md` 기획(14절 = 텍스트 진행 구조), `docs/DECISIONS.md` 결정 기록(시간순), `docs/NIGHT_LOG.md` 작업 일지
 - 직업 기술표: `docs/MAGE.md`, `docs/WARRIOR.md`, `docs/ADVENTURER.md` / 최신 밸런스 `docs/CLASS_BALANCE.md`
 - `docs/PROTOTYPE.md` 시스템별 구현 기록(절마다 날짜, 옛 절은 표시해 둠)
-- `docs/SKILLS_10_16_DRAFT.md` 직업 기술 10~16레벨 초안(결정 대기)
+- `docs/SKILLS_10_16_DRAFT.md` 직업 기술 10~16레벨(구현 완료, 13·16레벨 훈련은 4·5섹터 증표가 있어야)
 - `docs/SECTOR3_DRAFT.md` 3섹터 기획(구현 완료), `docs/SECTOR4_DRAFT.md`~`SECTOR6_DRAFT.md` 4~6섹터 초안
 - `docs/VISUAL_HANDOFF.md` 비주얼 세션 전달(분담 규칙, 아트 방향, UI 구조, 할 일 10절)
 
@@ -63,6 +63,6 @@
 - 지금 밸런스(탐험·신앙 없음): 12개월 1섹터 클리어 약 56~73%, 첫 달 사망 14~17%(`docs/CLASS_BALANCE.md`)
 
 ## 다음 후보
-- 3섹터 클리어 후 4섹터 숏컷, 4~6섹터(초안 있음), 레벨 10~16 직업 기술표(지금 레벨표는 9까지 — 10레벨 특수 훈련은 증표만 받고 배우는 기술 없음)
+- 3섹터 클리어 후 4섹터 숏컷, 4~6섹터(초안 있음), 4섹터 결정 15개(`SECTOR4_DRAFT.md` 끝 — 2026-10-14 채팅에서 갱신된 목록)
 - 민첩 직업(모험가 민첩형이 미리보기), 성직자, 히든 트레이닝, 탐문 단서·진엔딩
 - 비주얼: `docs/VISUAL_HANDOFF.md` 10절

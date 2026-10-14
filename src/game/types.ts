@@ -57,6 +57,8 @@ export interface Enemy {
   atkUp?: number;
   dmgUp?: number;
   acUp?: number;
+  /** 독 바른 칼: 남은 라운드와 라운드 피해 주사위 */
+  venom?: { rounds: number; dice: [number, number] };
 }
 
 /** 허수아비 측정용 피해 기록. rounds의 칸 = 측정 시작부터 센 라운드 */
@@ -112,6 +114,12 @@ export interface CombatState {
   meter?: DamageMeter;
   /** 전쟁의 신 ★4 "최후의 돌격": 이 전투 동안 명중 +2, 피해 +3 */
   lastStand?: boolean;
+  /** 성벽: 남은 라운드 동안 받는 피해 절반 */
+  halfRounds?: number;
+  /** 광폭화: 남은 라운드·라운드당 추가 공격·받는 피해 증가 */
+  fury?: { rounds: number; extra: number; taken: number };
+  /** 고통이 힘: 맞은 횟수만큼 피해 +(최대 5) */
+  pain?: number;
 }
 
 /** 자동 결정의 미궁 목표: 구석구석 탐험 / 빠르게 다음 층 / 파밍(전투·상자 위주) */
@@ -300,7 +308,7 @@ export interface GameState {
   gold: number;
   /** heart: 1섹터 보스가 남기는 "거대 쥐의 마석 심장"(레벨 3→4 훈련 대가) */
   /** banner: 2섹터 "장군의 녹슨 휘장", spore: 3섹터 "균모의 포자낭". whetstone 숫돌(부식), antidote 해독초(독·마비) */
-  inventory: { food: number; potion: number; scroll: number; heart: number; banner: number; spore: number; bandage: number; herb: number; whetstone: number; antidote: number };
+  inventory: { food: number; potion: number; scroll: number; heart: number; banner: number; spore: number; scale: number; fang: number; bandage: number; herb: number; whetstone: number; antidote: number };
   /** 이미 얻은 보스 증표(섹터마다 한 번만 나온다) */
   trophies: string[];
   /** 착용 장비(슬롯 → gear.ts의 GEAR id) */

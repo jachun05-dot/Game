@@ -143,12 +143,13 @@ export function useAntidote(s: GameState): void {
   if (poisonOf(s) <= 0 && paraOf(s, worst) <= 0) return;
   s.inventory.antidote -= 1;
   const out: string[] = [];
+  const n = s.skills.includes("scholar") ? 2 : 1; // 박식: 두 단계씩
   if (poisonOf(s) > 0) {
-    s.poison = poisonOf(s) - 1;
+    s.poison = Math.max(0, poisonOf(s) - n);
     out.push(s.poison ? "독이 조금 빠졌다" : "독이 빠졌다");
   }
   if (paraOf(s, worst) > 0) {
-    s.paralysis![worst] = paraOf(s, worst) - 1;
+    s.paralysis![worst] = Math.max(0, paraOf(s, worst) - n);
     out.push(`${PARA_PART_NAME[worst]}에 감각이 돌아온다`);
   }
   log(s, `해독초를 씹었다. ${out.join(", ")}.`, "good");

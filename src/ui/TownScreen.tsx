@@ -5,6 +5,7 @@ import { CORRODE_NAME, GEAR, SLOTS, corrosionOf, gearEffect, hasShield, targetSl
 import { corrodedSlots, corrosionEffect, repairCost } from "../game/hazards";
 import { CLASSES } from "../game/classes";
 import { hasLevelTable } from "../game/elements";
+import { LAST_SECTOR } from "../game/endless";
 import { BLACK_MARKET_MULT, canTrain, innCost, outlawTrainerHere, gateOf, nextSkill, shopPrice, trainCost } from "../game/town";
 import type { GameState } from "../game/types";
 import { SKILLS } from "../game/skills";
@@ -285,7 +286,7 @@ function trainSub(s: GameState): string {
   const base = `직업교관 · ${trainCost(s)}G · 레벨 ${s.hero.level} → ${s.hero.level + 1}`;
   const gate = gateOf(s);
   if (gate) {
-    if (s.inventory[gate.item] <= 0) return `${josa(gate.name, "이")} 필요하다 — ${gate.sector}섹터 3층 보스가 지니고 있다(처음 쓰러뜨릴 때 한 번만 나온다)`;
+    if (s.inventory[gate.item] <= 0) return gate.sector > LAST_SECTOR ? `${josa(gate.name, "이")} 필요하다 — ${gate.sector}섹터 보스가 지니고 있다(아직 열리지 않은 섹터 — 지금은 레벨 ${s.hero.level}이 끝이다)` : `${josa(gate.name, "이")} 필요하다 — ${gate.sector}섹터 3층 보스가 지니고 있다(처음 쓰러뜨릴 때 한 번만 나온다)`;
     if (s.gold < trainCost(s)) return `돈이 모자라다 (${trainCost(s)}G + ${gate.name})`;
     return `${base} + ${gate.name}`;
   }

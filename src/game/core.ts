@@ -61,7 +61,7 @@ export function rollPenalty(s: GameState): number {
 /** d20 + 보정치 vs DC. 자연 1 자동 실패, 자연 20 자동 성공(DESIGN 8절) */
 export function check(s: GameState, stat: StatKey, dc: number, bonus = 0): { ok: boolean; roll: number; total: number } {
   const roll = rngOf(s).die(20);
-  const total = roll + bonus + smod(s, stat) + rollPenalty(s) + sagaBonus(s) + (stat === "per" ? passive(s, "perception") : 0);
+  const total = roll + bonus + smod(s, stat) + rollPenalty(s) + sagaBonus(s) + passive(s, "check") + (stat === "per" ? passive(s, "perception") : 0);
   const ok = roll === 20 || (roll !== 1 && total >= dc);
   return { ok, roll, total };
 }

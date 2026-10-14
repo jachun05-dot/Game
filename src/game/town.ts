@@ -25,7 +25,7 @@ export function newRun(seed: number): GameState {
     month: 1,
     week: 1,
     gold: BAL.startGold,
-    inventory: { food: 0, potion: 0, scroll: 0, heart: 0, banner: 0, spore: 0, bandage: 0, herb: 0, whetstone: 0, antidote: 0 },
+    inventory: { food: 0, potion: 0, scroll: 0, heart: 0, banner: 0, spore: 0, scale: 0, fang: 0, bandage: 0, herb: 0, whetstone: 0, antidote: 0 },
     trophies: [],
     gear: {},
     skills: [],

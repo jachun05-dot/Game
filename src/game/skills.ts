@@ -30,7 +30,21 @@ export type SkillEffect =
   | { type: "stunAll"; rounds: number }
   | { type: "heal"; dice: [number, number]; plusInt: boolean }
   | { type: "endure" }
-  | { type: "stunOne"; rounds: number; text?: string }
+  | { type: "stunOne"; rounds: number; text?: string; dice?: [number, number] }
+  /** 가장 강한 적에게 바로 한 번 공격(확정 명중, crit면 확정 치명타) */
+  | { type: "strikeStrong"; mult: number; crit?: boolean; text: string }
+  /** 적 전원 n라운드 행동 불가(보스·정예·히든은 bossRounds), half면 첫 라운드 받는 피해 절반 */
+  | { type: "zero"; rounds: number; bossRounds: number; half?: boolean; text: string }
+  /** n라운드 동안 받는 피해 절반 */
+  | { type: "rampart"; rounds: number; text: string }
+  /** n라운드 동안 라운드마다 extra번 더 공격, 그동안 받는 피해 +taken */
+  | { type: "fury"; rounds: number; extra: number; taken: number; text: string }
+  /** 쓰러질 피해를 받으면 최대 HP pct%로 일어나며 적 전원에게 피해(미궁 1회) */
+  | { type: "phoenix"; pct: number; dice: [number, number]; text: string }
+  /** 확정 도주 */
+  | { type: "blink"; text: string }
+  /** 가장 강한 적을 중독시킨다(라운드마다 피해) */
+  | { type: "venom"; rounds: number; dice: [number, number]; text: string }
   /** 석상: 이번 라운드 받는 피해 절반 */
   | { type: "stone"; text: string }
   /** 주문: 반드시 명중, 피해 = 주사위 + 지능 보정. all이면 모든 적 */
@@ -54,11 +68,21 @@ export type SkillEffect =
       casts?: number;
       /** 피해 주사위 크기가 출렁인다(번개) */
       vary?: boolean;
+      /** 맞은 적을 불태운다(라운드) */
+      burnRounds?: number;
+      /** 얼림 라운드(기본 1) */
+      freezeRounds?: number;
+      /** 맞은 적이 이 확률로 1라운드 감전 */
+      shockChance?: number;
+      /** 나머지 적 전원에게 반 피해 */
+      splashAll?: boolean;
+      /** 무작위로 불탐·얼림·감전 중 하나 */
+      rider?: boolean;
     }
   /** 방어 주문: AC +ac, freeze면 나를 때린 적을 얼릴 확률, reduce면 받는 피해 감소 */
-  | { type: "eguard"; ac: number; rounds: number; freeze?: number; reduce?: number; counter?: boolean; text: string }
-  /** 광란: n라운드 동안 라운드마다 한 번 더 공격 */
-  | { type: "rampage"; rounds: number; text: string }
+  | { type: "eguard"; ac: number; rounds: number; freeze?: number; reduce?: number; counter?: boolean; stunAll?: number; text: string }
+  /** 광란: n라운드 동안 라운드마다 한 번 더 공격(ac면 그동안 AC +) */
+  | { type: "rampage"; rounds: number; ac?: number; text: string }
   /** 서리 안개: 적 전원 명중 감소 */
   | { type: "fog"; hit: number; rounds: number; text: string }
   /** 가장 강한 적을 묶는다. half면 그 라운드 받는 피해 절반 */
@@ -77,6 +101,8 @@ export interface Passive {
   hp?: number;
   /** 포만감 소모 배율 */
   hunger?: number;
+  /** 모든 판정(능력치 판정) */
+  check?: number;
 }
 
 export interface SkillDef {
@@ -316,6 +342,93 @@ Object.assign(SKILLS, {
   vitalStab: { id: "vitalStab", name: "급소 찌르기", kind: "active", desc: "HP 50% 이하인 적에게 반드시 맞는 치명타(전투당 1회)", trigger: { on: "targetBelow", pct: 50 }, effect: { type: "strike", hit: 0, dmg: 0, autoHit: true, crit: true }, uses: 1 },
 } satisfies Record<string, SkillDef>);
 
+
+// ── 10~16레벨(2026-10-14, docs/SKILLS_10_16_DRAFT.md): 10 낙인 · 13 궁극기 · 16 화신. 효과 처리는 combat.ts(id로) ──
+Object.assign(SKILLS, E("fire", {
+  fireSeal: { id: "fireSeal", name: "불의 낙인", kind: "passive", desc: "최대 HP +6, 화염 피해 +3, 불탐 피해 1d3 → 1d6, 화염 액티브 전투당 +1회", passive: { hp: 6 } },
+  fireLance: { id: "fireLance", name: "화염 창", kind: "active", desc: "전투 시작 시 가장 강한 적에게 화염 창(3d6 + 지능 보정)", trigger: { on: "start" }, effect: { type: "espell", el: "fire", dice: [3, 6], pick: "strongest", text: "불꽃이 창처럼 뻗어 나간다" }, uses: 1 },
+  fireBody: { id: "fireBody", name: "불 먹은 몸", kind: "passive", desc: "최대 HP +4, 화상에 걸릴 확률 절반(4섹터)", passive: { hp: 4 } },
+  fireMeteor: { id: "fireMeteor", name: "유성", kind: "active", desc: "궁극기. 전투 시작 시 적 전원에게 유성(2d6 + 지능 보정), 모두 3라운드 불탄다", trigger: { on: "start" }, effect: { type: "espell", el: "fire", dice: [2, 6], all: true, burnRounds: 3, text: "하늘이 갈라지며 유성이 쏟아진다" }, uses: 1 },
+  fireBlood: { id: "fireBlood", name: "타오르는 피", kind: "passive", desc: "내 HP 50% 이하면 모든 주문 피해 +4" },
+  firePhoenix: { id: "firePhoenix", name: "불사조의 숨", kind: "active", desc: "쓰러질 피해를 받으면 최대 HP 30%로 일어나며 적 전원에게 2d6 화염(미궁마다 1회)", trigger: { on: "lethal" }, effect: { type: "phoenix", pct: 30, dice: [2, 6], text: "재 속에서 불길이 다시 솟는다" }, uses: 1 },
+  fireAvatar: { id: "fireAvatar", name: "불의 화신", kind: "passive", desc: "최대 HP +10, 모든 주문·마력탄 피해 +4, 불탐 피해 2배", passive: { hp: 10 } },
+}), E("frost", {
+  frostSeal: { id: "frostSeal", name: "서리의 낙인", kind: "passive", desc: "최대 HP +6, 얼림 확률 +15%p, 얼거나 묶인 적이 받는 피해 +3 더, 서리 액티브 전투당 +1회", passive: { hp: 6 } },
+  frostLance: { id: "frostLance", name: "빙결 창", kind: "active", desc: "전투 시작 시 가장 강한 적에게 빙결 창(2d8 + 지능 보정), 2라운드 얼린다", trigger: { on: "start" }, effect: { type: "espell", el: "frost", dice: [2, 8], pick: "strongest", freeze: 1, freezeRounds: 2, text: "얼음 창이 꽂힌다" }, uses: 1 },
+  frostBlood: { id: "frostBlood", name: "서리 피", kind: "passive", desc: "AC +1, 냉기가 쌓이는 속도 절반(4섹터)", passive: { ac: 1 } },
+  frostZero: { id: "frostZero", name: "절대 영도", kind: "active", desc: "궁극기. 전투 시작 시 적 전원을 2라운드 얼린다(보스·정예는 1라운드), 첫 라운드 받는 피해 절반", trigger: { on: "start" }, effect: { type: "zero", rounds: 2, bossRounds: 1, half: true, text: "공기마저 얼어붙는다" }, uses: 1 },
+  frostCool: { id: "frostCool", name: "냉철", kind: "passive", desc: "명중 +2, 치명타 확률 +5%", passive: { hit: 2, crit: 5 } },
+  frostWard: { id: "frostWard", name: "서리 방벽", kind: "active", desc: "내 HP 50% 이하가 되면 적 전원 1라운드 얼림 + 2라운드 AC +4", trigger: { on: "selfBelow", pct: 50 }, effect: { type: "eguard", ac: 4, rounds: 2, stunAll: 1, text: "서리 벽이 사방으로 터진다" }, uses: 1 },
+  frostAvatar: { id: "frostAvatar", name: "겨울의 화신", kind: "passive", desc: "최대 HP +10, 모든 공격·주문이 25% 확률로 얼린다, 얼어 있는 적을 쓰러뜨리면 다른 적 하나를 얼린다", passive: { hp: 10 } },
+}), E("bolt", {
+  boltSeal: { id: "boltSeal", name: "번개의 낙인", kind: "passive", desc: "최대 HP +6, 번개 피해 +2, 번개가 한 번 더 튄다, 번개 주문이 20% 확률로 감전, 번개 액티브 전투당 +1회", passive: { hp: 6 } },
+  boltThunder: { id: "boltThunder", name: "천둥", kind: "active", desc: "적이 2마리 이상이면 모든 적에게 천둥(2d4 + 지능 보정), 각자 30% 감전", trigger: { on: "enemiesAtLeast", n: 2 }, effect: { type: "espell", el: "bolt", dice: [2, 4], all: true, shockChance: 0.3, text: "천둥이 동굴을 울린다" }, uses: 1 },
+  boltSense: { id: "boltSense", name: "전류 감각", kind: "passive", desc: "도주 +4, 함정 회피 판정 +3", passive: { flee: 4 } },
+  boltFall: { id: "boltFall", name: "낙뢰", kind: "active", desc: "궁극기. 전투 시작 시 가장 강한 적에게 낙뢰(4d6 + 지능 보정), 나머지 적 전원 반 피해", trigger: { on: "start" }, effect: { type: "espell", el: "bolt", dice: [4, 6], pick: "strongest", splashAll: true, text: "하늘에서 낙뢰가 꽂힌다" }, uses: 1 },
+  boltReflect: { id: "boltReflect", name: "번개 반사", kind: "passive", desc: "나를 때린 적이 25% 확률로 1d6 번개 피해" },
+  boltStorm: { id: "boltStorm", name: "폭풍 걸음", kind: "active", desc: "내 HP 50% 이하가 되면 2라운드 동안 한 번 더 행동, AC +3", trigger: { on: "selfBelow", pct: 50 }, effect: { type: "rampage", rounds: 2, ac: 3, text: "번개처럼 몸이 빨라진다" }, uses: 1 },
+  boltAvatar: { id: "boltAvatar", name: "뇌신", kind: "passive", desc: "최대 HP +10, 매 라운드 시작 시 무작위 적 하나에게 번개(1d8 + 지능 보정)", passive: { hp: 10 } },
+}), E("earth", {
+  earthSeal: { id: "earthSeal", name: "대지의 낙인", kind: "passive", desc: "최대 HP +12, 받는 피해 −1, 대지 액티브 전투당 +1회", passive: { hp: 12 } },
+  earthLance: { id: "earthLance", name: "지각 창", kind: "active", desc: "전투 시작 시 단단한 적을 먼저 노려 바위 창(3d6 + 지능 보정), 50% 넘어뜨린다", trigger: { on: "start" }, effect: { type: "espell", el: "earth", dice: [3, 6], pick: "hard", knock: 0.5, text: "바닥에서 바위 창이 솟구친다" }, uses: 1 },
+  earthBone: { id: "earthBone", name: "산의 뼈", kind: "passive", desc: "맞았을 때 부상 확률 절반, 낙반 피해 절반(4섹터)" },
+  earthWrath: { id: "earthWrath", name: "대지의 분노", kind: "active", desc: "궁극기. 전투 시작 시 적 전원에게 대지의 분노(2d6 + 지능 보정), 50% 넘어뜨린다", trigger: { on: "start" }, effect: { type: "espell", el: "earth", dice: [2, 6], all: true, knock: 0.5, text: "땅이 갈라지며 솟구친다" }, uses: 1 },
+  earthHeart: { id: "earthHeart", name: "바위 심장", kind: "passive", desc: "전투 라운드마다 HP +2" },
+  earthSlide: { id: "earthSlide", name: "산사태 방벽", kind: "active", desc: "내 HP 50% 이하가 되면 3라운드 AC +5, 받는 피해 −3", trigger: { on: "selfBelow", pct: 50 }, effect: { type: "eguard", ac: 5, rounds: 3, reduce: 3, text: "무너진 바위가 벽을 이룬다" }, uses: 1 },
+  earthAvatar: { id: "earthAvatar", name: "대지의 화신", kind: "passive", desc: "최대 HP +20, AC +2, 받는 피해 −2", passive: { hp: 20, ac: 2 } },
+}));
+
+Object.assign(SKILLS, {
+  // 수호
+  guardSeal: { id: "guardSeal", name: "수호의 낙인", kind: "passive", desc: "최대 HP +10, AC +1, 받는 피해 −2 더(각인과 합쳐 −4), 수호 액티브 전투당 +1회", passive: { hp: 10, ac: 1 } },
+  shieldCharge: { id: "shieldCharge", name: "방패 돌진", kind: "active", shield: true, desc: "🛡 방패 필요. 전투 시작 시 가장 강한 적에게 1d8 피해 + 2라운드 행동 불가", trigger: { on: "start" }, effect: { type: "stunOne", rounds: 2, dice: [1, 8], text: "방패를 앞세워 돌진한다 —" }, uses: 1 },
+  unshaken: { id: "unshaken", name: "흔들리지 않는 자", kind: "passive", desc: "맞았을 때 부상 확률 절반(각인과 곱한다), 낙반 피해 절반(4섹터)" },
+  rampart: { id: "rampart", name: "성벽", kind: "active", shield: true, desc: "궁극기. 🛡 방패 필요. 전투 시작 시 3라운드 동안 받는 피해 절반", trigger: { on: "start" }, effect: { type: "rampart", rounds: 3, text: "방패가 성벽처럼 버틴다" }, uses: 1 },
+  steelWill: { id: "steelWill", name: "강철 의지", kind: "passive", desc: "최대 HP +8, 모든 판정 +1", passive: { hp: 8, check: 1 } },
+  lastGuard: { id: "lastGuard", name: "최후의 방어", kind: "active", desc: "이 악물기를 미궁마다 한 번 더 쓴다(없으면 1회), 버틴 뒤 3라운드 AC +5", trigger: { on: "react" }, uses: 1 },
+  guardAvatar: { id: "guardAvatar", name: "불굴", kind: "passive", desc: "최대 HP +15, 내 HP 25% 이하면 받는 피해 절반", passive: { hp: 15 } },
+  // 검투
+  gladSeal: { id: "gladSeal", name: "검투의 낙인", kind: "passive", desc: "최대 HP +6, 치명타 확률 +10%, 치명타 피해 주사위 ×3, 검투 액티브 전투당 +1회", passive: { hp: 6, crit: 10 } },
+  swordDance: { id: "swordDance", name: "검무", kind: "active", desc: "전투 시작 시 적 전원을 한 번씩 벤다", trigger: { on: "start" }, effect: { type: "sweep", dmgMult: 1 }, uses: 1 },
+  arenaSense: { id: "arenaSense", name: "투기장의 감", kind: "passive", desc: "명중 +2, AC +1, 함정 회피 판정 +3", passive: { hit: 2, ac: 1 } },
+  oneFlash: { id: "oneFlash", name: "일섬", kind: "active", desc: "궁극기. 전투 시작 시 가장 강한 적에게 확정 치명타, 피해 ×3", trigger: { on: "start" }, effect: { type: "strikeStrong", mult: 3, crit: true, text: "한 줄기 빛처럼 벤다" }, uses: 1 },
+  flowWater: { id: "flowWater", name: "물 흐르듯", kind: "passive", desc: "적의 공격이 빗나가면 20% 확률로 반격(횟수 제한 없음)" },
+  deathDance: { id: "deathDance", name: "죽음의 춤", kind: "active", desc: "내 HP 50% 이하가 되면 3라운드 동안 한 번 더 공격, AC +2", trigger: { on: "selfBelow", pct: 50 }, effect: { type: "rampage", rounds: 3, ac: 2, text: "칼끝이 춤추기 시작한다" }, uses: 1 },
+  gladAvatar: { id: "gladAvatar", name: "검성", kind: "passive", desc: "매 라운드 첫 공격이 반드시 맞는다, 치명타 확률 +10%, 피해 +4", passive: { crit: 10, dmg: 4 } },
+  // 광전
+  berserkSeal: { id: "berserkSeal", name: "광전의 낙인", kind: "passive", desc: "최대 HP +8, 피해 +5, 내 HP 50% 이하면 피해 +5 더, 광전 액티브 전투당 +1회. 대가: AC −1", passive: { hp: 8, dmg: 5, ac: -1 } },
+  greatCleave: { id: "greatCleave", name: "대참격", kind: "active", desc: "적이 2마리 이상이면 모든 적을 온 힘으로 벤다(피해 ×1.0)", trigger: { on: "enemiesAtLeast", n: 2 }, effect: { type: "sweep", dmgMult: 1 }, uses: 1 },
+  burningBlood: { id: "burningBlood", name: "불타는 피", kind: "passive", desc: "피해 +1, 화상·동상에 걸릴 확률 절반(4섹터)", passive: { dmg: 1 } },
+  berserkFury: { id: "berserkFury", name: "광폭화", kind: "active", desc: "궁극기. 전투 시작 시 3라운드 동안 매 라운드 두 번 더 공격, 그동안 받는 피해 +2", trigger: { on: "start" }, effect: { type: "fury", rounds: 3, extra: 2, taken: 2, text: "이성이 끊어진다" }, uses: 1 },
+  painPower: { id: "painPower", name: "고통이 힘", kind: "passive", desc: "맞을 때마다 그 전투 동안 피해 +1(최대 +5)" },
+  doomStrike: { id: "doomStrike", name: "파멸의 일격", kind: "active", desc: "HP 30% 이하인 적에게 반드시 맞는 일격(피해 ×3, 전투당 1회)", trigger: { on: "targetBelow", pct: 30 }, effect: { type: "strike", hit: 0, dmg: 0, dmgMult: 3, autoHit: true }, uses: 1 },
+  berserkAvatar: { id: "berserkAvatar", name: "전쟁광", kind: "passive", desc: "매 라운드 한 번 더 공격. 대가: AC −2", passive: { ac: -2 } },
+  // 모험가 전사형
+  fighterSeal: { id: "fighterSeal", name: "칼잡이의 낙인", kind: "passive", desc: "최대 HP +8, 명중 +2, 피해 +3, 전사형 액티브 전투당 +1회", passive: { hp: 8, hit: 2, dmg: 3 } },
+  spinSlash: { id: "spinSlash", name: "회전 베기", kind: "active", desc: "적이 2마리 이상이면 모든 적을 벤다(피해 ×0.8)", trigger: { on: "enemiesAtLeast", n: 2 }, effect: { type: "sweep", dmgMult: 0.8 }, uses: 1 },
+  veteran: { id: "veteran", name: "노련함", kind: "passive", desc: "AC +1, 최대 HP +4, 맞았을 때 부상 확률 −25%", passive: { ac: 1, hp: 4 } },
+  duel: { id: "duel", name: "결전", kind: "active", desc: "궁극기. 전투 시작 시 2라운드 동안 매 라운드 한 번 더 공격", trigger: { on: "start" }, effect: { type: "rampage", rounds: 2, text: "숨을 고르고 결전에 나선다" }, uses: 1 },
+  battleSense: { id: "battleSense", name: "전장 감각", kind: "passive", desc: "명중 +1, 치명타 확률 +5%", passive: { hit: 1, crit: 5 } },
+  counterStance: { id: "counterStance", name: "반격 자세", kind: "active", desc: "내 HP 50% 이하가 되면 2라운드 AC +3, 그동안 빗나간 공격마다 반격", trigger: { on: "selfBelow", pct: 50 }, effect: { type: "eguard", ac: 3, rounds: 2, counter: true, text: "칼을 낮추고 받아칠 자세를 잡는다" }, uses: 1 },
+  fighterAvatar: { id: "fighterAvatar", name: "백전노장", kind: "passive", desc: "피해 +3, 최대 HP +10, 맞았을 때 부상 확률 절반", passive: { dmg: 3, hp: 10 } },
+  // 모험가 마법사형
+  casterSeal: { id: "casterSeal", name: "주문꾼의 낙인", kind: "passive", desc: "최대 HP +6, 주문 피해 +3, 마법사형 액티브 전투당 +1회", passive: { hp: 6 } },
+  elemArrow: { id: "elemArrow", name: "원소 화살", kind: "active", desc: "전투 시작 시 가장 강한 적에게 원소 화살(2d6 + 지능 보정), 무작위로 불탐·얼림·감전", trigger: { on: "start" }, effect: { type: "espell", el: "bolt", dice: [2, 6], pick: "strongest", rider: true, text: "손끝에서 원소가 뒤섞여 날아간다" }, uses: 1 },
+  scholar: { id: "scholar", name: "박식", kind: "passive", desc: "물약 회복 +3, 해독초가 두 단계씩 듣는다", passive: { potion: 3 } },
+  elemStorm: { id: "elemStorm", name: "원소 폭풍", kind: "active", desc: "궁극기. 전투 시작 시 적 전원에게 원소 폭풍(2d4 + 지능 보정), 각자 무작위로 불탐·얼림·감전", trigger: { on: "start" }, effect: { type: "espell", el: "bolt", dice: [2, 4], all: true, rider: true, text: "불·얼음·번개가 한꺼번에 휘몰아친다" }, uses: 1 },
+  manaShield: { id: "manaShield", name: "마력 방패", kind: "passive", desc: "AC +2", passive: { ac: 2 } },
+  blink: { id: "blink", name: "순간 이동", kind: "active", desc: "내 HP 30% 이하가 되면 반드시 도주한다(전투당 1회)", trigger: { on: "selfBelow", pct: 30 }, effect: { type: "blink", text: "공간이 접히며 몸이 사라진다" }, uses: 1 },
+  casterAvatar: { id: "casterAvatar", name: "대마도사의 길", kind: "passive", desc: "모든 주문 피해 +4, 마법사형 액티브 전투당 +1회 더" },
+  // 모험가 민첩형
+  shadowSeal: { id: "shadowSeal", name: "그림자의 낙인", kind: "passive", desc: "최대 HP +6, AC +2, 치명타 확률 +10%, 민첩형 액티브 전투당 +1회", passive: { hp: 6, ac: 2, crit: 10 } },
+  poisonBlade: { id: "poisonBlade", name: "독 바른 칼", kind: "active", desc: "전투 시작 시 가장 강한 적을 3라운드 중독시킨다(라운드마다 1d6)", trigger: { on: "start" }, effect: { type: "venom", rounds: 3, dice: [1, 6], text: "칼날에 독을 바른다" }, uses: 1 },
+  trapMaster: { id: "trapMaster", name: "함정 장인", kind: "passive", desc: "함정 해체 +5, 함정에 받는 피해 절반" },
+  assassinate: { id: "assassinate", name: "암살", kind: "active", desc: "궁극기. 전투 시작 시 가장 강한 적에게 확정 치명타, 피해 ×2", trigger: { on: "start" }, effect: { type: "strikeStrong", mult: 2, crit: true, text: "그림자 속에서 급소를 꿰뚫는다" }, uses: 1 },
+  shadowBody: { id: "shadowBody", name: "그림자 몸", kind: "passive", desc: "도주 +5, 적의 명중 −1", passive: { flee: 5 } },
+  vanish: { id: "vanish", name: "사라지기", kind: "active", desc: "내 HP 30% 이하가 되면 적 전원 2라운드 행동 불가", trigger: { on: "selfBelow", pct: 30 }, effect: { type: "stunAll", rounds: 2 }, uses: 1 },
+  rogueAvatar: { id: "rogueAvatar", name: "그림자 군주", kind: "passive", desc: "치명타 확률 +10%, 치명타 피해 주사위 ×4, 손버릇으로 쓰러뜨린 적 마석 ×2", passive: { crit: 10 } },
+} satisfies Record<string, SkillDef>);
+
 // "고통 무시": 공포 면역
 mindResist.push((s, k) => (k === "fear" && s.skills.includes("painless") ? 0 : 1));
 
@@ -333,13 +446,13 @@ export function hasSkill(s: GameState, id: string): boolean {
 
 /** 배운 패시브 + 편린 능력 + 착용 장비 보정의 합 */
 export function passive(s: GameState, key: Exclude<keyof Passive, "hunger">): number {
-  let t = gearBonus(s, key);
+  let t = key === "check" ? 0 : gearBonus(s, key);
   const earthMark = s.skills.includes("earthMark");
   const shield = hasShield(s);
   for (const id of allSkills(s)) {
     if (SKILLS[id]?.shield && !shield) continue; // 방패 기술은 방패가 있어야
     const v = SKILLS[id]?.passive?.[key] ?? 0;
-    t += earthMark && SKILLS[id]?.el === "earth" && id !== "earthMark" ? v * 2 : v; // 대지의 각인: 대지 패시브 2배
+    t += earthMark && SKILLS[id]?.el === "earth" && !["earthMark", "earthSeal", "earthAvatar"].includes(id) ? v * 2 : v; // 대지의 각인: 대지 패시브 2배(낙인·화신 제외)
   }
   return t;
 }

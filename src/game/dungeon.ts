@@ -461,7 +461,7 @@ function fall(s: GameState): boolean {
   const dg = d(s);
   const r = rngOf(s);
   const deep = dg.floor >= 3;
-  const dmg = Math.max(1, Math.round(r.dice(deep ? 3 : 2, 6) * faithFallMult(s)));
+  const dmg = Math.max(1, Math.round(r.dice(deep ? 3 : 2, 6) * faithFallMult(s) * (s.skills.includes("trapMaster") ? 0.5 : 1)));
   s.hero.hp -= dmg;
   log(s, deep ? `바닥이 꺼졌다 — 끝이 보이지 않는 틈으로 미끄러져 내려갔다! ${dmg} 피해` : `바닥이 꺼졌다 — 아래층으로 곤두박질쳤다! ${dmg} 피해`, "hurt");
   if (s.hero.hp <= 0 && power(s, "abyss", 4)) {
@@ -496,7 +496,7 @@ function fall(s: GameState): boolean {
 /** 함정 작동. 숨어 있던 고블린이 있으면 덮친다(밟아서 다쳤으면 기습). 매복 전투가 벌어졌으면 true */
 function springTrap(s: GameState, room: Room): boolean {
   room.resolved = true;
-  const c = check(s, "dex", BAL.trapDodgeDc, (power(s, "trap", 1) ? 3 : 0) + (room.trapKind === "pit" && s.skills.includes("earthLevel") ? 5 : 0)); // 땅 고르기
+  const c = check(s, "dex", BAL.trapDodgeDc, (power(s, "trap", 1) ? 3 : 0) + (room.trapKind === "pit" && s.skills.includes("earthLevel") ? 5 : 0) + (s.skills.includes("boltSense") || s.skills.includes("arenaSense") ? 3 : 0)); // 땅 고르기·전류 감각·투기장의 감
   let hurt = false;
   if (c.ok) {
     note(s, "dex");
@@ -507,7 +507,7 @@ function springTrap(s: GameState, room: Room): boolean {
   } else if (room.trapKind === "pit") {
     return fall(s);
   } else {
-    const dmg = rngOf(s).dice(1, 6);
+    const dmg = Math.max(1, Math.round(rngOf(s).dice(1, 6) * (s.skills.includes("trapMaster") ? 0.5 : 1))); // 함정 장인: 절반
     s.hero.hp -= dmg;
     const sec = d(s).sector;
     const name = sec === 3 ? "산성 웅덩이" : sec === 2 ? "녹슨 곰덫" : "가시함정";
@@ -603,7 +603,7 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
     }
     if (choice === "disarm") {
       passTime(s, 1);
-      const c = check(s, "dex", BAL.trapDisarmDc, (power(s, "trap", 1) ? 3 : 0) + (s.skills.includes("earthLevel") || s.skills.includes("trapHand") ? 3 : 0));
+      const c = check(s, "dex", BAL.trapDisarmDc, (power(s, "trap", 1) ? 3 : 0) + (s.skills.includes("earthLevel") || s.skills.includes("trapHand") ? 3 : 0) + (s.skills.includes("trapMaster") ? 5 : 0));
       if (c.ok) {
         note(s, "per");
         room.resolved = true;
