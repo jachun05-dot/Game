@@ -16,7 +16,9 @@ const NAME: Record<ElementKey, string> = { fire: "화염", frost: "서리", bolt
 
 import { PLANS as plans } from "./plans";
 import { BRANCH_SKILLS, ELEMENT_SKILLS, STYLE_SKILLS } from "../src/game/elements";
-const LINE_OF: Record<string, string> = Object.fromEntries(Object.entries({ ...ELEMENT_SKILLS, ...STYLE_SKILLS, ...BRANCH_SKILLS }).flatMap(([line, tb]) => Object.values(tb).map((id) => [id, line])));
+// 기술 → 레벨표(직업마다 따로: 같은 기술이 여러 직업 표에 있을 수 있다)
+const lineMap = (tables: Record<string, Record<number, string>>) => Object.fromEntries(Object.entries(tables).flatMap(([line, tb]) => Object.values(tb).map((id) => [id, line])));
+const LINE_BY_CLASS: Record<string, Record<string, string>> = { mage: lineMap(ELEMENT_SKILLS), warrior: lineMap(STYLE_SKILLS), adventurer: lineMap(BRANCH_SKILLS) };
 
 type Row = {
   id: string; kind: string; label: string; n: number;
@@ -93,7 +95,7 @@ plans.filter((p) => !only || only.some((o) => p.id.startsWith(o))).forEach((plan
     }
     // 실제로 배운 원소 기술 수(어느 속성인지)
     {
-      for (const id of s.skills) { const line = LINE_OF[id]; if (line) row.learned[line] = (row.learned[line] ?? 0) + 1; }
+      for (const id of s.skills) { const line = LINE_BY_CLASS[plan.cls][id]; if (line) row.learned[line] = (row.learned[line] ?? 0) + 1; }
       const m = s.mainElement ?? "없음";
       row.main[m] = (row.main[m] ?? 0) + 1;
     }
