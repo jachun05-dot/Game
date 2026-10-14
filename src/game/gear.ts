@@ -78,6 +78,23 @@ export interface GearDef {
   critHeal?: number;
   /** 물이 높을 때 명중 + */
   tideHit?: number;
+  // ── 4섹터 ──
+  /** 화상 확률 배율 / 냉기 쌓임 배율 */
+  burnRes?: number;
+  coldRes?: number;
+  /** 단단한 적을 쳐도 자기 손을 다치지 않는다 */
+  noHardSelf?: boolean;
+  /** 함정 발견 + / 광차·얇은 얼음 회피 + */
+  trapFind?: number;
+  trapDodge?: number;
+  /** 가스 주머니를 항상 미리 안다 */
+  gasSense?: boolean;
+  /** 고임 때 명중 + */
+  stagnantHit?: number;
+  /** 맞힌 적의 명중 −1(1라운드) */
+  chillHit?: boolean;
+  /** 낙반·폭발·광차 피해 배율 */
+  blastRes?: number;
   flavor: string;
 }
 
@@ -123,6 +140,16 @@ export const GEAR: Record<string, GearDef> = {
   steelsword: { id: "steelsword", name: "강철 장검", slot: "main", bonus: {}, weapon: { dice: [1, 10], stat: "str", verb: "강철 장검을 내리쳐" }, price: 160, rank: 1, flavor: "등급을 올린 모험가에게만 파는 칼." },
   steelshield: { id: "steelshield", name: "강철 방패", slot: "offhand", bonus: { ac: 2 }, price: 110, rank: 1, flavor: "가볍고 단단하다." },
   oakstaff: { id: "oakstaff", name: "마력이 깃든 지팡이", slot: "main", bonus: { hit: 1 }, weapon: { dice: [1, 8], stat: "int", verb: "짙은 마력탄을 날려" }, price: 150, rank: 1, flavor: "차원문 너머의 나무로 깎았다." },
+  // ── 4섹터(불타는 광산 갱도) ──
+  fireleather: { id: "fireleather", name: "내화 가죽 갑옷", slot: "body", bonus: { ac: 4 }, burnRes: 0.5, price: 380, rank: 3, flavor: "불에 그을려도 타지 않게 무두질했다. 화상 확률이 절반." },
+  furcoat: { id: "furcoat", name: "털 안감 외투", slot: "body", bonus: { ac: 3 }, coldRes: 0.5, price: 320, rank: 3, flavor: "안쪽에 두꺼운 털을 댔다. 냉기가 절반만 스민다." },
+  minerpick: { id: "minerpick", name: "광부 곡괭이", slot: "main", bonus: {}, weapon: { dice: [1, 12], stat: "str", verb: "곡괭이를 내리찍어" }, noHardSelf: true, price: 420, rank: 3, flavor: "바위를 깨던 곡괭이. 단단한 것을 쳐도 손목이 버틴다." },
+  minerhelm: { id: "minerhelm", name: "등불 달린 갱도모", slot: "head", bonus: { ac: 2 }, trapFind: 2, price: 180, rank: 3, flavor: "이마의 등불이 발밑을 비춘다. 함정 발견 +2." },
+  safetyboots: { id: "safetyboots", name: "징 박은 안전화", slot: "feet", bonus: { ac: 1 }, trapDodge: 3, price: 150, rank: 3, flavor: "밑창에 징을 박았다. 얼음과 레일 위에서도 미끄러지지 않는다." },
+  canary: { id: "canary", name: "카나리아 새장", slot: "neck", bonus: { perception: 1 }, gasSense: true, loot: 2, sector: 4, flavor: "작은 새가 먼저 숨을 멈춘다. 가스 주머니를 항상 미리 안다." },
+  emberring: { id: "emberring", name: "불씨 반지", slot: "ring", bonus: { hit: 2 }, stagnantHit: 1, loot: 2, sector: 4, flavor: "공기가 고이면 반지가 달아오른다." },
+  frostwand: { id: "frostwand", name: "서리 광맥 지팡이", slot: "main", bonus: {}, weapon: { dice: [1, 10], stat: "int", verb: "서리 마력을 쏘아" }, chillHit: true, loot: 1, sector: 4, flavor: "얼음 광맥을 깎아 만들었다. 맞은 것의 손발이 굳는다." },
+  hingeshield: { id: "hingeshield", name: "미믹의 경첩 방패", slot: "offhand", bonus: { ac: 3 }, blastRes: 0.5, flavor: "광차 미믹의 경첩 턱을 떼어 만든 방패. 낙반·폭발·광차를 반쯤 받아낸다." },
   // ── 3섹터(물에 잠긴 사원) ──
   oiledleather: { id: "oiledleather", name: "기름 먹인 가죽 갑옷", slot: "body", bonus: { ac: 3 }, corrodeRes: 0.5, price: 200, rank: 2, flavor: "기름을 몇 겹 먹여 물과 산을 흘려낸다. 부식될 확률이 절반." },
   bronzeblade: { id: "bronzeblade", name: "청동 장검", slot: "main", bonus: {}, weapon: { dice: [1, 10], stat: "str", verb: "청동 장검을 내리쳐" }, corrodeRes: 0, price: 260, rank: 2, flavor: "녹슬지 않는 청동. 산성 점액에도 삭지 않는다." },
@@ -167,6 +194,15 @@ export function gearEffect(id: string): string {
   if (g.swim) parts.push(`헤엄 판정 +${g.swim}`);
   if (g.critHeal) parts.push(`치명타 시 HP +${g.critHeal}`);
   if (g.tideHit) parts.push(`물이 높을 때 명중 +${g.tideHit}`);
+  if (g.burnRes) parts.push("화상 확률 절반");
+  if (g.coldRes) parts.push("냉기 절반");
+  if (g.noHardSelf) parts.push("단단한 적에 손 안 다침");
+  if (g.trapFind) parts.push(`함정 발견 +${g.trapFind}`);
+  if (g.trapDodge) parts.push(`광차·얼음 회피 +${g.trapDodge}`);
+  if (g.gasSense) parts.push("가스 주머니를 미리 앎");
+  if (g.stagnantHit) parts.push(`고임 때 명중 +${g.stagnantHit}`);
+  if (g.chillHit) parts.push("맞힌 적 명중 −1");
+  if (g.blastRes) parts.push("낙반·폭발·광차 피해 절반");
   return parts.join(" · ");
 }
 
@@ -178,7 +214,8 @@ export function gearScore(id: string | undefined): number {
   let v = (b.ac ?? 0) * 3 + (b.hit ?? 0) * 2 + (b.dmg ?? 0) * 2 + (b.crit ?? 0) * 0.5 + (b.hp ?? 0) * 0.7 + (b.flee ?? 0) * 0.3 + (b.perception ?? 0) * 0.5 + (b.potion ?? 0) * 0.5;
   if (g.weapon) v += g.weapon.dice[1] * g.weapon.dice[0];
   v += Object.values(g.stats ?? {}).reduce((a, x) => a + x, 0) * 2 + (g.lifeSaves ?? 0) * 20;
-  v += (g.corrodeRes !== undefined ? 1 : 0) + (g.poisonRes ? 2 : 0) + (g.moldRes ? 2 : 0) + (g.wade ? 2 : 0) + (g.swim ? 1 : 0) + (g.critHeal ? 2 : 0) + (g.tideHit ? 1 : 0);
+  v += (g.corrodeRes !== undefined ? 1 : 0) + (g.poisonRes ? 2 : 0) + (g.moldRes ? 2 : 0) + (g.wade ? 2 : 0) + (g.swim ? 1 : 0) + (g.critHeal ? 2 : 0) + (g.tideHit ? 1 : 0)
+    + (g.burnRes ? 2 : 0) + (g.coldRes ? 2 : 0) + (g.noHardSelf ? 1 : 0) + (g.trapFind ? 1 : 0) + (g.trapDodge ? 1 : 0) + (g.gasSense ? 1 : 0) + (g.stagnantHit ? 1 : 0) + (g.chillHit ? 1 : 0) + (g.blastRes ? 2 : 0);
   return v;
 }
 

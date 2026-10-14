@@ -2,6 +2,7 @@ import { autoEat, camp, drinkPotion, eat, enterDungeon, moveTo, resolvePending, 
 import { answerInquisition, surrender, regen, prosthetic, useBandage, useHerb, buy, buyGear, closeSettlement, closeWeek, createHero, doActivity, eraseFrag, pickClass, rerollCandidates, sell, setTactics, train } from "./town";
 import { maxHp } from "./core";
 import { repair, useAntidote, useWhetstone } from "./hazards";
+import { syncCauses, useSalve } from "./fire";
 import type { CorrodeSlot } from "./gear";
 import type { ClassId } from "./classes";
 import type { Part } from "./injury";
@@ -20,8 +21,10 @@ export type Action =
   | { t: "sell"; item: ShopItem }
   | { t: "buyGear"; id: string }
   | { t: "closeWeek" }
-  /** 4주차: 마을에서 준비를 마치고 미궁에 들어간다 */
-  | { t: "enterDungeon" }
+  /** 4주차: 마을에서 준비를 마치고 미궁에 들어간다(shortcut: 3섹터 클리어 뒤 4섹터로 곧장) */
+  | { t: "enterDungeon"; shortcut?: boolean }
+  /** 4섹터: 화상 연고 */
+  | { t: "salve" }
   | { t: "move"; room: number }
   | { t: "pending"; choice: PendingChoice }
   | { t: "camp" }
@@ -58,6 +61,7 @@ export function act(prev: GameState, a: Action): GameState {
 export function apply(s: GameState, a: Action): void {
   run(s, a);
   autoEat(s);
+  syncCauses(s); // 다 나은 부위의 화상·동상 표시를 지운다
   // 최대 HP가 줄어드는 길(병이 나아 역병의 신 ★3이 꺼짐, 신앙 포기·하락, 장비 교체 등)이 많아
   // 행동이 끝날 때마다 현재 HP를 새 최대치로 한 번 맞춘다.
   if (s.phase !== "create" && s.phase !== "dead" && s.hero.hp > maxHp(s)) s.hero.hp = maxHp(s);
@@ -78,7 +82,7 @@ function run(s: GameState, a: Action): void {
       closeWeek(s);
       return;
     case "enterDungeon":
-      if (s.phase === "town" && s.week >= 4) enterDungeon(s);
+      if (s.phase === "town" && s.week >= 4) enterDungeon(s, !!a.shortcut);
       return;
     case "move": return moveTo(s, a.room);
     case "pending": return resolvePending(s, a.choice);
@@ -93,6 +97,7 @@ function run(s: GameState, a: Action): void {
     case "bandage": return useBandage(s);
     case "herb": return useHerb(s);
     case "whetstone": return useWhetstone(s);
+    case "salve": return useSalve(s);
     case "antidote": return useAntidote(s);
     case "repair": return repair(s, a.slot);
     case "regen": return regen(s, a.part);

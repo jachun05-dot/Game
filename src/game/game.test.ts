@@ -1308,14 +1308,14 @@ describe("끝없는 미궁", () => {
     s.hero.level = 12;
     enterDungeon(s);
     const dg = s.dungeon!;
-    dg.sector = 3;
+    dg.sector = 4;
     dg.floor = 3;
     dg.pending = { kind: "portal" };
     s.combat = null;
     apply(s, { t: "pending", choice: "enter" });
     return s;
   };
-  it("2섹터 차원문으로 들어가면 3섹터(물에 잠긴 사원) 1층, 남은 시간 두 배", () => {
+  it("2섹터 차원문으로 들어가면 3섹터(물에 잠긴 사원) 1층, 남은 시간 ×1.5", () => {
     const s = newRun(122);
     apply(s, { t: "create", name: "x", candidate: 0, faith: null });
     s.month = 6;
@@ -1328,16 +1328,16 @@ describe("끝없는 미궁", () => {
     apply(s, { t: "pending", choice: "enter" });
     expect(s.dungeon!.endless).toBeFalsy();
     expect(s.dungeon!.sector).toBe(3);
-    expect(s.dungeon!.turnsLeft).toBeGreaterThan(190);
+    expect(s.dungeon!.turnsLeft).toBe(150);
     expect(s.rank).toBe(2);
   });
-  it("3섹터 차원문으로 들어가면 끝없는 미궁 1층: 함정·상자·기록물 없이 전투·빈 방·계단뿐", () => {
+  it("4섹터 차원문으로 들어가면 끝없는 미궁 1층: 함정·상자·기록물 없이 전투·빈 방·계단뿐", () => {
     const s = toEndless();
     const dg = s.dungeon!;
     expect(dg.endless).toBe(true);
     expect(dg.sector).toBe(ENDLESS_SECTOR);
     expect(dg.floor).toBe(1);
-    expect(s.rank).toBe(3);
+    expect(s.rank).toBe(4);
     expect(dg.rooms.every((r) => ["entrance", "combat", "empty", "stairs"].includes(r.type))).toBe(true);
   });
   it("계단은 끝없이 이어지고, 깊을수록 몬스터가 강하며, 5층마다 보스가 계단 앞을 지킨다", () => {
@@ -1346,7 +1346,7 @@ describe("끝없는 미궁", () => {
       const rooms = generateEndlessFloor(r, n);
       expect(rooms.filter((x) => x.type === "stairs").length).toBe(1);
       expect(rooms.some((x) => x.type === "trap" || x.type === "treasure")).toBe(false);
-      const bossy = rooms.some((x) => x.encounter?.some((m) => ["boss", "harpyqueen", "general", "mycomother"].includes(m)));
+      const bossy = rooms.some((x) => x.encounter?.some((m) => ["boss", "harpyqueen", "general", "mycomother", "furnacemother"].includes(m)));
       expect(bossy).toBe(n % 5 === 0);
     }
     const s = toEndless();
@@ -1517,5 +1517,75 @@ describe("직업 기술 10~16레벨", () => {
       saves = s.tripUsed.filter((x) => x === "grit").length;
     }
     expect(saves).toBe(2);
+  });
+});
+
+describe("4섹터: 불타는 광산 갱도", () => {
+  const hero = (seed = 501) => {
+    const s = newRun(seed);
+    apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    s.month = 20;
+    return s;
+  };
+  it("층 생성: 함정 2+층수, 낙반은 필수 경로에 없고, 3층 서리 계열은 얼음 구역에만, 보스는 화로 어미", () => {
+    const r = new Rng({ s: 11 });
+    for (let i = 0; i < 80; i++) {
+      for (const floor of [1, 2, 3]) {
+        const rooms = generateFloor(r, floor, 4);
+        expect(reachable(rooms).size).toBe(rooms.length);
+        const traps = rooms.filter((x) => x.type === "trap");
+        for (const t of traps) expect(["collapse", "cart", "gas", "steam", "ice"]).toContain(t.trapKind);
+        if (floor === 3) expect(rooms.find((x) => x.type === "boss")!.encounter![0]).toBe("furnacemother");
+        for (const x of rooms) if (floor === 3 && x.type === "combat" && !x.ice) expect(x.encounter!.some((m) => MONSTERS[m].heat === "frost" && !MONSTERS[m].rare)).toBe(false);
+        // 낙반은 입구→계단(보스) 필수 경로 위에 없다: 그 방을 지워도 출구에 닿는다
+        const exit = rooms.find((x) => x.type === "stairs" || x.type === "boss")!;
+        for (const t of traps.filter((x) => x.trapKind === "collapse")) {
+          const seen = new Set([0]);
+          const q = [0];
+          while (q.length) for (const nb of rooms[q.shift()!].edges) if (nb !== t.id && !seen.has(nb)) { seen.add(nb); q.push(nb); }
+          expect(seen.has(exit.id)).toBe(true);
+        }
+      }
+    }
+  });
+  it("화상은 부상 칸을 올리고(원인 표시), 연고로 한 단계 낫는다. 머리·몸통은 화상으로 결손이 되지 않는다", () => {
+    const s = hero();
+    enterDungeon(s);
+    s.injuries.body = 2;
+    s.injuryCause = { body: "burn" };
+    s.inventory.salve = 1;
+    apply(s, { t: "salve" });
+    expect(s.injuries.body).toBe(1);
+    expect(s.inventory.salve).toBe(0);
+  });
+  it("냉기가 4 쌓이면 손·발 동상, 장작을 때고 야영하면 냉기 0", () => {
+    const s = hero(502);
+    enterDungeon(s);
+    s.dungeon!.sector = 4;
+    s.cold = 3.5;
+    s.inventory.firewood = 1;
+    s.hero.satiety = 100;
+    apply(s, { t: "camp" });
+    expect(s.cold ?? 0).toBe(0);
+    expect(s.inventory.firewood).toBe(0);
+  });
+  it("3섹터를 클리어하면 숏컷으로 곧장 4섹터 1층", () => {
+    const s = hero(503);
+    s.week = 4;
+    apply(s, { t: "enterDungeon", shortcut: true });
+    expect(s.dungeon!.sector).toBe(1);
+    const t = hero(504);
+    t.rank = 3;
+    t.week = 4;
+    apply(t, { t: "enterDungeon", shortcut: true });
+    expect(t.dungeon!.sector).toBe(4);
+    expect(t.dungeon!.turnsLeft).toBe(BAL.shortcutTurns);
+  });
+  it("4섹터 몬스터는 사람이 아니고 편린이 있으며, 곰팡이 괴물의 불 약점은 없다", () => {
+    for (const id of ["emberbat", "salamander", "orebeetle", "fireelem", "burrower", "frostwraith", "icetroll", "cartmimic", "furnacemother"]) {
+      expect(MONSTERS[id].human).toBeFalsy();
+      expect(FRAGMENTS[id]).toBeDefined();
+    }
+    expect((MONSTERS.mold as unknown as Record<string, unknown>).fireWeak).toBeUndefined();
   });
 });

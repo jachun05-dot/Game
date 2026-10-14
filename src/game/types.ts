@@ -120,6 +120,8 @@ export interface CombatState {
   fury?: { rounds: number; extra: number; taken: number };
   /** 고통이 힘: 맞은 횟수만큼 피해 +(최대 5) */
   pain?: number;
+  /** 화로 어미가 동굴을 무너뜨렸다(한 번) */
+  caveIn?: boolean;
 }
 
 /** 자동 결정의 미궁 목표: 구석구석 탐험 / 빠르게 다음 층 / 파밍(전투·상자 위주) */
@@ -149,7 +151,9 @@ export type RoomType =
   /** 2섹터: 전쟁의 흔적(조사하면 낡은 장비·망령·기록물) */
   | "relic"
   /** 3섹터: 공양 제단(조사하면 낡은 장비·독·역병의 신 기록물, 역병의 신도는 기도) */
-  | "altar";
+  | "altar"
+  /** 4섹터: 버려진 화약고(조사하면 화약통·낡은 장비·재앙의 신 기록물, 재앙의 신도는 기도) */
+  | "magazine";
 
 export interface Room {
   id: number;
@@ -168,8 +172,8 @@ export interface Room {
   remaining?: Enemy[];
   /** 함정방에 숨어 있는 고블린(함정을 밟으면 덮친다) */
   ambush?: string[];
-  /** 함정 종류(기본 가시함정, pit = 꺼진 바닥: 떨어지면 아래층으로) */
-  trapKind?: "spike" | "pit";
+  /** 함정 종류(기본 가시함정, pit = 꺼진 바닥: 떨어지면 아래층으로). 4섹터: collapse 낙반·cart 폭주 광차·gas 가스 주머니·steam 증기 분출·ice 얇은 얼음 */
+  trapKind?: "spike" | "pit" | "collapse" | "cart" | "gas" | "steam" | "ice";
   /** 숨은 고블린을 알아챘는지 */
   ambushKnown?: boolean;
   /** 비웠던 전투방에 몬스터가 다시 들어왔다(마석 절반) */
@@ -179,6 +183,10 @@ export interface Room {
   deep?: boolean;
   /** 3섹터: 물이 낮을 때 바닥의 공양물(작은 마석)을 주울 수 있다 */
   offering?: boolean;
+  /** 4섹터: 뜨거운 방(고임 때 발 화상) / 얼음 구역(냉기) / 지하수 웅덩이(화상 회복, 한 번) */
+  hot?: boolean;
+  ice?: boolean;
+  pool?: boolean;
   flavor: number;
 }
 
@@ -189,6 +197,7 @@ export type Pending =
   | { kind: "shrine" }
   | { kind: "relic" }
   | { kind: "altar" }
+  | { kind: "magazine" }
   | { kind: "stairs" }
   /** 첫 미궁의 1층 계단: 내려갈 수 없고, 떨어진 귀환 주문서를 쓸지 고른다 */
   | { kind: "lostScroll" }
@@ -234,6 +243,10 @@ export interface DungeonState {
   saga?: number;
   /** 재앙의 신 ★4 "함정 다루기": 해체한 함정을 다음 전투 시작 때 터뜨린다 */
   trapCharge?: boolean;
+  /** 4섹터 폭주 광차: 전철기를 돌려 다음 전투의 첫 적에게 굴러간다(피해 주사위 수) */
+  cartCharge?: number;
+  /** 3섹터 클리어 뒤 숏컷으로 곧장 4섹터에 들어왔다 */
+  shortcut?: boolean;
 }
 
 export type Activity = "train" | "rumor" | "field" | "inn";
@@ -308,7 +321,7 @@ export interface GameState {
   gold: number;
   /** heart: 1섹터 보스가 남기는 "거대 쥐의 마석 심장"(레벨 3→4 훈련 대가) */
   /** banner: 2섹터 "장군의 녹슨 휘장", spore: 3섹터 "균모의 포자낭". whetstone 숫돌(부식), antidote 해독초(독·마비) */
-  inventory: { food: number; potion: number; scroll: number; heart: number; banner: number; spore: number; scale: number; fang: number; bandage: number; herb: number; whetstone: number; antidote: number };
+  inventory: { food: number; potion: number; scroll: number; heart: number; banner: number; spore: number; scale: number; fang: number; salve: number; firewood: number; powder: number; bandage: number; herb: number; whetstone: number; antidote: number };
   /** 이미 얻은 보스 증표(섹터마다 한 번만 나온다) */
   trophies: string[];
   /** 착용 장비(슬롯 → gear.ts의 GEAR id) */
@@ -335,6 +348,12 @@ export interface GameState {
   poison?: number;
   /** 탐욕의 신 ★4 "피의 값"을 썼다(삶마다 1회): 최대 HP −5 */
   bloodPrice?: boolean;
+  /** 4섹터 화상·동상(fire.ts): 부상 단계를 올린 원인 표시(부위별) */
+  injuryCause?: Partial<Record<"head" | "body" | "main" | "offhand" | "feet", "burn" | "frost">>;
+  /** 화상 중상 뒤 치료 없이 치른 전투 수(부위별, 3번 넘으면 결손 판정) */
+  burnFights?: Partial<Record<"head" | "body" | "main" | "offhand" | "feet", number>>;
+  /** 냉기(0~4): 4가 되면 손·발 하나에 동상 */
+  cold?: number;
   /** 정신 상태이상(mind.ts). 있으면 걸린 것, known이면 눈치채서 화면에 보인다 */
   mind: Partial<Record<"fear" | "rage" | "confusion" | "despair", { known: boolean }>>;
   /** 섬기는 신의 신앙심(0~100, faith.ts) */

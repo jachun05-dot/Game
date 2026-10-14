@@ -115,6 +115,17 @@
 
 게임플레이 세션이 새 기능을 넣을 때마다 여기에 그림·모양 작업을 적는다. 끝낸 항목은 ~~취소선~~으로 남겨 두면 된다.
 
+### 2026-10-14 — 4섹터 "불타는 광산 갱도"
+4섹터가 들어갔다(기획 `docs/SECTOR4_DRAFT.md`, 이름·설명은 `src/game/data.ts`·`gear.ts`). 그림이 없으면 글자만 나온다.
+
+26. **몬스터 13종** (우선) — `MONSTER_ART`: 불씨 박쥐 `emberbat`, 불도롱뇽 `salamander`, 광석 갑충 `orebeetle`, 화염 정령 `fireelem`, 굴착 벌레 `burrower`, 서리 망령 `frostwraith`, 얼음 트롤 `icetroll`, 희귀 금맥 박쥐 `goldbat`·마석 광석 갑충 `manabeetle`·마석 서리 정령 `frostspirit`(색 바꾸기 가능), 정예 광차 미믹 `cartmimic`, 보스 화로 어미 도롱뇽 `furnacemother`(반쪽 불·반쪽 얼음), 히든 갱도의 청소부 `sweeper4`(이어 붙인 광차)
+27. **미궁 4섹터 장면** `scene-dungeon4.png` — 갱도(버팀목·녹슨 레일·벽 틈의 용암, 깊은 쪽은 푸른 얼음). `SCENE_ART`에 `dungeon4`
+28. **버려진 화약고 방 아이콘** `magazine` — `ROOM_ICON`(지도 노드 `.map-node.t-magazine`)
+29. **4섹터 장비 아이콘 9종**: fireleather, furcoat, minerpick, minerhelm, safetyboots, canary, emberring, frostwand, hingeshield
+30. (선택) 소모품 아이콘 화상 연고 `salve`·장작 `firewood`·화약통 `powder` / 상태: 부상 카드의 "· 화상"·"· 동상" 표시와 냉기 줄(`.hurt-row`), 미궁 제목의 "바람·고임", 갈림길 버튼의 "뜨거운 방·얼음 구역·지하수"가 지금은 글자뿐
+31. (선택) **함정 그림** 낙반·폭주 광차·가스 주머니·증기·얇은 얼음
+32. **숏컷 버튼** — 4주차 준비 화면의 "숏컷 — 곧장 4섹터로"(`.btn.wide`). 지금은 보통 버튼
+
 ### 2026-10-14 — 직업 기술 10~16레벨
 훈련 레벨표(`LevelTable`)가 16레벨까지 길어졌다(기본 접힘 그대로). 특수 칸 이름이 각인·특화·낙인·궁극기·화신으로 나뉜다(`.lv-kind`).
 

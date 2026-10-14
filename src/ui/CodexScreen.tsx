@@ -23,12 +23,12 @@ function MonsterFigure({ id, seen }: { id: string; seen: boolean }) {
   );
 }
 
-const ORDER = ["rat", "goblin", "skeleton", "boss", "goldrat", "jewelgoblin", "crystalskel", "wolf", "alphawolf", "crow", "harpy", "warhorse", "wraith", "general", "harpyqueen", "goldwolf", "manaharpy", "manawraith", "plaguerat", "leech", "toad", "snail", "mold", "shroudmold", "gargoyle", "mycomother", "drownedchoir", "pearlleech", "sporecap", "shellsnail"];
+const ORDER = ["rat", "goblin", "skeleton", "boss", "goldrat", "jewelgoblin", "crystalskel", "wolf", "alphawolf", "crow", "harpy", "warhorse", "wraith", "general", "harpyqueen", "goldwolf", "manaharpy", "manawraith", "plaguerat", "leech", "toad", "snail", "mold", "shroudmold", "gargoyle", "mycomother", "drownedchoir", "pearlleech", "sporecap", "shellsnail", "emberbat", "salamander", "orebeetle", "fireelem", "burrower", "frostwraith", "icetroll", "furnacemother", "cartmimic", "goldbat", "manabeetle", "frostspirit"];
 
 function whereFound(id: string): string {
   const places: string[] = [];
   if (FIELD_ENCOUNTERS.some((e) => e.item.includes(id))) places.push("영지 밖 숲");
-  for (const sector of [1, 2, 3]) {
+  for (const sector of [1, 2, 3, 4]) {
     const boss = bossGroup(sector, { int: (a) => a })[0];
     const elite = SECTOR_ELITES[sector];
     const floors = [1, 2, 3].filter((f) => SECTOR_ENCOUNTERS[sector][f].some((e) => e.item.includes(id)) || SECTOR_RARES[sector][f] === id || (id === boss && f === 3) || (elite && (elite.id === id || elite.escort.includes(id)) && elite.floors.includes(f)));

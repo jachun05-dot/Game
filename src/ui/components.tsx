@@ -400,6 +400,7 @@ export function InjuryCard({ s }: { s: GameState }) {
               <span className="item">
                 {LEVEL_NAME[raw]}
                 {raw >= 3 && s.prosthetic[p] ? (p === "feet" ? " · 의족" : " · 의수") : ""}
+                {raw > 0 && s.injuryCause?.[p] ? (s.injuryCause[p] === "burn" ? " · 화상" : " · 동상") : ""}
               </span>
               <span className="effect">{eff}</span>
             </li>
@@ -410,6 +411,13 @@ export function InjuryCard({ s }: { s: GameState }) {
           <span className="item">{s.disease ? diseaseName(s) : "없음"}</span>
           <span className="effect">{s.disease === 2 ? "방을 옮길 때마다 HP −2, 판정 −2" : s.disease === 1 ? "방을 옮길 때마다 HP −1" : ""}{s.disease && s.diseaseKind === "mold" ? ", 야영 회복 절반" : ""}</span>
         </li>
+        {(s.cold ?? 0) > 0 && (
+          <li className="hurt-row">
+            <span className="slot">냉기</span>
+            <span className="item">{Math.floor(s.cold ?? 0)}/4</span>
+            <span className="effect">4가 되면 손·발 하나에 동상 · 장작을 때고 야영, 얼음 구역 밖에선 방마다 −1</span>
+          </li>
+        )}
         {poisonOf(s) > 0 && (
           <li className="hurt-row">
             <span className="slot">독</span>

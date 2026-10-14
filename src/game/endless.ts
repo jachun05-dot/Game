@@ -9,13 +9,13 @@ import type { DungeonState, Enemy, Room, RoomType } from "./types";
 // 섹터 번호는 실제 섹터와 겹치지 않게 큰 수를 쓰고, 섹터별 표(조우·마석 배율 등)는 endless 플래그로 따로 고른다.
 
 /** 지금까지 만든 마지막 섹터: 이 섹터의 차원문 너머가 끝없는 미궁 */
-export const LAST_SECTOR = 3;
+export const LAST_SECTOR = 4;
 export const ENDLESS_SECTOR = 99;
 export const ENDLESS_NAME = "끝없는 미궁";
 
 /** 보스는 5층마다 */
 export const ENDLESS_BOSS_EVERY = 5;
-const BOSSES = ["boss", "harpyqueen", "general", "mycomother"];
+const BOSSES = ["boss", "harpyqueen", "general", "mycomother", "furnacemother"];
 
 /** 끝없는 미궁에 나오는 보통 몬스터(지금까지 만든 몬스터 전부, 특수한 것 제외) */
 export function endlessPool(): string[] {

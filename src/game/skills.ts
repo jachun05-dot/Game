@@ -258,6 +258,21 @@ Object.assign(SKILLS, {
   fragMycelium: { id: "fragMycelium", name: "균사 재생", kind: "passive", desc: "전투 라운드마다 HP +1(병을 앓는 동안 +2)" },
 } satisfies Record<string, SkillDef>);
 
+// 편린 능력(4섹터). 화상·냉기·낙반은 fire.ts가 id로 처리
+Object.assign(SKILLS, {
+  fragFireSkin: { id: "fragFireSkin", name: "불 먹은 피부", kind: "passive", desc: "화상에 걸릴 확률 절반" },
+  fragOreShell: { id: "fragOreShell", name: "광석 껍질", kind: "passive", desc: "낙반·광차 피해 −3" },
+  fragEmber: { id: "fragEmber", name: "불씨", kind: "passive", desc: "명중하면 10% 확률로 적이 불탄다(2라운드)" },
+  fragTremor: { id: "fragTremor", name: "땅울림", kind: "passive", desc: "낙반 함정을 항상 알아챈다" },
+  fragColdBlood: { id: "fragColdBlood", name: "찬 피", kind: "passive", desc: "냉기가 쌓이는 속도 절반" },
+  fragRegen: { id: "fragRegen", name: "재생", kind: "passive", desc: "전투 라운드마다 HP +1" },
+  fragMimic: {
+    id: "fragMimic", name: "의태", kind: "active", desc: "전투 시작 시 첫 공격 피해 ×2",
+    trigger: { on: "start" }, effect: { type: "strike", hit: 2, dmg: 0, dmgMult: 2 }, uses: 1,
+  },
+  fragTwoBloods: { id: "fragTwoBloods", name: "두 개의 피", kind: "passive", desc: "화상·동상 부위가 결손까지 가지 않는다(중상에서 멈춤)" },
+} satisfies Record<string, SkillDef>);
+
 // 마법사 원소 기술(elements.ts의 레벨표). 효과 처리는 combat.ts
 const E = (el: ElementKey, defs: Record<string, Omit<SkillDef, "el">>) => Object.fromEntries(Object.entries(defs).map(([k, v]) => [k, { ...v, el }]));
 Object.assign(SKILLS, E("fire", {

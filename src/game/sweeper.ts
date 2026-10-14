@@ -16,7 +16,7 @@ export function nextFloorLevel(sector: number, floor: number): number {
 }
 
 export function sweeperId(sector: number): string {
-  return sector >= 3 ? "sweeper3" : sector === 2 ? "sweeper2" : "sweeper1";
+  return sector >= 4 ? "sweeper4" : sector === 3 ? "sweeper3" : sector === 2 ? "sweeper2" : "sweeper1";
 }
 
 /** 이 층에서 청소부 시계가 도는가 */

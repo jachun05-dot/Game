@@ -59,6 +59,20 @@ export const FRAGMENTS: Record<string, FragmentDef> = {
   drownedchoir: { id: "drownedchoir", name: "익사한 성가대의 편린", tier: 3, chance: 0.03, stats: { per: 4, int: 2 }, skill: "fragChoirBell", flavor: "귓가에 종소리가 남는다. 울리면 적이 멈칫한다." },
   mycomother: { id: "mycomother", name: "가라앉은 본당의 균모의 편린", tier: 4, chance: 0.03, stats: { con: 6, str: 3 }, skill: "fragMycelium", flavor: "몸속에 균사가 뿌리내린다. 상처가 저절로 메워진다." },
   sweeper3: { id: "sweeper3", name: "사원의 청소부의 편린", tier: 4, chance: 0.03, stats: { str: 4, con: 5, per: 3 }, flavor: "물이끼 낀 촉수의 감촉. 머물지 않는 자는 쓸려 가지 않는다." },
+  // 4섹터
+  emberbat: { id: "emberbat", name: "불씨 박쥐의 편린", tier: 1, chance: 0.02, stats: { dex: 2, per: 1 }, flavor: "불씨처럼 깜박이는 빛. 어둠 속에서도 눈이 밝다." },
+  salamander: { id: "salamander", name: "불도롱뇽의 편린", tier: 2, chance: 0.015, stats: { con: 3, str: 1 }, skill: "fragFireSkin", flavor: "뜨겁고 미끈하다. 불이 살갗을 덜 태운다." },
+  orebeetle: { id: "orebeetle", name: "광석 갑충의 편린", tier: 2, chance: 0.015, stats: { con: 5 }, skill: "fragOreShell", flavor: "광석 같은 무게. 무너지는 돌이 덜 아프다." },
+  fireelem: { id: "fireelem", name: "화염 정령의 편린", tier: 2, chance: 0.015, stats: { int: 3, str: 1 }, skill: "fragEmber", flavor: "손끝에 불씨가 머문다." },
+  burrower: { id: "burrower", name: "굴착 벌레의 편린", tier: 2, chance: 0.015, stats: { str: 3, con: 2 }, skill: "fragTremor", flavor: "발바닥으로 땅의 울림을 듣는다." },
+  frostwraith: { id: "frostwraith", name: "서리 망령의 편린", tier: 2, chance: 0.015, stats: { per: 3, con: 2 }, skill: "fragColdBlood", flavor: "피가 차갑게 식는다. 추위가 덜 스민다." },
+  icetroll: { id: "icetroll", name: "얼음 트롤의 편린", tier: 3, chance: 0.02, stats: { con: 5, str: 3 }, skill: "fragRegen", flavor: "상처가 얼어붙듯 아문다." },
+  goldbat: { id: "goldbat", name: "금맥 박쥐의 편린", tier: 3, chance: 0.03, stats: { luk: 5, dex: 3 }, skill: "fragGoldHunter", flavor: "금가루가 날개처럼 흩날린다." },
+  manabeetle: { id: "manabeetle", name: "마석 광석 갑충의 편린", tier: 3, chance: 0.03, stats: { con: 6, str: 3 }, skill: "fragManaArmor", flavor: "마석 광맥이 등뼈를 따라 자란다." },
+  frostspirit: { id: "frostspirit", name: "마석 서리 정령의 편린", tier: 3, chance: 0.03, stats: { per: 5, int: 3 }, skill: "fragManaFeather", flavor: "얼음 결정이 마석처럼 빛난다." },
+  cartmimic: { id: "cartmimic", name: "광차 미믹의 편린", tier: 3, chance: 0.03, stats: { str: 4, dex: 2 }, skill: "fragMimic", flavor: "무언가인 척하는 법을 안다. 첫 일격은 아무도 모른다." },
+  furnacemother: { id: "furnacemother", name: "화로 어미 도롱뇽의 편린", tier: 4, chance: 0.03, stats: { con: 6, str: 4, int: 2 }, skill: "fragTwoBloods", flavor: "한쪽은 타오르고 한쪽은 얼어 있다. 불도 얼음도 몸을 다 가져가지는 못한다." },
+  sweeper4: { id: "sweeper4", name: "갱도의 청소부의 편린", tier: 4, chance: 0.03, stats: { str: 5, con: 5, dex: 3 }, flavor: "녹슨 레일의 진동. 멈추지 않고 나아가는 법." },
   boss: { id: "boss", name: "거대한 돌연변이 쥐의 편린", tier: 4, chance: 0.03, stats: { str: 4, con: 4, dex: 1 }, skill: "fragFrenzy", flavor: "붉게 고동친다. 이빨이 근질거린다." },
 };
 
