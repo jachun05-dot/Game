@@ -109,3 +109,10 @@ export const GEAR_ICON: Record<string, SpriteArt> = {
   luckring: { src: "./gear-luckring.png", w: 24, h: 26 },
   vigorring: { src: "./gear-vigorring.png", w: 24, h: 26 },
 };
+
+/**
+ * 훈련 갈래 아이콘(훈련 레벨표 머리·캐릭터 시트). 키는 훈련 id:
+ * 마법사 fire·frost·bolt·earth, 전사 guard·glad·berserk, 모험가 fighter·caster·rogue.
+ * 비어 있으면 글자만 나온다. 비주얼 세션이 그림을 넣고 한 줄씩 등록한다.
+ */
+export const LINE_ICON: Record<string, SpriteArt> = {};

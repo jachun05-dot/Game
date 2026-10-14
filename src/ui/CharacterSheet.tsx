@@ -4,7 +4,7 @@ import { CLASSES } from "../game/classes";
 import { heroAc, maxHp, smod, stat } from "../game/core";
 import { passive } from "../game/skills";
 import type { Ctl } from "./App";
-import { Card, FaithCard, GearIcon, InjuryCard, FragList, SkillList, StatGrid, TacticsBar, fmtMod } from "./components";
+import { BuildSummary, Card, FaithCard, GearIcon, InjuryCard, FragList, LevelTable, SkillList, StatGrid, TacticsBar, fmtMod } from "./components";
 import { CLASS_ART } from "./art";
 
 /** 캐릭터 화면: 장비 9슬롯, 공격·방어 계산 내역, 능력치, 기술, 소지품 */
@@ -90,6 +90,11 @@ export function CharacterSheet({ ctl }: { ctl: Ctl }) {
 
           <Card title="능력치">
             <StatGrid s={s} />
+          </Card>
+
+          <Card title="훈련 갈래">
+            <BuildSummary s={s} />
+            <LevelTable s={s} />
           </Card>
 
           <Card title="기술">

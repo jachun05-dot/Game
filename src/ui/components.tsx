@@ -7,11 +7,14 @@ import { DISEASE_NAME, INJ, LEVEL_NAME, PARTS, PART_NAME, injurySummary, partEff
 import { STAT_KEYS, STAT_LABEL } from "../game/data";
 import { GEAR } from "../game/gear";
 import { CLASSES } from "../game/classes";
-import { SKILLS } from "../game/skills";
+import { SKILLS, skillWorks } from "../game/skills";
+import { hasLevelTable, levelSkill } from "../game/elements";
+import { TRAININGS } from "../game/data";
+import { hasShield } from "../game/gear";
 import type { AutoGoal, GameState } from "../game/types";
 import type { Ctl, Speed } from "./App";
 import { CharacterSheet } from "./CharacterSheet";
-import { CLASS_ART, FRAG_ICON, GEAR_ICON, MONSTER_ART, SCENE_ART } from "./art";
+import { CLASS_ART, FRAG_ICON, GEAR_ICON, LINE_ICON, MONSTER_ART, SCENE_ART } from "./art";
 
 export function Shell({ children, wide }: { children: ReactNode; wide?: boolean }) {
   return <main className={`shell${wide ? " wide" : ""}`}>{children}</main>;
@@ -250,10 +253,12 @@ export function SkillList({ s, empty }: { s: GameState; empty?: string }) {
     <ul className="skills">
       {s.skills.map((id) => {
         const sk = SKILLS[id];
+        const off = !skillWorks(s, id);
         return (
-          <li key={id}>
+          <li key={id} className={off ? "off" : ""}>
             <span className={`skill-kind ${sk.kind}`}>{sk.kind === "active" ? "자동 발동" : "패시브"}</span>
             <b>{sk.name}</b>
+            {off && <span className="skill-kind warn">방패 없음 — 쓸 수 없다</span>}
             <span className="dim small">{sk.desc}</span>
           </li>
         );
@@ -434,5 +439,100 @@ export function GearIcon({ id, scale = 1 }: { id?: string | null; scale?: number
     <span className="gear-icon" style={scale !== 1 ? { minWidth: 32 * scale, minHeight: 32 * scale } : undefined}>
       {a && <img src={a.src} width={a.w * scale} height={a.h * scale} alt="" />}
     </span>
+  );
+}
+
+/** 특수 훈련 레벨(보스 재료가 드는 훈련) */
+export const SPECIAL_LEVELS = [4, 7, 10];
+
+/**
+ * 직업 훈련 레벨표: 줄은 레벨, 칸은 훈련. 배운 칸 · 이번에 고를 수 있는 칸 · 놓친 칸 · 앞으로의 칸을 구분한다.
+ * onPick이 있으면 이번 레벨 칸을 눌러 훈련을 고른다.
+ */
+export function LevelTable({ s, selected, onPick }: { s: GameState; selected?: string; onPick?: (trainingId: string) => void }) {
+  const lines = CLASSES[s.hero.cls].trainings.filter(hasLevelTable);
+  if (lines.length === 0) return null;
+  const next = s.hero.level + 1;
+  const shield = hasShield(s);
+  return (
+    <div className="lvtable-wrap">
+      <table className="lvtable">
+        <thead>
+          <tr>
+            <th>Lv</th>
+            {lines.map((id) => (
+              <th key={id} className={selected === id ? "sel" : ""}>
+                {LINE_ICON[id] && <img className="line-icon" src={LINE_ICON[id].src} width={LINE_ICON[id].w} height={LINE_ICON[id].h} alt="" />}
+                {TRAININGS.find((x) => x.id === id)!.name.replace(/ (수련|훈련)$/, "")}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((lv) => {
+            const special = SPECIAL_LEVELS.includes(lv);
+            return (
+              <tr key={lv} className={`${special ? "special" : ""}${lv === next ? " now" : ""}`}>
+                <th>
+                  {lv}
+                  <span className="lv-kind">{special ? "특화" : lv % 2 === 0 ? "패시브" : "액티브"}</span>
+                </th>
+                {lines.map((line) => {
+                  const id = levelSkill(line, lv);
+                  if (!id) return <td key={line} className="lt-future dim">{lv === 10 ? "3섹터" : "—"}</td>;
+                  const sk = SKILLS[id];
+                  const learned = s.skills.includes(id);
+                  const state = learned ? "lt-learned" : lv === next ? "lt-next" : lv <= s.hero.level ? "lt-missed" : "lt-future";
+                  const pick = state === "lt-next" && onPick ? () => onPick(line) : undefined;
+                  return (
+                    <td key={line} className={`${state}${selected === line && lv === next ? " sel" : ""}`} title={sk.desc}>
+                      {pick ? (
+                        <button type="button" onClick={pick}>
+                          {sk.name}
+                        </button>
+                      ) : (
+                        <span>{sk.name}</span>
+                      )}
+                      {learned && <span className="mark-ok"> ✓</span>}
+                      {sk.shield && <span className={shield ? "dim" : "warn"}> 🛡</span>}
+                    </td>
+                  );
+                })}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <p className="dim small lv-legend">
+        <span className="lg-learned">✓ 배움</span> · <span className="lg-next">이번 훈련</span> · <span className="lg-missed">놓침</span> · 🛡 방패가 있어야 발동. 짝수 레벨은 패시브, 홀수 레벨은 액티브, 4·7·10레벨은 보스 재료가 드는 특화.
+      </p>
+    </div>
+  );
+}
+
+/** 갈래별 배운 기술 수와 각인(캐릭터 시트용) */
+export function BuildSummary({ s }: { s: GameState }) {
+  const lines = CLASSES[s.hero.cls].trainings.filter(hasLevelTable);
+  const parts = lines
+    .map((line) => {
+      const ids = [2, 3, 4, 5, 6, 7, 8, 9, 10].map((lv) => levelSkill(line, lv)).filter((x): x is string => !!x);
+      const n = ids.filter((id) => s.skills.includes(id)).length;
+      const marked = SPECIAL_LEVELS.some((lv) => {
+        const id = levelSkill(line, lv);
+        return !!id && s.skills.includes(id);
+      });
+      return { name: TRAININGS.find((x) => x.id === line)!.name.replace(/ (수련|훈련)$/, ""), n, marked };
+    })
+    .filter((p) => p.n > 0);
+  if (!parts.length) return <p className="dim small">아직 갈래를 정하지 않았다.</p>;
+  return (
+    <p className="small">
+      {parts.map((p, i) => (
+        <span key={p.name}>
+          {i ? " · " : ""}
+          <b>{p.name}</b> {p.n}개{p.marked ? " (특화)" : ""}
+        </span>
+      ))}
+    </p>
   );
 }

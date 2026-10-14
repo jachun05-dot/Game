@@ -1,4 +1,4 @@
-# 비주얼 작업 인수인계 (2026-10-13)
+# 비주얼 작업 인수인계 (2026-10-13, 최신 갱신 2026-10-14)
 
 게임의 비주얼(그림·UI 모양)은 별도 세션에서 작업한다. 이 문서는 그 세션이 처음 읽을 안내서다.
 게임 규칙·수치·로직은 이 세션(게임플레이 세션)이 계속 맡는다. 전체 맥락은 `docs/HANDOFF.md`, 아트 원칙과 프롬프트 기록은 `docs/ART_PROMPTS.md`.
@@ -7,7 +7,7 @@
 
 - 텍스트 기반 던전크롤 로그라이크 "DDD — 열여섯 살, 미궁으로". 참고작: slbcareer.com, kickru.com, 1in8b.life(텍스트+카드, 턴 결과 리포트)
 - 모바일 세로 화면 우선(390×844 기준), 어두운 갈색 + 탁한 금색 톤, 16비트 도트 일러스트
-- 지금 들어간 그림은 **모험가 소년 1장뿐**(전신 + 얼굴 잘라낸 것). 나머지는 전부 글자와 CSS
+- 들어간 그림: 직업 3종(전신·얼굴), 몬스터 13종, 편린 등급 아이콘, 장소 그림 10장, 방 아이콘, 1섹터 장비 아이콘 21종(아래 5절). **할 일은 맨 아래 10절**
 - 플레이 링크(비공개 아티팩트): https://claude.ai/artifact/3hRQb1UtFGqHvFAGstGNdy
 
 ## 1-1. 지금 작업 방식(2026-10-14부터)
@@ -54,7 +54,7 @@
 |---|---|---|
 | 직업 전신 3종 | `hero.png`(모험가 37×90), `warrior.png`(35×86), `mage.png`(44×86) | 타이틀(모험가), 직업 선택 카드 설명(2배) |
 | 직업 얼굴 3종 | `hero-face.png`, `warrior-face.png`, `mage-face.png`(30×30) | 헤더 초상(2배 60px), 캐릭터 시트(3배 90px) |
-| 몬스터 7종 | `mon-{rat,goblin,skeleton,boss,goldrat,jewelgoblin,crystalskel}.png` — 모두 같은 월드 스케일 | 도감 카드 위 무대(모두 2배, 안 본 몬스터는 실루엣), 미궁 로그의 "나타났다" 줄(1배, `LogLine.mons`) |
+| 몬스터 13종 | `mon-{rat,goblin,skeleton,boss,goldrat,jewelgoblin,crystalskel}.png` + 2섹터 `mon-{wolf,alphawolf,crow,harpy,warhorse,wraith}.png` — 모두 같은 월드 스케일 | 도감 카드 위 무대(모두 2배, 안 본 몬스터는 실루엣), 미궁 로그의 "나타났다" 줄(1배, `LogLine.mons`) |
 | 편린 등급 아이콘 4종 | `frag-1~4.png` | 캐릭터 시트 편린 목록·도감(1배), 미궁 편린 획득 카드(2배). 처음 보는 편린은 늘 같은 실루엣 |
 | 장소 그림 10장 | `scene-{training,tavern,forest,market,smithy,temple,office,grave,dungeon1,title}.png` — 모두 200격자 장면을 띠로 자른 것 | 훈련 카드·주간 결과 카드(훈련/탐문/외부 탐험), 상점가·대장간·신전 카드, 정산 세금 카드, 묘지 화면, 미궁 지도 칸 배경(`dungeon`+섹터), 타이틀 키아트(소년 2배를 위에 세움). `SceneBanner`, 좁은 화면은 `focus` 쪽을 남기고 자른다 |
 
@@ -85,7 +85,7 @@
 | 미궁 | `DungeonScreen.tsx` | 생존 게이지 3개, SVG 방 지도(`FloorMap`), 로그, 도크에 길 선택·함정/상자/편린/장비 선택(`.loot-card`) |
 | 월말 정산 | `SettlementScreen.tsx` | 환전·세금 |
 | 사망·묘비 | `DeadScreen.tsx`, `TombCard.tsx`, `GraveyardScreen.tsx` | |
-| 캐릭터 시트 | `CharacterSheet.tsx` | 바텀시트 모달: 장비 9슬롯, 전투 수치, 능력치, 기술, 편린, 소지품 |
+| 캐릭터 시트 | `CharacterSheet.tsx` | 바텀시트 모달: 장비 9슬롯, 전투 수치, 능력치, **훈련 갈래(레벨표)**, 기술, 편린, 소지품 |
 | 몬스터 도감 | `CodexScreen.tsx` | 안 본 몬스터는 `???`, 편린은 흡수해 본 것만 공개 |
 
 `styles.css`는 주석 머리말로 구역이 나뉘어 있다(카드·버튼 / 타이틀 / 인트로·생성 / 헤더·상태 / 결과 카드 / 로그 / 던전 / 묘비 / 고정 화면 틀 / 얼굴 초상 / 캐릭터 화면 / 직업 선택·장비 발견 / 편린 / 몬스터 도감).
@@ -110,3 +110,26 @@
 - 모바일 폭 390px에서 가로 스크롤이 생기지 않게, 터치 대상은 충분히 크게
 - 도감의 "모르는 것은 ???" 규칙(안 본 몬스터, 흡수 안 한 편린의 능력치)을 그림으로 누설하지 않는다 — 안 본 몬스터는 실루엣이나 물음표로
 - 도트 그림은 정수배 확대 + `image-rendering: pixelated`만. 부드럽게 늘리지 않는다
+
+## 10. 할 일 (게임플레이 세션 요청 — 최신이 위)
+
+게임플레이 세션이 새 기능을 넣을 때마다 여기에 그림·모양 작업을 적는다. 끝낸 항목은 ~~취소선~~으로 남겨 두면 된다.
+
+### 2026-10-14 — 직업 훈련 재설계(레벨표)
+세 직업의 훈련이 "레벨마다 정해진 기술" 구조로 바뀌었다(기술표: `docs/MAGE.md`, `docs/WARRIOR.md`, `docs/ADVENTURER.md`).
+훈련 화면과 캐릭터 시트에 **훈련 레벨표**가 새로 들어갔다(`LevelTable`, `BuildSummary` — `src/ui/components.tsx`).
+
+1. **훈련 갈래 아이콘 10종** (우선) — 레벨표 머리 칸에 글자 위에 뜬다. 16×16 또는 20×20 도트, 1배로 쓴다.
+   - 마법사 원소: 화염 `fire`, 서리 `frost`, 번개 `bolt`, 대지 `earth`
+   - 전사 방향: 수호 `guard`(방패), 검투 `glad`(검), 광전 `berserk`(도끼·핏자국)
+   - 모험가 갈래: 전사형 `fighter`, 마법사형 `caster`, 민첩형 `rogue`
+   - 연결: `public/line-<id>.png`, `src/ui/art.ts`의 `LINE_ICON`에 `<id>: { src: "./line-<id>.png", w, h }` 한 줄씩. 코드는 이미 연결돼 있다(없으면 글자만)
+2. **레벨표 모양 다듬기** — 클래스: `.lvtable`(표), `tr.special`(4·7·10레벨 특화 줄), `tr.now`(이번 레벨 줄), `td.lt-learned`(배움, ✓), `td.lt-next`(이번에 고를 수 있음, 버튼), `td.lt-next.sel`(선택), `td.lt-missed`(놓침, 취소선), `td.lt-future`, `.lv-legend`, `.special-note`(특수 훈련 안내 상자), `.skill-kind.warn`(방패 없음 경고), `.line-icon`.
+   - 상태는 색만으로 구분하지 않는다(✓·취소선·버튼 밑줄 유지). 390px 폭에서 마법사 4칸이 한 화면에 들어가야 한다
+   - 지금 화면: 훈련 패널(마을 → 이번 주 할 일 → 훈련), 캐릭터 시트 "훈련 갈래" 카드
+3. (선택) **특화 각인 아이콘** — 4레벨 특화 10종(불의 각인·서리의 각인·번개의 각인·대지의 각인, 수호의 각인·검투의 각인·광전의 각인, 칼잡이의 각인·주문꾼의 각인·그림자의 각인). 기술 목록에서 쓸 수 있게 `SKILL_ICON`(새 목록)으로 등록하면 게임플레이 세션이 화면에 연결한다
+
+### 2섹터에서 아직 그림이 없는 것
+4. **몬스터 6종**: 이단심문관 `inquisitor`(사람 — 성당의 이단 사냥꾼, 철퇴), 금빛 털 늑대 `goldwolf`, 마석 깃털 하피 `manaharpy`, 마석 갑주 망령 `manawraith`, 하피 여왕 `harpyqueen`(정예, 하피보다 큼), 끝나지 않은 전쟁의 장군 `general`(2섹터 보스, 망령 군마를 탄 장군 느낌). 설정 문장은 `src/game/data.ts`의 `MONSTERS[].note`
+5. **미궁 2섹터 장면** `scene-dungeon2.png` — 잊힌 전쟁터의 초원(무너진 참호·녹슨 깃발). `SCENE_ART`에 `dungeon2` 한 줄이면 미궁 지도 배경에 바로 나온다(코드가 `dungeon${섹터}`를 찾음)
+6. **2섹터 장비 아이콘 10종**: wraithspear(망령의 창), warbanner(전쟁 깃발), harpycharm(하피 깃털 부적), horseshoe(유령 군마의 편자), battlering(전장의 반지), wolfhide(늑대 가죽 갑옷), steelsword(강철 장검), steelshield(강철 방패), oakstaff(마력이 깃든 지팡이), queencloak(하피 여왕의 깃털 망토). 이름·설명은 `src/game/gear.ts`

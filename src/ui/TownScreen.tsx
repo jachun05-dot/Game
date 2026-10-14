@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { BAL, STAT_KEYS, STAT_LABEL, TRAININGS } from "../game/data";
-import { GEAR, SLOTS, gearEffect, targetSlot } from "../game/gear";
+import { GEAR, SLOTS, gearEffect, hasShield, targetSlot } from "../game/gear";
 import { CLASSES } from "../game/classes";
 import { hasLevelTable } from "../game/elements";
 import { canTrain, gateOf, nextSkill, shopPrice, trainCost } from "../game/town";
@@ -12,7 +12,7 @@ import type { StatKey } from "../game/types";
 import type { Ctl } from "./App";
 import { josa } from "../game/josa";
 import { INJ, LIMBS, PART_NAME, anyInjury } from "../game/injury";
-import { Card, GameScreen, GearIcon, GearList, HeroHeader, LogView, FaithCard, InjuryCard, FragList, SceneBanner, SkillList, StatGrid, TacticsBar } from "./components";
+import { Card, GameScreen, GearIcon, GearList, HeroHeader, LevelTable, LogView, FaithCard, InjuryCard, FragList, SPECIAL_LEVELS, SceneBanner, SkillList, StatGrid, TacticsBar } from "./components";
 
 const ITEM_INFO = {
   food: { name: "말린 고기", desc: "포만감 +40" },
@@ -261,6 +261,11 @@ function TrainingPanel({ ctl, onClose }: { ctl: Ctl; onClose: () => void }) {
   const [tid, setTid] = useState(allowed[0].id);
   const [free, setFree] = useState<StatKey[]>([]);
   const t = TRAININGS.find((x) => x.id === tid)!;
+  const sk = nextSkill(s, tid);
+  const gate = gateOf(s);
+  const next = s.hero.level + 1;
+  const basic = CLASSES[s.hero.cls].firstSkill;
+  const needShield = sk && SKILLS[sk].shield && !hasShield(s);
 
   const toggle = (k: StatKey) => {
     setFree((f) => (f.length < 2 ? [...f, k] : [f[1], k]));
@@ -269,30 +274,41 @@ function TrainingPanel({ ctl, onClose }: { ctl: Ctl; onClose: () => void }) {
   return (
     <Card title={`훈련 — ${trainCost(s)}G`}>
       <SceneBanner id="training" />
-      <p className="dim small">훈련마다 6포인트: 훈련 종류로 정해지는 2 + 자유 2 + 지난 행동으로 정해지는 2.</p>
+      <p className="dim small">훈련마다 6포인트: 훈련 종류로 정해지는 2 + 자유 2 + 지난 행동으로 정해지는 2. 어느 레벨에서 어느 훈련을 받았는지에 따라 배우는 기술이 정해진다 — 그 레벨에 다른 훈련을 고르면 그 칸은 놓친다.</p>
+      {SPECIAL_LEVELS.includes(next) && (
+        <div className="special-note">
+          <b>특수 훈련 — 레벨 {next}</b>
+          <span className="small">{gate ? `재료: ${gate.name}. ` : ""}고른 훈련의 <b>특화</b>를 얻는다. 특화를 얻으면 그 갈래의 액티브를 전투마다 한 번 더 쓰고, 확 강해진다.</span>
+        </div>
+      )}
+      {basic && !s.skills.includes(basic) && (
+        <p className="small accent">첫 훈련: 어느 훈련을 받든 기본기 【{SKILLS[basic].name}】을(를) 함께 배운다 — {SKILLS[basic].desc}</p>
+      )}
+      <LevelTable s={s} selected={tid} onPick={setTid} />
       <div className="stack tight">
         {allowed.map((x) => {
-          const sk = nextSkill(s, x.id);
+          const xs = nextSkill(s, x.id);
           return (
             <button key={x.id} className={`option${tid === x.id ? " on" : ""}`} onClick={() => setTid(x.id)}>
               <b>{x.name}</b> <span className="dim small">{x.desc}</span>
               <span className="small accent">
                 {" "}
-                {x.stats.map((k) => STAT_LABEL[k]).join(" · ")} +1
+                {x.stats[0] === x.stats[1] ? `${STAT_LABEL[x.stats[0]]} +2` : `${x.stats.map((k) => STAT_LABEL[k]).join(" · ")} +1`}
               </span>
               <span className="option-skill small">
-                {sk ? (
+                {xs ? (
                   <>
-                    배울 기술: <b>{SKILLS[sk].name}</b> <span className="dim">({SKILLS[sk].kind === "active" ? "자동 발동" : "패시브"}) {SKILLS[sk].desc}</span>
+                    레벨 {next} 기술: <b>{SKILLS[xs].name}</b> <span className="dim">({SPECIAL_LEVELS.includes(next) ? "특화" : SKILLS[xs].kind === "active" ? "자동 발동" : "패시브"}) {SKILLS[xs].desc}</span>
                   </>
                 ) : (
-                  <span className="dim">{hasLevelTable(x.id) ? "이 레벨에는 이 훈련으로 배울 기술이 없다" : "이 훈련의 기술은 모두 배웠다"}</span>
+                  <span className="dim">{hasLevelTable(x.id) ? (next >= 10 ? "10레벨 이후 기술은 3섹터와 함께 열린다" : "이 레벨에는 이 훈련으로 배울 기술이 없다") : "이 훈련의 기술은 모두 배웠다"}</span>
                 )}
               </span>
             </button>
           );
         })}
       </div>
+      {needShield && <p className="small warn">🛡 지금 방패가 없어 【{SKILLS[sk!].name}】을(를) 배워도 쓸 수 없다. 대장간에서 나무 방패({GEAR.shield.price}G)를 먼저 사 두자.</p>}
       <p className="eyebrow">자유 배분 2포인트 (같은 능력치에 두 번도 가능)</p>
       <div className="chips">
         {STAT_KEYS.map((k) => {
