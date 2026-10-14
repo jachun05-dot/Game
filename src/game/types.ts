@@ -52,6 +52,11 @@ export interface Enemy {
   shock?: number;
   /** 손버릇으로 찔렀다(쓰러뜨리면 마석 ×1.5) */
   stolen?: boolean;
+  /** 끝없는 미궁에서 강해진 몬스터: 최대 HP·명중·피해·AC 보정 */
+  hpMax?: number;
+  atkUp?: number;
+  dmgUp?: number;
+  acUp?: number;
 }
 
 /** 허수아비 측정용 피해 기록. rounds의 칸 = 측정 시작부터 센 라운드 */
@@ -193,6 +198,8 @@ export interface DungeonState {
   clock?: number;
   /** 리젠 판정까지 쌓인 턴 */
   respawnClock?: number;
+  /** 끝없는 미궁(2섹터 차원문 너머, endless.ts): floor = 끝없는 미궁 몇 층 */
+  endless?: boolean;
   /** 이번 삶의 첫 미궁(1월): 2층으로 내려갈 수 없다 */
   first?: boolean;
   /** 이 층에 도착한 뒤 흐른 턴(미궁의 청소부 시계) */

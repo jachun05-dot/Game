@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { Rng } from "./rng";
 import { enterDungeon, generateFloor, passTime } from "./dungeon";
 import { canTrain, newRun, trainCost } from "./town";
+import { endlessPool, generateEndlessFloor } from "./endless";
 import { CLASSES } from "./classes";
 import { act, apply } from "./engine";
 import { botAction } from "./bot";
@@ -1296,5 +1297,52 @@ describe("현상수배 중 떠돌이 교관", () => {
     g.inventory.heart = 0;
     apply(g, { t: "activity", a: "field" });
     expect(g.outlawTrainer).toBeUndefined();
+  });
+});
+
+describe("끝없는 미궁", () => {
+  const toEndless = () => {
+    const s = newRun(121);
+    apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    s.month = 6;
+    s.hero.level = 12;
+    enterDungeon(s);
+    const dg = s.dungeon!;
+    dg.sector = 2;
+    dg.floor = 3;
+    dg.pending = { kind: "portal" };
+    s.combat = null;
+    apply(s, { t: "pending", choice: "enter" });
+    return s;
+  };
+  it("2섹터 차원문으로 들어가면 끝없는 미궁 1층: 함정·상자·기록물 없이 전투·빈 방·계단뿐", () => {
+    const s = toEndless();
+    const dg = s.dungeon!;
+    expect(dg.endless).toBe(true);
+    expect(dg.floor).toBe(1);
+    expect(s.rank).toBe(2);
+    expect(dg.rooms.every((r) => ["entrance", "combat", "empty", "stairs"].includes(r.type))).toBe(true);
+  });
+  it("계단은 끝없이 이어지고, 깊을수록 몬스터가 강하며, 5층마다 보스가 계단 앞을 지킨다", () => {
+    const r = new Rng({ s: 7 });
+    for (let n = 1; n <= 40; n++) {
+      const rooms = generateEndlessFloor(r, n);
+      expect(rooms.filter((x) => x.type === "stairs").length).toBe(1);
+      expect(rooms.some((x) => x.type === "trap" || x.type === "treasure")).toBe(false);
+      const bossy = rooms.some((x) => x.encounter?.some((m) => ["boss", "harpyqueen", "general"].includes(m)));
+      expect(bossy).toBe(n % 5 === 0);
+    }
+    const s = toEndless();
+    s.dungeon!.floor = 1;
+    const e1 = makeEnemies(s, ["wraith"])[0];
+    s.dungeon!.floor = 10;
+    const e10 = makeEnemies(s, ["wraith"])[0];
+    expect(e1.hp).toBeGreaterThan(MONSTERS.wraith.hp);
+    expect(e10.hp).toBeGreaterThan(e1.hp);
+    expect(e10.atkUp!).toBeGreaterThan(e1.atkUp!);
+    expect(endlessPool()).not.toContain("inquisitor");
+    expect(endlessPool()).not.toContain("sweeper1");
+    expect(endlessPool()).toContain("rat");
+    expect(endlessPool()).toContain("wraith");
   });
 });

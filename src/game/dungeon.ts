@@ -11,6 +11,7 @@ import { describeGroup, makeEnemies, potionHeal, startCombat } from "./combat";
 import { hungerMult } from "./skills";
 import { GEAR, equip, targetSlot } from "./gear";
 import { resetSweeper, sweeperId, sweeperStep, sweeperTick } from "./sweeper";
+import { ENDLESS_BOSS_EVERY, ENDLESS_NAME, ENDLESS_SECTOR, endlessGroup, endlessManaMult, generateEndlessFloor } from "./endless";
 import type { Rng } from "./rng";
 import type { CombatState, DungeonState, GameState, Pending, Room, RoomType } from "./types";
 
@@ -159,7 +160,7 @@ export function passTime(s: GameState, turns: number): void {
   dg.turnsLeft -= turns;
   const wasNight = isNight(s);
   dg.clock = (dg.clock ?? 0) + turns;
-  if (dg.sector >= 2 && isNight(s) !== wasNight) log(s, isNight(s) ? "해가 졌다. 풀숲 너머에서 늑대 울음이 번진다. (밤)" : "동이 튼다. 바람이 풀을 눕힌다. (낮)", "system");
+  if (dg.sector === 2 && isNight(s) !== wasNight) log(s, isNight(s) ? "해가 졌다. 풀숲 너머에서 늑대 울음이 번진다. (밤)" : "동이 튼다. 바람이 풀을 눕힌다. (낮)", "system");
   const h = s.hero;
   const wasFed = h.satiety > 0;
   h.satiety = Math.max(0, h.satiety - turns * 0.5 * hungerMult(s));
@@ -195,7 +196,7 @@ function respawn(s: GameState): void {
     room.resolved = false;
     room.respawned = true;
     room.remaining = undefined;
-    room.encounter = r.weighted(SECTOR_ENCOUNTERS[dg.sector][dg.floor]);
+    room.encounter = dg.endless ? endlessGroup(r, dg.floor) : r.weighted(SECTOR_ENCOUNTERS[dg.sector][dg.floor]);
     any = true;
   }
   if (any) log(s, "멀리서 무언가 기어 나오는 소리가 들린다. 비워 둔 방에 새로운 기척이 생겼다.", "system");
@@ -271,7 +272,7 @@ function flavor(s: GameState, room: Room, key: string): string {
 /** 2섹터부터 낮·밤이 있다(12시간마다 바뀜) */
 export function isNight(s: GameState): boolean {
   const dg = s.dungeon;
-  if (!dg || dg.sector < 2) return false;
+  if (!dg || dg.sector !== 2) return false; // 낮·밤은 2섹터(초원)에만 — 1섹터와 끝없는 미궁은 땅속
   return Math.floor((dg.clock ?? 0) / BAL.dayNightTurns) % 2 === 1;
 }
 
@@ -695,15 +696,16 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
     }
     dg.floor += 1;
     dg.deepestFloor = Math.max(dg.deepestFloor, dg.floor);
-    dg.rooms = generateFloor(r, dg.floor, dg.sector);
+    dg.rooms = dg.endless ? generateEndlessFloor(r, dg.floor) : generateFloor(r, dg.floor, dg.sector);
     resetSweeper(dg);
     dg.current = 0;
     dg.prev = null;
     passTime(s, 1);
     pray(s, "abyss", 8);
-    log(s, `— ${dg.floor}층으로 내려간다.`, "system");
-    if (dg.floor === 2) remember(s, "미궁 2층에 발을 디뎠다.");
-    if (dg.floor === 3) remember(s, "미궁 3층까지 내려갔다.");
+    log(s, dg.endless ? `— ${ENDLESS_NAME} ${dg.floor}층으로 내려간다.${dg.floor % ENDLESS_BOSS_EVERY === 0 ? " 아래에서 거대한 기척이 올라온다. (계단 앞에 보스)" : ""}` : `— ${dg.floor}층으로 내려간다.`, "system");
+    if (dg.endless && dg.floor % 5 === 0) remember(s, `${ENDLESS_NAME} ${dg.floor}층까지 내려갔다.`);
+    if (!dg.endless && dg.floor === 2) remember(s, "미궁 2층에 발을 디뎠다.");
+    if (!dg.endless && dg.floor === 3) remember(s, "미궁 3층까지 내려갔다.");
     if (!isDead(s)) arrive(s, true);
     return;
   }
@@ -717,10 +719,24 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
     s.rank = Math.max(s.rank, dg.sector); // 등급 = 클리어한 섹터 수(같은 섹터를 다시 넘어도 오르지 않음)
     remember(s, `${dg.sector}섹터의 차원문에 도달했다.`);
     if (first) log(s, `차원문에 닿았다 — ${dg.sector}섹터 클리어! (등급 ${s.rank})`, "good");
-    if (choice === "return" || dg.sector >= 2) {
-      if (dg.sector >= 2) log(s, "(3섹터는 다음 업데이트 예정 — 이번 달 탐험은 여기까지)", "system");
-      else log(s, "차원문의 빛을 등지고, 마석을 챙겨 돌아가기로 했다.", "system");
+    if (choice === "return") {
+      log(s, "차원문의 빛을 등지고, 마석을 챙겨 돌아가기로 했다.", "system");
       leaveDungeon(s, { cleared: true, forced: false, rankUp: first });
+      return;
+    }
+    // 2섹터 차원문 너머: 끝없는 미궁(남은 시간은 그대로)
+    if (dg.sector >= 2) {
+      dg.sector = ENDLESS_SECTOR;
+      dg.endless = true;
+      dg.floor = 1;
+      dg.deepestFloor = 1;
+      dg.rooms = generateEndlessFloor(r, 1);
+      resetSweeper(dg);
+      dg.current = 0;
+      dg.prev = null;
+      remember(s, `${ENDLESS_NAME}에 발을 디뎠다.`);
+      log(s, `차원문을 넘었다. — ${ENDLESS_NAME} 1층. 계단은 끝없이 아래로 이어진다. 함정도 보물도 없고, 깊이 내려갈수록 강한 것들만 기다린다. (돌아가려면 귀환 주문서, 아니면 시간이 다 될 때까지)`, "story");
+      arrive(s, true);
       return;
     }
     // 차원문 너머: 다음 섹터. 남은 시간은 2배가 된다(섹터마다 시간 흐름이 다르다)
@@ -865,7 +881,8 @@ export function afterDungeonCombat(s: GameState, outcome: "win" | "fled", c: Com
   const roomFight = room.type === "combat" || room.type === "boss";
   // 리젠된 몬스터의 마석은 절반(희귀 개체 보너스는 그대로)
   const sm = BAL.manaSectorMult[dg.sector] ?? 1;
-  const loot = Math.round(c.loot * MANA_FLOOR_MULT[dg.floor] * sm * (roomFight && room.respawned ? BAL.respawnManaMult : 1)) + Math.round(c.bonus * sm);
+  const floorMult = dg.endless ? endlessManaMult(dg.floor) : MANA_FLOOR_MULT[dg.floor];
+  const loot = Math.round(c.loot * floorMult * sm * (roomFight && room.respawned ? BAL.respawnManaMult : 1)) + Math.round(c.bonus * sm);
   if (c.bonus > 0) remember(s, `희귀 개체를 잡아 마석 ${Math.round(c.bonus * sm)}G 어치를 얻었다.`);
   if (outcome === "win") {
     if (roomFight) {
@@ -941,7 +958,7 @@ export function camp(s: GameState): void {
   if (sweeperStep(s, 2)) return sweeperFight(s, "camp");
   if (r.chance(isNight(s) ? 0.3 : 0.15)) {
     log(s, "잠결에 무언가 다가오는 소리!", "hurt");
-    const ids = campAmbush(dg.sector, dg.floor);
+    const ids = dg.endless ? endlessGroup(r, dg.floor).slice(0, 2) : campAmbush(dg.sector, dg.floor);
     startCombat(s, "dungeon", makeEnemies(s, ids));
     return;
   }

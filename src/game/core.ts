@@ -132,7 +132,7 @@ export function kill(s: GameState, cause: DeathCause, detail?: string): void {
   if (s.recordsRead >= 10) faiths.push(FAITH.song);
 
   const d = s.dungeon;
-  const reached = d ? `${d.sector}섹터 ${d.floor}층` : s.rank > 0 ? `${s.rank}섹터 클리어` : "마을";
+  const reached = d ? (d.endless ? `끝없는 미궁 ${d.floor}층` : `${d.sector}섹터 ${d.floor}층`) : s.rank > 0 ? `${s.rank}섹터 클리어` : "마을";
   const months = s.month;
   const epitaph = buildEpitaph(s, cause);
 

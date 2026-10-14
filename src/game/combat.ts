@@ -11,6 +11,7 @@ import { MARK_FOR_SKILL, SKILL_LEVEL, type ElementKey } from "./elements";
 
 const GEAR_IS_WEAPON = (id: string) => !!GEAR[id]?.weapon;
 import type { CombatState, DamageMeter, Enemy, GameState } from "./types";
+import { scaleEnemy } from "./endless";
 import { afterDungeonCombat, isNight, passTime } from "./dungeon";
 import { afterFieldCombat } from "./town";
 
@@ -21,7 +22,9 @@ import { afterFieldCombat } from "./town";
 const MAX_ROUNDS = 60;
 
 export function makeEnemies(s: GameState, ids: string[]): Enemy[] {
-  return ids.map((defId) => ({ uid: s.nextUid++, defId, hp: MONSTERS[defId].hp }));
+  const list = ids.map((defId) => ({ uid: s.nextUid++, defId, hp: MONSTERS[defId].hp }));
+  // 끝없는 미궁: 층이 깊을수록 강하다
+  return s.dungeon?.endless ? list.map((e) => scaleEnemy(e, s.dungeon!.floor)) : list;
 }
 
 export function describeGroup(enemies: Enemy[]): string {
@@ -514,7 +517,7 @@ function playerPhase(s: GameState, c: CombatState, opener: Strike | null): "win"
       const target = [...foes].sort((x, y) => x.hp - y.hp)[0];
       let strike = opener && a === 0 ? opener : PLAIN;
       const def = MONSTERS[target.defId];
-      const fin = activeSkills(s).find((sk) => sk.trigger!.on === "targetBelow" && (target.hp / def.hp) * 100 <= (sk.trigger as { pct: number }).pct && canUse(s, c, sk));
+      const fin = activeSkills(s).find((sk) => sk.trigger!.on === "targetBelow" && (target.hp / (target.hpMax ?? def.hp)) * 100 <= (sk.trigger as { pct: number }).pct && canUse(s, c, sk));
       if (fin && fin.effect!.type === "espell") {
         useSkill(s, c, fin, fin.effect!.text);
         castElement(s, c, fin.id, target);
@@ -536,7 +539,7 @@ function playerPhase(s: GameState, c: CombatState, opener: Strike | null): "win"
 function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
   const def = MONSTERS[target.defId];
   const r = rngOf(s);
-  const ac = def.ac - (target.acDown ?? 0);
+  const ac = def.ac + (target.acUp ?? 0) - (target.acDown ?? 0);
   const w = weaponOf(s);
   const statMod = smod(s, w.stat);
   const roll = r.die(20);
@@ -720,7 +723,7 @@ function enemyPhase(s: GameState, c: CombatState): void {
       }
     }
     const roll = r.die(20);
-    const atk = def.atk + enemyHitBonus(s, c, e) - (e.hitDown?.n ?? 0);
+    const atk = def.atk + (e.atkUp ?? 0) + enemyHitBonus(s, c, e) - (e.hitDown?.n ?? 0);
     if (!c.frenzy && (roll === 1 || (roll !== 20 && roll + atk - (c.cow ? 2 : 0) < ac))) {
       note(s, "dex");
       log(s, `${def.name}의 공격을 피했다.`, "miss");
@@ -733,7 +736,7 @@ function enemyPhase(s: GameState, c: CombatState): void {
     }
     const crit = roll === 20 || !!c.frenzy; // 발작 중에는 방어를 잊는다
     c.streak = (c.streak ?? 0) + 1;
-    let dmg = Math.max(1, r.dice(def.dice[0] * (crit ? 2 : 1), def.dice[1]));
+    let dmg = Math.max(1, r.dice(def.dice[0] * (crit ? 2 : 1), def.dice[1]) + (e.dmgUp ?? 0));
     // 돌진: 전투 첫 공격 피해 2배
     const charge = def.charge && !(c.charged ?? []).includes(e.uid);
     if (def.charge) (c.charged ??= []).push(e.uid);

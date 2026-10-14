@@ -137,7 +137,9 @@ function invariants(s: GameState): string[] {
   for (const id of s.fragments) if (!FRAGMENTS[id]) e.push(`없는 편린 ${id}`);
   if (s.dungeon) {
     const dg = s.dungeon;
-    if (dg.floor < 1 || dg.floor > 3 || dg.sector < 1 || dg.sector > 2) e.push(`층·섹터 범위 ${dg.sector}-${dg.floor}`);
+    if (dg.endless ? dg.sector !== 3 || dg.floor < 1 : dg.floor < 1 || dg.floor > 3 || dg.sector < 1 || dg.sector > 2) e.push(`층·섹터 범위 ${dg.sector}-${dg.floor}`);
+    if (dg.endless && dg.rooms.some((r) => r.type === "trap" || r.type === "treasure" || r.type === "record" || r.type === "shrine")) e.push("끝없는 미궁에 함정·상자·기록물·성소");
+    if (!Number.isFinite(dg.mana)) e.push("마석 NaN");
     for (const room of dg.rooms) {
       for (const nb of room.edges) if (!dg.rooms[nb]?.edges.includes(room.id)) e.push("한쪽 통로");
       for (const id of room.encounter ?? []) if (!MONSTERS[id] || MONSTERS[id].human) e.push(`방 구성 이상 ${id}`);

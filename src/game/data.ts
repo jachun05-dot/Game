@@ -21,7 +21,7 @@ export const BAL = {
   /** 등급(클리어한 섹터 수)에 따라 더 붙는 세금: 이름난 모험가에게 영주가 더 걷는다 */
   taxRank: [0, 120, 250, 250] as number[],
   /** 섹터별 마석 환전 배율(희귀 개체 포함) */
-  manaSectorMult: [1, 1, 0.35, 1] as number[],
+  manaSectorMult: [1, 1, 0.35, 0.35] as number[],
   /** 0보다 크면 레벨 1~3 훈련비 = trainCostBase + trainCostPerLevel × (레벨 − 1) (첫 훈련 값이 trainCostBase) */
   trainCostBase: 20,
   /** 레벨 4부터의 훈련비(레벨당). 0이면 레벨 1~3과 같은 식 — 초반(1섹터)은 싸게, 뒤로 갈수록 비싸게 */

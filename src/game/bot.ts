@@ -211,6 +211,8 @@ function dungeonAction(s: GameState): Action | null {
 
 /** 이 레벨에서 내려가도 될 만한 층 */
 function comfortFloor(s: GameState): number {
+  // 끝없는 미궁: 레벨 − 9층까지(물약 3개 이상이면 한 층 더)
+  if (s.dungeon?.endless) return Math.max(1, s.hero.level - 9 + (s.inventory.potion >= 3 ? 1 : 0));
   // 2섹터: 3층은 레벨 6 + 물약 3개 + AC 15 이상, 2층은 레벨 5부터
   if ((s.dungeon?.sector ?? 1) >= 2) {
     if (s.hero.level >= 6 && s.inventory.potion >= 3 && heroAc(s) >= 15) return 3;
