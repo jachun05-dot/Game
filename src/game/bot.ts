@@ -7,7 +7,7 @@ import { INJ, PARTS } from "./injury";
 import { god, power } from "./faith";
 import { fragScore, fragSlots } from "./fragments";
 import { heroAc, maxHp, smod, taxDue } from "./core";
-import { canTrain, innCost, nextSkill, shopPrice, trainCost } from "./town";
+import { canTrain, innCost, nextSkill, outlawTrainerHere, shopPrice, trainCost } from "./town";
 import type { Action } from "./engine";
 import { BRANCH_SKILLS, ELEMENTS, ELEMENT_KEYS, type BranchKey, type ElementKey, type StyleKey } from "./elements";
 import type { GameState } from "./types";
@@ -41,7 +41,11 @@ function townAction(s: GameState): Action {
   }
   // 4주차: 준비는 3주차에 마쳤으니 바로 미궁으로
   if (s.week >= 4) return { t: "enterDungeon" };
-  if (s.heretic) return { t: "activity", a: "field" };
+  if (s.heretic) {
+    // 외곽에서 떠돌이 교관을 만났으면 이번 주는 훈련(다음 세금 걱정이 없으니 물약 값만 남긴다)
+    if (outlawTrainerHere(s) && canTrain(s) && s.gold - trainCost(s) >= shopPrice(s, "potion") * 2) return pickTraining(s);
+    return { t: "activity", a: "field" };
+  }
   // 부상: 결손된 손·발엔 의수·의족, 중상·질병이면 여관에서 한 주 쉰다
   for (const p of ["main", "offhand", "feet"] as const) {
     if (s.injuries[p] >= 3 && !s.prosthetic[p] && s.gold >= INJ.prostheticCost) return { t: "prosthetic", part: p };
@@ -65,27 +69,15 @@ function townAction(s: GameState): Action {
   }
   // 1) 훈련 2) 몸통·방패 3) 여유가 되면 물약을 더
   if (canTrain(s) && spare >= trainCost(s)) {
-    if (s.hero.cls === "mage") {
-      const el = (magePlan ?? defaultMagePlan)(s);
-      return { t: "train", training: el, free: ["int", "con"] };
-    }
     if (s.hero.cls === "adventurer") {
       // 마법사형으로 기울면(지능이 힘·민첩보다 높고 마법사형 기술이 둘 이상) 지팡이를 산다
       const casterSkills = Object.values(BRANCH_SKILLS.caster).filter((id) => s.skills.includes(id)).length;
       const st = s.hero.stats;
       if (s.gear.main !== "staff" && casterSkills >= 2 && st.int > Math.max(st.str, st.dex) + 1 && s.gold >= GEAR.staff.price! + trainCost(s)) return { t: "buyGear", id: "staff" };
-      const br = (adventurerPlan ?? defaultAdventurerPlan)(s);
-      const main = br === "caster" ? "int" : br === "rogue" ? "dex" : "str";
-      return { t: "train", training: br, free: [main, "con"] };
     }
-    if (s.hero.cls === "warrior") {
-      // 방패가 없으면 먼저 산다(방패 기술은 방패가 있어야)
-      if (!s.gear.offhand && s.gold >= GEAR.shield.price! + trainCost(s)) return { t: "buyGear", id: "shield" };
-      return { t: "train", training: (warriorPlan ?? defaultWarriorPlan)(s), free: ["str", "con"] };
-    }
-    const order = ["warfare", "arcane", "sword", "endure", "footwork", "scout", "study"].filter((id) => CLASSES[s.hero.cls].trainings.includes(id));
-    const training = order.find((id) => nextSkill(s, id)) ?? order[0];
-    return { t: "train", training, free: ["str", "con"] };
+    // 전사: 방패가 없으면 먼저 산다(방패 기술은 방패가 있어야)
+    if (s.hero.cls === "warrior" && !s.gear.offhand && s.gold >= GEAR.shield.price! + trainCost(s)) return { t: "buyGear", id: "shield" };
+    return pickTraining(s);
   }
   if (!s.gear.body && spare >= GEAR.leather.price!) return { t: "buyGear", id: "leather" };
   if (!s.gear.offhand && spare >= GEAR.shield.price!) return { t: "buyGear", id: "shield" };
@@ -98,6 +90,20 @@ function townAction(s: GameState): Action {
   if (s.week === 3 && s.inventory.potion < 6 && spare >= shopPrice(s, "potion") + 20) return { t: "buy", item: "potion" };
   if (s.hero.level >= 2 && s.week !== 3) return { t: "activity", a: "field" };
   return { t: "activity", a: "rumor" };
+}
+
+/** 이번 훈련으로 받을 갈래와 자유 배분(장비 구매 없이) */
+function pickTraining(s: GameState): Action {
+  if (s.hero.cls === "mage") return { t: "train", training: (magePlan ?? defaultMagePlan)(s), free: ["int", "con"] };
+  if (s.hero.cls === "adventurer") {
+    const br = (adventurerPlan ?? defaultAdventurerPlan)(s);
+    const main = br === "caster" ? "int" : br === "rogue" ? "dex" : "str";
+    return { t: "train", training: br, free: [main, "con"] };
+  }
+  if (s.hero.cls === "warrior") return { t: "train", training: (warriorPlan ?? defaultWarriorPlan)(s), free: ["str", "con"] };
+  const order = ["warfare", "arcane", "sword", "endure", "footwork", "scout", "study"].filter((id) => CLASSES[s.hero.cls].trainings.includes(id));
+  const training = order.find((id) => nextSkill(s, id)) ?? order[0];
+  return { t: "train", training, free: ["str", "con"] };
 }
 
 /** 마법사가 이번 훈련에 고를 원소. 기본: 주 원소가 있으면 그것, 없으면 원소 능력치가 가장 높은 원소 한 가지에 몰아준다 */

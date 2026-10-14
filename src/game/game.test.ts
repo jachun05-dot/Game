@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { Rng } from "./rng";
 import { enterDungeon, generateFloor, passTime } from "./dungeon";
-import { newRun, trainCost } from "./town";
+import { canTrain, newRun, trainCost } from "./town";
+import { CLASSES } from "./classes";
 import { act, apply } from "./engine";
 import { botAction } from "./bot";
 import { STAT_KEYS, BAL, MONSTERS } from "./data";
@@ -1247,5 +1248,30 @@ describe("미궁의 청소부", () => {
     expect(s.dungeon!.floor).toBe(2);
     expect(s.dungeon!.sweeperStage).toBe(0);
     expect(s.dungeon!.floorTurns ?? 0).toBeLessThan(10);
+  });
+});
+
+describe("현상수배 중 떠돌이 교관", () => {
+  it("외곽으로 나가면 20%로 교관을 만나 그 주에 훈련할 수 있고, 주마다 한 번만 찾아본다", () => {
+    let found = false;
+    for (let seed = 1; seed <= 200 && !found; seed++) {
+      const s = newRun(seed);
+      apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+      s.month = 3;
+      s.heretic = true;
+      s.gold = 500;
+      expect(canTrain(s)).toBe(false);
+      const week = s.week;
+      apply(s, { t: "activity", a: "field" });
+      if (!s.outlawTrainer?.met) continue;
+      found = true;
+      expect(s.phase).toBe("town"); // 한 주를 쓰지 않았다
+      expect(s.week).toBe(week);
+      expect(canTrain(s)).toBe(true);
+      const lv = s.hero.level;
+      apply(s, { t: "train", training: CLASSES[s.hero.cls].trainings[0], free: ["str", "con"] });
+      expect(s.hero.level).toBe(lv + 1);
+    }
+    expect(found).toBe(true);
   });
 });

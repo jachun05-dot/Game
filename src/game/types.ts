@@ -313,6 +313,8 @@ export interface GameState {
   /** 자동 결정이 미궁에서 노리는 목표(bot.ts) */
   autoGoal: AutoGoal;
   /** 미궁 한 번 들어갈 때 1회 쓰는 기술 중 이미 쓴 것 */
+  /** 현상수배 중 외곽에서 떠돌이 교관을 찾아본 주("월-주")와 만났는지 */
+  outlawTrainer?: { week: string; met: boolean };
   /** 상점가 물가 배율(매달 오른다, 없으면 1) */
   priceIndex?: number;
   tripUsed: string[];

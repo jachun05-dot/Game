@@ -2,7 +2,7 @@
 // 매 행동 뒤 상태 불변식을 검사한다. 예외·멈춤·음수/NaN·말이 안 되는 상태 조합을 찾는다.
 // 실행: bun scripts/fuzz.ts [판수] [무작위 비율 0~1] [시작 시드]
 // 같은 시드면 같은 결과가 나온다(게임 RNG는 상태 안, 퍼저 RNG는 시드로 고정).
-import { newRun } from "../src/game/town";
+import { newRun, outlawTrainerHere } from "../src/game/town";
 import { apply, type Action } from "../src/game/engine";
 import { botAction } from "../src/game/bot";
 import { FAITH, TRAININGS, STAT_KEYS, BAL } from "../src/game/data";
@@ -224,6 +224,7 @@ for (let i = 0; i < N; i++) {
       }
       const before = s.phase;
       const logBefore = s.logCount;
+      const trainerBefore = outlawTrainerHere(s);
       const lockedBefore = s.heretic && s.phase === "town" ? JSON.stringify([s.gold, s.inventory, s.gear, s.hero.level, s.fragments, s.injuries, s.prosthetic]) : null;
       try {
         apply(s, a);
@@ -247,7 +248,7 @@ for (let i = 0; i < N; i++) {
         const listed = Math.ceil(BAL.prices[a.item] * (s.priceIndex ?? 1));
         if (s.gold !== was && was - s.gold !== listed * 2 && was - s.gold !== Math.ceil(listed / 2) * 2) extra.push(`암시장 값이 두 배가 아님 ${a.item}`);
       }
-      const townOnly = ["sell", "buyGear", "train", "eraseFrag", "regen", "prosthetic"].includes(a.t) || (a.t === "activity" && a.a !== "field");
+      const townOnly = (a.t === "train" && trainerBefore) ? false : ["sell", "buyGear", "train", "eraseFrag", "regen", "prosthetic"].includes(a.t) || (a.t === "activity" && a.a !== "field");
       if (lockedBefore && townOnly && JSON.stringify([s.gold, s.inventory, s.gear, s.hero.level, s.fragments, s.injuries, s.prosthetic]) !== lockedBefore) extra.push(`현상수배 중 마을 시설 이용 ${a.t}`);
       for (const m of [...invariants(s), ...extra]) report({ kind: "불변식", msg: m.replace(/-?\d+(\.\d+)?/g, "#") + ` ← ${a.t}${a.t === "pending" ? ":" + a.choice : ""}`, ...ctx, step, action: JSON.stringify(a) + ` (${m})`, phase: before });
       const k = progressKey(s);

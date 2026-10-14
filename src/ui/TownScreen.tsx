@@ -4,7 +4,7 @@ import { BAL, STAT_KEYS, STAT_LABEL, TRAININGS } from "../game/data";
 import { GEAR, SLOTS, gearEffect, hasShield, targetSlot } from "../game/gear";
 import { CLASSES } from "../game/classes";
 import { hasLevelTable } from "../game/elements";
-import { BLACK_MARKET_MULT, canTrain, innCost, gateOf, nextSkill, shopPrice, trainCost } from "../game/town";
+import { BLACK_MARKET_MULT, canTrain, innCost, outlawTrainerHere, gateOf, nextSkill, shopPrice, trainCost } from "../game/town";
 import type { GameState } from "../game/types";
 import { SKILLS } from "../game/skills";
 import { FRAGMENTS, fragStatText } from "../game/fragments";
@@ -57,13 +57,21 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
 
       {tab === "act" && s.week >= 4 && <DungeonPrep s={s} busy={busy} onShop={() => setTab("shop")} onEnter={() => dispatch({ t: "enterDungeon" })} />}
 
-      {tab === "act" && s.week < 4 && s.heretic && (
+      {tab === "act" && s.week < 4 && s.heretic && !training && (
         <div className="stack">
           <Card title="현상수배 중" className="warn">
             <p className="small">성당 문에 당신의 얼굴이 그려진 수배서가 붙어 있다. 마을 안으로는 들어갈 수 없다 — 영지 외곽만 다닐 수 있다.</p>
             <p className="dim small">숲의 마석은 밀수꾼에게 반값에 넘기고, 사냥한 짐승으로 말린 고기를 만든다. 고기·물약은 외곽의 암시장에서 {BLACK_MARKET_MULT}배 값에 살 수 있다(암시장 탭). 세금은 걷히지 않는다. 미궁에서는 이단심문관이 뒤를 쫓는다.</p>
           </Card>
-          <ActivityButton title="외부 탐험" sub="영지 밖 숲 · 작은 전투, 마석(반값)과 말린 고기" disabled={busy} onClick={() => dispatch({ t: "activity", a: "field" })} />
+          {outlawTrainerHere(s) && (
+            <ActivityButton title="떠돌이 교관에게 훈련" sub={`이번 주만 · ${trainSub(s)}`} disabled={busy || !canTrain(s)} onClick={() => setTraining(true)} />
+          )}
+          <ActivityButton
+            title="외부 탐험"
+            sub={`영지 밖 숲 · 작은 전투, 마석(반값)과 말린 고기${s.outlawTrainer?.week === `${s.month}-${s.week}` ? "" : ` · 외곽에서 떠돌이 교관을 만날 수도 있다(${Math.round(BAL.outlawTrainerChance * 100)}%)`}`}
+            disabled={busy}
+            onClick={() => dispatch({ t: "activity", a: "field" })}
+          />
           <ActivityButton title="성당에 자수한다" sub={`${josa(s.hero.faith ?? "옛 신", "을")} 부정하고 마을로 돌아간다 (신앙을 잃는다, 시간은 들지 않는다)`} disabled={busy} onClick={() => dispatch({ t: "surrender" })} />
         </div>
       )}

@@ -161,7 +161,7 @@ export function kitItems(items: { food: number; potion: number; scroll: number }
 }
 
 export function canTrain(s: GameState): boolean {
-  if (s.phase !== "town" || s.week >= 4 || s.heretic || s.month < BAL.firstTrainMonth || s.hero.level >= BAL.maxLevel || s.gold < trainCost(s)) return false;
+  if (s.phase !== "town" || s.week >= 4 || (s.heretic && !outlawTrainerHere(s)) || s.month < BAL.firstTrainMonth || s.hero.level >= BAL.maxLevel || s.gold < trainCost(s)) return false;
   const g = gateOf(s);
   return !g || s.inventory[g.item] > 0;
 }
@@ -265,9 +265,25 @@ export function rumor(s: GameState): void {
   finishWeek(s, { title: "탐문", lines, statDelta: {}, goldDelta: gold }, gold > 0);
 }
 
+/** 현상수배 중 이번 주에 떠돌이 교관을 만났나 */
+export function outlawTrainerHere(s: GameState): boolean {
+  return !!s.heretic && s.outlawTrainer?.week === `${s.month}-${s.week}` && s.outlawTrainer.met;
+}
+
 export function goField(s: GameState): void {
   if (s.phase !== "town") return;
   const r = rngOf(s);
+  // 현상수배 중: 외곽으로 나서면 주마다 한 번, 떠돌이 교관을 만날 수 있다(이번 주에 훈련 가능, 숲으로는 아직 가지 않음)
+  const wk = `${s.month}-${s.week}`;
+  if (s.heretic && s.outlawTrainer?.week !== wk && s.month >= BAL.firstTrainMonth) {
+    const met = r.chance(BAL.outlawTrainerChance);
+    s.outlawTrainer = { week: wk, met };
+    if (met) {
+      log(s, "외곽의 폐가 뒤에서 낡은 목검을 휘두르는 노인을 만났다. 성당을 떠난 교관이라고 한다.", "story");
+      log(s, "\"쫓기는 몸이라도 칼은 늘어야지. 이번 주라면 봐 주마.\" — 이번 주에 떠돌이 교관에게 훈련받을 수 있다. (숲으로 가려면 외부 탐험을 한 번 더)", "good");
+      return;
+    }
+  }
   log(s, "영지 밖 숲으로 나섰다.", "system");
   s.tripUsed = [];
   startCombat(s, "field", makeEnemies(s, r.weighted(FIELD_ENCOUNTERS)));
