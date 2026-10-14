@@ -1,11 +1,12 @@
 
 import { GEAR, gearScore, targetSlot } from "./gear";
 import { CLASSES } from "./classes";
+import { BAL } from "./data";
 import { INJ, PARTS } from "./injury";
 import { god, power } from "./faith";
 import { fragScore, fragSlots } from "./fragments";
 import { heroAc, maxHp, smod, taxDue } from "./core";
-import { canTrain, nextSkill, shopPrice, trainCost } from "./town";
+import { canTrain, innCost, nextSkill, shopPrice, trainCost } from "./town";
 import type { Action } from "./engine";
 import { BRANCH_SKILLS, ELEMENTS, ELEMENT_KEYS, type BranchKey, type ElementKey, type StyleKey } from "./elements";
 import type { GameState } from "./types";
@@ -48,7 +49,9 @@ function townAction(s: GameState): Action {
   if (!keepSick && s.disease > 0 && s.inventory.herb > 0) return { t: "herb" };
   // 눈치챈 정신 상태이상이 둘 이상이면(조합이 터질 수 있으니) 여관에서 쉰다
   const minds = Object.values(s.mind).filter((m) => m?.known).length;
-  if ((PARTS.some((p) => s.injuries[p] === 2) || (s.disease > 0 && !keepSick) || minds >= 2) && s.gold >= INJ.innCost) return { t: "activity", a: "inn" };
+  if ((PARTS.some((p) => s.injuries[p] === 2) || (s.disease > 0 && !keepSick) || minds >= 2) && s.gold >= innCost(s)) return { t: "activity", a: "inn" };
+  // 저절로 회복되지 않는 규칙이면: HP가 60% 아래이거나 경상이 있으면 여관에서 쉰다(4주차 미궁 전에는 장보기만)
+  if (!BAL.freeHeal && s.week < 4 && (s.hero.hp < maxHp(s) * 0.6 || PARTS.some((p) => s.injuries[p] === 1)) && s.gold >= innCost(s)) return { t: "activity", a: "inn" };
   // 미궁 준비물(고기 4, 물약 4) 살 돈은 항상 남겨 둔다
   // 2섹터까지 갈 생각이면(1섹터 클리어 + 레벨 4) 고기를 더 챙긴다
   const foodNeed = s.rank >= 1 && s.hero.level >= 4 ? 9 : 4;

@@ -178,7 +178,7 @@ function feedLines(r: Rng, good: boolean): string[] {
 function finishWeek(s: GameState, res: Omit<WeekResult, "month" | "week" | "feed">, good: boolean): void {
   const r = rngOf(s);
   s.weekResult = { ...res, month: s.month, week: s.week, feed: feedLines(r, good) };
-  s.hero.hp = maxHp(s); // 마을에서 일주일이면 회복된다(부상 시스템은 아직 미구현)
+  if (BAL.freeHeal) s.hero.hp = maxHp(s); // 예전 규칙: 마을에서 일주일이면 회복된다
   s.phase = "week-result";
 }
 
@@ -297,10 +297,16 @@ export function doActivity(s: GameState, a: Activity): void {
 }
 
 /** 여관: 한 주와 INJ.innCost(G)를 들여 모든 부상·질병을 한 단계 낫게 한다(결손은 그대로) */
+/** 여관비: 상점가 물가를 따라 매달 오른다 */
+export function innCost(s: GameState): number {
+  return Math.ceil(INJ.innCost * (s.priceIndex ?? 1));
+}
+
 export function inn(s: GameState): void {
-  if (s.phase !== "town" || s.heretic || s.gold < INJ.innCost) return;
-  s.gold -= INJ.innCost;
-  const lines = [`여관 다락방에 일주일을 묵었다. (${INJ.innCost}G)`];
+  const cost = innCost(s);
+  if (s.phase !== "town" || s.heretic || s.gold < cost) return;
+  s.gold -= cost;
+  const lines = [`여관 다락방에 일주일을 묵었다. (${cost}G) HP가 모두 회복됐다.`];
   let healed = 0;
   for (const p of PARTS) {
     const v = s.injuries[p];
@@ -323,7 +329,7 @@ export function inn(s: GameState): void {
   }
   if (!healed) lines.push("푹 쉬었다. 딱히 나을 데는 없었다.");
   s.hero.hp = maxHp(s);
-  finishWeek(s, { title: "여관", lines, statDelta: {}, goldDelta: -INJ.innCost }, healed > 0);
+  finishWeek(s, { title: "여관", lines, statDelta: {}, goldDelta: -cost }, healed > 0);
 }
 
 /** 신전 재생 의식: 결손된 손·발을 완전히 되살린다 */
@@ -443,15 +449,17 @@ export function beginSettlement(s: GameState, o: { mana: number; cleared: boolea
   if (o.cleared && o.rankUp) lines.push(`등급이 올랐다 — 클리어한 섹터 ${s.rank}개.`);
   faithMonthEnd(s, lines);
   fadeAfterDungeon(s, lines);
-  // 경상은 미궁 밖으로 나오면 체력 판정으로 저절로 낫는다
+  // 예전 규칙: 경상은 미궁 밖으로 나오면 체력 판정으로 저절로 낫는다
   for (const p of PARTS) {
+    if (!BAL.freeHeal) break;
     if (s.injuries[p] !== 1) continue;
     if (check(s, "con", INJ.healDc).ok) {
       s.injuries[p] = 0;
       lines.push(`${PART_NAME[p]}의 가벼운 상처가 아물었다.`);
     } else lines.push(`${PART_NAME[p]}의 상처가 아직 욱신거린다. (경상)`);
   }
-  for (const p of PARTS) if (s.injuries[p] === 2) lines.push(`${PART_NAME[p]} 중상은 저절로 낫지 않는다 — 여관이나 붕대가 필요하다.`);
+  for (const p of PARTS) if (s.injuries[p] === 2 || (!BAL.freeHeal && s.injuries[p] === 1)) lines.push(`${PART_NAME[p]} ${s.injuries[p] === 2 ? "중상" : "경상"}은 저절로 낫지 않는다 — 여관이나 붕대가 필요하다.`);
+  if (!BAL.freeHeal && s.hero.hp < maxHp(s)) lines.push(`HP ${s.hero.hp}/${maxHp(s)} — 여관에서 쉬어야 회복된다.`);
   if (s.disease > 0) lines.push("쥐 열병은 저절로 낫지 않는다 — 탕약이나 여관이 필요하다.");
   // 세금은 다음 달 1주차에 낸다. 해가 바뀌면 오른다. 현상수배 중에는 관공서가 세금 대신 목에 현상금을 건다
   let tax = s.heretic ? 0 : taxDue(s.month + 1, s.rank) + (s.debt ?? 0);
@@ -551,7 +559,7 @@ export function closeSettlement(s: GameState): void {
     s.gold -= st.tax;
     s.debt = 0;
   }
-  s.hero.hp = maxHp(s);
+  if (BAL.freeHeal) s.hero.hp = maxHp(s); // 예전 규칙: 미궁에서 돌아오면 다 회복
   s.phase = "town";
   if (s.heretic) log(s, `— ${s.month}월 1주차. 현상수배 중이다. 영지 외곽의 폐가에 몸을 숨겼다.`, "system");
   else log(s, `— ${s.month}월 1주차. ${st.debt ? `세금은 빚 문서로 미뤘다(다음 달 ${st.tax * 2}G).` : `세금 ${st.tax}G를 냈다.`} 남은 돈 ${s.gold}G.`, "system");

@@ -4,7 +4,7 @@ import { BAL, STAT_KEYS, STAT_LABEL, TRAININGS } from "../game/data";
 import { GEAR, SLOTS, gearEffect, hasShield, targetSlot } from "../game/gear";
 import { CLASSES } from "../game/classes";
 import { hasLevelTable } from "../game/elements";
-import { BLACK_MARKET_MULT, canTrain, gateOf, nextSkill, shopPrice, trainCost } from "../game/town";
+import { BLACK_MARKET_MULT, canTrain, innCost, gateOf, nextSkill, shopPrice, trainCost } from "../game/town";
 import type { GameState } from "../game/types";
 import { SKILLS } from "../game/skills";
 import { FRAGMENTS, fragStatText } from "../game/fragments";
@@ -76,8 +76,8 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
           <ActivityButton title="외부 탐험" sub="영지 밖 숲 · 작은 전투, 마석 획득 (위험)" disabled={busy} onClick={() => dispatch({ t: "activity", a: "field" })} />
           <ActivityButton
             title="여관에서 쉬기"
-            sub={`${INJ.innCost}G · 모든 부상·질병이 한 단계 낫는다 (결손 제외)${anyInjury(s) ? "" : " — 지금은 다친 데가 없다"}`}
-            disabled={busy || s.gold < INJ.innCost}
+            sub={`${innCost(s)}G · HP를 모두 회복하고 모든 부상·질병이 한 단계 낫는다 (결손 제외)${anyInjury(s) ? "" : " — 지금은 다친 데가 없다"}`}
+            disabled={busy || s.gold < innCost(s)}
             onClick={() => dispatch({ t: "activity", a: "inn" })}
           />
           <ActivityButton title="훈련소 허수아비" sub={`시간이 들지 않는다 · ${DUMMY_ROUNDS}라운드 동안 준 피해를 잰다`} disabled={busy} onClick={() => setDummy(true)} />
