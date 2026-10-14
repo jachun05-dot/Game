@@ -80,6 +80,12 @@ export function levelSkill(trainingId: string, toLevel: number): string | null {
   return LEVEL_TABLES[trainingId]?.[toLevel] ?? null;
 }
 
+/** 기술을 배우는 레벨(여러 표에 있으면 가장 낮은 레벨). 표에 없는 기본기는 1 */
+export const SKILL_LEVEL: Record<string, number> = {};
+for (const table of Object.values(LEVEL_TABLES)) {
+  for (const [lv, id] of Object.entries(table)) SKILL_LEVEL[id] = Math.min(SKILL_LEVEL[id] ?? 99, Number(lv));
+}
+
 /** 이 기술을 전투당 1회 더 쓰게 해 주는 각인들(그 기술이 들어 있는 레벨표의 특화 패시브) */
 export const MARK_FOR_SKILL: Record<string, string[]> = {};
 for (const [line, table] of Object.entries(LEVEL_TABLES)) {

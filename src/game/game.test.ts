@@ -13,6 +13,7 @@ import { FAITH } from "./data";
 import { maxHp } from "./core";
 import { injuryHit, injuryRollPenalty, lvl, wound } from "./injury";
 import { weaponOf } from "./gear";
+import { BRANCH_SKILLS, ELEMENT_SKILLS, STYLE_SKILLS } from "./elements";
 import { SKILLS, activeSkills, passive } from "./skills";
 import { mindSummary } from "./mind";
 import { makeEnemies, startCombat } from "./combat";
@@ -900,4 +901,36 @@ describe("모험가 갈래", () => {
     expect(weaponOf(s).stat).toBe("int");
     expect(weaponOf(s).magic).toBe(true);
   });
+});
+
+// 기술 점검: 레벨표의 모든 액티브(와 첫 훈련 기본기)가 조건을 맞춰 준 전투에서 실제로 발동하는지.
+// 배워도 한 번도 안 나오는 기술(예: 앞 주문이 싸움을 먼저 끝내 묻히는 경우)을 막는다.
+describe("기술 점검", () => {
+  const ids = [...new Set([...Object.values(ELEMENT_SKILLS), ...Object.values(STYLE_SKILLS), ...Object.values(BRANCH_SKILLS)].flatMap((tb) => Object.values(tb)).concat(["magicMissile", "firstStrike", "flashPowder"]))]
+    .filter((id) => SKILLS[id].kind === "active");
+  for (const id of ids) {
+    it(`${SKILLS[id].name}(${id})`, () => {
+      const sk = SKILLS[id];
+      let fired = false;
+      for (let seed = 1; seed <= 300 && !fired; seed++) {
+        const s = newRun(seed);
+        apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+        s.week = 3;
+        s.phase = "week-result";
+        apply(s, { t: "closeWeek" });
+        s.skills = [id];
+        s.gear.offhand = "shield";
+        s.inventory.potion = 0;
+        s.combat = null;
+        const tr = sk.trigger!;
+        const n = tr.on === "enemiesAtLeast" ? tr.n + 1 : 3;
+        const foes = makeEnemies(s, Array(n).fill("skeleton"));
+        if (tr.on === "targetBelow") for (const f of foes) f.hp = Math.max(1, Math.floor((MONSTERS.skeleton.hp * Math.min(tr.pct, 100)) / 100) - 1);
+        s.hero.hp = tr.on === "lethal" ? 1 : tr.on === "selfBelow" ? Math.max(2, Math.floor((maxHp(s) * tr.pct) / 100) - 1) : maxHp(s);
+        startCombat(s, "dungeon", foes);
+        fired = s.log.some((l) => l.text.startsWith(`【${sk.name}】`));
+      }
+      expect(fired).toBe(true);
+    });
+  }
 });

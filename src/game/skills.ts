@@ -222,7 +222,7 @@ Object.assign(SKILLS, E("fire", {
   fireHeat: { id: "fireHeat", name: "열기", kind: "passive", desc: "모든 주문 피해 +1, 힘 보정의 절반이 더해진다" },
   fireSea: { id: "fireSea", name: "불바다", kind: "active", desc: "전투 시작 시 적 전원을 불태운다(3라운드)", trigger: { on: "start" }, effect: { type: "burnAll", rounds: 3, text: "발밑이 불바다가 된다" }, uses: 1 },
   fireWill: { id: "fireWill", name: "타오르는 의지", kind: "passive", desc: "내 HP 30% 이하면 화염 피해 +3" },
-  fireBlaze: { id: "fireBlaze", name: "폭염", kind: "active", desc: "HP 50% 이하인 적에게 반드시 맞는 화염구(2d6 + 지능 보정)", trigger: { on: "targetBelow", pct: 50 }, effect: { type: "espell", el: "fire", dice: [2, 6], text: "화염구가 쏟아진다" }, uses: 1 },
+  fireBlaze: { id: "fireBlaze", name: "폭염", kind: "active", desc: "전투 시작 시 가장 강한 적에게 반드시 맞는 화염구(2d6 + 지능 보정)", trigger: { on: "start" }, effect: { type: "espell", el: "fire", dice: [2, 6], pick: "strongest", text: "화염구가 쏟아진다" }, uses: 1 },
 }), E("frost", {
   frostCalm: { id: "frostCalm", name: "냉정", kind: "passive", desc: "명중 +1, AC +1, 감각 판정 +2(앞방 엿보기·함정 발견)", passive: { hit: 1, ac: 1, perception: 2 } },
   frostArrow: { id: "frostArrow", name: "얼음 화살", kind: "active", desc: "전투 시작 시 가장 강한 적에게 얼음 화살(1d6 + 지능 보정), 60% 확률로 1라운드 얼린다", trigger: { on: "start" }, effect: { type: "espell", el: "frost", dice: [1, 6], pick: "strongest", freeze: 0.6, text: "얼음 화살이 날아간다" }, uses: 1 },
@@ -273,7 +273,7 @@ Object.assign(SKILLS, {
   berserkMark: { id: "berserkMark", name: "광전의 각인", kind: "passive", desc: "최대 HP +4, 피해 +5, 내 HP 50% 이하면 피해 +3 더, 분노에 걸리면 AC −1 대신 피해 +2. 대가: AC −1, 도주 −4. 광전 액티브 전투당 +1회", passive: { hp: 4, dmg: 5, ac: -1, flee: -4 } },
   charge: { id: "charge", name: "돌격", kind: "active", desc: "전투 시작 시 첫 공격이 반드시 맞고 피해 ×1.5", trigger: { on: "start" }, effect: { type: "strike", hit: 0, dmg: 0, dmgMult: 1.5, autoHit: true }, uses: 1 },
   bloodThirst: { id: "bloodThirst", name: "피의 갈증", kind: "passive", desc: "적을 쓰러뜨릴 때마다 HP +3" },
-  frenzy: { id: "frenzy", name: "광란", kind: "active", desc: "내 HP 50% 이하가 되면 3라운드 동안 라운드마다 한 번 더 공격", trigger: { on: "selfBelow", pct: 50 }, effect: { type: "rampage", rounds: 3, text: "피를 보자 눈이 뒤집힌다" }, uses: 1 },
+  frenzy: { id: "frenzy", name: "광란", kind: "active", desc: "내 HP 75% 이하가 되면 3라운드 동안 라운드마다 한 번 더 공격", trigger: { on: "selfBelow", pct: 75 }, effect: { type: "rampage", rounds: 3, text: "피를 보자 눈이 뒤집힌다" }, uses: 1 },
   painless: { id: "painless", name: "고통 무시", kind: "passive", desc: "부상의 명중·판정 페널티 절반, 공포에 걸리지 않는다" },
   smash: { id: "smash", name: "분쇄 일격", kind: "active", desc: "전투당 1회, 반드시 맞는 일격(피해 ×2), 1라운드 넘어뜨린다", trigger: { on: "targetBelow", pct: 100 }, effect: { type: "strike", hit: 0, dmg: 0, dmgMult: 2, autoHit: true, stun: 1 }, uses: 1 },
 } satisfies Record<string, SkillDef>);

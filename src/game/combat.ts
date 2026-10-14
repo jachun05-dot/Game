@@ -7,7 +7,7 @@ import { HEAD_STUN, INJ, canFlee, infect, injuryHit, lvl, noCrit, wound, type Pa
 import { MIND, afflict, comboNow, missPotion, rageDmg, symptom } from "./mind";
 import { activeSkills, passive, skillWorks, SKILLS, type SkillDef } from "./skills";
 import { GEAR, weaponOf } from "./gear";
-import { MARK_FOR_SKILL, type ElementKey } from "./elements";
+import { MARK_FOR_SKILL, SKILL_LEVEL, type ElementKey } from "./elements";
 
 const GEAR_IS_WEAPON = (id: string) => !!GEAR[id]?.weapon;
 import type { CombatState, Enemy, GameState } from "./types";
@@ -89,11 +89,18 @@ export function startCombat(s: GameState, context: CombatState["context"], enemi
     log(s, `【빈틈 읽기】 ${MONSTERS[target.defId].name}의 빈틈이 보인다 (AC -2)`, "skill");
   }
   let opener: Strike | null = null;
-  for (const sk of activeSkills(s)) {
+  // 전투 시작 기술은 높은 레벨에 배운 것부터(뒤에 배운 강한 주문이 앞 주문에 묻히지 않게).
+  // 적이 여럿일 때 쓰는 광역 주문은 전투를 시작할 때의 적 수로 판정해 바로 쏜다.
+  const startFoes = alive(c).length;
+  const level = (id: string) => SKILL_LEVEL[id] ?? 1;
+  const opening = activeSkills(s)
+    .filter((sk) => sk.trigger!.on === "start" || (sk.trigger!.on === "enemiesAtLeast" && (sk.effect?.type === "espell" || sk.effect?.type === "spell") && startFoes >= sk.trigger!.n))
+    .sort((a, b) => level(b.id) - level(a.id));
+  for (const sk of opening) {
     const t = sk.trigger!;
     if (alive(c).length === 0) return finish(s, "win");
-    if (t.on !== "start" || !canUse(s, c, sk)) continue;
-    if (t.minEnemies && alive(c).length < t.minEnemies) continue;
+    if (!canUse(s, c, sk)) continue;
+    if (t.on === "start" && t.minEnemies && alive(c).length < t.minEnemies) continue;
     const e = sk.effect!;
     if (e.type === "strike") {
       // 기선 제압·돌격 등이 겹치면 합친다
