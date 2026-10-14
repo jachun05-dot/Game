@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Rng } from "./rng";
-import { enterDungeon, generateFloor } from "./dungeon";
+import { enterDungeon, generateFloor, passTime } from "./dungeon";
 import { newRun, trainCost } from "./town";
 import { act, apply } from "./engine";
 import { botAction } from "./bot";
@@ -1192,5 +1192,60 @@ describe("경제 개편(2026-10-14)", () => {
       expect(s.priceIndex ?? 1).toBeGreaterThanOrEqual(lo);
       expect(s.priceIndex ?? 1).toBeLessThanOrEqual(hi);
     }
+  });
+});
+
+describe("미궁의 청소부", () => {
+  const setup = (level: number, month = 2) => {
+    const s = newRun(111);
+    apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    s.month = month;
+    s.hero.level = level;
+    enterDungeon(s);
+    s.combat = null;
+    s.dungeon!.pending = null;
+    return s;
+  };
+  it("실력에 비해 얕은 층(1층에 3레벨 이상)에 오래 머물면 예고 뒤 나타나 쫓아온다", () => {
+    const s = setup(3);
+    const [w1, w2, ap] = BAL.sweeperTurns;
+    passTime(s, w1 - 1);
+    expect(s.dungeon!.sweeperStage ?? 0).toBe(0);
+    passTime(s, 1);
+    expect(s.dungeon!.sweeperStage).toBe(1);
+    passTime(s, w2 - w1);
+    expect(s.dungeon!.sweeperStage).toBe(2);
+    expect(s.dungeon!.rooms.find((r) => r.type === "stairs")!.known).toBe(true); // 도망칠 길은 알려 준다
+    passTime(s, ap - w2);
+    expect(s.dungeon!.sweeperStage).toBe(3);
+    expect(s.dungeon!.sweeperRoom).not.toBeNull();
+    // 바로 옆에 두고 야영하면 두 방 다가와 마주친다
+    const dg = s.dungeon!;
+    dg.sweeperRoom = dg.rooms[dg.current].edges[0];
+    s.hero.fatigue = 50;
+    apply(s, { t: "camp" });
+    expect(s.codex.seen).toContain("sweeper1");
+  });
+  it("레벨이 낮으면(1층에 2레벨) 시계가 돌지 않고, 첫 미궁(1월)에는 나오지 않는다", () => {
+    const s = setup(2);
+    passTime(s, 300);
+    expect(s.dungeon!.sweeperStage ?? 0).toBe(0);
+    const t = setup(9, 1);
+    passTime(t, 300);
+    expect(t.dungeon!.sweeperStage ?? 0).toBe(0);
+  });
+  it("계단으로 내려가면 새 층에서 시계가 처음부터", () => {
+    const s = setup(3);
+    passTime(s, BAL.sweeperTurns[1]);
+    expect(s.dungeon!.sweeperStage).toBe(2);
+    const dg = s.dungeon!;
+    const stairs = dg.rooms.findIndex((r) => r.type === "stairs");
+    dg.current = dg.rooms.findIndex((r) => r.edges.includes(stairs));
+    dg.sweeperRoom = null;
+    apply(s, { t: "move", room: stairs });
+    if (s.dungeon?.pending?.kind === "stairs") apply(s, { t: "pending", choice: "descend" });
+    expect(s.dungeon!.floor).toBe(2);
+    expect(s.dungeon!.sweeperStage).toBe(0);
+    expect(s.dungeon!.floorTurns ?? 0).toBeLessThan(10);
   });
 });

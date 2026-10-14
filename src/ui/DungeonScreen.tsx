@@ -2,7 +2,8 @@ import type { CSSProperties } from "react";
 import { maxHp } from "../game/core";
 import { ROOM_LABEL, ROOM_SHORT, currentRoom, isNight } from "../game/dungeon";
 import type { PendingChoice } from "../game/dungeon";
-import type { DungeonState } from "../game/types";
+import type { DungeonState, GameState } from "../game/types";
+import { sweeperDistance, sweeperThreat } from "../game/sweeper";
 import { BAL } from "../game/data";
 import { GEAR, gearEffect, targetSlot } from "../game/gear";
 import { FRAGMENTS, TIER_LABEL, fragKnown, fragSlots, fragStatText } from "../game/fragments";
@@ -49,6 +50,7 @@ export function DungeonScreen({ ctl }: { ctl: Ctl }) {
       dock={<RoomDock ctl={ctl} />}
     >
       <FloorMap dg={dg} />
+      <SweeperWarn s={s} />
       <LogView ctl={ctl} fill />
     </GameScreen>
   );
@@ -90,6 +92,21 @@ const PENDING_OPTIONS: Record<string, { choice: PendingChoice; label: string; pr
     { choice: "leave", label: "죽은 자들의 물건은 건드리지 않는다" },
   ],
 };
+
+/** 미궁의 청소부 예고·추적 */
+function SweeperWarn({ s }: { s: GameState }) {
+  const dg = s.dungeon!;
+  if (!sweeperThreat(s)) return null;
+  const dist = sweeperDistance(s);
+  return (
+    <p className="sweeper-warn">
+      {dist === null
+        ? "이 층에 너무 오래 머물렀다 — 무언가 오고 있다. 계단으로 내려가거나 미궁을 나가면 피할 수 있다."
+        : `미궁의 청소부가 쫓아온다 — ${dist}방 거리. 방을 옮길 때마다 한 방, 야영하면 두 방 다가온다.`}
+      {dg.sweeperStage === 3 && dist !== null && dist <= 1 && " 바로 옆이다!"}
+    </p>
+  );
+}
 
 function RoomDock({ ctl }: { ctl: Ctl }) {
   const { s, dispatch, busy } = ctl;
@@ -332,6 +349,7 @@ function FloorMap({ dg }: { dg: DungeonState }) {
           return (
             <g key={r.id}>
               <circle cx={p.x} cy={p.y} r={r.id === dg.current ? 7 : 5} className={`map-node ${cls} t-${r.type}`} />
+              {dg.sweeperRoom === r.id && !dg.sweeperDown && <circle cx={p.x} cy={p.y} r={10} className="map-sweeper" />}
               {(r.known || r.visited) && <text x={p.x} y={p.y - 9} className="map-label">{ROOM_SHORT[r.type]}</text>}
             </g>
           );

@@ -2,6 +2,7 @@
 import { GEAR, gearScore, targetSlot } from "./gear";
 import { CLASSES } from "./classes";
 import { BAL } from "./data";
+import { sweeperDistance, sweeperThreat } from "./sweeper";
 import { INJ, PARTS } from "./injury";
 import { god, power } from "./faith";
 import { fragScore, fragSlots } from "./fragments";
@@ -149,7 +150,8 @@ function dungeonAction(s: GameState): Action | null {
       case "record": return { t: "pending", choice: goal === "explore" && god(s) !== "oblivion" ? "read" : "leave" };
       case "shrine": return { t: "pending", choice: goal === "rush" && hp >= 0.8 ? "leave" : "pray" };
       case "stairs":
-        return { t: "pending", choice: wantDescend(s) ? "descend" : "stay" };
+        // 청소부가 오고 있으면 내려간다
+        return { t: "pending", choice: wantDescend(s) || sweeperThreat(s) ? "descend" : "stay" };
       // 첫 미궁: 1층을 다 돌았거나 많이 다쳤으면 떨어진 주문서로 돌아간다
       case "lostScroll":
         return { t: "pending", choice: floorDone(s) || hp < 0.5 ? "use" : "stay" };
@@ -178,9 +180,18 @@ function dungeonAction(s: GameState): Action | null {
   if (s.inventory.herb > 0 && s.disease > 0 && god(s) !== "plague") return { t: "herb" };
   if (hp < 0.4 && s.inventory.potion > 0) return { t: "potion" };
   if (hp < 0.45 && s.inventory.potion === 0 && s.inventory.scroll > 0) return { t: "scroll" };
+  // 청소부가 바로 옆인데 출구가 옆에 없으면 주문서로 빠진다
+  const sd = sweeperDistance(s);
+  if (sd !== null && sd <= 1 && s.inventory.scroll > 0 && !dg.rooms[dg.current].edges.some((e) => ["stairs", "portal"].includes(dg.rooms[e].type))) return { t: "scroll" };
   if (s.hero.satiety < 25 && s.inventory.food > 0) return { t: "eat" };
-  if (s.hero.fatigue >= 90 || (hp < 0.5 && s.hero.satiety > 30)) return { t: "camp" };
+  // 청소부가 오고 있으면 야영하지 않는다(자는 동안 두 방 다가온다) — HP가 아주 낮을 때만 예외
+  if ((s.hero.fatigue >= 90 || (hp < 0.5 && s.hero.satiety > 30)) && (!sweeperThreat(s) || hp < 0.2)) return { t: "camp" };
   const step = nextStep(s);
+  // 청소부가 오고 있으면 쉬지 않고 출구로(보스방을 지나야 하면 그대로 들어간다). 갈 곳이 없으면 주문서
+  if (sweeperThreat(s) && hp >= 0.2) {
+    if (step !== null) return { t: "move", room: step };
+    if (s.inventory.scroll > 0) return { t: "scroll" };
+  }
   // 보스방 앞에서는 야영으로 HP를 채우고 들어간다(잘 준비된 플레이어의 행동)
   if (step !== null && dg.rooms[step].type === "boss" && !dg.rooms[step].resolved && hp < 0.9 && dg.turnsLeft > 40) {
     if (s.hero.satiety < 30 && s.inventory.food > 0) return { t: "eat" };
@@ -239,7 +250,10 @@ function nextStep(s: GameState): number | null {
   const boss = () => first((id) => (dg.rooms[id].type === "boss" && !dg.rooms[id].resolved && seen(id)) || (dg.rooms[id].type === "portal" && seen(id)));
 
   let target: number | null = null;
-  if (goal === "rush") {
+  // 청소부가 오고 있으면 무엇보다 출구(계단·차원문)로
+  if (sweeperThreat(s)) target = exitRoom();
+  if (target !== null) { /* 출구로 */ }
+  else if (goal === "rush") {
     // 출구가 보이면 곧장, 아니면 가장 가까운 미방문 방(알려진 함정은 피해서)
     if (dg.floor === 3) target = boss();
     if (target === null && exitOk && wantDescend(s)) target = exitRoom();

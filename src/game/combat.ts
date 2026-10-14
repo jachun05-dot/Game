@@ -71,7 +71,7 @@ export function startCombat(s: GameState, context: CombatState["context"], enemi
   s.log[s.log.length - 1].mons = enemies.map((e) => e.defId);
   for (const e of enemies) if (!s.codex.seen.includes(e.defId)) s.codex.seen.push(e.defId);
   // 공포: 보스·이단심문관과 마주치면
-  if (enemies.some((e) => e.defId === "boss" || e.defId === "inquisitor")) afflict(s, "fear", MIND.fearBoss, "그것을 본 순간, 등줄기가 서늘하게 식었다.");
+  if (enemies.some((e) => e.defId === "boss" || e.defId === "inquisitor" || MONSTERS[e.defId].hidden)) afflict(s, "fear", MIND.fearBoss, "그것을 본 순간, 등줄기가 서늘하게 식었다.");
   for (const e of enemies) {
     const def = MONSTERS[e.defId];
     if (def.rare) log(s, `【희귀 개체】 ${def.name} — ${def.note} 놓치기 전에 잡아야 한다! (마석 ${def.mana}G 어치)`, "crit");
@@ -622,7 +622,7 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
  */
 function foldEasyFight(s: GameState, c: CombatState): void {
   if (c.logFrom === undefined || s.hero.hp < (c.hpStart ?? 0) || c.frags.length) return;
-  if (c.enemies.some((e) => { const d = MONSTERS[e.defId]; return d.rare || d.elite || d.human || e.defId === "boss" || e.defId === "general"; })) return;
+  if (c.enemies.some((e) => { const d = MONSTERS[e.defId]; return d.rare || d.elite || d.human || d.hidden || e.defId === "boss" || e.defId === "general"; })) return;
   const n = s.logCount - c.logFrom; // 등장 줄 포함
   if (n < 4 || n > s.log.length) return; // 세부가 3줄 이상일 때만 접는다
   const lines = s.log.slice(s.log.length - n + 1);

@@ -29,6 +29,10 @@ export const BAL = {
   /** true면 예전 규칙: 마을에서 한 주를 보내거나 미궁에서 돌아오면 HP가 다 차고, 경상은 체력 판정으로 저절로 낫는다.
    *  false면 HP·부상은 여관(돈)·물약·붕대·야영으로만 회복한다 */
   freeHeal: false,
+  /** 미궁의 청소부: 이 층에 도착한 뒤 예고 1·2, 나타남 턴(48 = 하루). 보통 한 층 탐색은 50~100턴 */
+  sweeperTurns: [96, 120, 144] as [number, number, number],
+  /** 청소부를 쓰러뜨린 보상 마석(섹터별, 섹터 배율 적용 안 함) */
+  sweeperMana: [0, 400, 800] as number[],
   /** 매달 상점가 물가가 오르는 폭 [최소, 최대](0.05 = 5%). [0, 0]이면 오르지 않는다 */
   inflation: [0.05, 0.1] as [number, number],
   /** 특수 훈련(이 레벨 → 다음 레벨) 수련비 */
@@ -123,6 +127,8 @@ export interface MonsterDef {
   escapeAfter?: number;
   /** 훈련소 허수아비: 공격하지 않는다(도감·조우에 없음) */
   dummy?: boolean;
+  /** 히든: 마주치기 전에는 도감에 실루엣도 나오지 않는다 */
+  hidden?: boolean;
 }
 
 // DESIGN 11절 "1섹터 몬스터(확정)" / "1섹터 보스"
@@ -148,6 +154,9 @@ export const MONSTERS: Record<string, MonsterDef> = {
   manawraith: { id: "manawraith", name: "마석 갑주 망령", wound: { head: 3, body: 2 }, hard: true, hp: 22, ac: 17, atk: 4, dice: [1, 6], mana: 500, rare: true, escapeAfter: 4, attackText: "마석 갑주로 들이받았다", note: "갑주가 통째로 마석이다. 오래 머물지 않는다." },
   harpyqueen: { id: "harpyqueen", name: "하피 여왕", wound: { head: 3, body: 2, main: 1, offhand: 1, feet: 1 }, hp: 28, ac: 15, atk: 5, dice: [1, 8], mana: 40, flying: true, scream: 0.25, elite: true, attackText: "날카로운 발톱을 내리꽂았다", note: "하피들의 여왕. 비명이 머릿속을 헤집는다. 깃털 망토를 두르고 있다." },
   general: { id: "general", name: "끝나지 않은 전쟁의 장군", wound: { head: 2, body: 3, main: 2, offhand: 2, feet: 2 }, hard: true, hp: 28, ac: 15, atk: 4, dice: [1, 8], mana: 120, charge: true, rally: true, fearHit: 0.2, attackText: "유령 군마 위에서 장검을 내리쳤다", note: "유령 군마를 탄 망령 장군. 3라운드마다 진군 명령을 내린다." },
+  // 미궁의 청소부(히든 보스, sweeper.ts): 실력에 비해 얕은 층에 오래 머물면 나타나 쫓아온다. 그 섹터보다 3섹터 위 보스 급
+  sweeper1: { id: "sweeper1", name: "미궁의 청소부", hp: 260, ac: 22, atk: 12, dice: [3, 8], mana: 0, hard: true, fearHit: 0.3, hidden: true, wound: { head: 2, body: 3, main: 2, offhand: 2, feet: 2 }, attackText: "녹슨 갈퀴 같은 팔로 쓸어 냈다", note: "미궁은 한곳에 오래 머무는 것을 싫어한다. 층을 치우러 온다. 계단 아래까지는 쫓아오지 않는다." },
+  sweeper2: { id: "sweeper2", name: "전쟁터의 청소부", hp: 330, ac: 24, atk: 14, dice: [3, 10], mana: 0, hard: true, fearHit: 0.3, hidden: true, wound: { head: 2, body: 3, main: 2, offhand: 2, feet: 2 }, attackText: "부러진 깃대들을 엮은 팔로 후려쳤다", note: "끝나지 않은 전쟁의 잔해를 치우는 거대한 것. 머무는 자도 잔해로 여긴다." },
   // 훈련소 허수아비(dummy.ts): 복사한 상태에서만 등장한다
   dummy: { id: "dummy", name: "짚 허수아비", hp: 30, ac: 13, atk: 0, dice: [1, 1], mana: 0, dummy: true, attackText: "흔들렸다" },
   dummyPack: { id: "dummyPack", name: "작은 허수아비", hp: 10, ac: 12, atk: 0, dice: [1, 1], mana: 0, dummy: true, attackText: "흔들렸다" },

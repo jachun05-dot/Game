@@ -38,7 +38,7 @@ function whereFound(id: string): string {
 }
 
 export function CodexScreen({ codex, onBack }: { codex: Codex; onBack: () => void }) {
-  const ids = [...ORDER, ...Object.keys(MONSTERS).filter((id) => !ORDER.includes(id) && !MONSTERS[id].human && !MONSTERS[id].dummy)];
+  const ids = [...ORDER, ...Object.keys(MONSTERS).filter((id) => !ORDER.includes(id) && !MONSTERS[id].human && !MONSTERS[id].dummy && (!MONSTERS[id].hidden || codex.seen.includes(id)))];
   const seen = ids.filter((id) => codex.seen.includes(id)).length;
   useEffect(() => window.scrollTo(0, 0), []); // 아래로 내린 화면에서 열어도 맨 위부터
   return (

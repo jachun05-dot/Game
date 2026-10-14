@@ -1,6 +1,7 @@
 import { MIND_KEYS } from "../game/mind";
 import { PARTS } from "../game/injury";
 import type { GameState } from "../game/types";
+import { sweeperThreat } from "../game/sweeper";
 
 // 처음 하는 사람을 위한 안내: 그 상황을 처음 만났을 때 한 번만 뜬다(본 안내는 Meta에 남아 다음 삶에도 안 뜬다).
 // 설정의 "용어 사전"에서 모두 다시 볼 수 있다. 순서가 곧 우선순위(한 번에 하나만 뜬다).
@@ -45,6 +46,12 @@ export const TIPS: Tip[] = [
     title: "특수 훈련",
     text: "4·7·10레벨로 가는 훈련은 보스가 남긴 재료(4레벨: 거대 쥐의 마석 심장, 7레벨: 장군의 녹슨 휘장)가 있어야 받을 수 있다. 그때 고른 갈래의 특화를 얻어 확 강해지고, 그 갈래의 액티브를 전투마다 한 번 더 쓴다. 훈련 화면의 레벨표를 보고 주력 갈래를 정하자.",
     when: (s) => s.phase === "town" && (s.hero.level === 3 || s.hero.level === 6) && s.month >= 2,
+  },
+  {
+    id: "sweeper",
+    title: "미궁의 청소부",
+    text: "실력에 비해 얕은 층(이 층 아래로 내려가도 될 만한 레벨)에 오래 머물면, 미궁이 그 층을 치우러 온다. 예고가 두 번 오고(두 번째 예고 때 출구가 지도에 드러난다), 하루쯤 뒤 청소부가 나타나 방을 옮길 때마다 한 방씩 쫓아온다. 야영하면 두 방. 그 섹터 보스보다 훨씬 강하다 — 계단으로 내려가거나 미궁을 나가면 피할 수 있다. 쓰러뜨리면 큰 보상이 있다고 한다.",
+    when: (s) => sweeperThreat(s),
   },
   {
     id: "portal",

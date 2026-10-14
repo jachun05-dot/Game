@@ -195,6 +195,16 @@ export interface DungeonState {
   respawnClock?: number;
   /** 이번 삶의 첫 미궁(1월): 2층으로 내려갈 수 없다 */
   first?: boolean;
+  /** 이 층에 도착한 뒤 흐른 턴(미궁의 청소부 시계) */
+  floorTurns?: number;
+  /** 청소부 예고 단계(0 없음, 1·2 예고, 3 나타남) */
+  sweeperStage?: number;
+  /** 청소부가 있는 방(나타난 뒤) */
+  sweeperRoom?: number | null;
+  /** 이 층의 청소부를 쓰러뜨렸다 */
+  sweeperDown?: boolean;
+  /** 청소부 전투가 어디서 시작됐나(방 이동 / 야영) */
+  sweeperFrom?: "move" | "camp";
 }
 
 export type Activity = "train" | "rumor" | "field" | "inn";

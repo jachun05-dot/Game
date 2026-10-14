@@ -42,6 +42,9 @@ export const FRAGMENTS: Record<string, FragmentDef> = {
   manawraith: { id: "manawraith", name: "마석 갑주 망령의 편린", tier: 3, chance: 0.03, stats: { con: 5, str: 3 }, skill: "fragManaArmor", flavor: "뼈 위로 마석 갑주가 자라난다." },
   harpyqueen: { id: "harpyqueen", name: "하피 여왕의 편린", tier: 3, chance: 0.03, stats: { dex: 5, luk: 2 }, skill: "fragQueenScream", flavor: "목구멍 깊은 곳에 비명이 깃든다." },
   general: { id: "general", name: "끝나지 않은 전쟁의 장군의 편린", tier: 4, chance: 0.03, stats: { str: 5, con: 5 }, skill: "fragVanguard", flavor: "아직 끝나지 않은 전쟁이 핏속에서 울린다." },
+  // 미궁의 청소부: 쓰러뜨리면 반드시 남긴다(dungeon.ts 청소부 전투 뒤처리 — 일반 확률 굴림은 쓰지 않는다)
+  sweeper1: { id: "sweeper1", name: "미궁의 청소부의 편린", tier: 4, chance: 0.03, stats: { str: 3, con: 3, per: 3 }, flavor: "먼지와 녹이 엉긴 잿빛. 머무는 법이 아니라 지나가는 법을 안다." },
+  sweeper2: { id: "sweeper2", name: "전쟁터의 청소부의 편린", tier: 4, chance: 0.03, stats: { str: 4, con: 4, dex: 2, per: 2 }, flavor: "부러진 깃대의 나뭇결. 전쟁터를 끝까지 걸어 나온 자의 다리." },
   boss: { id: "boss", name: "거대한 돌연변이 쥐의 편린", tier: 4, chance: 0.03, stats: { str: 4, con: 4, dex: 1 }, skill: "fragFrenzy", flavor: "붉게 고동친다. 이빨이 근질거린다." },
 };
 

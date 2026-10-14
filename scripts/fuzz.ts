@@ -168,6 +168,7 @@ function setup(s: GameState, scen: string) {
     s.week = 3;
     s.phase = "week-result";
     apply(s, { t: "closeWeek" });
+    apply(s, { t: "enterDungeon" });
     const dg = s.dungeon!;
     dg.sector = 2;
     dg.floor = 1;

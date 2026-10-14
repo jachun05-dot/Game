@@ -10,6 +10,7 @@ import { SKILLS } from "./skills";
 import { describeGroup, makeEnemies, potionHeal, startCombat } from "./combat";
 import { hungerMult } from "./skills";
 import { GEAR, equip, targetSlot } from "./gear";
+import { resetSweeper, sweeperId, sweeperStep, sweeperTick } from "./sweeper";
 import type { Rng } from "./rng";
 import type { CombatState, DungeonState, GameState, Pending, Room, RoomType } from "./types";
 
@@ -180,6 +181,7 @@ export function passTime(s: GameState, turns: number): void {
   } else {
     dg.starvingTurns = 0;
   }
+  sweeperTick(s, turns);
 }
 
 /** 미궁은 스스로 괴물을 낳는다: 비워 둔 전투방이 다시 채워진다(함정·상자·보스방은 그대로) */
@@ -249,6 +251,8 @@ export function moveTo(s: GameState, id: number): void {
     }
   }
   if (checkTimeUp(s)) return;
+  // 미궁의 청소부: 내가 한 방 옮기면 한 방 다가온다
+  if (sweeperStep(s, 1)) return sweeperFight(s, "move");
   // 현상수배 중이면 성당의 이단심문관이 뒤를 밟는다
   if (s.heretic && rngOf(s).chance(FAITH_BAL.inquisitorChance)) {
     log(s, "등 뒤에서 쇠사슬 끌리는 소리 — 성당의 이단심문관이 길을 막아선다!", "hurt");
@@ -405,6 +409,7 @@ function fall(s: GameState): boolean {
   dg.floor += 1;
   dg.deepestFloor = Math.max(dg.deepestFloor, dg.floor);
   dg.rooms = generateFloor(r, dg.floor, dg.sector);
+  resetSweeper(dg);
   dg.current = 0;
   dg.prev = null;
   log(s, `— ${dg.floor}층에 떨어졌다. 올라갈 길은 없다.`, "system");
@@ -499,6 +504,7 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
     dg.floor += 1;
     dg.deepestFloor = Math.max(dg.deepestFloor, dg.floor);
     dg.rooms = generateFloor(r, dg.floor, dg.sector);
+    resetSweeper(dg);
     dg.current = 0;
     dg.prev = null;
     log(s, `— ${dg.floor}층에 내려섰다.`, "system");
@@ -690,6 +696,7 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
     dg.floor += 1;
     dg.deepestFloor = Math.max(dg.deepestFloor, dg.floor);
     dg.rooms = generateFloor(r, dg.floor, dg.sector);
+    resetSweeper(dg);
     dg.current = 0;
     dg.prev = null;
     passTime(s, 1);
@@ -724,6 +731,7 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
     dg.turnsLeft = before * 2;
     dg.clock = 0;
     dg.rooms = generateFloor(r, 1, dg.sector);
+    resetSweeper(dg);
     dg.current = 0;
     dg.prev = null;
     remember(s, `${dg.sector}섹터 — 잊힌 전쟁터의 초원에 발을 디뎠다.`);
@@ -795,10 +803,46 @@ function resolveFrag(s: GameState, id: string, choice: PendingChoice): void {
   log(s, `${josa(f.name, "을")} 흡수했다! ${fragStatText(id)}${skill ? ` · 능력 【${skill.name}】 ${skill.desc}` : ""}`, "good");
 }
 
+/** 미궁의 청소부와 마주쳤다 */
+function sweeperFight(s: GameState, from: "move" | "camp"): void {
+  const dg = d(s);
+  dg.sweeperFrom = from;
+  const id = sweeperId(dg.sector);
+  log(s, from === "camp" ? "잠결에 공기가 무거워진다 — 눈을 뜨자 그것이 방을 가득 메우고 있다!" : "방에 들어서자 그것이 기다리고 있었다 — 미궁의 청소부!", "hurt");
+  startCombat(s, "dungeon", makeEnemies(s, [id]));
+}
+
 export function afterDungeonCombat(s: GameState, outcome: "win" | "fled", c: CombatState): void {
   const dg = d(s);
   const room = currentRoom(s);
   s.phase = "dungeon";
+  // 미궁의 청소부: 방의 사건과 별개. 이기면 큰 보상, 도망치면 직전 방으로(청소부는 그 방에 남아 계속 쫓는다)
+  const sw = c.enemies.find((e) => MONSTERS[e.defId]?.hidden);
+  if (sw) {
+    const from = dg.sweeperFrom;
+    dg.sweeperFrom = undefined;
+    if (outcome === "win") {
+      dg.sweeperDown = true;
+      dg.sweeperRoom = null;
+      const mana = BAL.sweeperMana[dg.sector] ?? 0;
+      dg.mana += mana;
+      remember(s, `${josa(MONSTERS[sw.defId].name, "을")} 쓰러뜨렸다.`);
+      log(s, `${josa(MONSTERS[sw.defId].name, "이")} 무너져 내린다. 녹과 먼지 속에서 커다란 마석(${mana}G 어치)이 굴러 나왔다.`, "crit");
+      if (!s.codex.fragSeen.includes(sw.defId)) s.codex.fragSeen.push(sw.defId);
+      offerFrag(s, [sw.defId]);
+      if (from === "move" && !dg.pending) arrive(s, false);
+    } else {
+      const back = dg.prev !== null && dg.prev !== dg.current ? dg.prev : currentRoom(s).edges.find((e) => e !== dg.sweeperRoom);
+      if (back !== undefined) {
+        dg.prev = dg.current;
+        dg.current = back;
+        log(s, "청소부의 팔을 피해 옆 통로로 굴러 나왔다. 그것은 아직 뒤에 있다.", "hurt");
+        passTime(s, 1);
+        checkTimeUp(s);
+      }
+    }
+    return;
+  }
   // 이단심문관: 방의 사건과 별개. 이기면 신앙심 +10 후 그 방에 원래대로 들어서고, 도망치면 직전 방으로
   if (c.enemies.some((e) => e.defId === "inquisitor")) {
     if (outcome === "win") {
@@ -893,6 +937,8 @@ export function camp(s: GameState): void {
   const heal = 4 + Math.max(0, smod(s, "con")) + (power(s, "song", 2) ? 3 : 0);
   s.hero.hp = Math.min(maxHp(s), s.hero.hp + heal);
   log(s, `피로가 풀렸다. HP +${heal}`, "good");
+  // 미궁의 청소부: 8시간 자는 동안 두 방 다가온다
+  if (sweeperStep(s, 2)) return sweeperFight(s, "camp");
   if (r.chance(isNight(s) ? 0.3 : 0.15)) {
     log(s, "잠결에 무언가 다가오는 소리!", "hurt");
     const ids = campAmbush(dg.sector, dg.floor);

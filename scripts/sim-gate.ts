@@ -49,6 +49,7 @@ PLANS.filter((p) => !only || only.some((o) => p.id.startsWith(o))).forEach((plan
     if (!snap) continue;
     const A = structuredClone(snap);
     apply(A, { t: "closeWeek" });
+    apply(A, { t: "enterDungeon" });
     const ra = runTrip(A);
     const B = structuredClone(snap);
     B.phase = "town";
@@ -60,6 +61,7 @@ PLANS.filter((p) => !only || only.some((o) => p.id.startsWith(o))).forEach((plan
     else apply(B, train);
     if (B.hero.level !== 4) continue;
     apply(B, { t: "closeWeek" });
+    apply(B, { t: "enterDungeon" });
     const rb = runTrip(B);
     row.n++;
     if (ra.portal) row.a.portal++;
