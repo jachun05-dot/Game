@@ -524,3 +524,4 @@ html, body, #root { height: 100%; }
 .dummy-bar{height:8px;background:var(--panel-2);border:1px solid var(--border);overflow:hidden}
 .dummy-bar>span{display:block;height:100%;background:var(--accent)}
 .option-skill b.accent{color:var(--accent)}
+.topbar.sticky{position:sticky;top:0;z-index:5;background:var(--bg);padding-top:6px}

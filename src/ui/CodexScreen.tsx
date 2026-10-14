@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { FIELD_ENCOUNTERS, MONSTERS, SECTOR_ELITES, SECTOR_ENCOUNTERS, SECTOR_RARES, bossGroup } from "../game/data";
 import { FRAGMENTS, TIER_LABEL, fragStatText } from "../game/fragments";
 import { SKILLS } from "../game/skills";
@@ -39,8 +40,16 @@ function whereFound(id: string): string {
 export function CodexScreen({ codex, onBack }: { codex: Codex; onBack: () => void }) {
   const ids = [...ORDER, ...Object.keys(MONSTERS).filter((id) => !ORDER.includes(id) && !MONSTERS[id].human && !MONSTERS[id].dummy)];
   const seen = ids.filter((id) => codex.seen.includes(id)).length;
+  useEffect(() => window.scrollTo(0, 0), []); // 아래로 내린 화면에서 열어도 맨 위부터
   return (
     <Shell>
+      <div className="topbar sticky">
+        <button className="link" onClick={onBack}>
+          ← 돌아가기
+        </button>
+        <span className="topbar-title">몬스터 도감</span>
+        <span />
+      </div>
       <p className="eyebrow">BESTIARY · 몬스터 도감</p>
       <h1 className="h1">몬스터 도감</h1>
       <p className="dim small">
