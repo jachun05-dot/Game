@@ -27,6 +27,7 @@
 - `docs/DESIGN.md` 기획(14절 = 텍스트 진행 구조), `docs/DECISIONS.md` 결정 기록(시간순), `docs/NIGHT_LOG.md` 작업 일지
 - 직업 기술표: `docs/MAGE.md`, `docs/WARRIOR.md`, `docs/ADVENTURER.md` / 최신 밸런스 `docs/CLASS_BALANCE.md`
 - `docs/PROTOTYPE.md` 시스템별 구현 기록(절마다 날짜, 옛 절은 표시해 둠)
+- `docs/SKILLS_10_16_DRAFT.md` 직업 기술 10~16레벨 초안(결정 대기)
 - `docs/SECTOR3_DRAFT.md` 3섹터 기획(구현 완료), `docs/SECTOR4_DRAFT.md`~`SECTOR6_DRAFT.md` 4~6섹터 초안
 - `docs/VISUAL_HANDOFF.md` 비주얼 세션 전달(분담 규칙, 아트 방향, UI 구조, 할 일 10절)
 
