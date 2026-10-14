@@ -178,7 +178,7 @@ export function SpeedBar({ ctl }: { ctl: Ctl }) {
           {v === 0 ? "즉시" : `${v}×`}
         </button>
       ))}
-      <button className={`chip${ctl.auto ? " on" : ""}`} onClick={() => ctl.setAuto(!ctl.auto)} title="중요한 결정도 자동으로 고릅니다">
+      <button className={`chip${ctl.auto ? " on" : ""}`} onClick={() => ctl.setAuto(!ctl.auto)} title="중요한 결정도 자동으로 고릅니다. 미궁에서 나오면 저절로 꺼진다">
         자동 결정 {ctl.auto ? "ON" : "OFF"}
       </button>
     </div>

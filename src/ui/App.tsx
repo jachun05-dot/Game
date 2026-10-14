@@ -109,8 +109,12 @@ export function App() {
     };
   }, [auto, s, busy, view, speed, dispatch]);
 
+  // 자동 결정은 미궁 한 번까지: 죽거나 미궁에서 나오면(정산·마을로 돌아오면) 꺼진다
+  const prevPhase = useRef(s?.phase);
   useEffect(() => {
-    if (s?.phase === "dead") setAuto(false);
+    const was = prevPhase.current;
+    prevPhase.current = s?.phase;
+    if (s?.phase === "dead" || (was === "dungeon" && s?.phase !== "dungeon")) setAuto(false);
   }, [s?.phase]);
 
   const startNew = () => {
