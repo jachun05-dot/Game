@@ -6,6 +6,7 @@ import { passive } from "./skills";
 import { fragStat } from "./fragments";
 import { abyssEdge, faithMaxHp, power } from "./faith";
 import { rageAc, rollMindPenalty } from "./mind";
+import { deathNotes } from "./autopsy";
 import { injuryAc, injuryMaxHp, injuryRollPenalty, offhandAcPenalty } from "./injury";
 import type { DeathCause, GameState, LogKind, StatKey, Stats } from "./types";
 
@@ -146,6 +147,7 @@ export function kill(s: GameState, cause: DeathCause, detail?: string): void {
     className: CLASSES[s.hero.cls].name,
     seed: s.seed,
     diedAt: new Date().toISOString(),
+    notes: deathNotes(s, cause),
   };
   s.combat = null;
   s.phase = "dead";

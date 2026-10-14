@@ -222,6 +222,8 @@ export interface Tomb {
   className?: string;
   seed: number;
   diedAt: string;
+  /** 죽은 순간의 상태와 다음 판 조언(autopsy.ts). 옛 묘비에는 없다 */
+  notes?: { facts: string[]; hints: string[] };
 }
 
 export interface Candidate {

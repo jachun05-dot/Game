@@ -6,7 +6,7 @@ import { act, apply } from "./engine";
 import { botAction } from "./bot";
 import { STAT_KEYS, BAL, MONSTERS } from "./data";
 import { FRAGMENTS, FRAG_MAX_CHANCE, fragKnown, fragSlots } from "./fragments";
-import { stat, taxDue } from "./core";
+import { kill, stat, taxDue } from "./core";
 import { allSkills } from "./skills";
 import { tier } from "./faith";
 import { FAITH } from "./data";
@@ -955,5 +955,35 @@ describe("전투 로그 접기", () => {
     const before = s.log.filter((l) => l.foldOf !== undefined).length;
     startCombat(s, "dungeon", makeEnemies(s, ["goldrat"]));
     expect(s.log.filter((l) => l.foldOf !== undefined).length).toBe(before);
+  });
+});
+
+describe("묘비 사망 요약", () => {
+  it("전투에서 죽으면 마지막 상대·남긴 물약을 적고, 세금 처형은 세금과 가진 돈을 적는다", () => {
+    const s = newRun(71);
+    apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    s.week = 3;
+    s.phase = "week-result";
+    apply(s, { t: "closeWeek" });
+    s.hero.hp = 1;
+    s.inventory.potion = 3;
+    s.tactics.potionAt = 0;
+    s.combat = null;
+    startCombat(s, "dungeon", makeEnemies(s, ["rat", "rat", "rat", "rat", "rat", "rat"]));
+    for (let i = 0; i < 50 && (s.phase as string) !== "dead"; i++) {
+      const a = botAction(s);
+      if (!a) break;
+      apply(s, a);
+    }
+    expect(s.phase).toBe("dead");
+    const n = s.tomb!.notes!;
+    expect(n.facts.some((f) => f.startsWith("남긴 것: 물약 3개"))).toBe(true);
+    expect(n.hints.some((h) => h.includes("물약 방침을 켜"))).toBe(true);
+    expect(n.hints.length).toBeLessThanOrEqual(3);
+
+    const t = newRun(72);
+    apply(t, { t: "create", name: "y", candidate: 0, faith: null });
+    kill(t, "tax");
+    expect(t.tomb!.notes!.facts.some((f) => f.startsWith("세금 "))).toBe(true);
   });
 });
