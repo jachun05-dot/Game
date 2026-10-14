@@ -240,7 +240,12 @@ for (let i = 0; i < N; i++) {
       if (s.rank < prevRank) extra.push(`등급 역행`);
       if (a.t === "train" && s.month < BAL.firstTrainMonth && s.hero.level > prevLevel) extra.push("첫 달 훈련으로 레벨업");
       prevLevel = s.hero.level; prevRank = s.rank;
-      const townOnly = ["buy", "sell", "buyGear", "train", "eraseFrag", "regen", "prosthetic"].includes(a.t) || (a.t === "activity" && a.a !== "field");
+      // 현상수배 중 buy는 암시장(두 배 값)으로 허용: 산 만큼 정확히 두 배 값이 빠져야 한다
+      if (lockedBefore && a.t === "buy") {
+        const was = JSON.parse(lockedBefore)[0] as number;
+        if (s.gold !== was && was - s.gold !== BAL.prices[a.item] * 2 && was - s.gold !== Math.ceil(BAL.prices[a.item] / 2) * 2) extra.push(`암시장 값이 두 배가 아님 ${a.item}`);
+      }
+      const townOnly = ["sell", "buyGear", "train", "eraseFrag", "regen", "prosthetic"].includes(a.t) || (a.t === "activity" && a.a !== "field");
       if (lockedBefore && townOnly && JSON.stringify([s.gold, s.inventory, s.gear, s.hero.level, s.fragments, s.injuries, s.prosthetic]) !== lockedBefore) extra.push(`현상수배 중 마을 시설 이용 ${a.t}`);
       for (const m of [...invariants(s), ...extra]) report({ kind: "불변식", msg: m.replace(/-?\d+(\.\d+)?/g, "#") + ` ← ${a.t}${a.t === "pending" ? ":" + a.choice : ""}`, ...ctx, step, action: JSON.stringify(a) + ` (${m})`, phase: before });
       const k = progressKey(s);
