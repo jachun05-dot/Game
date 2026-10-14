@@ -115,11 +115,11 @@ export function rollMindPenalty(s: GameState): number {
 }
 
 export function rageDmg(s: GameState): number {
-  return has(s, "rage") ? 1 : 0;
+  return has(s, "rage") ? (s.skills.includes("berserkMark") ? 3 : 1) : 0; // 광전의 각인: 분노가 힘이 된다
 }
 
 export function rageAc(s: GameState): number {
-  return has(s, "rage") ? -1 : 0;
+  return has(s, "rage") && !s.skills.includes("berserkMark") ? -1 : 0;
 }
 
 /** 물약 방침을 놓친다(분노·절망) */

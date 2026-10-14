@@ -153,6 +153,12 @@ export function weaponOf(s: GameState): Weapon {
   return w.stat === "int" ? { ...w, magic: true } : w;
 }
 
+/** 쓸 수 있는 방패를 들고 있나(무기가 아닌 왼손 장비, 왼손 중상·결손이면 못 씀) */
+export function hasShield(s: GameState): boolean {
+  const id = s.gear.offhand;
+  return !!id && !GEAR[id]?.weapon && slotWorks(s, "offhand");
+}
+
 /** 이 장비가 들어갈 슬롯(반지는 빈 쪽, 둘 다 차 있으면 약한 쪽) */
 export function targetSlot(s: GameState, id: string): SlotKey {
   const g = GEAR[id];

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { BAL, STAT_KEYS, STAT_LABEL, TRAININGS } from "../game/data";
 import { GEAR, SLOTS, gearEffect, targetSlot } from "../game/gear";
 import { CLASSES } from "../game/classes";
-import { isElement } from "../game/elements";
+import { hasLevelTable } from "../game/elements";
 import { canTrain, gateOf, nextSkill, shopPrice, trainCost } from "../game/town";
 import type { GameState } from "../game/types";
 import { SKILLS } from "../game/skills";
@@ -286,7 +286,7 @@ function TrainingPanel({ ctl, onClose }: { ctl: Ctl; onClose: () => void }) {
                     배울 기술: <b>{SKILLS[sk].name}</b> <span className="dim">({SKILLS[sk].kind === "active" ? "자동 발동" : "패시브"}) {SKILLS[sk].desc}</span>
                   </>
                 ) : (
-                  <span className="dim">{isElement(x.id) ? "이 레벨에는 이 원소로 배울 기술이 없다" : "이 훈련의 기술은 모두 배웠다"}</span>
+                  <span className="dim">{hasLevelTable(x.id) ? "이 레벨에는 이 훈련으로 배울 기술이 없다" : "이 훈련의 기술은 모두 배웠다"}</span>
                 )}
               </span>
             </button>

@@ -235,6 +235,10 @@ export const TRAININGS: { id: string; name: string; desc: string; stats: [StatKe
   { id: "frost", name: "서리 수련", desc: "마법사 전용. 묶어 두고 맞기 전에 끝낸다", stats: ["int", "per"], skills: [] },
   { id: "bolt", name: "번개 수련", desc: "마법사 전용. 빠르고 변덕스럽다", stats: ["int", "dex"], skills: [] },
   { id: "earth", name: "대지 수련", desc: "마법사 전용. 맞으면서 버틴다", stats: ["int", "con"], skills: [] },
+  // 전사 방향 훈련(elements.ts STYLE_SKILLS): 배우는 기술은 레벨마다 정해져 있다
+  { id: "guard", name: "수호 훈련", desc: "전사 전용. 방패를 들고 버티는 법", stats: ["str", "con"], skills: [] },
+  { id: "glad", name: "검투 훈련", desc: "전사 전용. 빈틈을 찌르고 받아치는 법", stats: ["str", "dex"], skills: [] },
+  { id: "berserk", name: "광전 훈련", desc: "전사 전용. 피를 보면 더 세게 휘두르는 법", stats: ["str", "str"], skills: [] },
 ];
 
 export const NAMES = [

@@ -1,5 +1,5 @@
 import { josa } from "./josa";
-import { ELEMENTS, elementSkill, isElement } from "./elements";
+import { ELEMENTS, hasLevelTable, isElement, levelSkill } from "./elements";
 import { BAL, TROPHIES, FEED, FIELD_ENCOUNTERS, NAMES, RIVAL_NEWS, RIVALS, RUMORS, STAT_KEYS, STAT_LABEL, TRAININGS } from "./data";
 import { addStat, check, emptyStats, kill, log, maxHp, rngOf, taxDue, topBehavior, yearOf } from "./core";
 import { FRAGMENTS, emptyCodex, fragSlots } from "./fragments";
@@ -216,16 +216,16 @@ export function train(s: GameState, trainingId: string, free: [StatKey, StatKey]
     `고정: ${t.stats.map((k) => STAT_LABEL[k]).join(", ")} / 자유: ${free.map((k) => STAT_LABEL[k]).join(", ")} / ${noBehavior ? "몸이 기억한 것(무작위)" : "몸이 기억한 것"}: ${behaviorPicks.map((k) => STAT_LABEL[k]).join(", ")}`,
   ];
   if (paidHeart) lines.unshift(`교관이 ${josa(gate!.name, "을")} 받아 들고 고개를 끄덕였다. "${gate!.item === "heart" ? "이제야 진짜 훈련을 시작할 수 있겠군." : "차원문 너머에서 살아 돌아왔군. 다음 단계로 가자."}"`);
-  if (!learned) lines.push(isElement(t.id) ? "이 레벨에서 이 원소로 배울 기술은 없다." : "이 훈련에서 더 배울 기술은 없다. (히든 트레이닝은 준비 중)");
+  if (!learned) lines.push(hasLevelTable(t.id) ? "이 레벨에서 이 훈련으로 배울 기술은 없다." : "이 훈련에서 더 배울 기술은 없다. (히든 트레이닝은 준비 중)");
   if (fragSlots(s.hero.level) > fragSlots(from)) lines.push(`몸에 편린을 담을 자리가 하나 더 생겼다. (편린 칸 ${fragSlots(s.hero.level)})`);
   finishWeek(s, { title: "훈련", lines, statDelta: delta, levelUp: { from, to: s.hero.level }, learned: learned ?? undefined, goldDelta: -cost }, true);
 }
 
 /** 이 훈련을 받으면 다음에 배울 기술(사다리 순서) */
 export function nextSkill(s: GameState, trainingId: string): string | null {
-  // 마법사 원소 수련: 이번 훈련으로 오를 레벨에 정해진 기술
-  if (isElement(trainingId)) {
-    const id = elementSkill(trainingId, s.hero.level + 1);
+  // 마법사 원소·전사 방향 훈련: 이번 훈련으로 오를 레벨에 정해진 기술
+  if (hasLevelTable(trainingId)) {
+    const id = levelSkill(trainingId, s.hero.level + 1);
     return id && !s.skills.includes(id) ? id : null;
   }
   const t = TRAININGS.find((x) => x.id === trainingId);

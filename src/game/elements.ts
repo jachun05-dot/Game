@@ -34,3 +34,35 @@ export function isElement(id: string): id is ElementKey {
 export function elementSkill(el: ElementKey, toLevel: number): string | null {
   return ELEMENT_SKILLS[el][toLevel] ?? null;
 }
+
+// ── 전사 훈련(2026-10-14): 수호·검투·광전. 모든 훈련이 힘 + 방향 능력치. 마법사와 같은 레벨표 규칙 ──
+export type StyleKey = "guard" | "glad" | "berserk";
+export const STYLE_KEYS: StyleKey[] = ["guard", "glad", "berserk"];
+export const STYLES: Record<StyleKey, { name: string; mark: string }> = {
+  guard: { name: "수호", mark: "guardMark" },
+  glad: { name: "검투", mark: "gladMark" },
+  berserk: { name: "광전", mark: "berserkMark" },
+};
+export const STYLE_SKILLS: Record<StyleKey, Record<number, string>> = {
+  guard: { 2: "tough", 3: "shieldBash", 4: "guardMark", 5: "holdFast", 6: "shieldCraft", 7: "shieldCounter", 8: "ironBody", 9: "grit" },
+  glad: { 2: "sharpEdge", 3: "riposte", 4: "gladMark", 5: "parryCounter", 6: "lightStep", 7: "chainSlash", 8: "readGap", 9: "finisher" },
+  berserk: { 2: "roughPower", 3: "wideSweep", 4: "berserkMark", 5: "charge", 6: "bloodThirst", 7: "frenzy", 8: "painless", 9: "smash" },
+};
+
+/** 레벨표가 있는 훈련(마법사 원소·전사 방향) */
+const LEVEL_TABLES: Record<string, Record<number, string>> = { ...ELEMENT_SKILLS, ...STYLE_SKILLS };
+const MARK_OF_LINE: Record<string, string> = { ...Object.fromEntries(ELEMENT_KEYS.map((k) => [k, ELEMENTS[k].mark])), ...Object.fromEntries(STYLE_KEYS.map((k) => [k, STYLES[k].mark])) };
+
+export function hasLevelTable(trainingId: string): boolean {
+  return trainingId in LEVEL_TABLES;
+}
+
+/** 이 훈련으로 toLevel이 될 때 배우는 기술 */
+export function levelSkill(trainingId: string, toLevel: number): string | null {
+  return LEVEL_TABLES[trainingId]?.[toLevel] ?? null;
+}
+
+/** 이 기술을 전투당 1회 더 쓰게 해 주는 각인(그 레벨표의 특화 패시브) */
+export const MARK_FOR_SKILL: Record<string, string> = Object.fromEntries(
+  Object.entries(LEVEL_TABLES).flatMap(([line, table]) => Object.values(table).filter((id) => id !== MARK_OF_LINE[line]).map((id) => [id, MARK_OF_LINE[line]])),
+);

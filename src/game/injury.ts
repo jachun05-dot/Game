@@ -55,12 +55,14 @@ export function lvl(s: GameState, p: Part): number {
 /** 판정 페널티(머리·질병) */
 export function injuryRollPenalty(s: GameState): number {
   const h = lvl(s, "head");
-  return (h >= 2 ? -4 : h === 1 ? -2 : 0) + (s.disease >= 2 && !plagueImmune(s) ? -2 : 0);
+  const p = (h >= 2 ? -4 : h === 1 ? -2 : 0) + (s.disease >= 2 && !plagueImmune(s) ? -2 : 0);
+  return s.skills.includes("painless") ? Math.trunc(p / 2) : p; // 전사 "고통 무시"
 }
 
 export function injuryHit(s: GameState): number {
   const m = lvl(s, "main");
-  return m === 2 ? -5 : m === 1 ? -2 : 0;
+  const p = m === 2 ? -5 : m === 1 ? -2 : 0;
+  return s.skills.includes("painless") ? Math.trunc(p / 2) : p;
 }
 
 export function injuryAc(s: GameState): number {

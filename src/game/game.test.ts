@@ -13,7 +13,7 @@ import { FAITH } from "./data";
 import { maxHp } from "./core";
 import { injuryHit, injuryRollPenalty, lvl, wound } from "./injury";
 import { weaponOf } from "./gear";
-import { SKILLS } from "./skills";
+import { SKILLS, activeSkills, passive } from "./skills";
 import { mindSummary } from "./mind";
 import { makeEnemies, startCombat } from "./combat";
 import type { GameState } from "./types";
@@ -362,10 +362,10 @@ describe("시작 조건", () => {
       expect(s.gold).toBe(0);
       expect(s.inventory.food + s.inventory.potion).toBeGreaterThan(0);
       s.gold = 999;
-      apply(s, { t: "train", training: s.hero.cls === "mage" ? "fire" : "sword", free: ["str", "con"] });
+      apply(s, { t: "train", training: s.hero.cls === "mage" ? "fire" : s.hero.cls === "warrior" ? "glad" : "sword", free: ["str", "con"] });
       expect(s.hero.level).toBe(1);
       s.month = 2;
-      apply(s, { t: "train", training: s.hero.cls === "mage" ? "fire" : "sword", free: ["str", "con"] });
+      apply(s, { t: "train", training: s.hero.cls === "mage" ? "fire" : s.hero.cls === "warrior" ? "glad" : "sword", free: ["str", "con"] });
       expect(s.hero.level).toBe(2);
     }
   });
@@ -853,5 +853,36 @@ describe("마법사 원소", () => {
     startCombat(s, "dungeon", makeEnemies(s, ["skeleton", "skeleton", "skeleton"]));
     const casts = s.log.filter((l) => l.text.startsWith("【불화살】")).length;
     expect(casts).toBe(2);
+  });
+});
+
+describe("전사 방향 훈련", () => {
+  const warrior = (seed = 41) => {
+    const s = newRun(seed);
+    apply(s, { t: "pickClass", cls: "warrior" });
+    apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    s.month = 2;
+    s.gold = 9999;
+    return s;
+  };
+  it("레벨마다 그 방향의 정해진 기술을 배우고, 첫 훈련 때 기선 제압을 함께 배운다", () => {
+    const s = warrior();
+    const str = s.hero.stats.str;
+    apply(s, { t: "train", training: "berserk", free: ["con", "con"] });
+    expect(s.skills).toEqual(expect.arrayContaining(["roughPower", "firstStrike"]));
+    expect(s.hero.stats.str).toBeGreaterThanOrEqual(str + 2); // 광전은 힘 몰빵
+    s.phase = "town";
+    apply(s, { t: "train", training: "guard", free: ["str", "con"] });
+    expect(s.skills).toContain("shieldBash");
+  });
+  it("방패 기술은 방패를 들어야만 발동한다", () => {
+    const s = warrior();
+    s.skills.push("shieldBash", "shieldCraft");
+    delete s.gear.offhand;
+    expect(activeSkills(s).some((k) => k.id === "shieldBash")).toBe(false);
+    const acNo = passive(s, "ac");
+    s.gear.offhand = "shield";
+    expect(activeSkills(s).some((k) => k.id === "shieldBash")).toBe(true);
+    expect(passive(s, "ac")).toBe(acNo + 1 + 1); // 나무 방패 AC +1, 방패술 +1
   });
 });

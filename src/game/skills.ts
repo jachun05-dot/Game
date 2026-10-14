@@ -1,4 +1,4 @@
-import { gearBonus } from "./gear";
+import { gearBonus, hasShield } from "./gear";
 import { fragSkills } from "./fragments";
 import { mindResist } from "./mind";
 import { faithHungerMult } from "./faith";
@@ -14,10 +14,12 @@ export type Trigger =
   | { on: "targetBelow"; pct: number }
   | { on: "selfBelow"; pct: number }
   | { on: "enemiesAtLeast"; n: number }
-  | { on: "lethal" };
+  | { on: "lethal" }
+  /** 반응형(맞거나 피했을 때 등): combat.ts가 기술 id로 직접 처리 */
+  | { on: "react" };
 
 export type SkillEffect =
-  | { type: "strike"; hit: number; dmg: number; dmgMult?: number; autoHit?: boolean }
+  | { type: "strike"; hit: number; dmg: number; dmgMult?: number; autoHit?: boolean; stun?: number }
   | { type: "sweep"; dmgMult: number }
   | { type: "guard"; ac: number; rounds: number }
   | { type: "weaken"; ac: number }
@@ -48,7 +50,9 @@ export type SkillEffect =
       vary?: boolean;
     }
   /** 방어 주문: AC +ac, freeze면 나를 때린 적을 얼릴 확률, reduce면 받는 피해 감소 */
-  | { type: "eguard"; ac: number; rounds: number; freeze?: number; reduce?: number; text: string }
+  | { type: "eguard"; ac: number; rounds: number; freeze?: number; reduce?: number; counter?: boolean; text: string }
+  /** 광란: n라운드 동안 라운드마다 한 번 더 공격 */
+  | { type: "rampage"; rounds: number; text: string }
   /** 서리 안개: 적 전원 명중 감소 */
   | { type: "fog"; hit: number; rounds: number; text: string }
   /** 가장 강한 적을 묶는다. half면 그 라운드 받는 피해 절반 */
@@ -81,6 +85,8 @@ export interface SkillDef {
   passive?: Passive;
   /** 마법사 원소 기술 */
   el?: ElementKey;
+  /** 방패를 들고 있어야만 효과가 있다 */
+  shield?: boolean;
 }
 
 export const SKILLS: Record<string, SkillDef> = {
@@ -138,8 +144,8 @@ export const SKILLS: Record<string, SkillDef> = {
   hungerTrained: { id: "hungerTrained", name: "굶주림 단련", kind: "passive", desc: "포만감이 25% 덜 닳는다", passive: { hunger: 0.75 } },
   // 전장 훈련(전사 전용)
   shieldBash: {
-    id: "shieldBash", name: "방패 밀치기", kind: "active",
-    desc: "전투 시작 시 가장 위협적인 적 하나를 1라운드 동안 행동 불가로 만든다",
+    id: "shieldBash", name: "방패 밀치기", kind: "active", shield: true,
+    desc: "🛡 방패 필요. 전투 시작 시 가장 위협적인 적 하나를 1라운드 동안 행동 불가로 만든다",
     trigger: { on: "start" }, effect: { type: "stunOne", rounds: 1 }, uses: 1,
   },
   warCry: {
@@ -207,7 +213,7 @@ const E = (el: ElementKey, defs: Record<string, Omit<SkillDef, "el">>) => Object
 Object.assign(SKILLS, E("fire", {
   fireEmber: { id: "fireEmber", name: "불씨", kind: "passive", desc: "마력탄이 맞으면 20% 확률로 적이 불탄다(2라운드, 라운드마다 1d3)" },
   fireArrow: { id: "fireArrow", name: "불화살", kind: "active", desc: "전투 시작 시 가장 약한 적에게 반드시 맞는 불화살(1d6 + 지능 보정)", trigger: { on: "start" }, effect: { type: "espell", el: "fire", dice: [1, 6], text: "손끝에서 불화살이 날아간다" }, uses: 1 },
-  fireMark: { id: "fireMark", name: "불의 각인", kind: "passive", desc: "화염 피해 +2, 화염 주문에 맞은 적이 불탄다(3라운드, 1d3 + 힘 보정), 화염 액티브 전투당 +1회" },
+  fireMark: { id: "fireMark", name: "불의 각인", kind: "passive", desc: "최대 HP +4, 마력탄 피해 +3, 화염 피해 +3, 화염 주문에 맞은 적이 불탄다(3라운드, 1d3 + 힘 보정), 마력탄이 30% 확률로 적을 불태운다, 화염 액티브 전투당 +1회", passive: { hp: 4 } },
   fireBlast: { id: "fireBlast", name: "불꽃 폭발", kind: "active", desc: "적이 3마리 이상이면 모든 적에게 불꽃(1d4 + 지능 보정)", trigger: { on: "enemiesAtLeast", n: 3 }, effect: { type: "espell", el: "fire", dice: [1, 4], all: true, text: "불꽃이 사방으로 터져 나간다" }, uses: 1 },
   fireHeat: { id: "fireHeat", name: "열기", kind: "passive", desc: "모든 주문 피해 +1, 힘 보정의 절반이 더해진다" },
   fireSea: { id: "fireSea", name: "불바다", kind: "active", desc: "전투 시작 시 적 전원을 불태운다(3라운드)", trigger: { on: "start" }, effect: { type: "burnAll", rounds: 3, text: "발밑이 불바다가 된다" }, uses: 1 },
@@ -216,7 +222,7 @@ Object.assign(SKILLS, E("fire", {
 }), E("frost", {
   frostCalm: { id: "frostCalm", name: "냉정", kind: "passive", desc: "명중 +1, AC +1, 감각 판정 +2(앞방 엿보기·함정 발견)", passive: { hit: 1, ac: 1, perception: 2 } },
   frostArrow: { id: "frostArrow", name: "얼음 화살", kind: "active", desc: "전투 시작 시 가장 강한 적에게 얼음 화살(1d6 + 지능 보정), 60% 확률로 1라운드 얼린다", trigger: { on: "start" }, effect: { type: "espell", el: "frost", dice: [1, 6], pick: "strongest", freeze: 0.6, text: "얼음 화살이 날아간다" }, uses: 1 },
-  frostMark: { id: "frostMark", name: "서리의 각인", kind: "passive", desc: "서리 피해 +2, 얼거나 묶인 적은 모든 주문·마력탄 피해 +2(깨뜨리기), 모든 얼림 확률 +20%p(감각 보정 ×3%p 추가), 서리 액티브 전투당 +1회" },
+  frostMark: { id: "frostMark", name: "서리의 각인", kind: "passive", desc: "최대 HP +4, 마력탄 피해 +2, 서리 피해 +3, 얼거나 묶인 적은 모든 주문·마력탄 피해 +3(깨뜨리기), 모든 얼림 확률 +25%p(감각 보정 ×3%p 추가), 마력탄이 25% 확률로 적을 얼린다, 서리 액티브 전투당 +1회", passive: { hp: 4 } },
   frostArmor: { id: "frostArmor", name: "얼음 갑옷", kind: "active", desc: "내 HP 50% 이하면 2라운드 AC +4, 나를 때린 적을 30% 확률로 얼린다", trigger: { on: "selfBelow", pct: 50 }, effect: { type: "eguard", ac: 4, rounds: 2, freeze: 0.3, text: "몸을 얼음으로 감싼다" }, uses: 1 },
   frostTouch: { id: "frostTouch", name: "서리 손끝", kind: "passive", desc: "마력탄이 맞으면 25% 확률로 1라운드 얼린다" },
   frostPrison: { id: "frostPrison", name: "얼음 감옥", kind: "active", desc: "전투 시작 시 가장 강한 적을 3라운드 얼음에 가둔다", trigger: { on: "start" }, effect: { type: "bind", rounds: 3, text: "얼음 기둥이 솟아 적을 가둔다" }, uses: 1 },
@@ -225,7 +231,7 @@ Object.assign(SKILLS, E("fire", {
 }), E("bolt", {
   boltStep: { id: "boltStep", name: "섬광 걸음", kind: "passive", desc: "AC +1, 도주 판정 +3", passive: { ac: 1, flee: 3 } },
   boltArrow: { id: "boltArrow", name: "번개 화살", kind: "active", desc: "전투 시작 시 번개 화살(1d6 + 지능 보정), 다른 적 하나에게 반 피해로 튄다", trigger: { on: "start" }, effect: { type: "espell", el: "bolt", dice: [1, 6], bounce: true, text: "번개가 손끝에서 튄다" }, uses: 1 },
-  boltMark: { id: "boltMark", name: "번개의 각인", kind: "passive", desc: "번개가 한 번 더 튄다(민첩 보정 ×10% 확률로 또 한 번), 날아다니는 적에게 마력탄 명중 +2, 번개 액티브 전투당 +1회" },
+  boltMark: { id: "boltMark", name: "번개의 각인", kind: "passive", desc: "최대 HP +4, 마력탄 피해 +2, 번개 피해 +2, 번개가 한 번 더 튄다(민첩 보정 ×10% 확률로 또 한 번), 마력탄이 맞으면 다른 적에게 반 피해로 튄다, 날아다니는 적에게 마력탄 명중 +2, 번개 액티브 전투당 +1회", passive: { hp: 4 } },
   boltChain: { id: "boltChain", name: "연쇄 번개", kind: "active", desc: "적이 3마리 이상이면 모든 적에게 번개(1d4~1d10 출렁임 + 지능 보정)", trigger: { on: "enemiesAtLeast", n: 3 }, effect: { type: "espell", el: "bolt", dice: [1, 6], all: true, vary: true, text: "번개가 적들 사이를 줄줄이 뛰어다닌다" }, uses: 1 },
   boltStatic: { id: "boltStatic", name: "정전기", kind: "passive", desc: "나를 때린 적이 25% 확률로 감전돼 다음 라운드 명중 −2" },
   boltStrike: { id: "boltStrike", name: "뇌격", kind: "active", desc: "전투 시작 시 가장 강한 적에게 벼락(2d6 + 지능 보정), 2라운드 동안 50% 확률로 행동 실패", trigger: { on: "start" }, effect: { type: "espell", el: "bolt", dice: [2, 6], pick: "strongest", shock: 2, text: "하늘을 가르는 벼락이 떨어진다" }, uses: 1 },
@@ -234,13 +240,41 @@ Object.assign(SKILLS, E("fire", {
 }), E("earth", {
   earthSkin: { id: "earthSkin", name: "돌 피부", kind: "passive", desc: "AC +1, 최대 HP +3", passive: { ac: 1, hp: 3 } },
   earthSling: { id: "earthSling", name: "돌팔매", kind: "active", desc: "전투 시작 시 단단한 적을 먼저 노려 돌을 날린다(1d6 + 지능 보정, 단단하면 +3)", trigger: { on: "start" }, effect: { type: "espell", el: "earth", dice: [1, 6], pick: "hard", hardBonus: 3, text: "바닥의 돌이 떠올라 날아간다" }, uses: 1 },
-  earthMark: { id: "earthMark", name: "대지의 각인", kind: "passive", desc: "대지 패시브 효과 1.5배, 단단한 적에게 대지 주문·마력탄 피해 +3, 대지 액티브 전투당 +1회" },
+  earthMark: { id: "earthMark", name: "대지의 각인", kind: "passive", desc: "최대 HP +8, 대지 패시브 효과 2배, 마력탄 피해 +2, 단단한 적에게 대지 주문·마력탄 피해 +3 더, 대지 액티브 전투당 +1회", passive: { hp: 8 } },
   earthWall: { id: "earthWall", name: "바위 방벽", kind: "active", desc: "내 HP 50% 이하면 2라운드 AC +3, 받는 피해 −1", trigger: { on: "selfBelow", pct: 50 }, effect: { type: "eguard", ac: 3, rounds: 2, reduce: 1, text: "바위 벽이 솟아오른다" }, uses: 1 },
   earthLevel: { id: "earthLevel", name: "땅 고르기", kind: "passive", desc: "꺼진 바닥을 피하는 판정 +5, 함정 해체 +3" },
   earthPrison: { id: "earthPrison", name: "바위 감옥", kind: "active", desc: "전투 시작 시 가장 강한 적을 2라운드 묶고, 첫 라운드 받는 피해 절반", trigger: { on: "start" }, effect: { type: "bind", rounds: 2, half: true, text: "바위가 솟아 적을 붙잡는다" }, uses: 1 },
   earthRoot: { id: "earthRoot", name: "뿌리 내리기", kind: "passive", desc: "최대 HP +5, 발 부상 이동 페널티 절반", passive: { hp: 5 } },
   earthQuake: { id: "earthQuake", name: "땅 울림", kind: "active", desc: "적이 2마리 이상이면 모든 적에게 땅 울림(1d4 + 지능 보정), 30% 확률로 1라운드 넘어뜨린다", trigger: { on: "enemiesAtLeast", n: 2 }, effect: { type: "espell", el: "earth", dice: [1, 4], all: true, knock: 0.3, text: "땅이 크게 울린다" }, uses: 1 },
 }));
+
+// 전사 방향 기술(elements.ts의 STYLE_SKILLS). 질긴 몸·방패 밀치기·강철 몸·이 악물기·마무리 일격은 위의 기존 기술을 쓴다
+Object.assign(SKILLS, {
+  // 수호(힘·체력)
+  guardMark: { id: "guardMark", name: "수호의 각인", kind: "passive", desc: "AC +2, 최대 HP +8, 받는 피해 −2(최소 1), 맞았을 때 부상 확률 절반, 수호 액티브 전투당 +1회", passive: { ac: 2, hp: 8 } },
+  holdFast: { id: "holdFast", name: "굳건히 버티기", kind: "active", desc: "내 HP 50% 이하면 2라운드 AC +4", trigger: { on: "selfBelow", pct: 50 }, effect: { type: "guard", ac: 4, rounds: 2 }, uses: 1 },
+  shieldCraft: { id: "shieldCraft", name: "방패술", kind: "passive", shield: true, desc: "🛡 방패 필요. AC +1, 왼손 부상 확률 절반", passive: { ac: 1 } },
+  shieldCounter: { id: "shieldCounter", name: "방패 반격", kind: "active", shield: true, desc: "🛡 방패 필요. 적의 공격이 빗나가면 30% 확률로 반격(전투당 3회)", trigger: { on: "react" }, uses: 3 },
+  // 검투(힘·민첩)
+  sharpEdge: { id: "sharpEdge", name: "날카로운 검끝", kind: "passive", desc: "명중 +1, 치명타 확률 +3%", passive: { hit: 1, crit: 3 } },
+  riposte: { id: "riposte", name: "맞받아치기", kind: "active", desc: "치명타를 맞으면 즉시 반격(피해 +2, 전투당 2회)", trigger: { on: "react" }, uses: 2 },
+  gladMark: { id: "gladMark", name: "검투의 각인", kind: "passive", desc: "최대 HP +4, 명중 +2, 피해 +3, 치명타 확률 +10%, 검투 액티브 전투당 +1회", passive: { hp: 4, hit: 2, dmg: 3, crit: 10 } },
+  parryCounter: { id: "parryCounter", name: "흘려내기", kind: "active", desc: "내 HP 50% 이하면 2라운드 AC +3, 그동안 빗나간 공격마다 반격", trigger: { on: "selfBelow", pct: 50 }, effect: { type: "eguard", ac: 3, rounds: 2, counter: true, text: "칼끝으로 공격을 흘려낸다" }, uses: 1 },
+  lightStep: { id: "lightStep", name: "가벼운 발", kind: "passive", desc: "AC +1, 도주 판정 +3", passive: { ac: 1, flee: 3 } },
+  chainSlash: { id: "chainSlash", name: "연속 베기", kind: "active", desc: "적을 쓰러뜨리면 같은 라운드에 다른 적을 한 번 더 공격(전투당 3회)", trigger: { on: "react" }, uses: 3 },
+  readGap: { id: "readGap", name: "빈틈 읽기", kind: "passive", desc: "전투 시작 시 가장 단단한 적의 AC −2" },
+  // 광전(힘·힘)
+  roughPower: { id: "roughPower", name: "거친 힘", kind: "passive", desc: "피해 +1", passive: { dmg: 1 } },
+  wideSweep: { id: "wideSweep", name: "휩쓸기", kind: "active", desc: "적이 2마리 이상이면 모든 적을 한 번에 벤다(피해 ×0.7)", trigger: { on: "enemiesAtLeast", n: 2 }, effect: { type: "sweep", dmgMult: 0.7 }, uses: 1 },
+  berserkMark: { id: "berserkMark", name: "광전의 각인", kind: "passive", desc: "최대 HP +4, 피해 +5, 내 HP 50% 이하면 피해 +3 더, 분노에 걸리면 AC −1 대신 피해 +2. 대가: AC −1, 도주 −4. 광전 액티브 전투당 +1회", passive: { hp: 4, dmg: 5, ac: -1, flee: -4 } },
+  charge: { id: "charge", name: "돌격", kind: "active", desc: "전투 시작 시 첫 공격이 반드시 맞고 피해 ×1.5", trigger: { on: "start" }, effect: { type: "strike", hit: 0, dmg: 0, dmgMult: 1.5, autoHit: true }, uses: 1 },
+  bloodThirst: { id: "bloodThirst", name: "피의 갈증", kind: "passive", desc: "적을 쓰러뜨릴 때마다 HP +3" },
+  frenzy: { id: "frenzy", name: "광란", kind: "active", desc: "내 HP 50% 이하가 되면 3라운드 동안 라운드마다 한 번 더 공격", trigger: { on: "selfBelow", pct: 50 }, effect: { type: "rampage", rounds: 3, text: "피를 보자 눈이 뒤집힌다" }, uses: 1 },
+  painless: { id: "painless", name: "고통 무시", kind: "passive", desc: "부상의 명중·판정 페널티 절반, 공포에 걸리지 않는다" },
+  smash: { id: "smash", name: "분쇄 일격", kind: "active", desc: "전투당 1회, 반드시 맞는 일격(피해 ×2), 1라운드 넘어뜨린다", trigger: { on: "targetBelow", pct: 100 }, effect: { type: "strike", hit: 0, dmg: 0, dmgMult: 2, autoHit: true, stun: 1 }, uses: 1 },
+} satisfies Record<string, SkillDef>);
+// "고통 무시": 공포 면역
+mindResist.push((s, k) => (k === "fear" && s.skills.includes("painless") ? 0 : 1));
 
 // "죽은 자의 담력": 공포 면역
 mindResist.push((s, k) => (k === "fear" && fragSkills(s).includes("fragDeadNerve") ? 0 : 1));
@@ -258,9 +292,11 @@ export function hasSkill(s: GameState, id: string): boolean {
 export function passive(s: GameState, key: Exclude<keyof Passive, "hunger">): number {
   let t = gearBonus(s, key);
   const earthMark = s.skills.includes("earthMark");
+  const shield = hasShield(s);
   for (const id of allSkills(s)) {
+    if (SKILLS[id]?.shield && !shield) continue; // 방패 기술은 방패가 있어야
     const v = SKILLS[id]?.passive?.[key] ?? 0;
-    t += earthMark && SKILLS[id]?.el === "earth" ? Math.ceil(v * 1.5) : v; // 대지의 각인: 대지 패시브 1.5배
+    t += earthMark && SKILLS[id]?.el === "earth" && id !== "earthMark" ? v * 2 : v; // 대지의 각인: 대지 패시브 2배
   }
   return t;
 }
@@ -272,5 +308,11 @@ export function hungerMult(s: GameState): number {
 }
 
 export function activeSkills(s: GameState): SkillDef[] {
-  return allSkills(s).map((id) => SKILLS[id]).filter((d) => d && d.kind === "active");
+  const shield = hasShield(s);
+  return allSkills(s).map((id) => SKILLS[id]).filter((d) => d && d.kind === "active" && (!d.shield || shield));
+}
+
+/** 기술을 지금 쓸 수 있나(방패 기술은 방패가 있어야) */
+export function skillWorks(s: GameState, id: string): boolean {
+  return s.skills.includes(id) && (!SKILLS[id]?.shield || hasShield(s));
 }

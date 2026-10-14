@@ -7,7 +7,7 @@ import { fragScore, fragSlots } from "./fragments";
 import { heroAc, maxHp, smod } from "./core";
 import { canTrain, nextSkill, shopPrice, trainCost } from "./town";
 import type { Action } from "./engine";
-import { ELEMENTS, ELEMENT_KEYS, type ElementKey } from "./elements";
+import { ELEMENTS, ELEMENT_KEYS, type ElementKey, type StyleKey } from "./elements";
 import type { GameState } from "./types";
 
 // "자동 결정" 옵션과 밸런스 시뮬레이션이 같이 쓰는 단순한 정책.
@@ -57,6 +57,11 @@ function townAction(s: GameState): Action {
       const el = (magePlan ?? defaultMagePlan)(s);
       return { t: "train", training: el, free: ["int", "con"] };
     }
+    if (s.hero.cls === "warrior") {
+      // 방패가 없으면 먼저 산다(방패 기술은 방패가 있어야)
+      if (!s.gear.offhand && s.gold >= GEAR.shield.price! + trainCost(s)) return { t: "buyGear", id: "shield" };
+      return { t: "train", training: (warriorPlan ?? defaultWarriorPlan)(s), free: ["str", "con"] };
+    }
     const order = ["warfare", "arcane", "sword", "endure", "footwork", "scout", "study"].filter((id) => CLASSES[s.hero.cls].trainings.includes(id));
     const training = order.find((id) => nextSkill(s, id)) ?? order[0];
     return { t: "train", training, free: ["str", "con"] };
@@ -80,9 +85,16 @@ export function defaultMagePlan(s: GameState): ElementKey {
   return [...ELEMENT_KEYS].sort((a, b) => s.hero.stats[ELEMENTS[b].stat] - s.hero.stats[ELEMENTS[a].stat])[0];
 }
 let magePlan: ((s: GameState) => ElementKey) | null = null;
-/** 시뮬레이션용: 마법사 원소 선택 방식을 바꾼다(null이면 기본) */
-export function setMagePlan(fn: ((s: GameState) => ElementKey) | null): void {
-  magePlan = fn;
+let warriorPlan: ((s: GameState) => StyleKey) | null = null;
+/** 시뮬레이션용: 마법사 원소·전사 방향 선택 방식을 바꾼다(null이면 기본) */
+export function setMagePlan(fn: ((s: GameState) => string) | null): void {
+  magePlan = fn as typeof magePlan;
+  warriorPlan = fn as typeof warriorPlan;
+}
+
+/** 전사가 이번 훈련에 고를 방향. 기본: 검투(공방 균형)에 몰아준다 */
+export function defaultWarriorPlan(_s: GameState): StyleKey {
+  return "glad";
 }
 
 /** 이미 클리어한 1섹터를 2섹터로 가려고 다시 지날 때는 서둘러 지나간다 */

@@ -72,9 +72,11 @@ export interface CombatState {
   /** 전쟁의 신 ★3 "피의 함성": 남은 라운드 동안 적 명중 −2 */
   cow?: number;
   /** 흘려내기 등 일시 AC 보너스 */
-  guard: { ac: number; rounds: number; freeze?: number; reduce?: number } | null;
+  guard: { ac: number; rounds: number; freeze?: number; reduce?: number; counter?: boolean } | null;
   /** 바위 감옥: 이번 라운드 받는 피해 절반 */
   halfDmg?: boolean;
+  /** 광란: 남은 라운드 동안 라운드마다 한 번 더 공격 */
+  rampage?: number;
 }
 
 /** 자동 결정의 미궁 목표: 구석구석 탐험 / 빠르게 다음 층 / 파밍(전투·상자 위주) */

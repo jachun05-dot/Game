@@ -5,9 +5,9 @@ import { FRAGMENTS } from "./fragments";
 import { GODS, abyssEdge, faithDmg, faithHit, faithInfectMult, power, pray } from "./faith";
 import { HEAD_STUN, INJ, canFlee, infect, injuryHit, lvl, noCrit, wound, type Part } from "./injury";
 import { MIND, afflict, comboNow, missPotion, rageDmg, symptom } from "./mind";
-import { activeSkills, passive, SKILLS, type SkillDef } from "./skills";
+import { activeSkills, passive, skillWorks, SKILLS, type SkillDef } from "./skills";
 import { GEAR, weaponOf } from "./gear";
-import { ELEMENTS, type ElementKey } from "./elements";
+import { MARK_FOR_SKILL, type ElementKey } from "./elements";
 
 const GEAR_IS_WEAPON = (id: string) => !!GEAR[id]?.weapon;
 import type { CombatState, Enemy, GameState } from "./types";
@@ -41,6 +41,8 @@ interface Strike {
   dmg: number;
   mult: number;
   autoHit: boolean;
+  /** 맞으면 n라운드 행동 불가(분쇄 일격) */
+  stun?: number;
 }
 
 const PLAIN: Strike = { hit: 0, dmg: 0, mult: 1, autoHit: false };
@@ -64,6 +66,7 @@ export function startCombat(s: GameState, context: CombatState["context"], enemi
     log(s, "기습! 자세를 잡기도 전에 공격이 들어온다.", "hurt");
     enemyPhase(s, c);
     if (isDead(s)) return;
+    if (alive(c).length === 0) return finish(s, "win"); // 기습을 받아치다 다 쓰러뜨렸다
   }
 
   // 망각의 신 ★3 "망각의 장막"
@@ -77,14 +80,24 @@ export function startCombat(s: GameState, context: CombatState["context"], enemi
     log(s, `【${GODS.war.name}】 피의 함성 — 적들이 움찔한다 (2라운드 동안 적 명중 −2)`, "skill");
   }
 
+  // 빈틈 읽기(전사 검투 8레벨): 가장 단단한 적의 AC −2
+  if (has(s, "readGap") && alive(c).length) {
+    const target = [...alive(c)].sort((a, b) => MONSTERS[b.defId].ac - MONSTERS[a.defId].ac || b.hp - a.hp)[0];
+    target.acDown = (target.acDown ?? 0) + 2;
+    log(s, `【빈틈 읽기】 ${MONSTERS[target.defId].name}의 빈틈이 보인다 (AC -2)`, "skill");
+  }
   let opener: Strike | null = null;
   for (const sk of activeSkills(s)) {
     const t = sk.trigger!;
+    if (alive(c).length === 0) return finish(s, "win");
     if (t.on !== "start" || !canUse(s, c, sk)) continue;
     if (t.minEnemies && alive(c).length < t.minEnemies) continue;
     const e = sk.effect!;
     if (e.type === "strike") {
-      opener = { hit: e.hit, dmg: e.dmg, mult: e.dmgMult ?? 1, autoHit: !!e.autoHit };
+      // 기선 제압·돌격 등이 겹치면 합친다
+      opener = opener
+        ? { hit: opener.hit + e.hit, dmg: opener.dmg + e.dmg, mult: Math.max(opener.mult, e.dmgMult ?? 1), autoHit: opener.autoHit || !!e.autoHit }
+        : { hit: e.hit, dmg: e.dmg, mult: e.dmgMult ?? 1, autoHit: !!e.autoHit };
       useSkill(s, c, sk);
     } else if (e.type === "weaken") {
       const target = [...alive(c)].sort((a, b) => MONSTERS[b.defId].ac - MONSTERS[a.defId].ac || b.hp - a.hp)[0];
@@ -133,6 +146,7 @@ export function startCombat(s: GameState, context: CombatState["context"], enemi
     enemyPhase(s, c);
     if (isDead(s)) return;
     c.halfDmg = false;
+    if (c.rampage) c.rampage -= 1;
     plagueTick(s, c);
     burnTick(s, c);
     for (const foe of alive(c)) if (foe.hitDown && --foe.hitDown.rounds <= 0) foe.hitDown = undefined;
@@ -196,7 +210,7 @@ function freeze(e: Enemy): void {
 
 /** 서리의 각인: 얼림 확률 +20%p + 감각 보정 ×3%p */
 function freezeChance(s: GameState, p: number): number {
-  return p + (has(s, "frostMark") ? 0.2 + Math.max(0, smod(s, "per")) * 0.03 : 0);
+  return p + (has(s, "frostMark") ? 0.25 + Math.max(0, smod(s, "per")) * 0.03 : 0);
 }
 
 /** 번개 같은 손: 민첩 보정 ×10% 확률로 두 번 굴려 높은 쪽 */
@@ -210,9 +224,10 @@ function rollDice(s: GameState, n: number, sides: number): number {
 function elementBonus(s: GameState, el: ElementKey, t: Enemy): number {
   let b = 0;
   if (has(s, "fireHeat")) b += 1 + Math.floor(Math.max(0, smod(s, "str")) / 2);
-  if (el === "fire" && has(s, "fireMark")) b += 2;
-  if (el === "frost" && has(s, "frostMark")) b += 2;
-  if (has(s, "frostMark") && (t.stun ?? 0) > 0) b += 2; // 깨뜨리기
+  if (el === "fire" && has(s, "fireMark")) b += 3;
+  if (el === "frost" && has(s, "frostMark")) b += 3;
+  if (el === "bolt" && has(s, "boltMark")) b += 2;
+  if (has(s, "frostMark") && (t.stun ?? 0) > 0) b += 3; // 깨뜨리기
   if (el === "fire" && has(s, "fireWill") && hpPct(s) <= 30) b += 3;
   if (el === "earth" && has(s, "earthMark") && MONSTERS[t.defId].hard) b += 3;
   return b;
@@ -360,8 +375,9 @@ function gainLoot(s: GameState, c: CombatState, defId: string): void {
 }
 
 function canUse(s: GameState, c: CombatState, sk: SkillDef): boolean {
-  // 원소 특화(각인): 그 원소 액티브는 전투당 1회 더
-  const extra = sk.el && s.skills.includes(ELEMENTS[sk.el].mark) ? 1 : 0;
+  // 특화(각인): 그 레벨표의 액티브는 전투당 1회 더
+  const mark = MARK_FOR_SKILL[sk.id];
+  const extra = mark && s.skills.includes(mark) ? 1 : 0;
   return (c.used[sk.id] ?? 0) < (sk.uses ?? 1) + extra;
 }
 
@@ -383,8 +399,11 @@ function selfTriggers(s: GameState, c: CombatState): void {
     if (e.type === "guard") {
       c.guard = { ac: e.ac, rounds: e.rounds };
       useSkill(s, c, sk, `몸을 지킨다 (AC +${e.ac}, ${e.rounds}라운드)`);
+    } else if (e.type === "rampage") {
+      c.rampage = e.rounds;
+      useSkill(s, c, sk, `${e.text} (${e.rounds}라운드 동안 한 번 더 공격)`);
     } else if (e.type === "eguard") {
-      c.guard = { ac: e.ac, rounds: e.rounds, freeze: e.freeze, reduce: e.reduce };
+      c.guard = { ac: e.ac, rounds: e.rounds, freeze: e.freeze, reduce: e.reduce, counter: e.counter };
       useSkill(s, c, sk, `${e.text} (AC +${e.ac}, ${e.rounds}라운드)`);
     } else if (e.type === "heal") {
       const heal = rngOf(s).dice(e.dice[0], e.dice[1]) + (e.plusInt ? Math.max(0, smod(s, "int")) : 0);
@@ -413,8 +432,7 @@ function playerPhase(s: GameState, c: CombatState, opener: Strike | null): "win"
     }
     return alive(c).length === 0 ? "win" : null;
   }
-  const actions = actionsPerRound(s);
-  for (let a = 0; a < actions; a++) {
+  for (let a = 0; a < actionsPerRound(s) + (c.rampage ? 1 : 0); a++) {
     selfTriggers(s, c);
     const pct = hpPct(s);
     const { potionAt, fleeAt } = s.tactics;
@@ -452,7 +470,7 @@ function playerPhase(s: GameState, c: CombatState, opener: Strike | null): "win"
       if (fin && fin.effect!.type === "strike") {
         const e = fin.effect!;
         useSkill(s, c, fin, `${josa(def.name, "을")} 노린다`);
-        strike = { hit: e.hit, dmg: e.dmg, mult: e.dmgMult ?? 1, autoHit: !!e.autoHit };
+        strike = { hit: e.hit, dmg: e.dmg, mult: e.dmgMult ?? 1, autoHit: !!e.autoHit, stun: e.stun };
       }
       attack(s, c, target, strike);
     }
@@ -481,8 +499,12 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
   }
   const crit = !noCrit(s) && (roll === 20 || r.float() * 100 < 5 + smod(s, "luk") + passive(s, "crit") + (w.magic && held && has(s, "frostEye") ? 15 : 0));
   selfInjury(s, def.id, w.magic);
-  const magicDmg = (w.magic && s.mainElement === "earth" && has(s, "earthMark") && def.hard ? 3 : 0) + (w.magic && held && has(s, "frostMark") ? 2 : 0);
-  const base = (w.magic ? rollDice(s, w.dice[0] * (crit ? 2 : 1), w.dice[1]) : r.dice(w.dice[0] * (crit ? 2 : 1), w.dice[1])) + magicDmg + statMod + passive(s, "dmg") + st.dmg + faithDmg(s) + rageDmg(s) + abyssEdge(s, s.hero.hp / maxHp(s)).dmg;
+  // 각인: 마력탄 강화(불 +3, 서리 +2, 번개 +2, 대지 +2·단단한 적 +3)
+  const magicDmg = w.magic
+    ? (has(s, "earthMark") ? 2 + (def.hard ? 3 : 0) : 0) + (has(s, "fireMark") ? 3 : 0) + (has(s, "frostMark") ? 2 + (held ? 3 : 0) : 0) + (has(s, "boltMark") ? 2 : 0)
+    : 0;
+  const fury = has(s, "berserkMark") && hpPct(s) <= 50 ? 3 : 0; // 광전의 각인
+  const base = (w.magic ? rollDice(s, w.dice[0] * (crit ? 2 : 1), w.dice[1]) : r.dice(w.dice[0] * (crit ? 2 : 1), w.dice[1])) + magicDmg + fury + statMod + passive(s, "dmg") + st.dmg + faithDmg(s) + rageDmg(s) + abyssEdge(s, s.hero.hp / maxHp(s)).dmg;
   const dmg = Math.max(1, Math.round(base * st.mult));
   target.hp -= dmg;
   if (crit) note(s, "luk");
@@ -492,15 +514,29 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
     target.sick = true;
     log(s, `【${GODS.plague.name}】 ${josa(def.name, "이")} 병에 옮았다.`, "skill");
   }
-  // 마력탄의 원소: 불씨(불탐), 서리 손끝(얼림)
+  if (st.stun && target.hp > 0) target.stun = Math.max(target.stun ?? 0, st.stun);
+  // 마력탄의 원소: 불씨·불의 각인(불탐), 서리 손끝·서리의 각인(얼림), 번개의 각인(튐)
   if (w.magic && target.hp > 0) {
-    if (has(s, "fireEmber") && r.chance(0.2)) {
+    if ((has(s, "fireEmber") && r.chance(0.2)) || (has(s, "fireMark") && r.chance(0.3))) {
       burn(s, target, 2);
       log(s, `【불씨】 ${def.name}에게 불이 옮겨붙었다.`, "skill");
     }
-    if (has(s, "frostTouch") && r.chance(freezeChance(s, 0.25))) {
+    if ((has(s, "frostTouch") && r.chance(freezeChance(s, 0.25))) || (has(s, "frostMark") && r.chance(0.25))) {
       freeze(target);
-      log(s, `【서리 손끝】 ${josa(def.name, "이")} 얼어붙었다.`, "skill");
+      log(s, `【서리】 ${josa(def.name, "이")} 얼어붙었다.`, "skill");
+    }
+  }
+  if (w.magic && has(s, "boltMark")) {
+    const others = alive(c).filter((x) => x !== target);
+    if (others.length) {
+      const o = r.pick(others);
+      const half = Math.max(1, Math.floor(dmg / 2));
+      o.hp -= half;
+      log(s, `【번개의 각인】 마력탄이 ${MONSTERS[o.defId].name}에게 튀었다. ${half} 피해`, "hit");
+      if (o.hp <= 0) {
+        gainLoot(s, c, o.defId);
+        log(s, `${josa(MONSTERS[o.defId].name, "을")} 쓰러뜨렸다.`, "good");
+      }
     }
   }
   if (target.hp <= 0) {
@@ -508,7 +544,25 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
     gainLoot(s, c, def.id);
     log(s, `${josa(def.name, "을")} 쓰러뜨렸다.`, "good");
     if (power(s, "war", 2)) s.hero.hp = Math.min(maxHp(s), s.hero.hp + 2); // 전쟁의 신 ★2
+    if (has(s, "bloodThirst")) {
+      s.hero.hp = Math.min(maxHp(s), s.hero.hp + 3);
+      log(s, "【피의 갈증】 HP +3", "skill");
+    }
+    // 연속 베기: 같은 라운드에 다른 적을 한 번 더
+    const chain = SKILLS.chainSlash;
+    if (has(s, "chainSlash") && canUse(s, c, chain) && alive(c).length) {
+      useSkill(s, c, chain, "멈추지 않고 다음 적을 벤다");
+      attack(s, c, [...alive(c)].sort((a, b) => a.hp - b.hp)[0], PLAIN);
+    }
   }
+}
+
+/** 반응 기술(맞받아치기·흘려내기·방패 반격)의 반격 한 번 */
+function counter(s: GameState, c: CombatState, e: Enemy, skillId: string | null, text: string, bonus = 0): void {
+  if (e.hp <= 0 || isDead(s)) return;
+  if (skillId) useSkill(s, c, SKILLS[skillId], text);
+  else log(s, text, "skill");
+  attack(s, c, e, { ...PLAIN, dmg: bonus });
 }
 
 /** 때리다 자기 손을 다친다: 맨손이면 중간 확률, 단단한 몬스터면 낮은 확률(마력탄은 제외) */
@@ -524,12 +578,12 @@ function selfInjury(s: GameState, defId: string, magic?: boolean): void {
 function hitInjury(s: GameState, defId: string, dmg: number, crit: boolean): void {
   const def = MONSTERS[defId];
   const r = rngOf(s);
-  const p = crit ? INJ.hitCrit : dmg >= maxHp(s) * INJ.heavyRatio ? INJ.hitHeavy : INJ.hitNormal;
+  const p = (crit ? INJ.hitCrit : dmg >= maxHp(s) * INJ.heavyRatio ? INJ.hitHeavy : INJ.hitNormal) * (has(s, "guardMark") ? 0.5 : 1); // 수호의 각인
   if (r.chance(p)) {
     const w: Partial<Record<Part, number>> = { head: 1, body: 1, main: 1, offhand: 1, feet: 1, ...(def.wound ?? {}) };
     // 방패(무기가 아닌 왼손 장비)는 왼손을 지킨다
     const shield = s.gear.offhand && !GEAR_IS_WEAPON(s.gear.offhand);
-    if (shield) w.offhand = (w.offhand ?? 1) / 2;
+    if (shield) w.offhand = (w.offhand ?? 1) / (skillWorks(s, "shieldCraft") ? 4 : 2); // 방패술이면 더
     const part = r.weighted((Object.entries(w) as [Part, number][]).map(([item, wt]) => ({ item, w: wt })));
     const dead = wound(s, part, `${def.name}의 공격`);
     s.hero.hp = Math.min(s.hero.hp, maxHp(s)); // 몸통 부상은 최대 HP를 깎는다
@@ -593,6 +647,10 @@ function enemyPhase(s: GameState, c: CombatState): void {
       note(s, "dex");
       log(s, `${def.name}의 공격을 피했다.`, "miss");
       c.streak = 0;
+      // 흘려내기(빗나가면 반격), 방패 반격(30%)
+      if (c.guard?.counter) counter(s, c, e, null, "【흘려내기】 흘려낸 칼끝이 그대로 파고든다");
+      else if (activeSkills(s).some((k) => k.id === "shieldCounter") && canUse(s, c, SKILLS.shieldCounter) && r.chance(0.3)) counter(s, c, e, "shieldCounter", "방패로 받아내고 되받아친다");
+      if (alive(c).length === 0) return;
       continue;
     }
     const crit = roll === 20 || !!c.frenzy; // 발작 중에는 방어를 잊는다
@@ -603,6 +661,7 @@ function enemyPhase(s: GameState, c: CombatState): void {
     if (def.charge) (c.charged ??= []).push(e.uid);
     if (charge) dmg *= 2;
     if (c.guard?.reduce) dmg = Math.max(1, dmg - c.guard.reduce);
+    if (has(s, "guardMark")) dmg = Math.max(1, dmg - 2); // 수호의 각인
     if (c.halfDmg) dmg = Math.max(1, Math.ceil(dmg / 2));
     s.hero.hp -= dmg;
     // 얼음 갑옷(때린 적을 얼림), 정전기(때린 적 명중 −2)
@@ -620,6 +679,11 @@ function enemyPhase(s: GameState, c: CombatState): void {
       if (!c.fearRolled && s.hero.hp <= maxHp(s) * 0.2) {
         c.fearRolled = true;
         afflict(s, "fear", MIND.fearLowHp, "죽음이 바로 옆에 와 있다는 걸 알았다.");
+      }
+      // 맞받아치기: 치명타를 맞으면 즉시 반격
+      if (crit && has(s, "riposte") && canUse(s, c, SKILLS.riposte)) {
+        counter(s, c, e, "riposte", "이를 악물고 되받아친다", 2);
+        if (alive(c).length === 0) return;
       }
     }
     if (s.hero.hp <= 0) {
