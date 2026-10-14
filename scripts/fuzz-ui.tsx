@@ -18,6 +18,9 @@ import { DeadScreen } from "../src/ui/DeadScreen";
 import { CodexScreen } from "../src/ui/CodexScreen";
 import { GraveyardScreen } from "../src/ui/GraveyardScreen";
 import { emptyCodex } from "../src/game/fragments";
+import { maxHp } from "../src/game/core";
+import { generateFloor } from "../src/game/dungeon";
+import { Rng } from "../src/game/rng";
 
 const N = Number(process.argv[2] ?? 200);
 const START = Number(process.argv[3] ?? 1);
@@ -57,7 +60,31 @@ for (let i = 0; i < N; i++) {
   try {
     render(s, false);
     for (const a of steps) apply(s, a);
-    for (let k = 0; k < 30000 && s.phase !== "dead" && s.month <= 14; k++) {
+    // 세 판에 한 판은 6섹터(1층 또는 3층 성소)에서 시작해 엔딩·셉터 화면까지 그려 본다
+    const s6 = i % 3 === 1;
+    if (s6) {
+      s.hero.level = 16;
+      s.rank = 5;
+      s.month = 30;
+      for (const k of ["str", "dex", "con", "int", "per", "luk"] as const) s.hero.stats[k] += 15;
+      s.inventory.potion += 10;
+      s.inventory.food += 12;
+      s.inventory.incense = 1;
+      s.clues = ["lostgod", "lock", "ageless", "oldgods", ...(i % 2 ? ["edict"] : [])];
+      s.edict = i % 2 === 1;
+      if (s.hero.faith) s.piety = 150;
+      s.hero.hp = maxHp(s);
+      s.week = 4;
+      s.phase = "town";
+      apply(s, { t: "enterDungeon", shortcut: true, sector: 6 });
+      if (i % 2 === 0 && s.dungeon) {
+        s.dungeon.floor = 3;
+        s.dungeon.rooms = generateFloor(new Rng({ s: seed }), 3, 6);
+        s.dungeon.current = 0;
+        s.dungeon.prev = null;
+      }
+    }
+    for (let k = 0; k < 30000 && s.phase !== "dead" && s.month <= (s6 ? 40 : 14); k++) {
       const a = botAction(s);
       if (!a) break;
       apply(s, a);

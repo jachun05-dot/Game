@@ -9,6 +9,7 @@ import { FAITH_BAL, GODS, addPiety, faithManaMult, god, godOf, inquisitionChance
 import { clearCorrosion, poisonOf } from "./hazards";
 import { makeEnemies, startCombat } from "./combat";
 import { Rng } from "./rng";
+import { WEST_FIELD, grantClue, knowsClue, rumorWithClues } from "./truth";
 import { CLASSES, type ClassId } from "./classes";
 import { GEAR, equip, gearEffect, targetSlot } from "./gear";
 import type { Activity, Candidate, CombatState, GameState, StatKey, Stats, Tactics, WeekResult } from "./types";
@@ -25,7 +26,7 @@ export function newRun(seed: number): GameState {
     month: 1,
     week: 1,
     gold: BAL.startGold,
-    inventory: { food: 0, potion: 0, scroll: 0, heart: 0, banner: 0, spore: 0, scale: 0, fang: 0, salve: 0, firewood: 0, powder: 0, rope: 0, bandage: 0, herb: 0, whetstone: 0, antidote: 0 },
+    inventory: { food: 0, potion: 0, scroll: 0, heart: 0, banner: 0, spore: 0, scale: 0, fang: 0, salve: 0, firewood: 0, powder: 0, rope: 0, incense: 0, bandage: 0, herb: 0, whetstone: 0, antidote: 0 },
     trophies: [],
     gear: {},
     skills: [],
@@ -247,7 +248,8 @@ export function setTactics(s: GameState, t: Partial<Tactics>): void {
 export function rumor(s: GameState): void {
   if (s.phase !== "town" || s.heretic) return;
   const r = rngOf(s);
-  const lines = [r.pick(RUMORS)];
+  const lines: string[] = [];
+  rumorWithClues(s, lines); // 진실 조각이 섞인 소문(truth.ts)
   let gold = 0;
   pray(s, "song", 2);
   if (r.chance(0.55)) {
@@ -296,6 +298,11 @@ export function goField(s: GameState): void {
       return;
     }
     if (known) log(s, "폐가 뒤를 둘러봤지만 노인은 보이지 않는다. 숲으로 향한다.", "system");
+  }
+  // 현상수배 중 외곽 서쪽 끝: 버려진 마을 터(진실 조각 — 비어 버린 서쪽 마을)
+  if (s.heretic && !knowsClue(s, "westvillage") && r.chance(0.08)) {
+    log(s, WEST_FIELD, "story");
+    grantClue(s, "westvillage");
   }
   log(s, "영지 밖 숲으로 나섰다.", "system");
   s.tripUsed = [];
@@ -424,8 +431,11 @@ export function shopPrice(s: GameState, item: keyof typeof BAL.prices): number {
 /** 현상수배 중 암시장 값 배율 */
 export const BLACK_MARKET_MULT = 2;
 
+/** 이 등급부터 파는 소모품(옛 신의 향은 5섹터 클리어 뒤 외곽 밀수꾼이 들여온다) */
+export const ITEM_RANK: Partial<Record<keyof typeof BAL.prices, number>> = { incense: 5 };
+
 export function buy(s: GameState, item: keyof typeof BAL.prices): void {
-  if (s.phase !== "town") return;
+  if (s.phase !== "town" || s.rank < (ITEM_RANK[item] ?? 0)) return;
   const price = shopPrice(s, item);
   if (s.gold < price) return;
   s.gold -= price;
@@ -482,7 +492,7 @@ export function closeWeek(s: GameState): "town" | "dungeon" {
 
 export function beginSettlement(s: GameState, o: { mana: number; cleared: boolean; forced: boolean; deepest: number; sector?: number; rankUp?: boolean; extra?: string[] }): void {
   const lines: string[] = [];
-  lines.push(o.cleared ? `${o.sector ?? 1}섹터의 차원문에 도달하고 돌아왔다.` : o.forced ? "시간이 다 되어 마을로 끌려 나왔다." : "귀환 주문서로 돌아왔다.");
+  lines.push(o.cleared ? (o.sector === 6 ? "셉터의 제단에 닿았다가, 고르지 않고 돌아왔다." : `${o.sector ?? 1}섹터의 차원문에 도달하고 돌아왔다.`) : o.forced ? "시간이 다 되어 마을로 끌려 나왔다." : "귀환 주문서로 돌아왔다.");
   lines.push(`가장 깊이 내려간 곳: ${o.deepest}층`);
   // 환전: 탐욕의 신 보정, 현상수배 중이면 밀수꾼에게 반값
   let gold = Math.round(o.mana * faithManaMult(s));

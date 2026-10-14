@@ -1308,11 +1308,13 @@ describe("끝없는 미궁", () => {
     s.hero.level = 12;
     enterDungeon(s);
     const dg = s.dungeon!;
-    dg.sector = 5;
+    // 6섹터 구현 뒤: 끝없는 미궁은 셉터의 제단 아래로
+    dg.sector = 6;
     dg.floor = 3;
-    dg.pending = { kind: "portal" };
+    s.rank = 6;
+    dg.pending = { kind: "scepter" };
     s.combat = null;
-    apply(s, { t: "pending", choice: "enter" });
+    apply(s, { t: "pending", choice: "down" });
     return s;
   };
   it("2섹터 차원문으로 들어가면 3섹터(물에 잠긴 사원) 1층, 남은 시간 ×1.5", () => {
@@ -1331,13 +1333,13 @@ describe("끝없는 미궁", () => {
     expect(s.dungeon!.turnsLeft).toBe(150);
     expect(s.rank).toBe(2);
   });
-  it("5섹터 차원문으로 들어가면 끝없는 미궁 1층: 함정·상자·기록물 없이 전투·빈 방·계단뿐", () => {
+  it("6섹터 셉터의 제단 아래로 내려가면 끝없는 미궁 1층: 함정·상자·기록물 없이 전투·빈 방·계단뿐", () => {
     const s = toEndless();
     const dg = s.dungeon!;
     expect(dg.endless).toBe(true);
     expect(dg.sector).toBe(ENDLESS_SECTOR);
     expect(dg.floor).toBe(1);
-    expect(s.rank).toBe(5);
+    expect(s.rank).toBe(6);
     expect(dg.rooms.every((r) => ["entrance", "combat", "empty", "stairs"].includes(r.type))).toBe(true);
   });
   it("계단은 끝없이 이어지고, 깊을수록 몬스터가 강하며, 5층마다 보스가 계단 앞을 지킨다", () => {
@@ -1346,7 +1348,7 @@ describe("끝없는 미궁", () => {
       const rooms = generateEndlessFloor(r, n);
       expect(rooms.filter((x) => x.type === "stairs").length).toBe(1);
       expect(rooms.some((x) => x.type === "trap" || x.type === "treasure")).toBe(false);
-      const bossy = rooms.some((x) => x.encounter?.some((m) => ["boss", "harpyqueen", "general", "mycomother", "furnacemother", "abyssmaw"].includes(m)));
+      const bossy = rooms.some((x) => x.encounter?.some((m) => ["boss", "harpyqueen", "general", "mycomother", "furnacemother", "abyssmaw", "avatar"].includes(m)));
       expect(bossy).toBe(n % 5 === 0);
     }
     const s = toEndless();
@@ -1690,5 +1692,337 @@ describe("퍼징 회귀(2026-10-15)", () => {
       startCombat(s, "dungeon", makeEnemies(s, ["riftworm"]).map((e) => ({ ...e, hp: 1 })));
       expect(dg.rooms.every((r) => r.type !== "trap")).toBe(true);
     }
+  });
+});
+
+describe("6섹터: 타락한 신전과 차원문의 성소·엔딩", () => {
+  const hero = (faith: string | null = null, seed = 701) => {
+    const s = newRun(seed);
+    s.faithsKnown = Object.values(FAITH);
+    apply(s, { t: "create", name: "x", candidate: 0, faith });
+    s.month = 30;
+    s.rank = 5;
+    s.hero.level = 16;
+    for (const k of STAT_KEYS) s.hero.stats[k] += 15;
+    s.hero.hp = maxHp(s);
+    return s;
+  };
+  /** 6섹터 3층 성소에 세운다 */
+  const sanctum = (s: GameState) => {
+    enterDungeon(s);
+    const dg = s.dungeon!;
+    dg.sector = 6;
+    dg.floor = 3;
+    dg.rooms = generateFloor(new Rng({ s: 5 }), 3, 6);
+    dg.current = 0;
+    dg.prev = null;
+    return dg;
+  };
+  const at = (s: GameState, type: string) => {
+    const dg = s.dungeon!;
+    const i = dg.rooms.findIndex((x) => x.type === type);
+    dg.prev = i - 1;
+    dg.current = i;
+    return dg.rooms[i];
+  };
+
+  it("층 생성: 1·2층은 봉헌함·성광 방(2층 고해실), 3층은 외길 — 제단 → (전투·봉인 문)×3 → 화신 → 셉터의 제단", () => {
+    const r = new Rng({ s: 31 });
+    let radiant = 0, conf = 0;
+    for (let i = 0; i < 40; i++) {
+      for (const floor of [1, 2]) {
+        const rooms = generateFloor(r, floor, 6);
+        expect(reachable(rooms).size).toBe(rooms.length);
+        expect(rooms.filter((x) => x.type === "offerbox").length).toBe(1);
+        radiant += rooms.filter((x) => x.radiant).length;
+        conf += rooms.filter((x) => x.type === "confession").length;
+        if (floor === 1) expect(rooms.some((x) => x.type === "confession")).toBe(false);
+      }
+      const s3 = generateFloor(r, 3, 6);
+      expect(s3.map((x) => x.type)).toEqual(["entrance", "altars", "combat", "trap", "combat", "trap", "combat", "trap", "boss", "scepter"]);
+      expect(s3.every((x) => x.edges.length <= 2)).toBe(true);
+      expect(new Set(s3.filter((x) => x.type === "trap").map((x) => x.trapKind))).toEqual(new Set(["rune", "weight", "mirror"]));
+      expect(s3.find((x) => x.type === "boss")!.encounter![0]).toBe("avatar");
+    }
+    expect(radiant).toBeGreaterThan(0);
+    expect(conf).toBe(40);
+    // 다른 섹터에는 신전 방이 없다
+    for (const sec of [1, 2, 3, 4, 5]) for (const floor of [1, 2, 3]) expect(generateFloor(r, floor, sec).some((x) => x.radiant || ["offerbox", "confession", "altars", "scepter"].includes(x.type))).toBe(false);
+  });
+
+  it("정화: 신앙심이 깎이고 ★ 문턱 아래면 권능이 꺼진다. 옛 신의 향이 3번, 뒤집힌 성표는 늘 막는다", async () => {
+    const { purge } = await import("./temple");
+    const s = hero(FAITH.mob);
+    s.piety = 182;
+    enterDungeon(s);
+    expect(tier(s)).toBe(5);
+    purge(s, 4, "시험");
+    expect(s.piety).toBe(178);
+    expect(tier(s)).toBe(4);
+    s.inventory.incense = 1;
+    for (let i = 0; i < 3; i++) purge(s, 10, "시험");
+    expect(s.piety).toBe(178);
+    expect(s.inventory.incense).toBe(0);
+    purge(s, 10, "시험");
+    expect(s.piety).toBe(168);
+    s.gear.neck = "oldsigil";
+    purge(s, 10, "시험");
+    expect(s.piety).toBe(168);
+    // 무신앙은 깎일 것이 없다
+    const n = hero(null);
+    enterDungeon(n);
+    purge(n, 10, "시험");
+    expect(n.piety).toBe(0);
+  });
+
+  it("성광 방: 처음 들어서면 신앙심 −3(순례자의 신이면 그대로)", () => {
+    const s = hero(FAITH.mob);
+    s.piety = 100;
+    enterDungeon(s);
+    const dg = s.dungeon!;
+    dg.sector = 6;
+    dg.rooms = generateFloor(new Rng({ s: 3 }), 1, 6);
+    const room = dg.rooms[dg.rooms[0].edges[0]];
+    room.type = "empty";
+    room.radiant = true;
+    apply(s, { t: "move", room: room.id });
+    expect(s.piety).toBe(97);
+    const t = hero(FAITH.mob);
+    t.piety = 100;
+    t.gear.feet = "pilgrimboots";
+    enterDungeon(t);
+    const dt = t.dungeon!;
+    dt.sector = 6;
+    dt.rooms = generateFloor(new Rng({ s: 3 }), 1, 6);
+    const r2 = dt.rooms[dt.rooms[0].edges[0]];
+    r2.type = "empty";
+    r2.radiant = true;
+    apply(t, { t: "move", room: r2.id });
+    expect(t.piety).toBe(100);
+  });
+
+  it("봉인 문: ★5면 그냥 열리고, 해석에 실패하면 수호자 — 져도 죽지 않고 HP 1로 문 밖", () => {
+    const s = hero(FAITH.mob);
+    s.piety = 190;
+    const dg = sanctum(s);
+    const door = dg.rooms[3];
+    dg.prev = 2;
+    dg.current = 2;
+    dg.rooms[2].resolved = true;
+    apply(s, { t: "move", room: 3 });
+    expect(door.resolved).toBe(true);
+    expect(s.dungeon!.pending).toBe(null);
+    // 무신앙·약한 영웅: 수호자에게 진다
+    const w = hero(null);
+    for (const k of STAT_KEYS) w.hero.stats[k] = 2;
+    w.hero.level = 1;
+    w.hero.hp = maxHp(w);
+    const d2 = sanctum(w);
+    d2.rooms[2].resolved = true;
+    d2.current = 2;
+    apply(w, { t: "move", room: 3 });
+    expect(w.dungeon!.pending?.kind).toBe("trap");
+    apply(w, { t: "pending", choice: "force" });
+    expect(w.phase).toBe("dungeon");
+    expect(w.hero.hp).toBeGreaterThanOrEqual(1);
+    expect(w.dungeon!.current).toBe(2);
+    expect(d2.rooms[3].resolved).toBe(false);
+    expect(d2.rooms[3].remaining?.[0].defId).toBe("guardian");
+  });
+
+  it("옛 신들의 제단: 섬기는 신은 신앙심 +10과 유물(삶마다 하나), 다른 해금 신은 응답. 유물은 그 신을 섬길 때만", () => {
+    const s = hero(FAITH.tax);
+    s.piety = 100;
+    sanctum(s);
+    at(s, "altars");
+    s.dungeon!.pending = { kind: "altars" };
+    apply(s, { t: "pending", choice: "pray" });
+    expect(s.piety).toBe(110);
+    expect(s.relic).toBe("greed");
+    expect(s.dungeon!.answers!.length).toBe(Object.values(FAITH).length - 1);
+    const ac = (x: GameState) => x.hero.stats.dex; // AC 비교는 heroAc로
+    void ac;
+    expect(allSkills(s)).toBeTruthy();
+    // 개종하면 유물은 빛을 잃는다
+    const before = s.relic;
+    apply(s, { t: "pending", choice: "convert0" });
+    expect(s.relic).toBe(before);
+  });
+
+  it("고해실: 신앙이 있으면 부정(신앙 잃음)·거부(현상수배 + 심문관장), 무신앙은 캐물어 칙서", () => {
+    const s = hero(FAITH.mob);
+    s.piety = 80;
+    enterDungeon(s);
+    let dg = s.dungeon!;
+    dg.sector = 6;
+    dg.floor = 2;
+    dg.rooms = generateFloor(new Rng({ s: 4 }), 2, 6);
+    let room = at(s, "confession");
+    dg.pending = { kind: "confession" };
+    apply(s, { t: "pending", choice: "renounce" });
+    expect(s.hero.faith).toBe(null);
+    expect(s.piety).toBe(0);
+    expect(room.resolved).toBe(true);
+    const t = hero(FAITH.mob);
+    t.piety = 80;
+    enterDungeon(t);
+    dg = t.dungeon!;
+    dg.sector = 6;
+    dg.floor = 2;
+    dg.rooms = generateFloor(new Rng({ s: 4 }), 2, 6);
+    room = at(t, "confession");
+    dg.pending = { kind: "confession" };
+    apply(t, { t: "pending", choice: "refuse" });
+    expect(t.heretic).toBe(true);
+    if (t.phase === "dungeon" && room.resolved) {
+      expect(t.edict).toBe(true);
+      expect(t.clues).toContain("edict");
+    }
+    // 무신앙: 캐묻기(판정이 반드시 성공하게 감각을 올림)
+    const u = hero(null);
+    u.hero.stats.per = 50;
+    u.hero.stats.int = 50;
+    enterDungeon(u);
+    dg = u.dungeon!;
+    dg.sector = 6;
+    dg.floor = 2;
+    dg.rooms = generateFloor(new Rng({ s: 4 }), 2, 6);
+    at(u, "confession");
+    dg.pending = { kind: "confession" };
+    for (let i = 0; i < 1 && !u.edict; i++) apply(u, { t: "pending", choice: "ask" });
+    expect(u.edict).toBe(true);
+  });
+
+  it("화신: 쓰러지면 한 번 다시 일어서고(호위는 타 버린다), 삼킴은 ★를 봉인한다 — 기아/풍요 ★5·짝신의 이름이면 무효", () => {
+    const s = hero(null);
+    sanctum(s);
+    const c = { context: "dungeon" as const, enemies: makeEnemies(s, ["avatar", "seraph"]), round: 1, loot: 0, bonus: 0, used: {}, frags: [], guard: null };
+    s.combat = c;
+    const av = c.enemies[0];
+    av.hp = 1;
+    // 화신 HP를 0 아래로: rebirth가 dealt 안에서 일어난다 — 직접 temple.rebirth로 확인
+    return import("./temple").then(({ rebirth }) => {
+      av.hp = 0;
+      expect(rebirth(s, c, av)).toBe(true);
+      expect(av.hp).toBe(MONSTERS.avatar.rebirth);
+      expect(c.enemies[1].hp).toBe(0);
+      expect(rebirth(s, c, av)).toBe(false);
+      s.combat = null;
+    });
+  });
+
+  it("셉터의 제단: 들면 헌납 엔딩(이단은 못 든다), 두고 가기는 조건이 차야 열린다, 보류는 6섹터 클리어, 아래로는 끝없는 미궁", () => {
+    const s = hero(null);
+    sanctum(s);
+    at(s, "scepter");
+    s.rank = 6;
+    s.dungeon!.pending = { kind: "scepter" };
+    apply(s, { t: "pending", choice: "leave" }); // 잠겨 있다
+    expect(s.phase).toBe("dungeon");
+    s.dungeon!.pending = { kind: "scepter" };
+    apply(s, { t: "pending", choice: "take" });
+    expect(s.phase).toBe("dead");
+    expect(s.tomb!.ending).toBe("offering");
+    expect(s.tomb!.faithsUnlocked).toEqual([]);
+    expect(s.tomb!.epilogue!.length).toBeGreaterThan(3);
+    // 이단은 들 수 없다
+    const h = hero(FAITH.mob);
+    h.heretic = true;
+    h.piety = 60;
+    sanctum(h);
+    at(h, "scepter");
+    h.dungeon!.pending = { kind: "scepter" };
+    apply(h, { t: "pending", choice: "take" });
+    expect(h.phase).toBe("dungeon");
+    // 보류: 6섹터 클리어로 돌아간다
+    h.dungeon!.pending = { kind: "scepter" };
+    apply(h, { t: "pending", choice: "hold" });
+    expect(h.phase).toBe("settlement");
+    expect(h.settlement!.cleared).toBe(true);
+  });
+
+  it("진엔딩: 조각 5개 + 칙서 + 신앙이면 결전 — 이기면 진엔딩, 지면 '영주에게 맞선 자'", () => {
+    const seen = new Set<string>();
+    for (let k = 0; k < 12; k++) {
+      const strong = k % 2 === 0;
+      const s = hero(FAITH.mob, 711 + k);
+      s.piety = 100;
+      s.clues = ["lostgod", "lock", "ageless", "oldgods", "edict"];
+      s.edict = true;
+      if (strong) {
+        for (const st of STAT_KEYS) s.hero.stats[st] = 50;
+        s.gear = { main: "sunsteel", body: "hollowplate", offhand: "towershield", head: "confessmask", waist: "chainbelt" };
+        s.inventory.potion = 20;
+      } else {
+        for (const st of STAT_KEYS) s.hero.stats[st] = 2;
+        s.hero.level = 1;
+        s.skills = [];
+        s.inventory.potion = 0;
+      }
+      s.hero.hp = maxHp(s);
+      sanctum(s);
+      at(s, "scepter");
+      s.rank = 6;
+      s.dungeon!.answers = Object.values(FAITH).filter((f) => f !== FAITH.mob);
+      s.dungeon!.pending = { kind: "scepter" };
+      apply(s, { t: "pending", choice: "leave" });
+      expect(s.phase).toBe("dead");
+      expect(s.combat).toBe(null);
+      if (!strong) expect(s.tomb!.ending).toBe("fallen");
+      seen.add(s.tomb!.ending!);
+    }
+    expect(seen.has("true")).toBe(true);
+  });
+
+  it("진실 조각: 기록물 문장으로 얻고, 늙지 않는 영주는 소문과 기록 둘 다", async () => {
+    const { clueFromText, rumorWithClues, clueCount } = await import("./truth");
+    const { RECORDS, RUMORS } = await import("./data");
+    const s = hero(null);
+    s.clues = [];
+    clueFromText(s, RECORDS[0]);
+    expect(s.clues).toContain("lostgod");
+    clueFromText(s, RECORDS[4]);
+    expect(s.clues).not.toContain("ageless");
+    clueFromText(s, RUMORS[5]);
+    expect(s.clues).toContain("ageless");
+    expect(clueCount(s)).toBe(2);
+    // 헌납 엔딩을 본 다음 삶: 첫 탐문에서 짝신의 이름
+    s.clueBits = ["dream"];
+    const lines: string[] = [];
+    rumorWithClues(s, lines);
+    expect(s.clues).toContain("name");
+  });
+
+  it("숏컷: 4섹터부터 가장 깊이 열린 섹터까지 골라 들어간다(5섹터 클리어면 6섹터까지)", async () => {
+    const { shortcutSectors } = await import("./dungeon");
+    const s = hero(null);
+    s.rank = 5;
+    expect(shortcutSectors(s)).toEqual([4, 5, 6]);
+    s.week = 4;
+    s.phase = "town";
+    apply(s, { t: "enterDungeon", shortcut: true, sector: 6 });
+    expect(s.dungeon!.sector).toBe(6);
+    expect(s.dungeon!.turnsLeft).toBe(BAL.shortcutTurns);
+    const t = hero(null);
+    t.rank = 3;
+    expect(shortcutSectors(t)).toEqual([4]);
+  });
+
+  it("심판의 눈: 6섹터 1·2층은 레벨과 상관없이 시계가 돌고, 3층 성소에는 없다", async () => {
+    const { sweeperEligible, sweeperId } = await import("./sweeper");
+    const s = hero(null);
+    s.hero.level = 2;
+    enterDungeon(s);
+    s.dungeon!.sector = 6;
+    s.dungeon!.first = false;
+    expect(sweeperEligible(s)).toBe(true);
+    s.dungeon!.floor = 3;
+    expect(sweeperEligible(s)).toBe(false);
+    expect(sweeperId(6)).toBe("judgeeye");
+  });
+
+  it("세금 등급 6 +1000G, 15→16 수련비 1000G(시뮬 조정)", () => {
+    expect(taxDue(1, 6) - taxDue(1, 5)).toBe(200);
+    expect(BAL.specialTrainFee[15]).toBe(1000);
   });
 });

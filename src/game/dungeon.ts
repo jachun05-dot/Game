@@ -1,5 +1,7 @@
 import { josa } from "./josa";
-import { BAL, MANA_FLOOR_MULT, MINE_RECORDS, RIFT_RECORDS, MIN_COMBAT_ROOMS, MONSTERS, PLAGUE_RECORDS, RECORDS, ROOM_FLAVOR, SECTOR_ELITES, SECTOR_ENCOUNTERS, SECTOR_FLAVOR, SECTOR_NAME, SECTOR_RARES, TRAP_AMBUSH, TROPHIES, WAR_RECORDS, bossGroup, campAmbush } from "./data";
+import { BAL, MANA_FLOOR_MULT, MINE_RECORDS, RIFT_RECORDS, MIN_COMBAT_ROOMS, MONSTERS, PLAGUE_RECORDS, RECORDS, ROOM_FLAVOR, SECTOR_ELITES, SECTOR_ENCOUNTERS, SECTOR_FLAVOR, SECTOR_NAME, SECTOR_RARES, TEMPLE_RECORDS, TRAP_AMBUSH, TROPHIES, WAR_RECORDS, bossGroup, campAmbush } from "./data";
+import { arriveConfession, arriveScepter, arriveSealDoor, enterRadiant, grandInquisitorDown, guardianFight, isSealDoor, leaveScepter, prayAltars, resolveConfession, takeScepter, tryOpenSeal } from "./temple";
+import { NAME_RECORD, clueFromText, nameRecordChance, pickRecord, trueEndingOpen } from "./truth";
 import { check, isDead, kill, log, maxHp, note, remember, rngOf, smod } from "./core";
 import { FRAGMENTS, fragKnown, fragSlots, fragStatText } from "./fragments";
 import { INJ, bleedPerMove, canPeek, moveMult, wound } from "./injury";
@@ -37,15 +39,21 @@ export const ROOM_LABEL: Record<RoomType, string> = {
   altar: "공양 제단",
   magazine: "버려진 화약고",
   plenty: "풍요의 제단",
+  offerbox: "봉헌함",
+  confession: "고해실",
+  altars: "옛 신들의 제단",
+  scepter: "셉터의 제단",
 };
 
 /** 지도 노드 위 짧은 라벨 */
 export const ROOM_SHORT: Record<RoomType, string> = {
   entrance: "입구", empty: "빈방", combat: "적", trap: "함정", treasure: "보물",
   record: "기록", shrine: "성소", stairs: "계단", boss: "보스", portal: "문", relic: "흔적", altar: "제단", magazine: "화약", plenty: "풍요",
+  offerbox: "봉헌", confession: "고해", altars: "제단", scepter: "셉터",
 };
 
 export function generateFloor(r: Rng, floor: number, sector = 1): Room[] {
+  if (sector === 6 && floor >= 3) return sanctumFloor(r);
   const rooms: Room[] = [];
   const add = (type: RoomType, depth: number): Room => {
     const room: Room = { id: rooms.length, type, edges: [], depth, visited: false, known: false, resolved: false, flavor: r.int(0, 99) };
@@ -97,6 +105,8 @@ export function generateFloor(r: Rng, floor: number, sector = 1): Room[] {
   };
   const isDeadEnd = (x: Room) => x.edges.length === 1;
   take("treasure", 1, isDeadEnd);
+  if (sector === 6 && floor === 2) take("confession", 1, isDeadEnd); // 심문관의 고해실(확정 1개 — 방이 모자라지 않게 먼저)
+  if (sector === 6) take("offerbox", 1); // 봉헌함
   // 전투방을 먼저 확보한다(함정이 많아져도 몬스터가 줄지 않게, DESIGN 11절 "층이 깊을수록 조우 증가")
   take("combat", Math.max(MIN_COMBAT_ROOMS[floor], Math.round(free.length * 0.25)));
   take("trap", (sector >= 4 ? 2 : 1) + floor); // 함정: 층이 깊을수록 증가(4·5섹터는 하나 더 — 함정·벼랑이 주인공)
@@ -131,6 +141,35 @@ export function generateFloor(r: Rng, floor: number, sector = 1): Room[] {
   }
   if (sector === 3) floodFloor(r, rooms, floor);
   if (sector === 4) mineRooms(r, rooms, floor);
+  // 6섹터 성광 방(1층 30%, 2층 20%): 전투방·빈 방에
+  if (sector === 6) for (const room of rooms) if (["combat", "empty"].includes(room.type) && r.chance(BAL.radiantChance[floor] ?? 0)) room.radiant = true;
+  return rooms;
+}
+
+/** 6섹터 3층 차원문의 성소: 갈림길 없는 외길 순례로 — 입구 → 옛 신들의 제단 → (전투 → 봉인 문) × 3 → 화신 → 셉터의 제단 */
+function sanctumFloor(r: Rng): Room[] {
+  const rooms: Room[] = [];
+  let prev: Room | null = null;
+  const add = (type: RoomType, extra: Partial<Room> = {}): Room => {
+    const room: Room = { id: rooms.length, type, edges: [], depth: rooms.length, visited: false, known: false, resolved: false, flavor: r.int(0, 99), ...extra };
+    rooms.push(room);
+    if (prev) {
+      prev.edges.push(room.id);
+      room.edges.push(prev.id);
+    }
+    prev = room;
+    return room;
+  };
+  add("entrance");
+  add("altars");
+  for (const kind of r.shuffle(["rune", "weight", "mirror"] as const)) {
+    add("combat", { encounter: r.weighted(SECTOR_ENCOUNTERS[6][3]) });
+    add("trap", { trapKind: kind });
+  }
+  add("boss", { encounter: bossGroup(6, r) });
+  add("scepter");
+  // 희귀 개체(마석 날개 조각): 전투방 하나를 차지한다
+  if (r.chance(BAL.rareChance)) r.pick(rooms.filter((x) => x.type === "combat")).encounter = [SECTOR_RARES[6][3]];
   return rooms;
 }
 
@@ -187,18 +226,31 @@ function floodFloor(r: Rng, rooms: Room[], floor: number): void {
   }
 }
 
-/** 3섹터를 클리어하면 4섹터로 곧장 가는 숏컷을 쓸 수 있다 */
+/** 3섹터를 클리어하면 숏컷을 쓸 수 있다: 가장 깊이 클리어한 섹터의 다음 섹터로 곧장(6섹터를 클리어했으면 6섹터) */
 export function canShortcut(s: GameState): boolean {
   return s.rank >= 3 && LAST_SECTOR >= 4 && s.month > 1;
 }
 
-export function enterDungeon(s: GameState, shortcut = false): void {
+/** 숏컷으로 들어가는 섹터 */
+export function shortcutSector(s: GameState): number {
+  return Math.min(LAST_SECTOR, Math.max(4, s.rank + 1));
+}
+
+/** 숏컷으로 고를 수 있는 섹터(4섹터부터 가장 깊이 열린 섹터까지) */
+export function shortcutSectors(s: GameState): number[] {
+  if (!canShortcut(s)) return [];
+  const out: number[] = [];
+  for (let k = 4; k <= shortcutSector(s); k++) out.push(k);
+  return out;
+}
+
+export function enterDungeon(s: GameState, shortcut = false, to?: number): void {
   const r = rngOf(s);
   s.week = 4;
   s.hero.fatigue = 0;
   s.tripUsed = [];
   const sc = shortcut && canShortcut(s);
-  const sector = sc ? 4 : 1;
+  const sector = sc ? Math.min(shortcutSector(s), Math.max(4, to ?? shortcutSector(s))) : 1;
   s.dungeon = {
     sector,
     floor: 1,
@@ -221,7 +273,7 @@ export function enterDungeon(s: GameState, shortcut = false): void {
     s.inventory.food += 2;
     log(s, `【${GODS.hunger.name}】 풍요의 얼굴 — 배가 가득 차고, 짐 속에 말린 고기 2개가 늘어 있다.`, "skill");
   }
-  if (sc) log(s, `— ${s.month}월 4주차. 3섹터까지 아는 길을 단숨에 지나, 곧장 4섹터 ${SECTOR_NAME[4]}로 내려왔다. (남은 시간 ${Math.round(BAL.shortcutTurns / 2)}시간)`, "system");
+  if (sc) log(s, `— ${s.month}월 4주차. ${sector - 1}섹터까지 아는 길을 단숨에 지나, 곧장 ${sector}섹터 ${SECTOR_NAME[sector]}${sector === 6 ? "으" : ""}로 내려왔다. (남은 시간 ${Math.round(BAL.shortcutTurns / 2)}시간)`, "system");
   else log(s, `— ${s.month}월 4주차. 미궁 1섹터에 들어섰다. (남은 시간 ${BAL.weekTurns}턴 = 7일)`, "system");
   arrive(s, true);
 }
@@ -277,6 +329,7 @@ function respawn(s: GameState): void {
   const dg = d(s);
   const r = rngOf(s);
   let any = false;
+  if (dg.sector === 6 && !dg.endless && dg.floor >= 3) return; // 성소(외길)에는 다시 차지 않는다
   for (const room of dg.rooms) {
     if (room.type !== "combat" || !room.resolved || room.id === dg.current) continue;
     if (!r.chance(BAL.respawnChance)) continue;
@@ -419,6 +472,11 @@ function arrive(s: GameState, firstOfFloor: boolean): void {
   const room = currentRoom(s);
   const firstVisit = !room.visited;
   room.visited = true;
+  // 6섹터 성광 방: 처음 들어설 때
+  if (room.radiant && firstVisit && dg.sector === 6 && !dg.endless) {
+    enterRadiant(s);
+    if (isDead(s)) return;
+  }
 
   // 썰물 때 물에 잠긴 방 바닥의 공양물(작은 마석)
   if (room.offering && !highTide(s)) {
@@ -448,6 +506,11 @@ function arrive(s: GameState, firstOfFloor: boolean): void {
     room.known = true;
     log(s, flavor(s, room, room.type), "story");
     dg.pending = { kind: room.type };
+  } else if (room.type === "scepter") {
+    room.known = true;
+    log(s, flavor(s, room, "scepter"), "story");
+    if (firstVisit) arriveScepter(s);
+    dg.pending = { kind: "scepter" };
   } else if (room.resolved) {
     log(s, `이미 지나온 곳이다. (${ROOM_LABEL[room.type]})`);
   } else {
@@ -480,8 +543,21 @@ function arrive(s: GameState, firstOfFloor: boolean): void {
         return;
       }
       case "trap":
+        // 6섹터 봉인 문: ★5면 그냥 열린다, 아니면 해석/강행/되돌아가기
+        if (isSealDoor(room)) {
+          if (!arriveSealDoor(s, room)) {
+            dg.pending = { kind: "trap" };
+            return;
+          }
+          break;
+        }
         // 매복 전투가 벌어졌으면 전투 뒤처리(afterDungeonCombat)가 엿보기까지 끝낸다
         if (arriveTrap(s, room) || isDead(s) || dg.pending) return;
+        break;
+      case "confession":
+        log(s, flavor(s, room, "confession"), "story");
+        if (arriveConfession(s, room)) return;
+        dg.pending = { kind: "confession" };
         break;
       case "treasure":
       case "record":
@@ -490,6 +566,8 @@ function arrive(s: GameState, firstOfFloor: boolean): void {
       case "altar":
       case "magazine":
       case "plenty":
+      case "offerbox":
+      case "altars":
         room.known = true;
         log(s, flavor(s, room, room.type), "story");
         dg.pending = { kind: room.type };
@@ -666,11 +744,11 @@ function springTrap(s: GameState, room: Room): boolean {
     const dmg = Math.max(1, Math.round(rngOf(s).dice(1, 6) * (s.skills.includes("trapMaster") ? 0.5 : 1))); // 함정 장인: 절반
     s.hero.hp -= dmg;
     const sec = d(s).sector;
-    const name = sec === 5 ? "무너지는 돌길" : sec === 3 ? "산성 웅덩이" : sec === 2 ? "녹슨 곰덫" : "가시함정";
+    const name = sec === 6 ? "빛나는 성구" : sec === 5 ? "무너지는 돌길" : sec === 3 ? "산성 웅덩이" : sec === 2 ? "녹슨 곰덫" : "가시함정";
     log(s, `${josa(name, "을")} 밟았다! ${dmg} 피해 (민첩 ${c.total} vs ${BAL.trapDodgeDc})`, "hurt");
     if (s.hero.hp <= 0) {
       s.hero.hp = 0;
-      kill(s, "trap", sec === 5 ? "무너지는 돌길에 휩쓸려 목숨을 잃었다" : sec === 3 ? "산성 웅덩이에 빠져 목숨을 잃었다" : sec === 2 ? "녹슨 곰덫에 걸려 목숨을 잃었다" : "가시함정에 목숨을 잃었다");
+      kill(s, "trap", sec === 6 ? "빛나는 성구에 꿰뚫려 목숨을 잃었다" : sec === 5 ? "무너지는 돌길에 휩쓸려 목숨을 잃었다" : sec === 3 ? "산성 웅덩이에 빠져 목숨을 잃었다" : sec === 2 ? "녹슨 곰덫에 걸려 목숨을 잃었다" : "가시함정에 목숨을 잃었다");
       if (isDead(s)) return false;
     }
     note(s, "con");
@@ -803,6 +881,13 @@ export type PendingChoice =
   | "careful"
   | "rope"
   | "offer"
+  /** 6섹터 고해실: 신앙 포기 / 거부 / 캐묻기, 셉터의 제단: 든다 / 두고 간다(leave) / 보류 / 아래로 */
+  | "renounce"
+  | "refuse"
+  | "ask"
+  | "take"
+  | "hold"
+  | "down"
   /** 편린: n번째 편린을 깨뜨리고 흡수 */
   | `swap${number}`;
 
@@ -823,6 +908,66 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
   const kind = pend.kind;
   dg.pending = null;
   const r = rngOf(s);
+
+  // 6섹터 봉인 문: 해석(능력치 판정, 실패하면 수호자) / 강행(곧장 수호자)
+  if (kind === "trap" && isSealDoor(room) && choice !== "back") {
+    passTime(s, 1);
+    if (isDead(s) || !s.dungeon) return;
+    if (choice === "force") return guardianFight(s, room);
+    if (tryOpenSeal(s, room)) return;
+    if (!checkTimeUp(s)) peek(s);
+    return;
+  }
+  if (kind === "offerbox") {
+    room.resolved = true;
+    if (choice !== "search") {
+      log(s, "봉헌함에는 손대지 않았다.");
+      return;
+    }
+    passTime(s, 2);
+    const roll = r.float();
+    if (roll < 0.4) {
+      const mana = r.int(40, 80) * dg.floor;
+      dg.mana += mana;
+      log(s, `순례자들이 넣고 간 마석 조각이 쌓여 있다. (${mana}G 어치)`, "good");
+    } else if (roll < 0.7) {
+      dg.incense = (dg.incense ?? 0) + 1;
+      log(s, "작은 성물을 챙겼다. 뒤집어 쥐면 흰빛을 한 번 막아 준다. (정화 1번 막기)", "good");
+    } else readRecord(s, room, TEMPLE_RECORDS, "봉헌함 바닥에 깔린 불탄 문서");
+    return;
+  }
+  if (kind === "confession") {
+    if (resolveConfession(s, room, choice)) return;
+    if (!checkTimeUp(s)) peek(s);
+    return;
+  }
+  if (kind === "altars") {
+    if (choice === "pray" && !dg.prayedAltars) {
+      room.resolved = true;
+      passTime(s, 2);
+      if (isDead(s) || !s.dungeon) return;
+      prayAltars(s);
+      const calm = MIND_KEYS.find((k) => has(s, k));
+      if (calm) cure(s, calm);
+    } else if (choice.startsWith("convert")) {
+      passTime(s, 2);
+      const name = s.faithsKnown[Number(choice.slice(7))];
+      if (name) convert(s, name);
+    } else log(s, "제단들을 지나쳤다. (다시 오면 기도할 수 있다)");
+    return;
+  }
+  if (kind === "scepter") {
+    if (choice === "take" && !s.heretic) return takeScepter(s);
+    if (choice === "leave" && trueEndingOpen(s)) return leaveScepter(s);
+    if (choice === "hold") {
+      log(s, "셉터를 그대로 두고, 아직은 고르지 않기로 했다. 마석을 챙겨 돌아간다. (다음에 다시 와서 고를 수 있다 — 화신은 다시 싸워야 한다)", "system");
+      leaveDungeon(s, { cleared: true, forced: false, rankUp: true });
+      return;
+    }
+    if (choice === "down") return enterEndless(s);
+    log(s, "셉터 앞에서 조금 더 머물기로 했다.");
+    return;
+  }
 
   if (kind === "trap" && room.trapKind === "ledge" && choice !== "back") {
     if (choice === "jump" && power(s, "abyss", 1) && (dg.floor < 3 || power(s, "abyss", 5))) return abyssJump(s, room);
@@ -1118,8 +1263,10 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
       if (isDead(s) || !s.dungeon) return;
       s.recordsRead += 1;
       note(s, "int");
-      const list = wet ? PLAGUE_RECORDS : dg.sector === 5 ? RIFT_RECORDS : dg.sector === 4 ? MINE_RECORDS : RECORDS;
-      log(s, list[(room.flavor + s.recordsRead) % list.length], "story");
+      const list = wet ? PLAGUE_RECORDS : dg.sector === 6 ? TEMPLE_RECORDS : dg.sector === 5 ? RIFT_RECORDS : dg.sector === 4 ? MINE_RECORDS : RECORDS;
+      const text = nameRecordChance(s, dg.sector) ? NAME_RECORD : pickRecord(s, list, room.flavor + s.recordsRead);
+      log(s, text, "story");
+      clueFromText(s, text);
       // 4섹터 갱도 지도: 이 층 함정방 하나가 지도에 드러난다
       const hidden = dg.sector === 4 ? dg.rooms.find((x) => x.type === "trap" && !x.known) : undefined;
       if (hidden) {
@@ -1217,20 +1364,7 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
       return;
     }
     // 마지막 섹터 차원문 너머: 끝없는 미궁(남은 시간은 그대로)
-    if (dg.sector >= LAST_SECTOR) {
-      dg.sector = ENDLESS_SECTOR;
-      dg.endless = true;
-      dg.floor = 1;
-      dg.deepestFloor = 1;
-      dg.rooms = generateEndlessFloor(r, 1);
-      resetSweeper(dg);
-      dg.current = 0;
-      dg.prev = null;
-      remember(s, `${ENDLESS_NAME}에 발을 디뎠다.`);
-      log(s, `차원문을 넘었다. — ${ENDLESS_NAME} 1층. 계단은 끝없이 아래로 이어진다. 함정도 보물도 없고, 깊이 내려갈수록 강한 것들만 기다린다. (돌아가려면 귀환 주문서, 아니면 시간이 다 될 때까지)`, "story");
-      arrive(s, true);
-      return;
-    }
+    if (dg.sector >= LAST_SECTOR) return enterEndless(s);
     // 차원문 너머: 다음 섹터. 남은 시간은 2배가 된다(섹터마다 시간 흐름이 다르다)
     const before = dg.turnsLeft;
     dg.sector += 1;
@@ -1246,6 +1380,24 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
     log(s, `차원문을 넘었다. — ${dg.sector}섹터, ${SECTOR_NAME[dg.sector]}. (남은 시간 ${Math.round(before / 2)}시간 → ${Math.round(dg.turnsLeft / 2)}시간)`, "story");
     arrive(s, true);
   }
+}
+
+/** 끝없는 미궁으로(마지막 섹터 너머 — 6섹터는 셉터의 제단 아래로). 남은 시간은 그대로 */
+function enterEndless(s: GameState): void {
+  const dg = d(s);
+  const r = rngOf(s);
+  const fromScepter = dg.sector === 6;
+  dg.sector = ENDLESS_SECTOR;
+  dg.endless = true;
+  dg.floor = 1;
+  dg.deepestFloor = 1;
+  dg.rooms = generateEndlessFloor(r, 1);
+  resetSweeper(dg);
+  dg.current = 0;
+  dg.prev = null;
+  remember(s, `${ENDLESS_NAME}에 발을 디뎠다.`);
+  log(s, `${fromScepter ? "셉터의 제단 아래, 결계 틈으로 내려갔다." : "차원문을 넘었다."} — ${ENDLESS_NAME} 1층. 계단은 끝없이 아래로 이어진다. 함정도 보물도 없고, 깊이 내려갈수록 강한 것들만 기다린다. (돌아가려면 귀환 주문서, 아니면 시간이 다 될 때까지)`, "story");
+  arrive(s, true);
 }
 
 /** 보물상자·보스가 떨어뜨리는 장비(층이 깊을수록 좋은 것이 더 잘 나온다) */
@@ -1354,6 +1506,43 @@ export function afterDungeonCombat(s: GameState, outcome: "win" | "fled", c: Com
     }
     return;
   }
+  // 6섹터 봉인의 수호자: 이기면 문이 열린다. 지면(문 밖에 쓰러짐)·도주하면 직전 방으로(수호자는 그대로 남는다)
+  if (c.enemies.some((e) => MONSTERS[e.defId].trial)) {
+    if (outcome === "win") {
+      room.resolved = true;
+      log(s, "수호자가 무릎을 꿇고 비켜선다. \"지나가라.\" 문이 열렸다.", "good");
+      offerFrag(s, c.frags);
+      if (!dg.pending && !checkTimeUp(s)) peek(s);
+      return;
+    }
+    room.remaining = c.enemies.filter((e) => e.hp > 0);
+    if (dg.prev !== null) {
+      dg.current = dg.prev;
+      dg.prev = room.id;
+    }
+    if (!c.ejected) log(s, "수호자에게서 물러나 문 밖으로 나왔다.");
+    passTime(s, 1);
+    checkTimeUp(s);
+    return;
+  }
+  // 6섹터 심문관장(고해실): 이기면 신앙심 +20·영주의 칙서, 도망치면 직전 방으로(심문관장은 남는다)
+  if (c.enemies.some((e) => e.defId === "grandinquisitor")) {
+    if (outcome === "win") {
+      room.resolved = true;
+      grandInquisitorDown(s);
+      if (!checkTimeUp(s)) peek(s);
+      return;
+    }
+    room.remaining = c.enemies.filter((e) => e.hp > 0);
+    if (dg.prev !== null) {
+      dg.current = dg.prev;
+      dg.prev = room.id;
+    }
+    log(s, "심문관장을 피해 고해실을 빠져나왔다.");
+    passTime(s, 1);
+    checkTimeUp(s);
+    return;
+  }
   // 이단심문관: 방의 사건과 별개. 이기면 신앙심 +10 후 그 방에 원래대로 들어서고, 도망치면 직전 방으로
   if (c.enemies.some((e) => e.defId === "inquisitor")) {
     if (outcome === "win") {
@@ -1409,7 +1598,7 @@ export function afterDungeonCombat(s: GameState, outcome: "win" | "fled", c: Com
     if (room.type === "boss") {
       const bossId = room.encounter?.[0] ?? "boss";
       remember(s, `${josa(MONSTERS[bossId].name, "을")} 쓰러뜨렸다.`);
-      log(s, "보스가 쓰러지자 차원문의 빛이 한층 밝아진다.", "story");
+      log(s, dg.sector === 6 ? "흰빛이 흩어지자 결계 너머로 셉터의 빛이 드러난다. 그 뒤에서 여러 목소리가 기다린다." : "보스가 쓰러지자 차원문의 빛이 한층 밝아진다.", "story");
       // 보스 증표는 섹터마다 처음 한 번만
       const t = TROPHIES.find((x) => x.sector === dg.sector);
       if (t && !s.trophies.includes(t.item)) {
@@ -1422,7 +1611,9 @@ export function afterDungeonCombat(s: GameState, outcome: "win" | "fled", c: Com
       if (dg.sector >= 2 && dg.sector <= 5) {
         s.recordsRead += 1;
         const list = dg.sector === 5 ? RIFT_RECORDS : dg.sector === 4 ? MINE_RECORDS : dg.sector === 3 ? PLAGUE_RECORDS : WAR_RECORDS;
-        log(s, list[(s.recordsRead + room.flavor) % list.length], "story");
+        const text = pickRecord(s, list, s.recordsRead + room.flavor);
+        log(s, text, "story");
+        clueFromText(s, text);
         log(s, `(${dg.sector === 5 ? "아귀의 이빨 사이에 낀 낙서 조각" : dg.sector === 4 ? "어미의 둥지에 깔린 광산 장부" : dg.sector === 3 ? "균모의 뿌리에 감겨 있던 기도문" : "장군의 안장 주머니에서 나온 기록"} — 읽은 기록물 ${s.recordsRead}개)`, "system");
       }
       log(s, "보스가 지키던 자리에서 무언가 반짝인다.", "system");
@@ -1472,7 +1663,8 @@ export function camp(s: GameState): void {
   if (sweeperStep(s, 2)) return sweeperFight(s, "camp");
   // 물에 잠긴 방 옆에서 자면 거머리가 더 잘 꼬인다
   const wet = (dg.sector === 3 && dg.floor >= 2 && (currentRoom(s).flooded || currentRoom(s).edges.some((e) => dg.rooms[e].flooded))) || (dg.sector === 4 && !!currentRoom(s).ice);
-  if (r.chance(isNight(s) || wet ? 0.3 : 0.15)) {
+  const sanctum = dg.sector === 6 && !dg.endless && dg.floor >= 3; // 옛 신들의 제단 곁에서는 기습당하지 않는다
+  if (!sanctum && r.chance(isNight(s) || wet ? 0.3 : 0.15)) {
     log(s, "잠결에 무언가 다가오는 소리!", "hurt");
     let ids = dg.endless ? endlessGroup(r, dg.floor).slice(0, 2) : campAmbush(dg.sector, dg.floor);
     if (ids.includes("leech") && !currentRoom(s).flooded) ids = ["plaguerat", "plaguerat", "plaguerat"]; // 거머리는 물에 잠긴 방에만
@@ -1543,7 +1735,9 @@ function readRecord(s: GameState, room: Room, list: string[], where: string): vo
   note(s, "int");
   pray(s, "song", 4);
   pray(s, "oblivion", -5);
-  log(s, list[(room.flavor + s.recordsRead) % list.length], "story");
+  const text = nameRecordChance(s, s.dungeon?.sector ?? 1) ? NAME_RECORD : pickRecord(s, list, room.flavor + s.recordsRead);
+  log(s, text, "story");
+  clueFromText(s, text);
   log(s, `(${where} — 읽은 기록물 ${s.recordsRead}개)`, "system");
   saga(s);
 }

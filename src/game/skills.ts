@@ -1,7 +1,7 @@
 import { gearBonus, hasShield } from "./gear";
 import { fragSkills } from "./fragments";
 import { mindResist } from "./mind";
-import { faithHungerMult } from "./faith";
+import { faithHungerMult, pietyCapBonus } from "./faith";
 import type { GameState } from "./types";
 import type { ElementKey } from "./elements";
 
@@ -288,6 +288,36 @@ Object.assign(SKILLS, {
   fragDevour: { id: "fragDevour", name: "삼키는 입", kind: "passive", desc: "적을 쓰러뜨리면 포만감 +5" },
   fragEndlessHunger: { id: "fragEndlessHunger", name: "끝없는 허기", kind: "passive", desc: "HP 50% 이하일 때 피해 +3(굶주리면 +5)" },
 } satisfies Record<string, SkillDef>);
+
+// 편린 능력(6섹터). 정화·성광·삼킴은 temple.ts·combat.ts가 id로 처리
+Object.assign(SKILLS, {
+  fragSmoke: { id: "fragSmoke", name: "연기 장막", kind: "passive", desc: "정신 상태이상에 걸릴 확률 −25%" },
+  fragChain: {
+    id: "fragChain", name: "묶기", kind: "active", desc: "전투 시작 시 가장 강한 적이 1라운드 행동 불가",
+    trigger: { on: "start" }, effect: { type: "stunOne", rounds: 1, text: "참회의 사슬이 뻗어 나가 감는다 —" }, uses: 1,
+  },
+  fragHollow: { id: "fragHollow", name: "빈 껍데기", kind: "passive", desc: "맞았을 때 몸통을 다칠 확률 절반" },
+  fragMelt: { id: "fragMelt", name: "녹아내림", kind: "passive", desc: "쓰러질 피해를 받으면 10% 확률로 HP 1로 버틴다" },
+  fragFlip: { id: "fragFlip", name: "성물 뒤집기", kind: "passive", desc: "정화를 받으면 깎인 신앙심의 절반을 되찾는다" },
+  fragExecute: {
+    id: "fragExecute", name: "처형", kind: "active", desc: "HP 20% 이하인 적에게 반드시 맞는 피해 2배 일격(전투당 2회)",
+    trigger: { on: "targetBelow", pct: 20 }, effect: { type: "strike", hit: 0, dmg: 0, dmgMult: 2, autoHit: true }, uses: 2,
+  },
+  fragManyEyes: { id: "fragManyEyes", name: "많은 눈", kind: "passive", desc: "앞방 엿보기가 반드시 성공한다" },
+  fragNameBack: { id: "fragNameBack", name: "돌려받은 이름", kind: "passive", desc: "섬기는 신의 신앙심 상한 +10" },
+  fragSermon: {
+    id: "fragSermon", name: "빈 설교", kind: "active", desc: "전투 시작 시 적 전원 명중 −2(2라운드)",
+    trigger: { on: "start" }, effect: { type: "fog", hit: 2, rounds: 2, text: "속이 빈 설교가 울려 퍼진다" }, uses: 1,
+  },
+  fragTrial: { id: "fragTrial", name: "돌의 시험", kind: "passive", desc: "모든 능력치 판정 +2", passive: { check: 2 } },
+  fragSwallowLight: { id: "fragSwallowLight", name: "빛 삼키기", kind: "passive", desc: "정화·성광이 통하지 않는다" },
+} satisfies Record<string, SkillDef>);
+
+// "돌려받은 이름": 신앙심 상한 +10
+pietyCapBonus.push((s) => (fragSkills(s).includes("fragNameBack") ? 10 : 0));
+
+// "연기 장막": 정신 상태이상 확률 −25%
+mindResist.push((s) => (fragSkills(s).includes("fragSmoke") ? 0.75 : 1));
 
 // "마주 보기": 절망 확률 절반
 mindResist.push((s, k) => (k === "despair" && fragSkills(s).includes("fragFaceVoid") ? 0.5 : 1));

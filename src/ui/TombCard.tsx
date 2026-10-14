@@ -2,8 +2,9 @@ import type { Tomb } from "../game/types";
 
 export function TombCard({ t }: { t: Tomb }) {
   return (
-    <article className="tomb">
-      <div className="tomb-cross">✝</div>
+    <article className={`tomb${t.ending ? ` tomb-ending end-${t.ending}` : ""}`}>
+      <div className="tomb-cross">{t.ending === "true" ? "✦" : t.ending === "offering" ? "⚓" : "✝"}</div>
+      {t.ending && <p className="eyebrow center">{ENDING_TITLE[t.ending]}</p>}
       <h3 className="tomb-name">{t.name}</h3>
       <p className="dim small">
         {t.className ?? "모험가"} Lv.{t.level} · {t.months}개월 · {t.reached}
@@ -11,7 +12,16 @@ export function TombCard({ t }: { t: Tomb }) {
       <p className="tomb-cause">{t.cause}</p>
       <p className="tomb-epitaph">{t.epitaph}</p>
       {t.faith && <p className="small">섬긴 신: {t.faith}</p>}
-      {t.notes && (t.notes.facts.length > 0 || t.notes.hints.length > 0) && (
+      {t.epilogue && (
+        <div className="tomb-epilogue">
+          {t.epilogue.map((l, i) => (
+            <p key={i} className="small">
+              {l}
+            </p>
+          ))}
+        </div>
+      )}
+      {t.notes && !t.ending && (t.notes.facts.length > 0 || t.notes.hints.length > 0) && (
         <div className="tomb-notes">
           <p className="tomb-notes-title">무엇이 죽음을 불렀나</p>
           {t.notes.facts.map((f) => (
@@ -39,9 +49,15 @@ export function TombCard({ t }: { t: Tomb }) {
   );
 }
 
+export const ENDING_TITLE: Record<NonNullable<Tomb["ending"]>, string> = {
+  offering: "ENDING — 헌납",
+  true: "TRUE ENDING — 돌아온 신들",
+  fallen: "ENDING — 영주에게 맞선 자",
+};
+
 export function tombText(t: Tomb): string {
   return [
-    `✝ ${t.name} (Lv.${t.level}, ${t.months}개월, ${t.reached})`,
+    `${t.ending ? ENDING_TITLE[t.ending] + " · " : "✝ "}${t.name} (Lv.${t.level}, ${t.months}개월, ${t.reached})`,
     t.cause,
     t.epitaph,
     t.faithsUnlocked.length ? `해금: ${t.faithsUnlocked.join(", ")}` : "",

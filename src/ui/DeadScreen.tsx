@@ -18,7 +18,7 @@ export function DeadScreen({ ctl, onNew, onGraveyard }: { ctl: Ctl; onNew: () =>
   return (
     <Shell>
       <LogView ctl={ctl} max={6} />
-      <p className="eyebrow center">REST IN PEACE</p>
+      {!t.ending && <p className="eyebrow center">REST IN PEACE</p>}
       <TombCard t={t} />
       <div className="stack">
         <button className="btn" onClick={copy}>
@@ -28,7 +28,7 @@ export function DeadScreen({ ctl, onNew, onGraveyard }: { ctl: Ctl; onNew: () =>
           묘지 보기
         </button>
         <button className="btn primary" onClick={onNew}>
-          다시 태어나기 →
+          {t.ending === "true" ? "새 삶 — 이제 모든 신을 고를 수 있다 →" : "다시 태어나기 →"}
         </button>
       </div>
     </Shell>

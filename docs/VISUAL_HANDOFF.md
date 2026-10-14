@@ -123,6 +123,14 @@
 35. **풍요의 제단 방 아이콘** `plenty` — `ROOM_ICON`(지도 노드 `.map-node.t-plenty`)
 36. **5섹터 장비 아이콘 9종**: abyssblade, voidstaff, shadowhide, lanternhelm, clawboots, batcloak, voidring, ghoulfang, twofacebowl / 소모품 밧줄 `rope`, 증표 "아귀의 검은 이빨"
 37. (선택) 상태: 미궁 제목의 "들숨·날숨", 갈림길 버튼의 "벼랑 위", 벼랑길 선택 카드(밧줄·조심히·그냥·뛰어내리기)가 지금은 글자뿐
+38. **6섹터 몬스터 13종** (우선) — `MONSTER_ART`: 기도문 떼 `litany`, 떠도는 향로 `censer`, 빈 성갑 `hollowknight`(속이 빈 성기사 갑옷에 빛), 참회의 사슬 `penitchain`, 처형인의 갑주 `executioner`(머리 없는 갑옷과 도끼 — 사람 아님), 저주받은 성물 `reliquary`, 밀랍 신도 `waxfaithful`(기도가 굳은 밀랍 인형 — 사람 아님), 눈 많은 날개 `seraph`, 삼켜진 것 `swallowed`, 희귀 마석 촛대 `candle`·마석 성배 `grail`·마석 날개 조각 `wingshard`, 정예 주인 없는 주교관 `mitre`(속이 빈 주교관과 제의)
+39. **6섹터 보스급 4종** — 봉인의 수호자 `guardian`(옛 신들의 돌 시험관), 짝을 삼킨 빛의 화신 `avatar`(얼굴 없는 빛, 얼굴 자리에 다른 얼굴이 비침 — 2단계는 날개가 타 버린 모습이면 좋다), 심판의 눈 `judgeeye`(천장에서 내려오는 거대한 눈과 날개), 심문관장 `grandinquisitor`(기존 이단심문관 변형)
+40. **결전** — 늙지 않는 영주 `lord`(사람 — 마을 영주성), 유일신의 아바타 `godavatar`
+41. **6섹터 장면** `scene-dungeon6.png`(흰 회랑 — 섬의 성당과 같은 대리석) / `scene-sanctum.png`(3층 차원문의 성소 — 여덟 개의 부서진 제단, 결계에 박힌 셉터). `SCENE_ART`에 `dungeon6`
+42. **방 아이콘** — 봉헌함 `offerbox`, 고해실 `confession`, 옛 신들의 제단 `altars`, 셉터의 제단 `scepter`, 성광 방 표시(지도 노드 `.map-node.t-…`, 갈림길 버튼의 "성광 방" 글자)
+43. **엔딩 일러스트** — 헌납 2장(영주에게 셉터를 바침 / 떠나는 배와 가라앉는 섬), 진엔딩 3장(영주성 결전 / 멈춘 성당 종 / 돌아온 여덟 신), 결전 패배 1장(꽃 놓인 묘비). 지금은 엔딩 묘비 카드(`.tomb-ending`, `.end-true`·`.end-offering`)에 글만 나온다
+44. **6섹터 장비 아이콘 9종**: sunsteel, relicstaff, towershield, pilgrimboots, hollowplate, confessmask, chainbelt, pairring, oldsigil / 소모품 옛 신의 향 `incense` / 유물 8종(신마다 하나 — 캐릭터 시트 신앙 카드에 이름만)
+45. (선택) 타이틀 화면: 진엔딩을 본 뒤에는 성당 대신 여덟 제단(지금은 "옛 신들이 돌아왔다" 카드만), 셉터의 제단 선택 카드(잠긴 진엔딩은 ??? 버튼)
 
 ### 2026-10-14 — 4섹터 "불타는 광산 갱도"
 4섹터가 들어갔다(기획 `docs/SECTOR4_DRAFT.md`, 이름·설명은 `src/game/data.ts`·`gear.ts`). 그림이 없으면 글자만 나온다.

@@ -59,6 +59,8 @@ export interface Enemy {
   acUp?: number;
   /** 독 바른 칼: 남은 라운드와 라운드 피해 주사위 */
   venom?: { rounds: number; dice: [number, number] };
+  /** 한 번 쓰러졌다가 다시 일어섰다(화신 2단계) */
+  reborn?: boolean;
 }
 
 /** 허수아비 측정용 피해 기록. rounds의 칸 = 측정 시작부터 센 라운드 */
@@ -74,7 +76,7 @@ export interface DamageMeter {
 
 export interface CombatState {
   /** dummy: 훈련소 허수아비(dummy.ts) — 복사한 상태에서만 쓰고 보상·기록이 없다 */
-  context: "field" | "dungeon" | "dummy";
+  context: "field" | "dungeon" | "dummy" | "final";
   enemies: Enemy[];
   round: number;
   /** 전투에서 얻은 마석 가치(G, 층 배율 적용 전) */
@@ -128,6 +130,18 @@ export interface CombatState {
   regrow?: { count: number; at: number[] };
   /** 끝나지 않는 전쟁(전쟁의 신 ★5): 쌓인 피해 보너스 */
   warStack?: number;
+  // ── 6섹터(temple.ts) ──
+  /** 참회의 사슬: 이 전투 도주 DC + */
+  fleeLock?: number;
+  /** 화신·아바타의 삼킴: 이 전투 동안 봉인된 ★ 수 / 봉인된 편린(무신앙) */
+  sealed?: number;
+  fragSealed?: string[];
+  /** 옛 신들의 응답: 아직 오지 않은 응답(신 이름) */
+  answers?: string[];
+  /** ★5 화신전 특례를 이미 썼다(탐욕·시와 노래의 한 번 버티기, 망각의 첫 성광 무효) */
+  specialUsed?: string[];
+  /** 봉인의 수호자에게 져서 문 밖에 쓰러졌다(전투가 끝나고 직전 방으로) */
+  ejected?: boolean;
   /** 벼랑에서 끌려 떨어졌다(전투가 끝나고 아래로) */
   dragged?: boolean;
 }
@@ -163,7 +177,12 @@ export type RoomType =
   /** 4섹터: 버려진 화약고(조사하면 화약통·낡은 장비·재앙의 신 기록물, 재앙의 신도는 기도) */
   | "magazine"
   /** 5섹터: 풍요의 제단(고기를 바치면 풍요 또는 기아의 얼굴) */
-  | "plenty";
+  | "plenty"
+  /** 6섹터: 봉헌함(조사하면 마석·성물·불탄 문서) / 심문관의 고해실(2층) / 옛 신들의 제단(3층) / 셉터의 제단(3층 끝) */
+  | "offerbox"
+  | "confession"
+  | "altars"
+  | "scepter";
 
 export interface Room {
   id: number;
@@ -183,7 +202,7 @@ export interface Room {
   /** 함정방에 숨어 있는 고블린(함정을 밟으면 덮친다) */
   ambush?: string[];
   /** 함정 종류(기본 가시함정, pit = 꺼진 바닥: 떨어지면 아래층으로). 4섹터: collapse 낙반·cart 폭주 광차·gas 가스 주머니·steam 증기 분출·ice 얇은 얼음 */
-  trapKind?: "spike" | "pit" | "collapse" | "cart" | "gas" | "steam" | "ice" | "ledge";
+  trapKind?: "spike" | "pit" | "collapse" | "cart" | "gas" | "steam" | "ice" | "ledge" | "rune" | "weight" | "mirror";
   /** 숨은 고블린을 알아챘는지 */
   ambushKnown?: boolean;
   /** 비웠던 전투방에 몬스터가 다시 들어왔다(마석 절반) */
@@ -199,6 +218,8 @@ export interface Room {
   pool?: boolean;
   /** 5섹터: 벼랑 위 전투방(벼랑 거미가 살고, 붙잡히거나 밀리면 아래로 떨어진다) */
   cliff?: boolean;
+  /** 6섹터: 성광 방(들어서면 신앙심 −3, 이 방 전투에서 신앙 명중·피해 보정 절반) */
+  radiant?: boolean;
   flavor: number;
 }
 
@@ -211,6 +232,10 @@ export type Pending =
   | { kind: "altar" }
   | { kind: "magazine" }
   | { kind: "plenty" }
+  | { kind: "offerbox" }
+  | { kind: "confession" }
+  | { kind: "altars" }
+  | { kind: "scepter" }
   | { kind: "stairs" }
   /** 첫 미궁의 1층 계단: 내려갈 수 없고, 떨어진 귀환 주문서를 쓸지 고른다 */
   | { kind: "lostScroll" }
@@ -266,6 +291,12 @@ export interface DungeonState {
   trapStock?: number;
   /** 시와 노래의 신 ★5 "노래가 된 이름": 이 미궁 동안 최대 HP +(최대 10) */
   songHp?: number;
+  /** 6섹터 옛 신의 향: 지금 피운 향으로 남은 정화 막기 횟수 */
+  incense?: number;
+  /** 6섹터 3층 옛 신들의 제단에서 기도해 등록한 응답(신 이름) — 화신전에서 한 번씩 돕는다 */
+  answers?: string[];
+  /** 이 미궁에서 옛 신들의 제단에 이미 기도했다 */
+  prayedAltars?: boolean;
 }
 
 export type Activity = "train" | "rumor" | "field" | "inn";
@@ -304,6 +335,9 @@ export interface Settlement {
 
 export type DeathCause = "mob" | "single" | "trap" | "starve" | "tax" | "plague" | "abyss" | "oblivion";
 
+/** 엔딩(6섹터 셉터의 제단): 헌납(일반) / 결전 승리(진엔딩) / 결전 패배 */
+export type EndingKind = "offering" | "true" | "fallen";
+
 export interface Tomb {
   id: string;
   name: string;
@@ -319,6 +353,10 @@ export interface Tomb {
   diedAt: string;
   /** 죽은 순간의 상태와 다음 판 조언(autopsy.ts). 옛 묘비에는 없다 */
   notes?: { facts: string[]; hints: string[] };
+  /** 엔딩 묘비(죽음이 아니라 엔딩으로 끝난 삶) */
+  ending?: EndingKind;
+  /** 엔딩 글(엔딩 화면) */
+  epilogue?: string[];
 }
 
 export interface Candidate {
@@ -340,7 +378,7 @@ export interface GameState {
   gold: number;
   /** heart: 1섹터 보스가 남기는 "거대 쥐의 마석 심장"(레벨 3→4 훈련 대가) */
   /** banner: 2섹터 "장군의 녹슨 휘장", spore: 3섹터 "균모의 포자낭". whetstone 숫돌(부식), antidote 해독초(독·마비) */
-  inventory: { food: number; potion: number; scroll: number; heart: number; banner: number; spore: number; scale: number; fang: number; salve: number; firewood: number; powder: number; rope: number; bandage: number; herb: number; whetstone: number; antidote: number };
+  inventory: { food: number; potion: number; scroll: number; heart: number; banner: number; spore: number; scale: number; fang: number; salve: number; firewood: number; powder: number; rope: number; incense: number; bandage: number; herb: number; whetstone: number; antidote: number };
   /** 이미 얻은 보스 증표(섹터마다 한 번만 나온다) */
   trophies: string[];
   /** 착용 장비(슬롯 → gear.ts의 GEAR id) */
@@ -377,6 +415,16 @@ export interface GameState {
   mind: Partial<Record<"fear" | "rage" | "confusion" | "despair", { known: boolean }>>;
   /** 섬기는 신의 신앙심(0~100, faith.ts) */
   piety: number;
+  /** 6섹터 옛 신들의 제단에서 받은 섬기는 신의 유물(삶마다 하나, 그 신을 섬기는 동안만 힘을 낸다) */
+  relic?: string;
+  /** 진실 조각(truth.ts) — 삶을 넘어 쌓인다(새 삶 시작 때 Meta에서 복사, 바뀌면 다시 Meta에 합친다) */
+  clues?: string[];
+  /** 조각의 반쪽(늙지 않는 영주: 소문과 기록을 둘 다 봐야 한다) */
+  clueBits?: string[];
+  /** 이번 삶에서 영주의 칙서를 직접 얻었다(진엔딩 필수) */
+  edict?: boolean;
+  /** 진엔딩 결전: 옛 신들의 응답(셉터를 두고 나올 때 제단에서 등록한 응답의 두 배) */
+  finalAnswers?: string[];
   /** 개종으로 버린 신의 저주 */
   curse?: { god: string; months: number };
   /** 이단 심문을 거부해 현상수배 중: 마을은 외곽만, 미궁에 이단심문관이 나타난다 */
@@ -442,4 +490,8 @@ export interface Meta {
   tipsSeen?: string[];
   /** 처음 안내 끄기 */
   tipsOff?: boolean;
+  /** 진실 조각(삶을 넘어 쌓인다) */
+  clues?: string[];
+  /** 본 엔딩 */
+  endings?: string[];
 }

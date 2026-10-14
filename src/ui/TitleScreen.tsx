@@ -43,6 +43,17 @@ export function TitleScreen({ run, meta, onNew, onContinue, onGraveyard, onCodex
         </button>
       </div>
 
+      {((meta.clues?.length ?? 0) > 0 || (meta.endings?.length ?? 0) > 0) && (
+        <Card title={meta.endings?.includes("true") ? "옛 신들이 돌아왔다" : "진실 조각"}>
+          <p className="small">
+            진실 {meta.clues?.length ?? 0}/7
+            {meta.endings?.includes("offering") && " · 헌납 엔딩"}
+            {meta.endings?.includes("fallen") && " · 영주에게 맞선 자"}
+            {meta.endings?.includes("true") && " · 진엔딩 — 이제 모든 신을 시작 신앙으로 고를 수 있다"}
+          </p>
+        </Card>
+      )}
+
       {meta.faiths.length > 0 && (
         <Card title="해금된 옛 신">
           <div className="chips">
@@ -56,7 +67,7 @@ export function TitleScreen({ run, meta, onNew, onContinue, onGraveyard, onCodex
       )}
 
       <p className="dim small center">기록은 이 브라우저에만 저장됩니다(다른 기기로 옮길 수 없고, 브라우저 데이터를 지우면 사라집니다).</p>
-      <p className="dim small center">프로토타입 v0.1 · 2섹터 + 끝없는 미궁 · 아동 사망·처형 등 무거운 장면이 나옵니다</p>
+      <p className="dim small center">프로토타입 v0.1 · 6섹터 · 엔딩 + 끝없는 미궁 · 아동 사망·처형 등 무거운 장면이 나옵니다</p>
     </Shell>
   );
 }

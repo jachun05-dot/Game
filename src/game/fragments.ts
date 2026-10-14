@@ -87,6 +87,23 @@ export const FRAGMENTS: Record<string, FragmentDef> = {
   hungermother: { id: "hungermother", name: "허기의 어미의 편린", tier: 3, chance: 0.03, stats: { con: 5, str: 3 }, skill: "fragDevour", flavor: "쓰러뜨린 것의 기운이 배를 채운다." },
   abyssmaw: { id: "abyssmaw", name: "심연의 아귀의 편린", tier: 4, chance: 0.03, stats: { str: 6, con: 6 }, skill: "fragEndlessHunger", flavor: "끝없는 허기가 힘이 된다." },
   sweeper5: { id: "sweeper5", name: "바닥의 청소부의 편린", tier: 4, chance: 0.03, stats: { str: 5, con: 5, dex: 3, per: 3 }, flavor: "떨어진 것들을 쓸어 담던 손. 머물지 않는 법." },
+  // 6섹터
+  litany: { id: "litany", name: "기도문 떼의 편린", tier: 1, chance: 0.03, stats: { int: 2, per: 1 }, flavor: "종잇조각 같은 빛. 글자들이 머릿속에서 줄을 선다." },
+  censer: { id: "censer", name: "떠도는 향로의 편린", tier: 2, chance: 0.02, stats: { per: 3, int: 1 }, skill: "fragSmoke", flavor: "향 연기가 몸을 감싼다. 무엇이 머릿속을 흔들어도 연기가 먼저 받는다." },
+  penitchain: { id: "penitchain", name: "참회의 사슬의 편린", tier: 2, chance: 0.02, stats: { str: 3, con: 2 }, skill: "fragChain", flavor: "손목에 가시 사슬의 감촉이 남는다. 먼저 묶는 법을 안다." },
+  hollowknight: { id: "hollowknight", name: "빈 성갑의 편린", tier: 2, chance: 0.015, stats: { con: 5 }, skill: "fragHollow", flavor: "속이 빈 갑옷의 울림. 몸통이 갑옷처럼 비어 버린다." },
+  waxfaithful: { id: "waxfaithful", name: "밀랍 신도의 편린", tier: 2, chance: 0.015, stats: { con: 3, luk: 2 }, skill: "fragMelt", flavor: "따뜻한 밀랍. 부서질 때 한 번 녹아내려 버틴다." },
+  reliquary: { id: "reliquary", name: "저주받은 성물의 편린", tier: 3, chance: 0.02, stats: { int: 4, per: 2 }, skill: "fragFlip", flavor: "뒤집힌 성인의 뼈. 깎인 것을 반쯤 되돌린다." },
+  executioner: { id: "executioner", name: "처형인의 갑주의 편린", tier: 3, chance: 0.02, stats: { str: 5, con: 2 }, skill: "fragExecute", flavor: "도끼의 무게가 팔에 남는다. 쓰러지기 직전의 것을 끝내는 법." },
+  seraph: { id: "seraph", name: "눈 많은 날개의 편린", tier: 3, chance: 0.02, stats: { dex: 4, per: 3 }, skill: "fragManyEyes", flavor: "등 뒤에 눈이 하나 더 뜬 것 같다." },
+  swallowed: { id: "swallowed", name: "삼켜진 것의 편린", tier: 3, chance: 0.02, stats: { con: 6, str: 2 }, skill: "fragNameBack", flavor: "삼켜졌던 이름 하나가 가슴에 내려앉는다." },
+  candle: { id: "candle", name: "마석 촛대의 편린", tier: 3, chance: 0.03, stats: { luk: 7, per: 2 }, skill: "fragGoldNose", flavor: "꺼지지 않는 촛불 같은 마석 빛." },
+  grail: { id: "grail", name: "마석 성배의 편린", tier: 3, chance: 0.03, stats: { luk: 7, dex: 2 }, skill: "fragGoldHunter", flavor: "비어 있어도 무겁다." },
+  wingshard: { id: "wingshard", name: "마석 날개 조각의 편린", tier: 3, chance: 0.03, stats: { dex: 7, per: 2 }, skill: "fragManaFeather", flavor: "마석 깃털 하나가 등에 붙는다." },
+  mitre: { id: "mitre", name: "주인 없는 주교관의 편린", tier: 3, chance: 0.03, stats: { int: 5, con: 3 }, skill: "fragSermon", flavor: "속이 빈 설교. 듣는 쪽이 먼저 맥이 빠진다." },
+  guardian: { id: "guardian", name: "봉인의 수호자의 편린", tier: 4, chance: 0.03, stats: { con: 6, str: 4 }, skill: "fragTrial", flavor: "돌 시험관의 무게. 무엇이든 한 번 더 버텨 본다." },
+  avatar: { id: "avatar", name: "짝을 삼킨 빛의 화신의 편린", tier: 4, chance: 0.03, stats: { str: 3, dex: 3, con: 3, int: 3, per: 3, luk: 3 }, skill: "fragSwallowLight", flavor: "삼켜진 빛을 다시 삼켰다. 흰빛이 더는 몸에 닿지 않는다." },
+  judgeeye: { id: "judgeeye", name: "심판의 눈의 편린", tier: 4, chance: 0.03, stats: { str: 5, con: 5, per: 4, dex: 3 }, flavor: "천장에서 내려다보던 눈. 이제 그 눈으로 본다." },
   boss: { id: "boss", name: "거대한 돌연변이 쥐의 편린", tier: 4, chance: 0.03, stats: { str: 4, con: 4, dex: 1 }, skill: "fragFrenzy", flavor: "붉게 고동친다. 이빨이 근질거린다." },
 };
 
@@ -95,14 +112,20 @@ export function fragSlots(level: number): number {
   return 1 + Math.floor(level / 3);
 }
 
+/** 지금 힘을 내는 편린(6섹터 화신의 삼킴으로 이 전투 동안 봉인된 것은 빼고) */
+export function activeFragments(s: GameState): string[] {
+  const sealed = s.combat?.fragSealed;
+  return sealed?.length ? s.fragments.filter((id) => !sealed.includes(id)) : s.fragments;
+}
+
 export function fragStat(s: GameState, key: StatKey): number {
   let t = 0;
-  for (const id of s.fragments) t += FRAGMENTS[id]?.stats[key] ?? 0;
+  for (const id of activeFragments(s)) t += FRAGMENTS[id]?.stats[key] ?? 0;
   return t;
 }
 
 export function fragSkills(s: GameState): string[] {
-  return s.fragments.map((id) => FRAGMENTS[id]?.skill).filter((x): x is string => !!x);
+  return activeFragments(s).map((id) => FRAGMENTS[id]?.skill).filter((x): x is string => !!x);
 }
 
 const STAT_NAME: Record<StatKey, string> = { str: "힘", dex: "민첩", con: "체력", int: "지능", per: "감각", luk: "행운" };

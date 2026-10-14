@@ -16,13 +16,15 @@ export function nextFloorLevel(sector: number, floor: number): number {
 }
 
 export function sweeperId(sector: number): string {
-  return sector >= 5 ? "sweeper5" : sector === 4 ? "sweeper4" : sector === 3 ? "sweeper3" : sector === 2 ? "sweeper2" : "sweeper1";
+  return sector === 6 ? "judgeeye" : sector >= 5 ? "sweeper5" : sector === 4 ? "sweeper4" : sector === 3 ? "sweeper3" : sector === 2 ? "sweeper2" : "sweeper1";
 }
 
 /** 이 층에서 청소부 시계가 도는가 */
 export function sweeperEligible(s: GameState): boolean {
   const dg = s.dungeon;
   if (!dg || dg.first || dg.sweeperDown) return false;
+  // 6섹터 심판의 눈: 1·2층에서는 레벨과 상관없이 시계가 돈다(권장 레벨이 최대 레벨을 넘어 청소부가 사라지는 구멍을 메운다). 3층 성소에는 시선이 닿지 않는다
+  if (dg.sector === 6 && !dg.endless) return dg.floor <= 2;
   return s.hero.level >= nextFloorLevel(dg.sector, dg.floor);
 }
 
@@ -66,7 +68,7 @@ export function sweeperTick(s: GameState, turns: number): void {
   if ((dg.sweeperStage ?? 0) < 3 && t >= appear) {
     dg.sweeperStage = 3;
     dg.sweeperRoom = spawnRoom(dg);
-    log(s, `【미궁의 청소부】 그것이 나타났다. 멀리서 방을 하나씩 비우며 이쪽으로 온다. (계단으로 내려가거나 미궁을 나가면 피할 수 있다)`, "crit");
+    log(s, dg.sector === 6 && !dg.endless ? "【심판의 눈】 천장이 열리고 거대한 눈이 내려왔다. 방을 하나씩 훑으며 이쪽으로 온다. (계단으로 내려가거나 미궁을 나가면 피할 수 있다)" : `【미궁의 청소부】 그것이 나타났다. 멀리서 방을 하나씩 비우며 이쪽으로 온다. (계단으로 내려가거나 미궁을 나가면 피할 수 있다)`, "crit");
   }
 }
 

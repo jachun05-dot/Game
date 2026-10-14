@@ -34,7 +34,7 @@ const GOALS: AutoGoal[] = ["explore", "rush", "farm"];
 const GODS: (string | null)[] = [null, ...Object.values(FAITH)];
 const ITEMS = Object.keys(BAL.prices) as (keyof typeof BAL.prices)[];
 const PARTS = ["head", "body", "main", "offhand", "feet"] as const;
-const CHOICES = ["disarm", "use", "force", "back", "open", "leave", "read", "pray", "descend", "stay", "jump", "return", "search", "enter", "equip", "absorb", "swap0", "swap1", "swap2", "convert0", "convert1", "convert5"];
+const CHOICES = ["disarm", "use", "force", "back", "open", "leave", "read", "pray", "descend", "stay", "jump", "return", "search", "enter", "equip", "absorb", "swap0", "swap1", "swap2", "convert0", "convert1", "convert5", "careful", "rope", "offer", "renounce", "refuse", "ask", "take", "hold", "down"];
 
 // 퍼저 자체 RNG(게임 RNG와 분리)
 let fz = 1;
@@ -134,14 +134,19 @@ function invariants(s: GameState): string[] {
     }
     case "settlement": if (!s.settlement) e.push("settlement 단계인데 정산 없음"); break;
     case "week-result": if (!s.weekResult) e.push("week-result 단계인데 결과 없음"); break;
-    case "dead": if (!s.tomb) e.push("죽었는데 묘비 없음"); break;
+    case "dead":
+      if (!s.tomb) e.push("죽었는데 묘비 없음");
+      if (s.tomb?.ending && s.tomb.ending !== "fallen" && s.rank < 6) e.push(`셉터 없이 엔딩 ${s.tomb.ending}`);
+      if (s.tomb?.ending === "true" && (!s.edict || !s.hero.faith)) e.push("진엔딩 조건 없이 진엔딩");
+      if (s.tomb?.ending === "offering" && s.heretic) e.push("이단이 헌납 엔딩");
+      break;
     case "town": if (s.combat && s.combat.context !== "field") e.push("마을인데 미궁 전투"); if (s.dungeon) e.push("마을인데 dungeon 남아 있음"); break;
   }
   if (s.combat) for (const en of s.combat.enemies) {
     if (!Number.isFinite(en.hp)) e.push(`적 HP ${en.hp}`);
     const m = MONSTERS[en.defId];
     if (!m) e.push(`없는 몬스터 ${en.defId}`);
-    else if (m.human && (en.defId !== "inquisitor" || !s.heretic)) e.push(`미궁에 사람 ${en.defId}`);
+    else if (m.human && !(en.defId === "inquisitor" && s.heretic) && !(en.defId === "grandinquisitor" && s.dungeon?.sector === 6) && !(en.defId === "lord" && s.combat?.context === "final")) e.push(`미궁에 사람 ${en.defId}`);
   }
   for (const id of s.fragments) if (!FRAGMENTS[id]) e.push(`없는 편린 ${id}`);
   if (s.dungeon) {
@@ -152,12 +157,14 @@ function invariants(s: GameState): string[] {
     if (dg.sector !== 4 && dg.rooms.some((r) => r.hot || r.ice || r.pool || r.type === "magazine")) e.push("4섹터가 아닌데 갱도 방");
     if (dg.sector !== 5 && dg.rooms.some((r) => r.cliff || r.type === "plenty" || r.trapKind === "ledge")) e.push("5섹터가 아닌데 벼랑·제단");
     if ((dg.trapStock ?? 0) > 2 || (dg.songHp ?? 0) > 10) e.push(`★5 범위 ${dg.trapStock}/${dg.songHp}`);
+    if (dg.sector !== 6 && dg.rooms.some((r) => r.radiant || ["offerbox", "confession", "altars", "scepter"].includes(r.type) || ["rune", "weight", "mirror"].includes(r.trapKind ?? ""))) e.push("6섹터가 아닌데 신전 방");
+    if (dg.sector === 6 && dg.floor >= 3 && dg.rooms.some((r) => r.edges.length > 2)) e.push("성소가 외길이 아님");
     // 출구(계단·보스·차원문)는 언제나 지금 방에서 닿을 수 있어야 한다(낙반이 필수 경로를 끊지 않는다)
     {
       const seen = new Set([dg.current]);
       const q = [dg.current];
       while (q.length) for (const nb of dg.rooms[q.shift()!]?.edges ?? []) if (!seen.has(nb)) { seen.add(nb); q.push(nb); }
-      if (!dg.rooms.some((r) => ["stairs", "boss", "portal"].includes(r.type) && seen.has(r.id))) e.push("출구에 닿을 수 없음");
+      if (!dg.rooms.some((r) => ["stairs", "boss", "portal", "scepter"].includes(r.type) && seen.has(r.id))) e.push("출구에 닿을 수 없음");
     }
     if (!Number.isFinite(dg.mana)) e.push("마석 NaN");
     for (const room of dg.rooms) {
@@ -172,13 +179,20 @@ function invariants(s: GameState): string[] {
 
 function setup(s: GameState, scen: string) {
   const r = new Rng({ s: s.seed + 99 });
-  if (scen === "strong" || scen === "s2" || scen === "s3" || scen === "s4" || scen === "s5") {
-    s.hero.level = scen === "s5" ? 14 : scen === "s4" ? 11 : scen === "s3" ? 9 : scen === "s2" ? 6 : 5;
-    s.rank = scen === "s5" ? 4 : scen === "s4" ? 3 : scen === "s3" ? 2 : 1;
+  if (scen === "strong" || scen === "s2" || scen === "s3" || scen === "s4" || scen === "s5" || scen === "s6") {
+    s.hero.level = scen === "s6" ? 16 : scen === "s5" ? 14 : scen === "s4" ? 11 : scen === "s3" ? 9 : scen === "s2" ? 6 : 5;
+    s.rank = scen === "s6" ? 5 : scen === "s5" ? 4 : scen === "s4" ? 3 : scen === "s3" ? 2 : 1;
     s.month = 4;
-    s.trophies = scen === "s5" ? ["heart", "banner", "spore", "scale"] : scen === "s4" ? ["heart", "banner", "spore"] : scen === "s3" ? ["heart", "banner"] : ["heart"];
-    if (scen === "s3" || scen === "s4" || scen === "s5") for (const k of STAT_KEYS) s.hero.stats[k] += scen === "s5" ? 12 : scen === "s4" ? 9 : 6;
-    if (scen === "s5" && s.hero.faith) s.piety = 190;
+    s.trophies = scen === "s6" ? ["heart", "banner", "spore", "scale", "fang"] : scen === "s5" ? ["heart", "banner", "spore", "scale"] : scen === "s4" ? ["heart", "banner", "spore"] : scen === "s3" ? ["heart", "banner"] : ["heart"];
+    if (scen === "s3" || scen === "s4" || scen === "s5" || scen === "s6") for (const k of STAT_KEYS) s.hero.stats[k] += scen === "s6" ? 15 : scen === "s5" ? 12 : scen === "s4" ? 9 : 6;
+    if ((scen === "s5" || scen === "s6") && s.hero.faith) s.piety = 190;
+    if (scen === "s6") {
+      // 진실 조각을 무작위로(진엔딩까지 가 볼 수 있게)
+      s.clues = ["lostgod", "lock", "ageless", "oldgods", "westvillage", "name"].filter(() => r.chance(0.7));
+      if (r.chance(0.4)) { s.clues.push("edict"); s.edict = true; }
+      if (r.chance(0.3)) s.relic = pick(["war", "hunger", "trap", "greed", "song", "plague", "abyss", "oblivion"]);
+      s.inventory.incense = r.int(0, 2);
+    }
     for (const k of STAT_KEYS) s.hero.stats[k] += 6;
     s.inventory.potion += 5;
     s.inventory.food += 6;
@@ -187,11 +201,12 @@ function setup(s: GameState, scen: string) {
     s.fragments = [pick(ids), pick(ids)];
     s.hero.hp = maxHp(s);
   }
-  if (scen === "s2" || scen === "s3" || scen === "s4" || scen === "s5") {
-    // 미궁으로 바로 들어가 2·3·4·5섹터 1층에 세운다
-    const sec = scen === "s5" ? 5 : scen === "s4" ? 4 : scen === "s3" ? 3 : 2;
+  if (scen === "s2" || scen === "s3" || scen === "s4" || scen === "s5" || scen === "s6") {
+    // 미궁으로 바로 들어가 2~6섹터 1층에 세운다(6섹터는 절반을 3층 성소에서)
+    const sec = scen === "s6" ? 6 : scen === "s5" ? 5 : scen === "s4" ? 4 : scen === "s3" ? 3 : 2;
     if (sec === 3) { s.inventory.antidote = 2; s.inventory.whetstone = 1; s.inventory.food += 4; }
     if (sec === 5) { s.inventory.rope = 2; s.inventory.food += 8; s.inventory.potion += 4; }
+    if (sec === 6) { s.inventory.food += 10; s.inventory.potion += 6; }
     if (sec >= 4) {
       const lines = CLASS_DEFS[s.hero.cls].trainings.filter(hasLevelTable);
       s.skills = [];
@@ -205,8 +220,8 @@ function setup(s: GameState, scen: string) {
     apply(s, { t: "enterDungeon" });
     const dg = s.dungeon!;
     dg.sector = sec;
-    dg.floor = 1;
-    dg.rooms = generateFloor(r, 1, sec);
+    dg.floor = sec === 6 && r.chance(0.5) ? 3 : 1;
+    dg.rooms = generateFloor(r, dg.floor, sec);
     dg.current = 0;
     dg.prev = null;
     dg.turnsLeft = 300;
@@ -267,7 +282,7 @@ for (let i = 0; i < N; i++) {
     apply(s, { t: "pickClass", cls });
     apply(s, { t: "autoGoal", goal });
     apply(s, { t: "create", name: "퍼즈", candidate: 0, faith });
-    const scen = SCEN === "mix" ? pick(["", "s2", "s3", "s4", "s5", "late", "heretic", "hurt", "strong"]) : SCEN;
+    const scen = SCEN === "mix" ? pick(["", "s2", "s3", "s4", "s5", "s6", "late", "heretic", "hurt", "strong"]) : SCEN;
     setup(s, scen);
     let prevLevel = s.hero.level, prevRank = s.rank;
     for (; step < MAX_ACTIONS && s.phase !== "dead" && s.month <= 24; step++) {
@@ -328,6 +343,9 @@ for (let i = 0; i < N; i++) {
   if (s.rank >= 4) hit("4섹터 클리어");
   if (s.dungeon?.sector === 5 || s.rank >= 5) hit("5섹터 도달");
   if (s.rank >= 5) hit("5섹터 클리어");
+  if (s.dungeon?.sector === 6 || s.rank >= 6) hit("6섹터 도달");
+  if (s.rank >= 6) hit("6섹터 클리어");
+  if (s.tomb?.ending) hit(`엔딩:${s.tomb.ending}`);
   if (s.rank > 0) cleared++;
   if (VERBOSE && i % 100 === 0) console.error(`${i}/${N} ${((Date.now() - t0) / 1000).toFixed(0)}s`);
 }

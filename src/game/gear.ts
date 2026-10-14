@@ -1,6 +1,7 @@
 import type { GameState, StatKey } from "./types";
 import { mainLost, slotWorks } from "./injury";
 import { MIND_NAME, mindResist, type MindKey } from "./mind";
+import { pietyCapBonus } from "./faith";
 
 // 장비(DESIGN 10절): 슬롯 9개. 장비는 파워 스케일링이 아니라 생존 최소 기준선이고,
 // 미궁에서 주운 장비는 착용해야만 가지고 나올 수 있다(DESIGN 6절).
@@ -106,6 +107,15 @@ export interface GearDef {
   fallRes?: number;
   /** 두 얼굴의 그릇: 포만감 70 이상이면 방을 옮길 때 HP +1, 30 이하면 피해 +2 */
   twoFace?: boolean;
+  // ── 6섹터 ──
+  /** 성광(화신·아바타·심판의 눈) 피해 배율 */
+  radianceRes?: number;
+  /** 정화 무효 */
+  purgeImmune?: boolean;
+  /** 성광 방에서 신앙심이 깎이지 않는다 */
+  noRadiant?: boolean;
+  /** 신앙심 상한 + */
+  pietyCap?: number;
   flavor: string;
 }
 
@@ -161,6 +171,16 @@ export const GEAR: Record<string, GearDef> = {
   voidring: { id: "voidring", name: "공허 눈 반지", slot: "ring", bonus: { perception: 1 }, mindRes: { despair: 0.5 }, loot: 2, sector: 5, flavor: "닫힌 눈을 새긴 반지. 바닥을 들여다봐도 덜 무너진다." },
   ghoulfang: { id: "ghoulfang", name: "아귀 이빨 단검", slot: "main", bonus: { crit: 6 }, weapon: { dice: [1, 10], stat: "dex", verb: "아귀 이빨을 찔러 넣어" }, loot: 1, sector: 5, flavor: "아귀의 이빨을 갈아 만들었다. 민첩으로 다룬다." },
   twofacebowl: { id: "twofacebowl", name: "두 얼굴의 그릇", slot: "waist", bonus: {}, twoFace: true, flavor: "한쪽은 넘치고 한쪽은 비어 있는 그릇. 배부르면 몸이 낫고, 굶주리면 손이 거칠어진다." },
+  // ── 6섹터(타락한 신전과 차원문의 성소) ──
+  sunsteel: { id: "sunsteel", name: "성광 강철 장검", slot: "main", bonus: { hit: 2 }, weapon: { dice: [2, 8], stat: "str", verb: "성광 강철을 내리쳐" }, price: 1400, rank: 5, flavor: "신전의 흰 강철을 훔쳐 와 벼렸다. 빛을 빛으로 벤다." },
+  relicstaff: { id: "relicstaff", name: "성인의 뼈 지팡이", slot: "main", bonus: { hit: 2 }, weapon: { dice: [2, 8], stat: "int", verb: "성인의 뼈로 마력을 쏘아" }, price: 1400, rank: 5, flavor: "성물함에서 꺼낸 뼈를 엮었다. 그 안의 이름은 이미 지워졌다." },
+  towershield: { id: "towershield", name: "결계석 방패", slot: "offhand", bonus: { ac: 3 }, radianceRes: 0.5, price: 900, rank: 5, flavor: "성소의 결계석을 깎아 덧댔다. 흰빛을 반쯤 받아낸다." },
+  pilgrimboots: { id: "pilgrimboots", name: "순례자의 신", slot: "feet", bonus: { ac: 1, flee: 4 }, noRadiant: true, price: 500, rank: 5, flavor: "옛 순례자들이 신던 신. 흰빛 위를 걸어도 옛 신의 기척이 깎이지 않는다." },
+  hollowplate: { id: "hollowplate", name: "빈 성갑의 흉갑", slot: "body", bonus: { ac: 6, flee: -2 }, loot: 2, sector: 6, flavor: "속이 빈 성기사 갑옷에서 떼어 냈다. 빛은 빠져나갔다." },
+  confessmask: { id: "confessmask", name: "고해의 가면", slot: "head", bonus: { ac: 2 }, mindRes: { fear: 0.5, confusion: 0.5 }, loot: 2, sector: 6, flavor: "고해실에 걸려 있던 가면. 쓰면 마음이 덜 흔들린다." },
+  chainbelt: { id: "chainbelt", name: "참회의 사슬 띠", slot: "waist", bonus: { hp: 8, flee: -1 }, loot: 2, sector: 6, flavor: "참회의 사슬을 허리에 감았다. 무겁지만 단단하다." },
+  pairring: { id: "pairring", name: "짝 잃은 반지", slot: "ring", bonus: {}, pietyCap: 20, loot: 1, sector: 6, flavor: "한 쌍 중 하나만 남은 반지. 끼고 있으면 신을 향한 마음이 더 깊이 담긴다." },
+  oldsigil: { id: "oldsigil", name: "뒤집힌 성표", slot: "neck", bonus: { perception: 1 }, purgeImmune: true, flavor: "주교관이 걸고 있던 성표를 뒤집어 걸었다. 흰빛이 옛 신의 기척을 깎지 못한다." },
   // ── 4섹터(불타는 광산 갱도) ──
   fireleather: { id: "fireleather", name: "내화 가죽 갑옷", slot: "body", bonus: { ac: 4 }, burnRes: 0.5, price: 380, rank: 3, flavor: "불에 그을려도 타지 않게 무두질했다. 화상 확률이 절반." },
   furcoat: { id: "furcoat", name: "털 안감 외투", slot: "body", bonus: { ac: 3 }, coldRes: 0.5, price: 320, rank: 3, flavor: "안쪽에 두꺼운 털을 댔다. 냉기가 절반만 스민다." },
@@ -188,6 +208,9 @@ const BONUS_LABEL: Record<keyof GearBonus, string> = {
   ac: "AC", hit: "명중", dmg: "피해", crit: "치명타%", hp: "최대 HP", flee: "도주", perception: "감각 판정", potion: "물약 회복",
 };
 const STAT_NAME: Record<StatKey, string> = { str: "힘", dex: "민첩", con: "체력", int: "지능", per: "감각", luk: "행운" };
+
+// 짝 잃은 반지: 신앙심 상한 +(faith.ts에 등록)
+pietyCapBonus.push((s) => gearHas(s, (g) => g.pietyCap).reduce((a, g) => a + g.pietyCap!, 0));
 
 // 장비의 정신 상태이상 저항을 mind.ts에 알려 준다(순환 참조를 피하려고 등록 방식)
 mindResist.push((s, k) => {
@@ -229,6 +252,10 @@ export function gearEffect(id: string): string {
   if (g.ledge) parts.push(`벼랑길 판정 +${g.ledge}`);
   if (g.fallRes) parts.push("추락 피해 절반");
   if (g.twoFace) parts.push("배부르면 방마다 HP +1, 굶주리면 피해 +2");
+  if (g.radianceRes) parts.push("성광 피해 절반");
+  if (g.purgeImmune) parts.push("정화 무효");
+  if (g.noRadiant) parts.push("성광 방에서 신앙심 감소 없음");
+  if (g.pietyCap) parts.push(`신앙심 상한 +${g.pietyCap}`);
   return parts.join(" · ");
 }
 
@@ -242,7 +269,8 @@ export function gearScore(id: string | undefined): number {
   v += Object.values(g.stats ?? {}).reduce((a, x) => a + x, 0) * 2 + (g.lifeSaves ?? 0) * 20;
   v += (g.corrodeRes !== undefined ? 1 : 0) + (g.poisonRes ? 2 : 0) + (g.moldRes ? 2 : 0) + (g.wade ? 2 : 0) + (g.swim ? 1 : 0) + (g.critHeal ? 2 : 0) + (g.tideHit ? 1 : 0)
     + (g.burnRes ? 2 : 0) + (g.coldRes ? 2 : 0) + (g.noHardSelf ? 1 : 0) + (g.trapFind ? 1 : 0) + (g.trapDodge ? 1 : 0) + (g.gasSense ? 1 : 0) + (g.stagnantHit ? 1 : 0) + (g.chillHit ? 1 : 0) + (g.blastRes ? 2 : 0)
-    + (g.grabRes ? 2 : 0) + (g.darkSight ? 1 : 0) + (g.ledge ? 2 : 0) + (g.fallRes ? 2 : 0) + (g.twoFace ? 3 : 0);
+    + (g.grabRes ? 2 : 0) + (g.darkSight ? 1 : 0) + (g.ledge ? 2 : 0) + (g.fallRes ? 2 : 0) + (g.twoFace ? 3 : 0)
+    + (g.radianceRes ? 3 : 0) + (g.purgeImmune ? 4 : 0) + (g.noRadiant ? 1 : 0) + (g.pietyCap ? 3 : 0);
   return v;
 }
 

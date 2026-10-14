@@ -1,8 +1,8 @@
 import { josa } from "./josa";
 import { BAL, MONSTERS } from "./data";
 import { actionsPerRound, check, heroAc, isDead, kill, log, maxHp, note, rngOf, rollPenalty, sagaBonus, smod } from "./core";
-import { FRAGMENTS } from "./fragments";
-import { GODS, abyssEdge, faithDmg, faithHit, faithInfectMult, power, pray } from "./faith";
+import { FRAGMENTS, fragSkills } from "./fragments";
+import { GODS, abyssEdge, addPiety, faithDmg, faithHit, faithInfectMult, power, pray, relicOn } from "./faith";
 import { HEAD_STUN, INJ, canFlee, infect, injuryHit, lvl, noCrit, wound, type Part } from "./injury";
 import { MIND, afflict, comboNow, missPotion, rageDmg, symptom } from "./mind";
 import { activeSkills, passive, skillWorks, SKILLS, type SkillDef } from "./skills";
@@ -10,6 +10,7 @@ import { GEAR, gearHas, hasShield, weaponCorrosion, weaponOf } from "./gear";
 import { corrode, moldAfflict, paraFires, paralyze, poisonAfflict, poisonOf } from "./hazards";
 import { blastDamage, burnWound, chill, stagnant, windy } from "./fire";
 import { grabMult } from "./rift";
+import { abyssFinisher, afterFinalCombat, answerTick, avatarOpening, inRadiant, lastStandFaith, purge, rebirth, templeRoundEnd } from "./temple";
 import { MARK_FOR_SKILL, SKILL_LEVEL, type ElementKey } from "./elements";
 
 const GEAR_IS_WEAPON = (id: string) => !!GEAR[id]?.weapon;
@@ -41,8 +42,9 @@ export function describeGroup(enemies: Enemy[]): string {
 }
 
 /** 적에게 피해를 준다(허수아비 측정 중이면 출처별·라운드별로 기록) */
-function dealt(c: CombatState, t: Enemy, dmg: number, src: string): void {
+function dealt(s: GameState, c: CombatState, t: Enemy, dmg: number, src: string): void {
   t.hp -= dmg;
+  if (t.hp <= 0 && MONSTERS[t.defId].rebirth) rebirth(s, c, t); // 화신: 한 번 다시 일어선다
   const m = c.meter;
   if (!m) return;
   m.by[src] = (m.by[src] ?? 0) + dmg;
@@ -113,7 +115,7 @@ export function startCombat(s: GameState, context: CombatState["context"], enemi
     s.dungeon!.trapStock! -= 1;
     const t = strongest(c);
     const dmg = rngOf(s).dice(2, 6);
-    dealt(c, t, dmg, "trap5");
+    dealt(s, c, t, dmg, "trap5");
     log(s, `【${GODS.trap.name}】 재앙의 주인 — 가방에서 꺼낸 함정이 ${MONSTERS[t.defId].name}의 발밑에서 터졌다. ${dmg} 피해 (남은 함정 ${s.dungeon!.trapStock})`, "skill");
     if (t.hp <= 0) killed(s, c, t);
     if (alive(c).length === 0) return finish(s, "win");
@@ -123,12 +125,23 @@ export function startCombat(s: GameState, context: CombatState["context"], enemi
     s.dungeon.trapCharge = false;
     const t = strongest(c);
     const dmg = rngOf(s).dice(2, 6);
-    dealt(c, t, dmg, "trap4");
+    dealt(s, c, t, dmg, "trap4");
     log(s, `【${GODS.trap.name}】 함정 다루기 — 챙겨 둔 함정이 ${MONSTERS[t.defId].name}의 발밑에서 터졌다. ${dmg} 피해`, "skill");
     if (t.hp <= 0) {
       gainLoot(s, c, t.defId, t.stolen);
       log(s, `${josa(MONSTERS[t.defId].name, "을")} 쓰러뜨렸다.`, "good");
     }
+    if (alive(c).length === 0) return finish(s, "win");
+  }
+  // 6섹터: 옛 신들의 응답·★5 화신전 특례·짝신의 이름
+  avatarOpening(s, c);
+  // 첫 함정의 쇠이빨(재앙의 신 유물): 가장 강한 적의 발밑에서 터진다
+  if (relicOn(s, "trap") && context !== "dummy" && alive(c).length) {
+    const t = strongest(c);
+    const dmg = rngOf(s).dice(2, 6);
+    dealt(s, c, t, dmg, "relic");
+    log(s, `【첫 함정의 쇠이빨】 ${MONSTERS[t.defId].name}의 발밑에서 쇠이빨이 물었다. ${dmg} 피해`, "skill");
+    if (t.hp <= 0) killed(s, c, t);
     if (alive(c).length === 0) return finish(s, "win");
   }
   // 망각의 신 ★5 "완전한 망각": 2라운드(보스·정예 1라운드) / ★3 "망각의 장막": 1라운드
@@ -183,7 +196,7 @@ export function startCombat(s: GameState, context: CombatState["context"], enemi
       target.stun = (target.stun ?? 0) + e.rounds;
       if (e.dice) {
         const dmg = rngOf(s).dice(e.dice[0], e.dice[1]) + Math.max(0, smod(s, "str"));
-        dealt(c, target, dmg, sk.id);
+        dealt(s, c, target, dmg, sk.id);
         log(s, `${MONSTERS[target.defId].name}에게 ${dmg} 피해`, "hit");
         if (target.hp <= 0) killed(s, c, target);
       }
@@ -223,7 +236,7 @@ export function startCombat(s: GameState, context: CombatState["context"], enemi
       const t = [...alive(c)].sort((a, b) => a.hp - b.hp)[0];
       const def = MONSTERS[t.defId];
       const dmg = Math.max(1, rngOf(s).dice(e.dice[0], e.dice[1]) + Math.max(smod(s, "str"), smod(s, "dex")));
-      dealt(c, t, dmg, sk.id);
+      dealt(s, c, t, dmg, sk.id);
       t.stolen = true;
       log(s, `${def.name}에게 ${dmg} 피해`, "hit");
       if (t.hp <= 0) {
@@ -268,7 +281,7 @@ export function startCombat(s: GameState, context: CombatState["context"], enemi
     if (isDead(s)) return;
     enemyPhase(s, c);
     if (isDead(s)) return;
-    if (c.dragged) return finish(s, "fled"); // 벼랑에서 끌려 떨어졌다
+    if (c.dragged || c.ejected) return finish(s, "fled"); // 벼랑에서 끌려 떨어졌다 / 봉인의 수호자가 문 밖에 내려놓았다
     c.halfDmg = false;
     if (c.rampage) c.rampage -= 1;
     if (c.halfRounds) c.halfRounds -= 1;
@@ -309,7 +322,7 @@ function castSpell(s: GameState, c: CombatState, dice: [number, number], all: bo
   for (const t of targets) {
     const def = MONSTERS[t.defId];
     const dmg = Math.max(1, r.dice(dice[0], dice[1]) + smod(s, "int") + spellBonus(s));
-    dealt(c, t, dmg, src);
+    dealt(s, c, t, dmg, src);
     note(s, "int");
     log(s, `${def.name}에게 ${dmg} 피해`, "hit");
     if (t.hp <= 0) {
@@ -347,7 +360,7 @@ function mineOpening(s: GameState, c: CombatState): boolean {
     const t = alive(c)[0];
     const dmg = r.dice(dg.cartCharge, 6);
     dg.cartCharge = undefined;
-    dealt(c, t, dmg, "cart");
+    dealt(s, c, t, dmg, "cart");
     log(s, `레일을 타고 내려온 광차가 ${MONSTERS[t.defId].name}을 들이받았다! ${dmg} 피해`, "skill");
     if (t.hp <= 0) killed(s, c, t);
   }
@@ -357,7 +370,7 @@ function mineOpening(s: GameState, c: CombatState): boolean {
     log(s, `화약통에 불을 붙여 던졌다! (남은 화약통 ${s.inventory.powder})`, "skill");
     for (const e of alive(c)) {
       const dmg = r.dice(2, 6);
-      dealt(c, e, dmg, "powder");
+      dealt(s, c, e, dmg, "powder");
       log(s, `${MONSTERS[e.defId].name}에게 ${dmg} 피해`, "hit");
       if (e.hp <= 0) killed(s, c, e);
     }
@@ -369,7 +382,7 @@ function mineOpening(s: GameState, c: CombatState): boolean {
 /** 보스·정예·히든(절대 영도가 짧게 듣는다) */
 function bossy(e: Enemy): boolean {
   const d = MONSTERS[e.defId];
-  return !!(d.elite || d.hidden || d.human || ["boss", "general", "mycomother"].includes(e.defId));
+  return !!(d.elite || d.hidden || d.human || d.avatar || d.trial || ["boss", "general", "mycomother", "furnacemother", "abyssmaw"].includes(e.defId));
 }
 
 /** 적을 쓰러뜨린 뒤처리(마석·편린·겨울의 화신) */
@@ -393,19 +406,24 @@ function roundStart(s: GameState, c: CombatState): void {
   if (has(s, "boltAvatar") && alive(c).length) {
     const t = r.pick(alive(c));
     const dmg = Math.max(1, r.dice(1, 8) + smod(s, "int"));
-    dealt(c, t, dmg, "boltAvatar");
+    dealt(s, c, t, dmg, "boltAvatar");
     log(s, `【뇌신】 ${MONSTERS[t.defId].name}에게 번개가 떨어진다. ${dmg} 피해`, "skill");
     if (t.hp <= 0) killed(s, c, t);
   }
   for (const e of alive(c)) {
     if (!e.venom || e.venom.rounds <= 0) continue;
     const dmg = r.dice(e.venom.dice[0], e.venom.dice[1]);
-    dealt(c, e, dmg, "poisonBlade");
+    dealt(s, c, e, dmg, "poisonBlade");
     e.venom.rounds -= 1;
     log(s, `${josa(MONSTERS[e.defId].name, "이")} 독에 몸을 떤다. ${dmg} 피해`, "hit");
     if (e.hp <= 0) killed(s, c, e);
   }
   if (has(s, "earthHeart") && s.hero.hp < maxHp(s)) s.hero.hp = Math.min(maxHp(s), s.hero.hp + 2);
+  // 6섹터: 옛 신들의 응답(라운드마다 하나)
+  answerTick(s, c, (t, dmg, src) => {
+    dealt(s, c, t, dmg, src);
+    if (t.hp <= 0) killed(s, c, t);
+  });
 }
 
 /** 적을 불태운다(불의 각인이면 힘 보정이 더해진다) */
@@ -466,7 +484,7 @@ function elementHit(s: GameState, c: CombatState, t: Enemy, sk: SkillDef, half =
   const sides = e.vary ? r.pick([4, 6, 8, 10]) : e.dice[1];
   let dmg = rollDice(s, e.dice[0], sides) + smod(s, "int") + spellBonus(s) + elementBonus(s, e.el, t) + (e.hardBonus && def.hard ? e.hardBonus : 0);
   dmg = Math.max(1, half ? Math.floor(dmg / 2) : dmg);
-  dealt(c, t, dmg, sk.id);
+  dealt(s, c, t, dmg, sk.id);
   note(s, "int");
   const extra: string[] = [];
   if (t.hp > 0) {
@@ -546,7 +564,7 @@ function burnTick(s: GameState, c: CombatState): void {
     if (!e.burn || e.burn.rounds <= 0) continue;
     const def = MONSTERS[e.defId];
     const dmg = (r.dice(1, has(s, "fireSeal") ? 6 : 3) + e.burn.bonus) * (has(s, "fireAvatar") ? 2 : 1);
-    dealt(c, e, dmg, "burn");
+    dealt(s, c, e, dmg, "burn");
     e.burn.rounds -= 1;
     log(s, `${josa(def.name, "이")} 불길 속에서 몸부림친다. ${dmg} 피해`, "hit");
     if (e.hp <= 0) {
@@ -578,7 +596,7 @@ function plagueTick(s: GameState, c: CombatState): void {
     if (!e.sick) continue;
     const def = MONSTERS[e.defId];
     const dmg = r.dice(1, 3);
-    dealt(c, e, dmg, "plague");
+    dealt(s, c, e, dmg, "plague");
     log(s, `${josa(def.name, "이")} 병으로 몸부림친다. ${dmg} 피해`, "hit");
     if (e.hp <= 0) {
       gainLoot(s, c, def.id, e.stolen);
@@ -599,7 +617,7 @@ function roundEnd(s: GameState, c: CombatState): void {
   const foes = alive(c);
   // 역병의 신 ★4 "역병의 숙주": 병이 깊으면 모든 적이 라운드마다 1 피해
   if (s.disease >= 2 && power(s, "plague", 4) && foes.length) {
-    for (const e of foes) dealt(c, e, 1, "plague4");
+    for (const e of foes) dealt(s, c, e, 1, "plague4");
     log(s, `【${GODS.plague.name}】 역병의 숙주 — 몸에서 번진 병이 적들을 갉아먹는다. (모두 1 피해)`, "skill");
     for (const e of foes) if (e.hp <= 0) {
       gainLoot(s, c, e.defId, e.stolen);
@@ -699,12 +717,20 @@ function roundEnd(s: GameState, c: CombatState): void {
   }
   if (has2(s, "fragRegen") && s.hero.hp < maxHp(s)) s.hero.hp = Math.min(maxHp(s), s.hero.hp + 1);
   if (riftRoundEnd(s, c)) return;
+  if (templeRoundEnd(s, c)) return;
+  // 첫 역병의 종(역병의 신 유물): 라운드마다 적 전원 1
+  if (relicOn(s, "plague") && alive(c).length) {
+    for (const e of alive(c)) {
+      dealt(s, c, e, 1, "relic");
+      if (e.hp <= 0) killed(s, c, e);
+    }
+  }
   // 균모의 편린 "균사 재생"
   if (has2(s, "fragMycelium") && s.hero.hp < maxHp(s)) s.hero.hp = Math.min(maxHp(s), s.hero.hp + (s.disease > 0 ? 2 : 1));
 }
 
 function has2(s: GameState, id: string): boolean {
-  return s.skills.includes(id) || s.fragments.some((f) => FRAGMENTS[f]?.skill === id);
+  return s.skills.includes(id) || fragSkills(s).includes(id);
 }
 
 /** 5섹터·★5 피해 보너스: 기아의 얼굴(이 층 +2), 두 얼굴의 그릇(굶주리면 +2), 끝없는 허기, 끝나지 않는 전쟁 */
@@ -831,6 +857,11 @@ function gainLoot(s: GameState, c: CombatState, defId: string, stolen = false): 
     log(s, `${josa(def.name, "이")} 삼켰던 것을 토해 냈다. 아직 먹을 만한 말린 고기 1개. (말린 고기 ${s.inventory.food})`, "good");
   }
   if (has2(s, "fragDevour")) s.hero.satiety = Math.min(100, s.hero.satiety + 5); // 삼키는 입
+  // 삼켜진 것: 쓰러뜨리면 그 이름 하나가 돌아온다(섬기는 신의 신앙심 +)
+  if (def.nameBack && s.hero.faith) {
+    addPiety(s, def.nameBack);
+    log(s, `삼켜졌던 이름 하나가 돌아온다. ${josa(s.hero.faith, "이")} 그 이름을 받아 든다. (신앙심 +${def.nameBack})`, "story");
+  }
   // 심연의 아귀가 있으면 쓰러진 촉수가 2라운드 뒤 다시 자란다(전투당 2번)
   if (defId === "tendril" && c.enemies.some((x) => MONSTERS[x.defId].maw && x.hp > 0)) {
     c.regrow ??= { count: 0, at: [] };
@@ -945,7 +976,7 @@ function playerPhase(s: GameState, c: CombatState, opener: Strike | null): "win"
     selfTriggers(s, c);
     // 순간 이동: HP 30% 이하면 반드시 빠져나간다
     const blink = activeSkills(s).find((sk) => sk.effect?.type === "blink" && hpPct(s) <= (sk.trigger as { pct: number }).pct && canUse(s, c, sk));
-    if (blink && c.context !== "dummy") {
+    if (blink && c.context !== "dummy" && c.context !== "final") {
       useSkill(s, c, blink, (blink.effect as { text: string }).text);
       return "fled";
     }
@@ -1012,7 +1043,8 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
   const wc = weaponCorrosion(s);
   const tide = (highTide(s) ? gearHas(s, (g) => g.tideHit).reduce((a, g) => a + (g.tideHit ?? 0), 0) : 0)
     + (stagnant(s) ? gearHas(s, (g) => g.stagnantHit).reduce((a, g) => a + (g.stagnantHit ?? 0), 0) : 0); // 조수의 지팡이·불씨 반지
-  const bonus = statMod + BAL.proficiency + passive(s, "hit") + st.hit + rollPenalty(s) + faithHit(s, alive(c).length) + injuryHit(s) + (def.flying && !w.magic ? -2 : 0) + magicHit + wc.hit + sagaBonus(s) + tide + (c.lastStand ? 2 : 0);
+  const radiant = inRadiant(s) ? 0.5 : 1; // 6섹터 성광 방: 신앙 명중·피해 보정 절반
+  const bonus = statMod + BAL.proficiency + passive(s, "hit") + st.hit + rollPenalty(s) + Math.trunc(faithHit(s, alive(c).length) * radiant) + injuryHit(s) + (def.flying && !w.magic ? -2 : 0) + magicHit + wc.hit + sagaBonus(s) + tide + (c.lastStand ? 2 : 0);
   if (!st.autoHit && roll === 1) {
     log(s, `손이 미끄러졌다! (주사위 1)`, "miss");
     return;
@@ -1032,10 +1064,10 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
     ? (has(s, "casterMark") ? 2 : 0) + (has(s, "earthMark") ? 2 + (def.hard ? 3 : 0) : 0) + (has(s, "fireMark") ? 3 : 0) + (has(s, "frostMark") ? 2 + (held ? 3 : 0) : 0) + (has(s, "boltMark") ? 2 : 0)
     : 0;
   const fury = has(s, "berserkMark") && hpPct(s) <= 50 ? 3 : 0; // 광전의 각인
-  const base = (w.magic ? rollDice(s, w.dice[0] * (crit ? critMult(s) : 1), w.dice[1]) : r.dice(w.dice[0] * (crit ? critMult(s) : 1), w.dice[1])) + magicDmg + fury + statMod + passive(s, "dmg") + st.dmg + faithDmg(s) + rageDmg(s) + abyssEdge(s, s.hero.hp / maxHp(s)).dmg + wc.dmg + (c.lastStand ? 3 : 0)
+  const base = (w.magic ? rollDice(s, w.dice[0] * (crit ? critMult(s) : 1), w.dice[1]) : r.dice(w.dice[0] * (crit ? critMult(s) : 1), w.dice[1])) + magicDmg + fury + statMod + passive(s, "dmg") + st.dmg + Math.trunc(faithDmg(s) * radiant) + (relicOn(s, "war") ? 2 : 0) + rageDmg(s) + abyssEdge(s, s.hero.hp / maxHp(s)).dmg + wc.dmg + (c.lastStand ? 3 : 0)
     + (c.pain ?? 0) + (has(s, "berserkSeal") && hpPct(s) <= 50 ? 5 : 0) + (w.magic && has(s, "fireAvatar") ? 4 : 0) + riftDmg(s, c);
-  const dmg = Math.max(1, Math.round(base * st.mult));
-  dealt(c, target, dmg, st.src ?? "attack");
+  const dmg = Math.max(1, Math.round(base * st.mult * abyssFinisher(s, target))); // 심연 ★5 화신전 특례
+  dealt(s, c, target, dmg, st.src ?? "attack");
   if (crit) note(s, "luk");
   log(s, `${def.name}에게 ${w.verb} 명중! ${dmg} 피해${crit ? " (치명타!)" : ""}`, crit ? "crit" : "hit");
   // 치명타 흡혈(거머리 이빨 부적·거머리의 편린)
@@ -1075,7 +1107,7 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
     if (others.length) {
       const o = r.pick(others);
       const half = Math.max(1, Math.floor(dmg / 2));
-      dealt(c, o, half, "boltMark");
+      dealt(s, c, o, half, "boltMark");
       log(s, `【번개의 각인】 마력탄이 ${MONSTERS[o.defId].name}에게 튀었다. ${half} 피해`, "hit");
       if (o.hp <= 0) {
         gainLoot(s, c, o.defId, o.stolen);
@@ -1106,7 +1138,7 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
  */
 function foldEasyFight(s: GameState, c: CombatState): void {
   if (c.logFrom === undefined || s.hero.hp < (c.hpStart ?? 0) || c.frags.length) return;
-  if (c.enemies.some((e) => { const d = MONSTERS[e.defId]; return d.rare || d.elite || d.human || d.hidden || e.defId === "boss" || e.defId === "general"; })) return;
+  if (c.enemies.some((e) => { const d = MONSTERS[e.defId]; return d.rare || d.elite || d.human || d.hidden || d.avatar || d.trial || e.defId === "boss" || e.defId === "general"; })) return;
   const n = s.logCount - c.logFrom; // 등장 줄 포함
   if (n < 4 || n > s.log.length) return; // 세부가 3줄 이상일 때만 접는다
   const lines = s.log.slice(s.log.length - n + 1);
@@ -1150,6 +1182,7 @@ function hitInjury(s: GameState, defId: string, dmg: number, crit: boolean, e?: 
     // 방패(무기가 아닌 왼손 장비)는 왼손을 지킨다
     const shield = s.gear.offhand && !GEAR_IS_WEAPON(s.gear.offhand);
     if (shield) w.offhand = (w.offhand ?? 1) / (skillWorks(s, "shieldCraft") ? 4 : 2); // 방패술이면 더
+    if (has2(s, "fragHollow")) w.body = (w.body ?? 1) / 2; // 빈 껍데기
     const part = r.weighted((Object.entries(w) as [Part, number][]).map(([item, wt]) => ({ item, w: wt })));
     const dead = wound(s, part, `${def.name}의 공격`);
     s.hero.hp = Math.min(s.hero.hp, maxHp(s)); // 몸통 부상은 최대 HP를 깎는다
@@ -1185,6 +1218,10 @@ function drink(s: GameState, when: string): void {
 }
 
 function tryFlee(s: GameState, c: CombatState): boolean {
+  if (c.context === "final") {
+    log(s, "물러설 곳이 없다. 이것이 마지막 싸움이다.", "miss");
+    return false;
+  }
   if (!canFlee(s)) {
     log(s, "다친 다리로는 도망칠 수 없다!", "miss");
     return false;
@@ -1195,7 +1232,7 @@ function tryFlee(s: GameState, c: CombatState): boolean {
   }
   // 물에 잠긴 방에서는 헤엄치는 짐승을 따돌리기 어렵다
   const swimmers = s.dungeon?.rooms[s.dungeon.current]?.flooded && alive(c).some((e) => MONSTERS[e.defId].water) ? 2 : 0;
-  const dc = BAL.fleeDcBase + alive(c).length * 2 + swimmers;
+  const dc = BAL.fleeDcBase + alive(c).length * 2 + swimmers + (c.fleeLock ?? 0); // 참회의 사슬
   const roll = rngOf(s).die(20);
   const bonus = smod(s, "dex") + passive(s, "flee") + rollPenalty(s) + (c.smoke ?? 0);
   if (roll === 20 || (roll !== 1 && roll + bonus >= dc)) {
@@ -1284,7 +1321,7 @@ function enemyPhase(s: GameState, c: CombatState): void {
     // 번개 반사(25% 1d6)
     if (has(s, "boltReflect") && r.chance(0.25)) {
       const back = r.dice(1, 6);
-      dealt(c, e, back, "boltReflect");
+      dealt(s, c, e, back, "boltReflect");
       log(s, `【번개 반사】 ${MONSTERS[e.defId].name}에게 번개가 되튄다. ${back} 피해`, "skill");
       if (e.hp <= 0) killed(s, c, e);
     }
@@ -1298,6 +1335,9 @@ function enemyPhase(s: GameState, c: CombatState): void {
       riftHit(s, c, e);
       if (c.dragged) return;
       if (isDead(s)) return;
+      // 6섹터: 정화(신앙심 −), 참회의 사슬(도주 DC +)
+      if (def.purge) purge(s, def.purge, def.name);
+      if (def.fleeLock) c.fleeLock = Math.max(c.fleeLock ?? 0, def.fleeLock);
       // 비명(혼란)·함성(공포)
       if (def.scream) afflict(s, "confusion", def.scream, `${def.name}의 비명이 머릿속을 긁고 지나간다.`);
       if (def.fearHit) afflict(s, "fear", def.fearHit, `${def.name}의 함성이 등골을 얼린다.`);
@@ -1314,6 +1354,21 @@ function enemyPhase(s: GameState, c: CombatState): void {
       }
     }
     if (s.hero.hp <= 0) {
+      // 봉인의 수호자는 시험관: 죽이지 않고 문 밖에 내려놓는다
+      if (def.trial && c.context === "dungeon") {
+        s.hero.hp = 1;
+        c.ejected = true;
+        log(s, `${josa(def.name, "이")} 쓰러진 당신을 들어 문 밖에 내려놓는다. "아직이다." (HP 1)`, "hurt");
+        return;
+      }
+      // ★5 화신전 특례(탐욕·시와 노래): 한 번 버틴다
+      if (lastStandFaith(s, c)) continue;
+      // 녹아내림(밀랍 신도의 편린): 10%로 버틴다
+      if (has2(s, "fragMelt") && rngOf(s).chance(0.1)) {
+        s.hero.hp = 1;
+        log(s, "【녹아내림】 몸이 밀랍처럼 녹아내리며 일격을 흘려보냈다. (HP 1)", "skill");
+        continue;
+      }
       // 불사조의 숨(미궁 1회): 최대 HP 30%로 일어나며 적 전원 화염
       const phoenix = activeSkills(s).find((sk) => sk.effect?.type === "phoenix" && !s.tripUsed.includes(sk.id));
       if (phoenix && c.context !== "dummy") {
@@ -1323,7 +1378,7 @@ function enemyPhase(s: GameState, c: CombatState): void {
         log(s, `【${phoenix.name}】 ${ef.text} (HP ${s.hero.hp})`, "skill");
         for (const foe of alive(c)) {
           const d = rngOf(s).dice(ef.dice[0], ef.dice[1]);
-          dealt(c, foe, d, phoenix.id);
+          dealt(s, c, foe, d, phoenix.id);
           log(s, `${MONSTERS[foe.defId].name}에게 ${d} 피해`, "hit");
           if (foe.hp <= 0) killed(s, c, foe);
         }
@@ -1361,7 +1416,9 @@ function enemyPhase(s: GameState, c: CombatState): void {
       }
       s.hero.hp = 0;
       const cause = new Set(attackers).size >= 2 ? "mob" : "single";
-      kill(s, cause, cause === "mob" ? `${describeGroup([...new Set(attackers)])}에게 둘러싸여 쓰러졌다` : `${def.name}에게 쓰러졌다`);
+      if (attackers.some((x) => MONSTERS[x.defId].avatar)) kill(s, cause, "빛에 삼켜졌다");
+      else if (c.context === "final") kill(s, cause, "영주에게 맞서다 쓰러졌다");
+      else kill(s, cause, cause === "mob" ? `${describeGroup([...new Set(attackers)])}에게 둘러싸여 쓰러졌다` : `${def.name}에게 쓰러졌다`);
       return;
     }
     note(s, "con");
@@ -1382,6 +1439,9 @@ function finish(s: GameState, outcome: "win" | "fled"): void {
     s.hero.hp = Math.min(maxHp(s), s.hero.hp + 5);
     log(s, `【${GODS.hunger.name}】 굶주림이 풍요로 뒤집힌다 — 포만감 +25, HP +5`, "skill");
   }
+  // 두 얼굴의 첫 접시(기아/풍요의 신 유물): 이기면 HP +4
+  if (outcome === "win" && relicOn(s, "hunger")) s.hero.hp = Math.min(maxHp(s), s.hero.hp + 4);
   if (c.context === "field") afterFieldCombat(s, outcome, c);
+  else if (c.context === "final") afterFinalCombat(s, outcome, c);
   else afterDungeonCombat(s, outcome, c);
 }

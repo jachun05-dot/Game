@@ -6,6 +6,9 @@ import { passive } from "../game/skills";
 import type { Ctl } from "./App";
 import { BuildSummary, Card, FaithCard, GearIcon, InjuryCard, FragList, LevelTable, SkillList, StatGrid, TacticsBar, fmtMod } from "./components";
 import { CLASS_ART } from "./art";
+import { godOf } from "../game/faith";
+import { relicDesc, relicName } from "../game/temple";
+import { CLUES, clueCount, knowsClue } from "../game/truth";
 
 /** 캐릭터 화면: 장비 9슬롯, 공격·방어 계산 내역, 능력치, 기술, 소지품 */
 export function CharacterSheet({ ctl }: { ctl: Ctl }) {
@@ -107,6 +110,21 @@ export function CharacterSheet({ ctl }: { ctl: Ctl }) {
 
           <Card title="신앙">
             <FaithCard s={s} />
+            {s.relic && (
+              <p className="small">
+                유물 【{relicName(s)}】 {relicDesc(s)}
+                {godOf(s.hero.faith)?.key !== s.relic && <span className="dim"> — 그 신을 섬기지 않아 빛을 잃었다</span>}
+              </p>
+            )}
+          </Card>
+
+          <Card title={`진실 조각 ${clueCount(s)}/${CLUES.length}`}>
+            {CLUES.map((c) => (
+              <p key={c.id} className="small">
+                {knowsClue(s, c.id) ? <b>{c.name}</b> : <span className="dim">??? — {c.where}</span>}
+                {c.id === "edict" && knowsClue(s, c.id) && !s.edict && <span className="dim"> (이번 삶에서 다시 들어야 진엔딩이 열린다)</span>}
+              </p>
+            ))}
           </Card>
 
           <Card title="편린">
@@ -125,6 +143,10 @@ export function CharacterSheet({ ctl }: { ctl: Ctl }) {
               {s.inventory.spore > 0 ? ` · 균모의 포자낭 ${s.inventory.spore}` : ""}
               {s.inventory.antidote > 0 ? ` · 해독초 ${s.inventory.antidote}` : ""}
               {s.inventory.whetstone > 0 ? ` · 숫돌 ${s.inventory.whetstone}` : ""}
+              {s.inventory.scale > 0 ? ` · 화로 어미의 불씨 비늘 ${s.inventory.scale}` : ""}
+              {s.inventory.fang > 0 ? ` · 아귀의 검은 이빨 ${s.inventory.fang}` : ""}
+              {s.inventory.rope > 0 ? ` · 밧줄 ${s.inventory.rope}` : ""}
+              {s.inventory.incense > 0 ? ` · 옛 신의 향 ${s.inventory.incense}` : ""}
             </p>
             <p className="dim small">읽은 기록물 {s.recordsRead}개</p>
           </Card>

@@ -106,12 +106,35 @@ export function god(s: GameState): GodKey | null {
 export function tier(s: GameState): number {
   if (!god(s)) return 0;
   const n = FAITH_BAL.tiers.filter((t) => s.piety >= t).length;
-  return s.rank >= FAITH_BAL.tier5Rank ? n : s.rank >= FAITH_BAL.tier4Rank ? Math.min(4, n) : Math.min(3, n);
+  const open = s.rank >= FAITH_BAL.tier5Rank ? n : s.rank >= FAITH_BAL.tier4Rank ? Math.min(4, n) : Math.min(3, n);
+  return Math.max(0, open - (s.combat?.sealed ?? 0)); // 6섹터 화신의 삼킴: 이 전투 동안 높은 ★부터 봉인
 }
+
+/** 신앙심 상한을 올려 주는 것들(짝 잃은 반지·돌려받은 이름 — gear.ts·skills.ts가 등록) */
+export const pietyCapBonus: ((s: GameState) => number)[] = [];
 
 /** 신앙심 상한(3섹터 클리어 뒤 200) */
 export function pietyCap(s: GameState): number {
-  return s.rank >= FAITH_BAL.tier4Rank ? FAITH_BAL.capHigh : FAITH_BAL.cap;
+  return (s.rank >= FAITH_BAL.tier4Rank ? FAITH_BAL.capHigh : FAITH_BAL.cap) + pietyCapBonus.reduce((a, f) => a + f(s), 0);
+}
+
+// ── 6섹터 옛 신들의 제단: 섬기는 신의 유물(사용자 제안 2026-10-15) ──
+// 섬기는 신의 제단에서 기도하면 그 신의 유물 하나(삶마다 하나). 그 신을 섬기는 동안만 힘을 낸다.
+
+export const RELICS: Record<GodKey, { name: string; desc: string }> = {
+  war: { name: "첫 전쟁의 군기", desc: "피해 +2" },
+  hunger: { name: "두 얼굴의 첫 접시", desc: "전투에 이기면 HP +4, 포만감 소모 −20%" },
+  trap: { name: "첫 함정의 쇠이빨", desc: "전투가 시작되면 가장 강한 적의 발밑에서 터진다(2d6)" },
+  greed: { name: "첫 동전", desc: "마석 가치 +20%, AC +1" },
+  song: { name: "첫 노래의 현", desc: "최대 HP +8, 정신 상태이상에 걸릴 확률 절반" },
+  plague: { name: "첫 역병의 종", desc: "전투 라운드마다 적 전원 1 피해" },
+  abyss: { name: "바닥의 돌", desc: "AC +2" },
+  oblivion: { name: "이름 없는 가면", desc: "정화가 통하지 않고, 성광 피해 절반" },
+};
+
+/** 그 신의 유물이 힘을 내는가(유물을 받았고, 지금 그 신을 섬긴다) */
+export function relicOn(s: GameState, key: GodKey): boolean {
+  return s.relic === key && god(s) === key;
 }
 
 /** 이번 달 이단 심문 확률 */
@@ -164,7 +187,12 @@ export function plagueImmune(s: GameState): boolean {
 }
 
 export function faithMaxHp(s: GameState): number {
-  return power(s, "plague", 3) && sick(s) ? 4 : 0;
+  return (power(s, "plague", 3) && sick(s) ? 4 : 0) + (relicOn(s, "song") ? 8 : 0);
+}
+
+/** 유물 AC(첫 동전 +1, 바닥의 돌 +2) */
+export function relicAc(s: GameState): number {
+  return (relicOn(s, "greed") ? 1 : 0) + (relicOn(s, "abyss") ? 2 : 0);
 }
 
 /** 쥐 열병 감염 확률 배율 */
@@ -184,11 +212,11 @@ export function abyssEdge(s: GameState, hpRatio: number): { dmg: number; ac: num
 
 /** 정신 상태이상 걸릴 확률 배율 */
 export function faithMindMult(s: GameState): number {
-  return (power(s, "oblivion", 1) ? 0.5 : 1) * (cursed(s, "oblivion") ? 2 : 1);
+  return (power(s, "oblivion", 1) ? 0.5 : 1) * (cursed(s, "oblivion") ? 2 : 1) * (relicOn(s, "song") ? 0.5 : 1);
 }
 
 export function faithHungerMult(s: GameState): number {
-  return (power(s, "hunger", 1) ? 0.7 : 1) * (cursed(s, "hunger") ? 1.25 : 1);
+  return (power(s, "hunger", 1) ? 0.7 : 1) * (cursed(s, "hunger") ? 1.25 : 1) * (relicOn(s, "hunger") ? 0.8 : 1);
 }
 
 export function faithTrapSense(s: GameState): number {
@@ -205,5 +233,5 @@ export function faithPeek(s: GameState): number {
 }
 
 export function faithManaMult(s: GameState): number {
-  return (power(s, "greed", 1) ? 1.2 : 1) * (cursed(s, "greed") ? 0.85 : 1);
+  return (power(s, "greed", 1) ? 1.2 : 1) * (cursed(s, "greed") ? 0.85 : 1) * (relicOn(s, "greed") ? 1.2 : 1);
 }

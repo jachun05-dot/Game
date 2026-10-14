@@ -19,14 +19,14 @@ export const BAL = {
   /** 해가 바뀔 때마다 오르는 세금(1년차 30, 2년차 70, 3년차 110 …) */
   taxPerYear: 40,
   /** 등급(클리어한 섹터 수)에 따라 더 붙는 세금: 이름난 모험가에게 영주가 더 걷는다 */
-  taxRank: [0, 120, 250, 400, 600, 800] as number[],
+  taxRank: [0, 120, 250, 400, 600, 800, 1000] as number[],
   /** 섹터별 마석 환전 배율 */
-  manaSectorMult: [1, 1, 0.35, 0.3, 0.8, 0.8] as number[],
+  manaSectorMult: [1, 1, 0.35, 0.3, 0.8, 0.8, 0.8] as number[],
   /** 섹터별 희귀 개체 마석 배율(3섹터부터 큰 한 방이 재미라 덜 깎는다) */
-  rareSectorMult: [1, 1, 0.35, 0.6, 0.6, 0.6] as number[],
+  rareSectorMult: [1, 1, 0.35, 0.6, 0.6, 0.6, 0.6] as number[],
   /** 차원문을 넘을 때 남은 시간 배율(넘어서 들어가는 섹터별). 1→2는 ×2, 2→3·3→4는 ×1.5(굶주림이 주된 사인이 되지 않게) */
-  portalTimeMult: [1, 1, 2, 1.5, 1.5, 1.5] as number[],
-  /** 3섹터 클리어 뒤 4섹터 숏컷으로 들어갈 때 남은 시간(일반 경로로 4섹터에 닿을 때의 중간값 근처) */
+  portalTimeMult: [1, 1, 2, 1.5, 1.5, 1.5, 1.5] as number[],
+  /** 숏컷(3섹터 클리어 뒤부터, 가장 깊이 클리어한 섹터의 다음 섹터로 곧장)으로 들어갈 때 남은 시간(일반 경로로 4섹터에 닿을 때의 중간값 근처) */
   shortcutTurns: 360,
   /** 끝없는 미궁 마석 배율(층 배율과 곱한다) */
   endlessManaSectorMult: 0.35,
@@ -43,11 +43,11 @@ export const BAL = {
   /** 미궁의 청소부: 이 층에 도착한 뒤 예고 1·2, 나타남 턴(48 = 하루). 보통 한 층 탐색은 50~100턴 */
   sweeperTurns: [96, 120, 144] as [number, number, number],
   /** 청소부를 쓰러뜨린 보상 마석(섹터별, 섹터 배율 적용 안 함) */
-  sweeperMana: [0, 400, 800, 1200, 1600, 2000] as number[],
+  sweeperMana: [0, 400, 800, 1200, 1600, 2000, 2400] as number[],
   /** 매달 상점가 물가가 오르는 폭 [최소, 최대](0.05 = 5%). [0, 0]이면 오르지 않는다 */
   inflation: [0.05, 0.1] as [number, number],
   /** 특수 훈련(이 레벨 → 다음 레벨) 수련비 */
-  specialTrainFee: { 6: 600, 9: 1000, 12: 1500, 15: 2000 } as Record<number, number>,
+  specialTrainFee: { 6: 600, 9: 1000, 12: 1500, 15: 1000 } as Record<number, number>,
   weekTurns: 336,
   moveTurns: 4,
   campTurns: 16,
@@ -57,7 +57,7 @@ export const BAL = {
   trapDodgeDc: 12,
   trapDisarmDc: 13,
   fleeDcBase: 10,
-  prices: { food: 5, potion: 6, scroll: 45, bandage: 25, herb: 25, whetstone: 15, antidote: 10, salve: 25, firewood: 10, rope: 25 },
+  prices: { food: 5, potion: 6, scroll: 45, bandage: 25, herb: 25, whetstone: 15, antidote: 10, salve: 25, firewood: 10, rope: 25, incense: 120 },
   /** 대장간 부식 수리비(단계별, 그 슬롯을 새것처럼). 물가를 따라 오른다 */
   repairCost: [0, 15, 40, 80],
   /** 3섹터 침수 방 비율(층별), 3층 침수 방 중 깊은 물 비율 */
@@ -75,6 +75,10 @@ export const BAL = {
   ledgeChance: [0, 0.3, 0.5, 0.5],
   pitChance5: 0.5,
   cliffChance: [0, 0.3, 0.5, 0.5],
+  /** 6섹터: 성광 방 비율(층별) */
+  radiantChance: [0, 0.3, 0.2, 0],
+  /** 6섹터 봉인 문 판정 DC */
+  sealDc: 20,
   /** 치료 물약 회복량 = 2d4 + 이 값 */
   potionBase: 6,
   /** 이 레벨에서 다음 레벨로 가는 훈련은 보스 증표가 있어야 받을 수 있다 */
@@ -230,6 +234,25 @@ export interface MonsterDef {
   devour?: number;
   /** 심연의 아귀: 붙잡힌 상대를 3라운드마다 깨문다·촉수가 다시 자란다·HP 절반 아래면 광란 */
   maw?: boolean;
+  // ── 6섹터(temple.ts·combat.ts) ──
+  /** 정화: 명중하면 신앙심 −(★ 문턱 아래로 떨어지면 그 권능이 꺼진다) */
+  purge?: number;
+  /** 사슬: 명중하면 그 전투 도주 DC + */
+  fleeLock?: number;
+  /** 돌려받은 이름: 쓰러뜨리면 섬기는 신의 신앙심 + */
+  nameBack?: number;
+  /** 3라운드마다 이 몬스터를 하나 부른다(최대 4) */
+  summon?: string;
+  /** 시험관(봉인의 수호자): 지면 죽지 않고 HP 1로 문 밖에 쓰러진다 */
+  trial?: boolean;
+  /** 성광: 3라운드마다 전원 2d8 + 정화 10 */
+  radiance?: boolean;
+  /** 쓰러지면 이 HP로 한 번 다시 일어선다(2단계) */
+  rebirth?: number;
+  /** 삼킴: 다시 일어선 뒤 라운드마다 이 확률로 섬기는 신의 ★ 권능 하나를 이 전투 동안 봉인(무신앙이면 편린 능력) */
+  swallow?: number;
+  /** 유일신의 화신·아바타: 옛 신들의 응답과 ★5 화신전 특례가 걸린다 */
+  avatar?: boolean;
 }
 
 // DESIGN 11절 "1섹터 몬스터(확정)" / "1섹터 보스"
@@ -300,6 +323,27 @@ export const MONSTERS: Record<string, MonsterDef> = {
   hungermother: { id: "hungermother", name: "허기의 어미", wound: { body: 3, main: 2, offhand: 2, head: 2, feet: 1 }, hp: 90, ac: 18, atk: 12, dice: [2, 8], mana: 90, elite: true, devour: 0.25, hungerHit: 10, attackText: "모든 것을 삼키려 덤벼들었다", note: "굶주린 망령들이 서로를 삼키다 하나로 뭉쳤다. 기아/풍요의 신이 남긴 가장 짙은 흔적. 허리에 낡은 그릇을 차고 있다." },
   abyssmaw: { id: "abyssmaw", name: "심연의 아귀", wound: { head: 2, body: 3, main: 2, offhand: 2, feet: 2 }, hp: 280, ac: 19, atk: 13, dice: [2, 10], mana: 260, grab: 0.3, hungerHit: 10, maw: true, attackText: "끝없는 입을 벌려 덮쳤다", note: "균열 맨 밑바닥, 틈 위 바위에 뿌리박은 거대한 입. 붙잡은 것을 깨물고, 촉수는 다시 자라며, 몰리면 미친 듯이 삼킨다." },
   sweeper5: { id: "sweeper5", name: "바닥의 청소부", hp: 540, ac: 30, atk: 20, dice: [4, 10], mana: 0, hard: true, fearHit: 0.3, hidden: true, wound: { head: 2, body: 3, main: 2, offhand: 2, feet: 2 }, attackText: "떨어진 것들을 쓸어 담는 손으로 훑었다", note: "떨어진 것을 치우는 손. 바닥에 오래 머무는 것도 떨어진 것으로 여긴다. 아래층까지는 따라오지 않는다." },
+  // ── 6섹터: 타락한 신전과 차원문의 성소(최종) — 사람 없음(광신도·처형인은 비인간으로) ──
+  litany: { id: "litany", name: "기도문 떼", wound: { head: 3, main: 2, offhand: 2, body: 1 }, hp: 26, ac: 19, atk: 13, dice: [1, 10], mana: 22, flying: true, attackText: "이빨 달린 종잇조각으로 베었다", note: "이빨 달린 기도문 조각들이 떼 지어 날아다닌다. 성가의 박자에 맞춰 문다." },
+  censer: { id: "censer", name: "떠도는 향로", wound: { head: 3, body: 2, main: 1, offhand: 1 }, hp: 56, ac: 20, atk: 14, dice: [2, 8], mana: 50, flying: true, scream: 0.15, attackText: "뜨거운 향 연기를 끼얹었다", note: "사슬 끊긴 향로가 저절로 흔들리며 떠다닌다. 연기를 들이마시면 머리가 흐려진다." },
+  hollowknight: { id: "hollowknight", name: "빈 성갑", wound: { head: 2, body: 3, main: 1, offhand: 1, feet: 1 }, hp: 88, ac: 22, atk: 14, dice: [2, 10], mana: 70, hard: true, attackText: "빛이 들어찬 장검을 내리쳤다", note: "속이 빈 성기사 갑옷에 빛이 들어찼다. 줄지어 서 있다가 한꺼번에 움직인다." },
+  penitchain: { id: "penitchain", name: "참회의 사슬", wound: { feet: 4, main: 1, offhand: 1, body: 1 }, hp: 70, ac: 21, atk: 14, dice: [2, 10], mana: 60, fleeLock: 4, attackText: "가시 박힌 사슬로 감아 당겼다", note: "참회하던 자들을 묶던 사슬이 스스로 움직인다. 감기면 쉽게 빠져나오지 못한다." },
+  executioner: { id: "executioner", name: "처형인의 갑주", wound: { head: 5, body: 2, main: 1, offhand: 1, feet: 1 }, hp: 104, ac: 22, atk: 15, dice: [2, 12], mana: 95, hard: true, attackText: "머리 없는 갑옷이 도끼를 내리찍었다", note: "머리 없는 갑옷과 도끼. 목을 노린다." },
+  reliquary: { id: "reliquary", name: "저주받은 성물", wound: { head: 2, body: 2, main: 1, offhand: 1 }, hp: 64, ac: 23, atk: 14, dice: [2, 8], mana: 85, flying: true, purge: 4, attackText: "성인의 뼈를 쏟아부었다", note: "성인의 뼈가 든 함이 떠다닌다. 그 빛에 닿으면 옛 신의 기척이 깎여 나간다." },
+  waxfaithful: { id: "waxfaithful", name: "밀랍 신도", wound: { body: 3, main: 2, offhand: 2, head: 1 }, hp: 52, ac: 19, atk: 14, dice: [2, 8], mana: 40, packBuff: 1, packOf: "waxfaithful", attackText: "녹아내리는 손으로 움켜쥐었다", note: "성당 신자들의 기도가 굳어 생긴 밀랍 인형. 셋이 함께 기도하며 서로를 이끈다." },
+  seraph: { id: "seraph", name: "눈 많은 날개", wound: { head: 3, body: 2, main: 1, offhand: 1 }, hp: 80, ac: 23, atk: 15, dice: [2, 10], mana: 110, flying: true, fearHit: 0.2, purge: 3, attackText: "눈이 가득한 날개로 내리쳤다", note: "결계 틈으로 스며든 유일신의 사도. 날개마다 눈이 떠 있다." },
+  swallowed: { id: "swallowed", name: "삼켜진 것", wound: { body: 3, main: 2, offhand: 2, feet: 1 }, hp: 130, ac: 20, atk: 15, dice: [2, 12], mana: 120, regen: 3, nameBack: 3, attackText: "여러 얼굴이 엉긴 몸으로 덮쳤다", note: "유일신에게 먹힌 작은 옛 신들의 잔해. 상처가 저절로 메워진다. 쓰러뜨리면 그 이름 하나가 돌아온다." },
+  candle: { id: "candle", name: "마석 촛대", wound: { head: 2, body: 1 }, hp: 30, ac: 22, atk: 6, dice: [1, 6], mana: 1500, rare: true, escapeAfter: 3, attackText: "마석 촛농을 튀겼다", note: "촛대가 통째로 마석이다. 세 번 깜박이고 나면 꺼져 버린다." },
+  grail: { id: "grail", name: "마석 성배", wound: { head: 2, body: 1 }, hp: 36, ac: 23, atk: 6, dice: [1, 6], mana: 1600, rare: true, escapeAfter: 3, purge: 2, flying: true, attackText: "성배의 빛을 쏟았다", note: "성배가 통째로 마석이다. 그 빛은 옛 신의 기척을 조금 깎는다. 금세 날아가 버린다." },
+  wingshard: { id: "wingshard", name: "마석 날개 조각", wound: { head: 2, body: 1 }, hp: 44, ac: 24, atk: 7, dice: [1, 8], mana: 1750, rare: true, escapeAfter: 4, flying: true, attackText: "마석 깃으로 그었다", note: "부서진 사도의 날개 조각이 마석으로 굳었다. 결계 틈으로 스며 사라진다." },
+  mitre: { id: "mitre", name: "주인 없는 주교관", wound: { head: 3, body: 2, main: 1, offhand: 1 }, hp: 150, ac: 23, atk: 15, dice: [2, 10], mana: 120, elite: true, flying: true, purge: 6, summon: "waxfaithful", attackText: "주교 지팡이를 내리쳤다", note: "떠다니는 주교관과 제의. 속은 비었다. 3라운드마다 밀랍 신도를 불러 모은다. 목에 뒤집힌 성표를 걸고 있다." },
+  guardian: { id: "guardian", name: "봉인의 수호자", wound: { head: 2, body: 3, main: 2, offhand: 2, feet: 1 }, hp: 170, ac: 24, atk: 16, dice: [2, 12], mana: 0, hard: true, trial: true, attackText: "돌 주먹을 내리찍었다", note: "옛 신들이 세운 돌 수호자. 적이 아니라 시험관이다. 이기면 문을 열고, 지면 문 밖에 내려놓는다." },
+  avatar: { id: "avatar", name: "짝을 삼킨 빛의 화신", wound: { head: 2, body: 3, main: 2, offhand: 2, feet: 2 }, hp: 265, ac: 24, atk: 16, dice: [3, 10], mana: 300, radiance: true, purge: 5, rebirth: 170, swallow: 0.3, avatar: true, attackText: "얼굴 없는 빛으로 내리눌렀다", note: "유일신이 짝신을 삼키고 얻은 빛이 결계 틈으로 뻗어 나온 몸. 얼굴 자리에 짝신의 얼굴이 비친다. 3라운드마다 성광, 쓰러지면 한 번 다시 일어서서 권능을 삼킨다." },
+  judgeeye: { id: "judgeeye", name: "심판의 눈", hp: 600, ac: 31, atk: 21, dice: [4, 12], mana: 0, hard: true, fearHit: 0.3, hidden: true, flying: true, purge: 10, wound: { head: 3, body: 3, main: 2, offhand: 2, feet: 1 }, attackText: "천장에서 내려온 눈이 빛을 쏟았다", note: "흰 회랑 천장에서 내려오는 거대한 눈과 날개. 신전에 오래 머무는 자를 본다. 성소(3층)까지는 시선이 닿지 않는다." },
+  grandinquisitor: { id: "grandinquisitor", name: "심문관장", wound: { head: 3, body: 2, main: 1, offhand: 1, feet: 1 }, hp: 140, ac: 22, atk: 14, dice: [3, 8], mana: 0, human: true, purge: 5, attackText: "성인의 이름을 외치며 철퇴를 내리쳤다", note: "미궁 끝 신전까지 이단을 쫓아온 심문관들의 우두머리." },
+  // 진엔딩 결전(마을 영주성 — 미궁 밖이라 사람과 싸운다)
+  lord: { id: "lord", name: "늙지 않는 영주", wound: { head: 2, body: 3, main: 2, offhand: 2, feet: 1 }, hp: 260, ac: 24, atk: 17, dice: [3, 10], mana: 0, human: true, purge: 5, attackText: "보석 박힌 지팡이로 내리쳤다", note: "섬의 영주. 늙지 않는다. 그 눈은 사람의 것이 아니다." },
+  godavatar: { id: "godavatar", name: "유일신의 아바타", wound: { head: 2, body: 3, main: 2, offhand: 2, feet: 2 }, hp: 360, ac: 26, atk: 18, dice: [4, 10], mana: 0, radiance: true, purge: 10, swallow: 0.3, avatar: true, attackText: "흰빛이 된 손으로 내리눌렀다", note: "영주의 껍질을 벗고 나온 것. 짝을 삼킨 자가 직접 내민 손이다." },
   // 훈련소 허수아비(dummy.ts): 복사한 상태에서만 등장한다
   dummy: { id: "dummy", name: "짚 허수아비", hp: 30, ac: 13, atk: 0, dice: [1, 1], mana: 0, dummy: true, attackText: "흔들렸다" },
   dummyPack: { id: "dummyPack", name: "작은 허수아비", hp: 10, ac: 12, atk: 0, dice: [1, 1], mana: 0, dummy: true, attackText: "흔들렸다" },
@@ -433,14 +477,36 @@ export const SECTOR_ENCOUNTERS: Record<number, Record<number, { item: string[]; 
     ],
   },
 };
+SECTOR_ENCOUNTERS[6] = {
+  1: [
+    { item: ["hollowknight", "hollowknight"], w: 2 },
+    { item: ["censer", "litany", "litany", "litany"], w: 2 },
+    { item: ["penitchain"], w: 2 },
+    { item: ["litany", "litany", "litany", "litany", "litany"], w: 1 },
+    { item: ["hollowknight", "censer"], w: 1 },
+  ],
+  2: [
+    { item: ["executioner"], w: 2 },
+    { item: ["waxfaithful", "waxfaithful", "waxfaithful"], w: 2 },
+    { item: ["reliquary", "hollowknight"], w: 2 },
+    { item: ["penitchain", "censer"], w: 1 },
+    { item: ["executioner", "waxfaithful", "waxfaithful"], w: 1 },
+  ],
+  3: [
+    { item: ["seraph"], w: 2 },
+    { item: ["swallowed"], w: 2 },
+    { item: ["seraph", "seraph"], w: 1 },
+  ],
+};
 /** 섹터별 마석 희귀 개체(층마다 BAL.rareChance) */
-export const SECTOR_RARES: Record<number, string[]> = { 1: RARE_BY_FLOOR, 2: ["", "goldwolf", "manaharpy", "manawraith"], 3: ["", "pearlleech", "sporecap", "shellsnail"], 4: ["", "goldbat", "manabeetle", "frostspirit"], 5: ["", "scalebat", "manaeye", "shellworm"] };
+export const SECTOR_RARES: Record<number, string[]> = { 1: RARE_BY_FLOOR, 2: ["", "goldwolf", "manaharpy", "manawraith"], 3: ["", "pearlleech", "sporecap", "shellsnail"], 4: ["", "goldbat", "manabeetle", "frostspirit"], 5: ["", "scalebat", "manaeye", "shellworm"], 6: ["", "candle", "grail", "wingshard"] };
 /** 섹터별 정예 희귀 개체(마석 대신 고유 보상) */
 export const SECTOR_ELITES: Record<number, { id: string; escort: string[]; floors: number[]; reward: string }> = {
   2: { id: "harpyqueen", escort: ["harpy", "harpy"], floors: [2, 3], reward: "queencloak" },
   3: { id: "drownedchoir", escort: ["shroudmold", "shroudmold"], floors: [2, 3], reward: "choirbell" },
   4: { id: "cartmimic", escort: ["emberbat", "emberbat"], floors: [1, 2], reward: "hingeshield" },
   5: { id: "hungermother", escort: ["hungerwraith", "hungerwraith"], floors: [2, 3], reward: "twofacebowl" },
+  6: { id: "mitre", escort: ["waxfaithful", "waxfaithful"], floors: [1, 2], reward: "oldsigil" },
 };
 /** 섹터별 보스 무리 */
 export function bossGroup(sector: number, r: { int: (a: number, b: number) => number }): string[] {
@@ -448,6 +514,7 @@ export function bossGroup(sector: number, r: { int: (a: number, b: number) => nu
   if (sector === 3) return ["mycomother", "mold", "mold"];
   if (sector === 4) return ["furnacemother", "salamander", "salamander"];
   if (sector === 5) return ["abyssmaw", "tendril", "tendril"];
+  if (sector === 6) return ["avatar", "seraph", "seraph"];
   return ["boss", ...Array(r.int(2, 3)).fill("rat")];
 }
 /** 섹터별 보스 증표(처음 쓰러뜨릴 때 한 번만) — 이 레벨에서 다음 레벨로 가는 훈련의 대가 */
@@ -460,13 +527,14 @@ export const TROPHIES: { sector: number; item: "heart" | "banner" | "spore" | "s
   { sector: 5, item: "fang", name: "아귀의 검은 이빨", gateLevel: 15 },
 ];
 /** 섹터 이름(차원문을 넘을 때·화면 제목) */
-export const SECTOR_NAME: Record<number, string> = { 1: "지하 감옥", 2: "잊힌 전쟁터의 초원", 3: "물에 잠긴 사원", 4: "불타는 광산 갱도", 5: "바닥없는 균열" };
+export const SECTOR_NAME: Record<number, string> = { 1: "지하 감옥", 2: "잊힌 전쟁터의 초원", 3: "물에 잠긴 사원", 4: "불타는 광산 갱도", 5: "바닥없는 균열", 6: "타락한 신전과 차원문의 성소" };
 /** 야영 중 기습하는 무리 */
 export function campAmbush(sector: number, floor: number): string[] {
   if (sector === 2) return floor >= 2 ? ["wolf", "wolf"] : ["wolf"];
   if (sector === 3) return floor >= 2 ? ["leech", "leech"] : ["plaguerat", "plaguerat", "plaguerat"];
   if (sector === 4) return floor >= 3 ? ["frostwraith"] : ["emberbat", "emberbat", "emberbat"];
   if (sector === 5) return floor >= 2 ? ["tendril"] : ["riftbat", "riftbat", "riftbat"];
+  if (sector === 6) return floor >= 2 ? ["waxfaithful", "waxfaithful"] : ["litany", "litany", "litany", "litany"];
   return floor >= 2 ? ["rat", "rat"] : ["rat"];
 }
 
@@ -716,6 +784,40 @@ export const RIFT_RECORDS = [
   "\"차원문의 성소에서 영주를 보았다. 그는 늙지 않았다. 사람의 눈이 아니었다.\"",
   "\"굶주림의 신과 풍요의 신은 여기서 갈라졌다. 한쪽은 위로, 한쪽은 아래로.\"",
   "\"열여섯 살만 들어갈 수 있는 이유를 알았다. 아직 무엇에도 묶이지 않은 나이라서다.\"",
+];
+
+/** 6섹터 방 묘사(1·2층 흰 회랑·심문의 전당, 3층 차원문의 성소) */
+SECTOR_FLAVOR[6] = {
+  arrival: ["차원문을 빠져나오자 흰 대리석 회랑이 끝없이 이어진다. 섬의 성당과 똑같다. 성당의 종소리가 여기서도 들린다.", "성가가 끝없이 울린다. 벽감마다 빈 갑옷이 줄지어 서 있다."],
+  empty: [
+    "흰 대리석 회랑. 발소리가 성가에 묻힌다.",
+    "이름이 긁혀 지워진 석상들이 벽을 따라 서 있다. 옛 신들이다.",
+    "고해실의 휘장이 바람도 없이 흔들린다.",
+    "타다 만 문서 더미가 화로 곁에 쌓여 있다.",
+    "빈 갑옷 하나가 고개를 돌린 것 같다. 기분 탓이다.",
+    "화형대의 재가 아직 따뜻하다.",
+  ],
+  combat: ["성가의 박자가 바뀐다. 무언가 움직이기 시작한다.", "빈 갑옷들의 투구 안에서 빛이 켜진다.", "향 연기가 짙어진다. 그 너머에서 그림자가 다가온다."],
+  trap: ["바닥의 성구가 빛을 머금고 있다.", "대리석 이음매가 어딘가 어색하다."],
+  pit: ["회랑 바닥이 얇다. 아래에서 성가가 올라온다."],
+  treasure: ["봉헌된 궤짝이 제단 아래 놓여 있다.", "주인 잃은 순례자의 짐 꾸러미가 있다."],
+  record: ["화로 곁에 타다 만 이단 문서가 있다. 성당이 태우다 만 것이다.", "고해실 벽에 손톱으로 새긴 글이 있다."],
+  shrine: ["흰 회랑 구석, 성당의 상징을 덧칠한 옛 신의 작은 제단이 숨어 있다.", "부서진 옛 신상 앞에 누군가 꽃을 두고 갔다. 여기에도."],
+  offerbox: ["순례자들이 무언가를 넣고 간 봉헌함이다.", "자물쇠가 녹은 봉헌함. 안에서 무언가 빛난다."],
+  confession: ["고해실 안에서 누군가 기도하고 있다. 쇠사슬 끌리는 소리가 난다 — 이단심문관이다."],
+  altars: ["흰빛이 끝나고 오래된 돌과 풀이 나타난다. 여덟 개의 부서진 제단이 반원으로 서 있다. 옛 신들의 제단이다."],
+  boss: ["결계의 틈 앞, 얼굴 없는 빛이 서 있다. 그 얼굴 자리에 다른 얼굴이 비친다. 눈 많은 날개 둘이 그 곁을 지킨다."],
+  scepter: ["돌 제단 한가운데, 마법 셉터가 결계로 박혀 있다. 그 너머에서 여러 목소리가 기다린다."],
+  stairs: ["회랑 끝에서 아래로 내려가는 흰 계단이 보인다.", "성가가 아래에서 올라온다. 흰 계단이다."],
+};
+
+/** 6섹터 기록물: 성당이 태우다 만 이단 문서 */
+export const TEMPLE_RECORDS = [
+  "\"성당의 첫 사제는 영주가 데려왔다. 그 전에는 섬에 종이 없었다.\"",
+  "\"열여섯 살만 미궁에 들어갈 수 있게 한 것은 셉터가 아니다. 셉터를 원하는 자가 그렇게 정했다.\"",
+  "\"심문관들은 옛 신을 지우는 것이 아니다. 문 너머에 가둬 둘 뿐이다.\"",
+  "\"흰빛은 따뜻하지 않다. 그것은 먹은 것의 빛이다.\"",
+  "\"이 신전은 미궁 끝에 있는 것이 아니다. 미궁이 이 신전 앞에 있는 것이다.\"",
 ];
 
 /** 2섹터 기록물: 신들의 전쟁 */

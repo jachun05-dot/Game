@@ -1,6 +1,7 @@
 import { autoEat, camp, drinkPotion, eat, enterDungeon, moveTo, resolvePending, useScroll, type PendingChoice } from "./dungeon";
 import { answerInquisition, surrender, regen, prosthetic, useBandage, useHerb, buy, buyGear, closeSettlement, closeWeek, createHero, doActivity, eraseFrag, pickClass, rerollCandidates, sell, setTactics, train } from "./town";
 import { maxHp } from "./core";
+import { pietyCap } from "./faith";
 import { repair, useAntidote, useWhetstone } from "./hazards";
 import { syncCauses, useSalve } from "./fire";
 import type { CorrodeSlot } from "./gear";
@@ -21,8 +22,8 @@ export type Action =
   | { t: "sell"; item: ShopItem }
   | { t: "buyGear"; id: string }
   | { t: "closeWeek" }
-  /** 4주차: 마을에서 준비를 마치고 미궁에 들어간다(shortcut: 3섹터 클리어 뒤 4섹터로 곧장) */
-  | { t: "enterDungeon"; shortcut?: boolean }
+  /** 4주차: 마을에서 준비를 마치고 미궁에 들어간다(shortcut: 3섹터 클리어 뒤 4섹터부터 가장 깊이 열린 섹터 중 sector로 곧장) */
+  | { t: "enterDungeon"; shortcut?: boolean; sector?: number }
   /** 4섹터: 화상 연고 */
   | { t: "salve" }
   | { t: "move"; room: number }
@@ -65,6 +66,8 @@ export function apply(s: GameState, a: Action): void {
   // 최대 HP가 줄어드는 길(병이 나아 역병의 신 ★3이 꺼짐, 신앙 포기·하락, 장비 교체 등)이 많아
   // 행동이 끝날 때마다 현재 HP를 새 최대치로 한 번 맞춘다.
   if (s.phase !== "create" && s.phase !== "dead" && s.hero.hp > maxHp(s)) s.hero.hp = maxHp(s);
+  // 신앙심 상한도 장비(짝 잃은 반지)·편린(돌려받은 이름)을 빼면 줄어든다
+  if (s.piety > pietyCap(s)) s.piety = pietyCap(s);
 }
 
 function run(s: GameState, a: Action): void {
@@ -82,7 +85,7 @@ function run(s: GameState, a: Action): void {
       closeWeek(s);
       return;
     case "enterDungeon":
-      if (s.phase === "town" && s.week >= 4) enterDungeon(s, !!a.shortcut);
+      if (s.phase === "town" && s.week >= 4) enterDungeon(s, !!a.shortcut, a.sector);
       return;
     case "move": return moveTo(s, a.room);
     case "pending": return resolvePending(s, a.choice);

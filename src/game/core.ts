@@ -4,9 +4,10 @@ import { CLASSES } from "./classes";
 import { Rng } from "./rng";
 import { passive } from "./skills";
 import { fragStat } from "./fragments";
-import { abyssEdge, faithMaxHp, power } from "./faith";
+import { abyssEdge, faithMaxHp, power, relicAc } from "./faith";
 import { rageAc, rollMindPenalty } from "./mind";
 import { deathNotes } from "./autopsy";
+import { fallenEpilogue } from "./truth";
 import { GEAR, gearStat } from "./gear";
 import { injuryAc, injuryMaxHp, injuryRollPenalty, offhandAcPenalty } from "./injury";
 import type { DeathCause, GameState, LogKind, StatKey, Stats } from "./types";
@@ -42,7 +43,8 @@ export function maxHp(s: GameState): number {
 
 export function heroAc(s: GameState): number {
   return 10 + smod(s, "dex") + passive(s, "ac") + injuryAc(s) + offhandAcPenalty(s) + rageAc(s) + abyssEdge(s, s.hero.hp / maxHp(s)).ac
-    + (power(s, "greed", 5) && s.dungeon ? Math.min(3, Math.floor(s.dungeon.mana / 1000)) : 0); // 탐욕의 신 ★5 "황금의 몸"
+    + (power(s, "greed", 5) && s.dungeon ? Math.min(3, Math.floor(s.dungeon.mana / 1000)) : 0) // 탐욕의 신 ★5 "황금의 몸"
+    + relicAc(s); // 6섹터 유물
 }
 
 export function actionsPerRound(s: GameState): number {
@@ -138,7 +140,9 @@ export function kill(s: GameState, cause: DeathCause, detail?: string): void {
   if (s.recordsRead >= 10) faiths.push(FAITH.song);
 
   const d = s.dungeon;
-  const reached = d ? (d.endless ? `끝없는 미궁 ${d.floor}층` : `${d.sector}섹터 ${d.floor}층`) : s.rank > 0 ? `${s.rank}섹터 클리어` : "마을";
+  // 진엔딩 결전(영주성)에서 쓰러졌다: 일반 사망이 아니라 "영주에게 맞선 자" 묘비
+  const fallen = s.combat?.context === "final";
+  const reached = fallen ? "영주성" : d ? (d.endless ? `끝없는 미궁 ${d.floor}층` : `${d.sector}섹터 ${d.floor}층`) : s.rank > 0 ? `${s.rank}섹터 클리어` : "마을";
   const months = s.month;
   const epitaph = buildEpitaph(s, cause);
 
@@ -156,6 +160,7 @@ export function kill(s: GameState, cause: DeathCause, detail?: string): void {
     seed: s.seed,
     diedAt: new Date().toISOString(),
     notes: deathNotes(s, cause),
+    ...(fallen ? { ending: "fallen" as const, epilogue: fallenEpilogue() } : {}),
   };
   s.combat = null;
   s.phase = "dead";

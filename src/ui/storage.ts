@@ -47,6 +47,8 @@ function fixRun(s: GameState | null): GameState | null {
   s.inventory.firewood ??= 0;
   s.inventory.powder ??= 0;
   s.inventory.rope ??= 0;
+  s.inventory.incense ??= 0;
+  s.clues ??= [];
   s.inventory.whetstone ??= 0;
   s.inventory.antidote ??= 0;
   s.faithsKnown ??= s.hero.faith ? [s.hero.faith] : [];
@@ -55,7 +57,7 @@ function fixRun(s: GameState | null): GameState | null {
 }
 
 function fixMeta(m: Partial<Meta> | null | undefined): Meta {
-  return { graveyard: m?.graveyard ?? [], faiths: m?.faiths ?? [], codex: m?.codex ? mergeCodex(emptyCodex(), m.codex) : emptyCodex(), tipsSeen: m?.tipsSeen ?? [], tipsOff: m?.tipsOff ?? false };
+  return { graveyard: m?.graveyard ?? [], faiths: m?.faiths ?? [], codex: m?.codex ? mergeCodex(emptyCodex(), m.codex) : emptyCodex(), tipsSeen: m?.tipsSeen ?? [], tipsOff: m?.tipsOff ?? false, clues: m?.clues ?? [], endings: m?.endings ?? [] };
 }
 
 export function saveRun(s: GameState | null): void {
@@ -88,5 +90,6 @@ export function saveMeta(m: Meta): void {
 export function buryTomb(m: Meta, t: Tomb): Meta {
   if (m.graveyard.some((x) => x.id === t.id)) return m;
   const faiths = [...new Set([...m.faiths, ...t.faithsUnlocked])];
-  return { ...m, graveyard: [t, ...m.graveyard].slice(0, 200), faiths };
+  const endings = t.ending ? [...new Set([...(m.endings ?? []), t.ending])] : m.endings ?? [];
+  return { ...m, graveyard: [t, ...m.graveyard].slice(0, 200), faiths, endings };
 }

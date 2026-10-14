@@ -528,3 +528,11 @@ html, body, #root { height: 100%; }
 .equip li .item{min-width:5.5em}
 .map-sweeper{fill:none;stroke:var(--danger);stroke-width:2.5;stroke-dasharray:3 2}
 .sweeper-warn{border:1px solid var(--danger);color:var(--danger);padding:6px 10px;font-size:13px}
+/* 6섹터 엔딩 묘비 */
+.tomb-ending{border-radius:8px}
+.tomb-ending .tomb-cause{color:var(--bright)}
+.end-true{background:linear-gradient(#2a2817,#17130e);border-color:#8a7a3a}
+.end-true .tomb-cross{color:#e6cf73}
+.end-offering .tomb-cross{color:#8fb3c9}
+.tomb-epilogue{text-align:left;border-top:1px solid #4d4230;margin-top:10px;padding-top:8px}
+.tomb-epilogue p{margin:4px 0;line-height:1.6}

@@ -6,7 +6,7 @@ import { corrodedSlots, corrosionEffect, repairCost } from "../game/hazards";
 import { CLASSES } from "../game/classes";
 import { hasLevelTable } from "../game/elements";
 import { LAST_SECTOR } from "../game/endless";
-import { canShortcut } from "../game/dungeon";
+import { shortcutSectors } from "../game/dungeon";
 import { BLACK_MARKET_MULT, canTrain, innCost, outlawTrainerHere, gateOf, nextSkill, shopPrice, trainCost } from "../game/town";
 import type { GameState } from "../game/types";
 import { SKILLS } from "../game/skills";
@@ -29,11 +29,12 @@ const ITEM_INFO = {
   salve: { name: "화상 연고", desc: "화상 입은 부위 하나를 한 단계 (4섹터)" },
   firewood: { name: "장작", desc: "야영할 때 불을 피워 냉기 0 + 동상 한 단계 (4섹터)" },
   rope: { name: "밧줄", desc: "벼랑길을 반드시 건넌다 (5섹터)" },
+  incense: { name: "옛 신의 향", desc: "정화(신앙심을 깎는 흰빛)를 3번 막는다 — 외곽 밀수꾼의 물건 (6섹터)" },
 } as const;
 
 /** 3섹터 소모품은 2섹터를 클리어했거나 가지고 있을 때만 보여 준다 */
 function shopItems(s: GameState): (keyof typeof ITEM_INFO)[] {
-  const need: Partial<Record<keyof typeof ITEM_INFO, number>> = { antidote: 2, whetstone: 2, salve: 3, firewood: 3, rope: 4 };
+  const need: Partial<Record<keyof typeof ITEM_INFO, number>> = { antidote: 2, whetstone: 2, salve: 3, firewood: 3, rope: 4, incense: 5 };
   return (Object.keys(ITEM_INFO) as (keyof typeof ITEM_INFO)[]).filter((k) => s.rank >= (need[k] ?? 0) || s.inventory[k] > 0);
 }
 
@@ -69,7 +70,7 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
         </button>
       </div>
 
-      {tab === "act" && s.week >= 4 && <DungeonPrep s={s} busy={busy} onShop={() => setTab("shop")} onEnter={(shortcut) => dispatch({ t: "enterDungeon", shortcut })} />}
+      {tab === "act" && s.week >= 4 && <DungeonPrep s={s} busy={busy} onShop={() => setTab("shop")} onEnter={(shortcut, sector) => dispatch({ t: "enterDungeon", shortcut, sector })} />}
 
       {tab === "act" && s.week < 4 && s.heretic && !training && (
         <div className="stack">
@@ -312,7 +313,7 @@ function WeekTrack({ month, week }: { month: number; week: number }) {
 }
 
 /** 4주차: 미궁에 들어가기 전에 상점에 들를 기회 */
-function DungeonPrep({ s, busy, onShop, onEnter }: { s: GameState; busy: boolean; onShop: () => void; onEnter: (shortcut: boolean) => void }) {
+function DungeonPrep({ s, busy, onShop, onEnter }: { s: GameState; busy: boolean; onShop: () => void; onEnter: (shortcut: boolean, sector?: number) => void }) {
   const inv = s.inventory;
   return (
     <div className="stack">
@@ -327,7 +328,8 @@ function DungeonPrep({ s, busy, onShop, onEnter }: { s: GameState; busy: boolean
           {inv.salve > 0 && <> · 화상 연고 <b>{inv.salve}</b></>}
           {inv.firewood > 0 && <> · 장작 <b>{inv.firewood}</b></>}
           {inv.powder > 0 && <> · 화약통 <b>{inv.powder}</b></>}
-          {inv.rope > 0 && <> · 밧줄 <b>{inv.rope}</b></>} · 소지금 <b>{s.gold}G</b>
+          {inv.rope > 0 && <> · 밧줄 <b>{inv.rope}</b></>}
+          {inv.incense > 0 && <> · 옛 신의 향 <b>{inv.incense}</b></>} · 소지금 <b>{s.gold}G</b>
         </p>
         {inv.food < 3 && <p className="small warn">말린 고기가 적다 — 일주일을 버티기 어렵다.</p>}
         {s.hero.hp < maxHp(s) && <p className="small warn">HP {s.hero.hp}/{maxHp(s)} — 다 차지 않은 채 들어간다. (여관은 1~3주에만 쓸 수 있다. 물약을 넉넉히 챙기자)</p>}
@@ -338,11 +340,11 @@ function DungeonPrep({ s, busy, onShop, onEnter }: { s: GameState; busy: boolean
       <button className="btn primary wide" disabled={busy} onClick={() => onEnter(false)}>
         미궁으로 들어간다 →
       </button>
-      {canShortcut(s) && (
-        <button className="btn wide" disabled={busy} onClick={() => onEnter(true)}>
-          숏컷 — 곧장 4섹터로 <span className="dim small">· 1~3섹터를 건너뛴다 (남은 시간 {Math.round(BAL.shortcutTurns / 2)}시간)</span>
+      {shortcutSectors(s).map((k) => (
+        <button key={k} className="btn wide" disabled={busy} onClick={() => onEnter(true, k)}>
+          숏컷 — 곧장 {k}섹터로 <span className="dim small">· 1~{k - 1}섹터를 건너뛴다 (남은 시간 {Math.round(BAL.shortcutTurns / 2)}시간)</span>
         </button>
-      )}
+      ))}
     </div>
   );
 }

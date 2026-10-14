@@ -14,6 +14,7 @@ import { DeadScreen } from "./DeadScreen";
 import { GraveyardScreen } from "./GraveyardScreen";
 import { CodexScreen } from "./CodexScreen";
 import { mergeCodex } from "../game/fragments";
+import { FAITH } from "../game/data";
 import { GameScreen, HeroHeader, LogView } from "./components";
 
 export type Speed = 1 | 2 | 4 | 8 | 0; // 0 = 즉시
@@ -71,6 +72,15 @@ export function App() {
     });
   }, [s?.codex]);
 
+  // 진실 조각도 삶을 넘어 이어진다(영주의 칙서만은 진엔딩에 그 삶에서 다시 들어야 한다)
+  useEffect(() => {
+    if (!s?.clues?.length) return;
+    setMeta((m) => {
+      const clues = [...new Set([...(m.clues ?? []), ...s.clues!])];
+      return clues.length === (m.clues ?? []).length ? m : { ...m, clues };
+    });
+  }, [s?.clues]);
+
   const total = s?.logCount ?? 0;
   const busy = shown < total;
 
@@ -121,7 +131,11 @@ export function App() {
     const seed = (Date.now() ^ Math.floor(Math.random() * 1e9)) | 0;
     const run = newRun(seed);
     run.codex = structuredClone(meta.codex);
-    run.faithsKnown = [...meta.faiths];
+    // 진엔딩을 본 뒤로는 해금하지 않은 신도 시작 신앙으로 고를 수 있다
+    run.faithsKnown = meta.endings?.includes("true") ? [...new Set([...meta.faiths, ...Object.values(FAITH)])] : [...meta.faiths];
+    run.clues = [...(meta.clues ?? [])];
+    // 헌납 엔딩을 본 다음 삶: 첫 탐문에서 짝신의 이름을 꿈에서 듣는다
+    if (meta.endings?.includes("offering") && !run.clues.includes("name")) run.clueBits = ["dream"];
     setS(run);
     setShown(0);
     setAuto(false);
