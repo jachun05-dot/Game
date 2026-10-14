@@ -1,48 +1,66 @@
-# 작업 인수인계 (2026-10-13 세션 요약)
+# 작업 인수인계 (2026-10-14 갱신)
 
-새 세션이나 대화 요약 뒤에 이어서 작업할 때 이 파일부터 읽는다.
+새 세션이나 대화 요약 뒤에 이어서 작업할 때 이 파일부터 읽는다. 날짜별 상세는 `docs/NIGHT_LOG.md`, 결정은 `docs/DECISIONS.md`.
 
 ## 프로젝트
 - 레포 `jachun05-dot/Game`, 브랜치 `master`. 텍스트 기반 던전크롤 로그라이크 웹게임 "DDD — 열여섯 살, 미궁으로"
-- 플레이 링크(비공개 아티팩트): https://claude.ai/artifact/3hRQb1UtFGqHvFAGstGNdy
-  - 배포: `npx vite build` → `dist/assets/*`를 스크래치패드 `artifact/assets`로 복사, `artifact/index.html`의 js/css 파일명 교체 → Artifact publish(이전 해시 파일은 `null`로 제거)
+- 플레이 링크(아티팩트, 링크가 있으면 누구나): https://claude.ai/artifact/3hRQb1UtFGqHvFAGstGNdy
+  - 배포: `npx vite build` → `dist/assets/index-*.js/css`를 스크래치패드 `artifact/assets`로 복사, `artifact/index.html`의 파일명 교체 → 라이브 페이지와 이전 파일을 먼저 읽어 내 사본과 같은지 확인 → Artifact publish(`files`: 새 파일 경로, 이전 해시 파일은 `null`). 비주얼 세션이 올린 새 PNG(`public/*.png`)는 확인한 뒤 함께 올린다
+- 밸런스 대시보드: https://claude.ai/artifact/EdnPKEXh8AyH3kpxd8nL42 (데이터 `docs/balance/*.json`)
 - 참고작: slbcareer.com(이번 생은 야구다), kickru.com(벤치에서 발롱까지), 1in8b.life(80억 분의 1) — 텍스트+카드, 턴 결과 리포트, 성장
-- 기획 원본은 사용자 PC의 다른 세션("게임 신앙 시스템 디자인 논의")에서 가져와 `docs/DESIGN.md`로 복원. 그리드 턴제 → 텍스트 게임으로 전환함
+
+## 세션 분담
+- **비주얼 세션**: 그림(PNG)과 `src/ui/art.ts` 데이터 줄만 master에 푸시한다. 빌드·배포는 하지 않는다
+- **게임플레이 세션(이쪽)**: 규칙·UI·빌드·배포. 비주얼이 할 일은 `docs/VISUAL_HANDOFF.md` 10절에 날짜별로 적고, 끝난 항목은 취소선
+- 아트: 사용자가 Gemini(구독, API 키 없음)로 생성 → 채팅에 첨부 → 마젠타 배경·워터마크 제거, 도트 복원(`docs/ART_PROMPTS.md`)
+
+## 사용자 방침(지켜야 할 것)
+- 버그 수정만 할 때는 규칙·수치를 바꾸지 않는다
+- 난이도는 더 올리지 않는다(전체적으로 조금 쉬운 쪽). 2섹터는 쉬어 가는 곳이라 지금 정도가 적당
+- 몬스터 내성은 아직 넣지 않는다
+- 미궁에 사람은 나오지 않는다(이단심문관만 예외)
+- API 키·토큰을 요구하지 않는다. PR은 요청할 때만
+- 푸시 전 `git fetch origin master && git merge`
 
 ## 문서
-- **비주얼 작업은 별도 세션** → `docs/VISUAL_HANDOFF.md`(분담 규칙, 아트 방향, 그림 목록, UI 구조, 스크린샷·후처리 도구)
-- `docs/DESIGN.md` 기획(14절 = 텍스트 진행 구조), `docs/DECISIONS.md` 결정 기록(시간순), `docs/PROTOTYPE.md` 구현 범위·수치·시뮬 결과, `docs/ART_PROMPTS.md` 아트 파이프라인
-- 아트: 사용자가 Gemini(구독, API 키 없음)로 생성 → 채팅에 이미지 첨부 → Claude가 마젠타 배경·워터마크 제거, 100격자 도트 복원. 기준 이미지 `assets/reference/style_reference.png`, 얼굴 `public/hero-face.png`
+- `docs/DESIGN.md` 기획(14절 = 텍스트 진행 구조), `docs/DECISIONS.md` 결정 기록(시간순), `docs/NIGHT_LOG.md` 작업 일지
+- 직업 기술표: `docs/MAGE.md`, `docs/WARRIOR.md`, `docs/ADVENTURER.md` / 최신 밸런스 `docs/CLASS_BALANCE.md`
+- `docs/PROTOTYPE.md` 시스템별 구현 기록(절마다 날짜, 옛 절은 표시해 둠)
+- `docs/SECTOR3_DRAFT.md` 3섹터 초안 — 사용자 결정 14개를 기다리는 중
+- `docs/VISUAL_HANDOFF.md` 비주얼 세션 전달(분담 규칙, 아트 방향, UI 구조, 할 일 10절)
 
 ## 환경 메모
 - npm 기본 레지스트리 차단 → `.npmrc`로 `registry.yarnpkg.com` 사용
-- 테스트 `npx vitest run`(16개), 타입 `npx tsc -b`, 빠른 실행은 `bun`도 가능
-- 밸런스: `bun scripts/sim-all.ts 1000`(직업별 첫 달 사망·12개월 클리어), `bun scripts/sim-boss.ts`, `scripts/sim.ts`, `scripts/sim-month1.ts`
-- 브라우저 확인: Playwright(`NODE_PATH=$(npm root -g)`), `npx vite preview --port 4173`
+- 테스트 `npx vitest run`(99개), 타입 `npx tsc -b`, 시뮬은 `bun`
+- 브라우저 확인: Playwright(`NODE_PATH=$(npm root -g)`), `npx vite preview --port 4173`. `pkill`을 명령 체인에 섞지 않는다
+- 시뮬레이션
+  - `bun scripts/sim-report.ts [판수] [샤드] [샤드 수]` 직업 3 × 목표 3 × 신앙 9 = 81조합(대시보드 데이터)
+  - `bun scripts/sim-mage.ts …` 직업·갈래별 방식(`scripts/plans.ts`, `PLANS=` 접두어 필터, `GOAL=`)
+  - `bun scripts/sim-gate.ts …` 같은 영웅의 레벨 3 vs 3→4 특수 훈련 후 비교
+  - `bun scripts/sim-sector2.ts`, 퍼저 `scripts/fuzz.ts`(SCEN=mix)·`fuzz-ui.tsx`·`fuzz-determinism.ts`
+  - 옛 스크립트 `sim-all/sim-boss/sim-month1/sim.ts`는 2026-10-13 기준선용
 
 ## 코드 구조
-- `src/game/` 순수 로직. `engine.ts`의 `act/apply(action)`가 진입점, 시드 RNG(`rng.ts`)로 결정론적
-  - `town.ts` 생성·직업 선택·주간 활동(훈련/탐문/숲)·상점·정산, `dungeon.ts` 방 그래프 층 생성·이동·함정/매복·보물/장비·야영·귀환, `combat.ts` 자동 전투, `skills.ts` 기술, `gear.ts` 장비 9슬롯, `classes.ts` 직업, `data.ts` 수치(BAL)·몬스터·조우표, `bot.ts` 자동 결정 겸 시뮬 봇, `josa.ts` 조사
-- `src/ui/` React. 고정 레이아웃(상단 헤더/가운데 스크롤/하단 선택지 도크), ⚙ 설정(속도·자동 결정·전투 방침), 캐릭터 시트(장비), 저장은 localStorage(+ 복사/붙여넣기 내보내기), 구 저장 보정은 `storage.ts`
+- `src/game/` 순수 로직. `engine.ts`의 `act/apply(action)`가 진입점, 시드 RNG(`rng.ts`)로 결정론적. 행동마다 HP를 최대치로 자른다
+  - `town.ts` 생성·직업·주간 활동·상점·훈련·정산, `dungeon.ts` 층 생성·이동·함정·보물·야영·귀환, `combat.ts` 자동 전투(한 행동 안에서 끝남, 일방적인 전투는 로그 접기)
+  - `elements.ts` 훈련 레벨표(마법사 원소·전사 방향·모험가 갈래), `skills.ts` 기술 정의·패시브, `classes.ts` 직업, `gear.ts` 장비, `data.ts` 수치(BAL)·몬스터·조우표·훈련
+  - `faith.ts` 신앙, `fragments.ts` 편린, `injury.ts` 부상·질병, `mind.ts` 정신 상태이상, `autopsy.ts` 묘비 사망 요약, `bot.ts` 자동 결정 겸 시뮬 봇(`setMagePlan`으로 갈래 계획 주입), `josa.ts` 조사
+- `src/ui/` React. 고정 레이아웃(헤더/스크롤/하단 도크), ⚙ 설정(속도·자동 결정·전투 방침·처음 안내·용어 사전), 캐릭터 시트, 안내 카드(`tips.ts`), 저장은 localStorage(+ 내보내기), 구 저장 보정 `storage.ts`, 그림 연결 `art.ts`
 
-## 지금까지 확정된 게임 규칙(요약)
-- 한 달 = 마을 1~3주(주마다 활동 1개 + 결과 카드) + 4주차 미궁(336턴=7일) → 월말 정산·세금(미납 시 처형)
-- 미궁: 1섹터 3층, 층 = 방 그래프(??? 방은 감각으로 엿보기), 3층 보스 → 차원문(2섹터는 미구현)
-- 전투 완전 자동. 플레이어는 전투 방침(물약/도주 HP 기준)만 설정. 기술 = 조건부 자동 발동 액티브 + 패시브, 훈련마다 3단계 사다리로 습득
-- 직업: 모험가(일반 훈련 전부)·전사(장검+가죽 갑옷, 전장 훈련)·마법사(지팡이 지능 마력탄+로브, 주문학). 후보 카드 능력치가 직업 성향으로 쏠림(합 30)
-- 장비 9슬롯, 대장간 판매 + 보물상자/보스 드롭(착용 or 두고 가기)
-- 고블린은 비겁: 함정방에 매복, 함정 밟고 다치면 기습, 해체하면 도주. 층마다 0.8% 희귀 개체(마석 180~220G, 몇 라운드 뒤 도주)
-- 2섹터 "잊힌 전쟁터의 초원" 구현(차원문 진입, 남은 시간 ×2, 하피 여왕, 장군, 휘장 6→7) — PROTOTYPE.md 2섹터 절
-- 정신 상태이상 2차(공포·분노·혼란·절망, 숨김·눈치채기·조합)
-- 부상·질병 1차(부위 5곳·쥐 열병·꺼진 바닥·여관/재생/의수) → 이후 경제 완화로 재조정 완료(첫 달 사망 ~27%, 클리어 ~38%)
-- 신앙: 8신 권능(역병·심연·망각 포함), 나중에 ★5로 확장 예정(DECISIONS.md)
-- 신앙(이전 기록): 5신 권능(★1~3)·성소 개종·이단 심문/현상수배/이단심문관 — PROTOTYPE.md 신앙 절
-- 비운 전투방은 8시간마다 30% 리젠(마석 절반)
-- 소지금 0G 시작(직업별 지급 장비·소모품), 첫 달 훈련 불가
-- 레벨 3→4 훈련은 1섹터 보스의 "거대 쥐의 마석 심장" 필요
-- 편린(원작 "정수"의 다른 이름): 미궁 몬스터 처치 시 최대 3%, 능력치 + 일부는 패시브/액티브 능력, 칸 = 1 + floor(레벨/3). 신전에서 1000G로 지우기, 처음 보는 편린은 ???, 몬스터 도감(삶을 넘어 유지). 세금은 해마다 +40G (PROTOTYPE.md 편린 절)
-- 자동 결정 목표: 탐험(기본·밸런스 기준)/돌파/파밍 — PROTOTYPE.md 자동 결정 목표 절
-- 밸런스 목표(봇 기준): 첫 달 사망 ~30%, 12개월 내 1섹터 클리어 ~40% → 현재 세 직업 모두 달성
+## 지금 규칙(요약)
+- 한 달 = 마을 1~3주(주마다 활동 1개) + 4주차 미궁(336턴=7일) → 월말 정산·세금(미납 시 처형, 해마다 +40G). 첫 달 훈련 불가
+- 미궁: 섹터당 3층 방 그래프, 3층 보스 → 차원문. 1섹터(쥐·고블린·스켈레톤), 2섹터 "잊힌 전쟁터의 초원"(남은 시간 ×2, 하피 여왕, 장군)
+- 전투 완전 자동. 플레이어는 전투 방침(물약/도주 HP 기준)만 고른다
+- **훈련 = 레벨표**: 훈련 갈래마다 레벨별로 배우는 기술이 정해져 있다(짝수 패시브, 홀수 액티브). 4·7·10레벨은 보스 재료(마석 심장·장군의 휘장·3섹터 전리품)가 드는 특수 훈련 → 그 갈래의 특화(액티브 전투당 +1회). 훈련마다 직업 기본 능력치 +1과 갈래 능력치 +1
+  - 마법사: 화염(지능·힘)·서리(지능·감각)·번개(지능·민첩)·대지(지능·체력), 첫 기술 마력 화살
+  - 전사: 수호(힘·체력, 방패 기술은 방패가 있어야)·검투(힘·민첩)·광전(힘·힘), 첫 기술 기선 제압
+  - 모험가: 전사형(힘·체력)·마법사형(지능·감각)·민첩형(민첩·행운), 숏소드는 힘·민첩 중 높은 쪽, 첫 기술 섬광 가루
+- 장비 9슬롯, 대장간 + 보물상자/보스 드롭. 편린(능력치·능력, 칸 = 1 + 레벨/3), 몬스터 도감·신앙 해금은 삶을 넘어 유지
+- 신앙 8신(★1~3), 성소 개종, 이단 심문·현상수배·이단심문관
+- 부상(부위 5곳 × 경상·중상·결손)·쥐 열병, 정신 상태이상(공포·분노·혼란·절망, 숨김·눈치채기·조합)
+- 지금 밸런스(탐험·신앙 없음): 12개월 1섹터 클리어 약 56~73%, 첫 달 사망 14~17%(`docs/CLASS_BALANCE.md`)
 
-## 미구현/다음 후보
-- 직업별 초상화, 로그·성직자, 히든 트레이닝, 3섹터 이후, 탐문 단서·진엔딩, 몬스터/장소 이미지(Gemini 프롬프트)
+## 다음 후보
+- 3섹터(`docs/SECTOR3_DRAFT.md` 결정 대기), 10레벨 특수 훈련
+- 민첩 직업(모험가 민첩형이 미리보기), 성직자, 히든 트레이닝, 탐문 단서·진엔딩
+- 비주얼: `docs/VISUAL_HANDOFF.md` 10절
