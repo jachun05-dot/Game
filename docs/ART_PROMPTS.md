@@ -438,3 +438,92 @@ Solid flat magenta background (#FF00FF). No text, no numbers, no frame or border
 ```
 
 결과(2026-10-13): 1차 채택. 이 시트만 **200격자**라 목걸이가 다른 아이콘의 두 배(35×52, 28×56)로 나왔다. 얇은 끈이 마젠타와 섞여 있어 지우면 끈이 사라지므로, 마젠타 낀 어두운 픽셀은 초록값 기준 어두운 갈색으로 **색만 되돌리고**(172개) 배경에 가까운 밝은 것만 투명(109개). 절반 축소(어두운 선 우선)도 해 봤지만 염주 알·태양 부적이 뭉개져 원래 크기를 쓴다 → 장비 아이콘 칸은 최소 32×32에서 늘어나고, 장비 목록 아이콘 열은 36px
+
+## 2섹터 몬스터 공통 규칙
+
+2섹터 "잊힌 전쟁터의 초원". 1섹터와 같은 월드 스케일, 왼쪽을 본다. 짐승(늑대·까마귀·하피)은 금색 눈, 망령 계열(유령 군마·망령 병사·장군)은 차가운 회청색 눈빛 `#9fb4c0`(1섹터 마석 청록과 섞이지 않게). 희귀 개체는 기본형을 두 번째로 첨부해 변형한다.
+
+**200격자로 온 스프라이트**: Gemini가 가끔 도트 2.56px(200격자)로 그린다. 100격자로 줄이면 점무늬로 뭉개지므로 200격자 원본을 쓰고, 짝수 크기로 맞춘 뒤 `art.ts`에는 **크기를 절반으로** 적는다(화면 코드 그대로 월드 스케일, 고해상도 화면에서 도트가 더 촘촘). 번짐은 `defringe`(투명과 맞닿은 마젠타 낀 픽셀 3겹 제거 + 안쪽은 주변색 중앙값).
+
+## 026 — 들늑대 (기준 이미지 첨부)
+
+```
+Match the exact art style, outline, palette and pixel scale of the attached reference image.
+
+Pixel art game sprite of a single creature, 3/4 side view facing left, classic 16-bit RPG style, same world scale as the reference boy (the wolf's back reaches about the boy's waist).
+A lean, hungry grassland wolf from an old forgotten battlefield in a grim dark-fantasy world: shaggy dusty grey-brown fur, ribs showing, a torn ear, yellow eyes, lips pulled back over yellowed fangs, head low and stalking forward.
+Muted earthy palette of about 14 colors: dusty grey, dark brown, dry straw ochre; dull gold (#cf9a44) only on the eyes.
+Crisp hard pixel edges, 1-pixel dark outline, no anti-aliasing, no blur, no gradients, no noisy dithering.
+Full body, centered, small margin around it.
+Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, no frame or border. Square 1:1 image.
+```
+
+## 027 — 우두머리 늑대 (기준 이미지 첨부)
+
+```
+Match the exact art style, outline, palette and pixel scale of the attached reference image.
+
+Pixel art game sprite of a single creature, 3/4 side view facing left, classic 16-bit RPG style, same world scale as the reference boy (a big wolf whose shoulder reaches the boy's chest, clearly larger than a normal wolf).
+The alpha of a grassland wolf pack on an old forgotten battlefield in a grim dark-fantasy world: massive, thick dark grey mane, many old scars across the muzzle, one milky blind eye, a broken arrow shaft still stuck in its shoulder, standing tall and howling a command with its head raised.
+Muted earthy palette of about 14 colors: dark grey, dusty brown, bone; dull gold (#cf9a44) only on the one good eye.
+Crisp hard pixel edges, 1-pixel dark outline, no anti-aliasing, no blur, no gradients, no noisy dithering.
+Full body, centered, small margin around it.
+Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, no frame or border. Square 1:1 image.
+```
+
+## 028 — 까마귀 (기준 이미지 첨부)
+
+```
+Match the exact art style, outline, palette and pixel scale of the attached reference image.
+
+Pixel art game sprite of a single small creature, 3/4 side view facing left, classic 16-bit RPG style, same world scale as the reference boy (a crow is tiny, only about the size of the boy's head, so it is small in the frame).
+A carrion crow that grew fat on the dead of an old battlefield in a grim dark-fantasy world: ragged black feathers with a faint blue-grey sheen, wings half spread as it swoops in to peck, sharp grey beak open, a small beady eye.
+Muted palette of about 10 colors: black, blue-grey, dark grey; dull gold (#cf9a44) only on the eye.
+Crisp hard pixel edges, 1-pixel dark outline, no anti-aliasing, no blur, no gradients, no noisy dithering.
+Centered, small margin around it.
+Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, no frame or border. Square 1:1 image.
+```
+
+## 029 — 하피 (기준 이미지 첨부)
+
+```
+Match the exact art style, outline, palette and pixel scale of the attached reference image.
+
+Pixel art game sprite of a single creature, front-facing 3/4 view facing left, classic 16-bit RPG style, same world scale as the reference boy (a harpy's body is about the boy's height, with wide wings).
+A harpy of the forgotten battlefield in a grim dark-fantasy world: a gaunt, monstrous bird-woman with a hollow-cheeked grey face, wild matted dark hair, mouth open in a shriek, large ragged brown-grey wings spread as she hovers in the air, scaly bird legs with long hooked talons reaching forward. Monstrous and frightening, not attractive; no exposed chest, the torso is covered in dark feathers.
+Muted palette of about 16 colors: dusty brown, ash grey, sickly pale grey skin, black; dull gold (#cf9a44) only on the eyes.
+Crisp hard pixel edges, 1-pixel dark outline, no anti-aliasing, no blur, no gradients, no noisy dithering.
+Full body, centered, wings fully inside the frame, small margin around it.
+Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, no frame or border. Square 1:1 image.
+```
+
+## 030 — 유령 군마 (기준 이미지 첨부)
+
+```
+Match the exact art style, outline, palette and pixel scale of the attached reference image.
+
+Pixel art game sprite of a single creature, 3/4 side view facing left, classic 16-bit RPG style, same world scale as the reference boy (a full-size warhorse, its back is higher than the boy's head; fill about 90% of the image width).
+A ghost warhorse that still charges across an old forgotten battlefield in a grim dark-fantasy world: a gaunt, half-rotted horse with patches of bone showing through, a torn and rusty barding of chain and faded cloth, a broken saddle with no rider, empty dark eye sockets with a faint cold pale-blue light, rearing slightly as if about to charge.
+Muted palette of about 16 colors: ash grey, bone, rusty iron, dark brown, faded dark red cloth; a cold pale blue-grey (#9fb4c0) only in the eye sockets, drawn with 2 flat shades, no soft glow.
+Crisp hard pixel edges, 1-pixel dark outline, no anti-aliasing, no blur, no gradients, no noisy dithering.
+Full body, centered, hooves visible, small margin around it.
+Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, no frame or border. Square 1:1 image.
+```
+
+## 031 — 망령 병사 (기준 이미지 첨부)
+
+```
+Match the exact art style, outline, palette and pixel scale of the attached reference image.
+
+Pixel art game sprite of a single creature, front-facing 3/4 view facing left, classic 16-bit RPG style, same world scale as the reference boy (an adult soldier, a head taller than the boy; fill about 95% of the image height).
+A wraith soldier still fighting a war that never ended, on an old forgotten battlefield in a grim dark-fantasy world: a gaunt translucent grey figure in dented, rusted plate and torn faded tabard, a cracked open-faced helmet showing a hollow, skull-like face with a faint cold pale-blue light in the eyes, holding a notched old sword raised, mouth open in a silent war cry.
+Muted palette of about 16 colors: ash grey, rusty iron, faded dark red cloth, bone; a cold pale blue-grey (#9fb4c0) only in the eyes, drawn with 2 flat shades, no soft glow.
+Crisp hard pixel edges, 1-pixel dark outline, no anti-aliasing, no blur, no gradients, no noisy dithering.
+Full body, centered, feet visible, small margin around it.
+Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, no frame or border. Square 1:1 image.
+```
+
+결과(2026-10-14, 026~031): 모두 1차 채택.
+- 들늑대 80×48, 우두머리 늑대 78×62(어깨에 부러진 화살, 하울링), 까마귀 37×35(요청보다 조금 크지만 날개를 편 크기로 자연스러움), 하피 93×85 — 100격자
+- 유령 군마 170×190 → 85×95, 망령 병사 150×190 → 75×95 — 200격자 원본, 마젠타 번짐 494·460픽셀 제거
+- `public/mon-{wolf,alphawolf,crow,harpy,warhorse,wraith}.png`, `MONSTER_ART`에 등록(도감·전투 로그에 자동 반영 — 빌드는 게임 세션에서)

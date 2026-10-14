@@ -35,6 +35,13 @@ export const MONSTER_ART: Record<string, SpriteArt> = {
   goldrat: { src: "./mon-goldrat.png", w: 36, h: 24 },
   jewelgoblin: { src: "./mon-jewelgoblin.png", w: 60, h: 71 },
   crystalskel: { src: "./mon-crystalskel.png", w: 82, h: 92 },
+  // 2섹터 잊힌 전쟁터의 초원
+  wolf: { src: "./mon-wolf.png", w: 80, h: 48 },
+  alphawolf: { src: "./mon-alphawolf.png", w: 78, h: 62 },
+  crow: { src: "./mon-crow.png", w: 37, h: 35 },
+  harpy: { src: "./mon-harpy.png", w: 93, h: 85 },
+  warhorse: { src: "./mon-warhorse.png", w: 85, h: 95 },  // 200격자 원본(도트 2배 촘촘) — 크기는 월드 스케일로 절반
+  wraith: { src: "./mon-wraith.png", w: 75, h: 95 },  // 200격자 원본(도트 2배 촘촘) — 크기는 월드 스케일로 절반
 };
 
 
