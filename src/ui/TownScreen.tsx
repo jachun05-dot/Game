@@ -12,7 +12,7 @@ import type { StatKey } from "../game/types";
 import type { Ctl } from "./App";
 import { josa } from "../game/josa";
 import { INJ, LIMBS, PART_NAME, anyInjury } from "../game/injury";
-import { Card, GameScreen, GearIcon, GearList, HeroHeader, LevelTable, LogView, FaithCard, InjuryCard, FragList, SPECIAL_LEVELS, SceneBanner, SkillList, StatGrid, TacticsBar } from "./components";
+import { Card, GameScreen, GearIcon, GearList, HeroHeader, LevelTable, LogView, FaithCard, InjuryCard, FragList, SPECIAL_LEVELS, SceneBanner, buildAdvice, SkillList, StatGrid, TacticsBar } from "./components";
 
 const ITEM_INFO = {
   food: { name: "말린 고기", desc: "포만감 +40" },
@@ -308,6 +308,11 @@ function TrainingPanel({ ctl, onClose }: { ctl: Ctl; onClose: () => void }) {
           );
         })}
       </div>
+      {buildAdvice(s).map((a) => (
+        <p key={a} className="small accent">
+          → {a}
+        </p>
+      ))}
       {needShield && <p className="small warn">🛡 지금 방패가 없어 【{SKILLS[sk!].name}】을(를) 배워도 쓸 수 없다. 대장간에서 나무 방패({GEAR.shield.price}G)를 먼저 사 두자.</p>}
       <p className="eyebrow">자유 배분 2포인트 (같은 능력치에 두 번도 가능)</p>
       <div className="chips">

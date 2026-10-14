@@ -10,7 +10,8 @@ import { CLASSES } from "../game/classes";
 import { SKILLS, skillWorks } from "../game/skills";
 import { hasLevelTable, levelSkill } from "../game/elements";
 import { TRAININGS } from "../game/data";
-import { hasShield } from "../game/gear";
+import { hasShield, weaponOf } from "../game/gear";
+import { BRANCH_SKILLS } from "../game/elements";
 import type { AutoGoal, GameState } from "../game/types";
 import type { Ctl, Speed } from "./App";
 import { CharacterSheet } from "./CharacterSheet";
@@ -555,16 +556,41 @@ export function BuildSummary({ s }: { s: GameState }) {
     })
     .filter((p) => p.n > 0);
   if (!parts.length) return <p className="dim small">아직 갈래를 정하지 않았다.</p>;
+  const advice = buildAdvice(s);
   return (
-    <p className="small">
-      {parts.map((p, i) => (
-        <span key={p.name}>
-          {i ? " · " : ""}
-          <b>{p.name}</b> {p.n}개{p.marked ? " (특화)" : ""}
-        </span>
+    <>
+      <p className="small">
+        {parts.map((p, i) => (
+          <span key={p.name}>
+            {i ? " · " : ""}
+            <b>{p.name}</b> {p.n}개{p.marked ? " (특화)" : ""}
+          </span>
+        ))}
+      </p>
+      {advice.map((a) => (
+        <p key={a} className="small accent">
+          → {a}
+        </p>
       ))}
-    </p>
+    </>
   );
+}
+
+/** 모험가: 고른 갈래와 손에 든 무기가 엇갈릴 때의 조언(규칙은 그대로, 안내만) */
+export function buildAdvice(s: GameState): string[] {
+  if (s.hero.cls !== "adventurer") return [];
+  const out: string[] = [];
+  const has = (line: "fighter" | "caster") => Object.values(BRANCH_SKILLS[line]).filter((id) => s.skills.includes(id)).length;
+  const fighter = has("fighter");
+  const caster = has("caster");
+  const int = stat(s, "int");
+  const melee = Math.max(stat(s, "str"), stat(s, "dex"));
+  const w = weaponOf(s);
+  if (w.magic && melee > int + 1) out.push(`지팡이는 지능(${int})으로 싸운다. 힘·민첩(${melee})이 더 높으니 숏소드처럼 힘·민첩을 따르는 무기가 낫다.`);
+  else if (!w.magic && caster >= 2 && int > melee + 1) out.push(`지능(${int})이 힘·민첩(${melee})보다 높다. 대장간의 지팡이(${GEAR.staff.price}G)를 들면 기본 공격도 지능을 따른다.`);
+  if (fighter >= 1 && caster >= 1)
+    out.push("전사형 기술은 무기 공격(힘·민첩)을, 마법사형 주문은 지능을 따른다. 두 갈래를 섞으면 능력치가 나뉘니, 특수 훈련 전에 주력 하나를 정해 두자.");
+  return out;
 }
 
 /** 처음 안내 카드: 지금 상황에 맞는, 아직 안 본 안내 하나 */
