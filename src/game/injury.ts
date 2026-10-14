@@ -35,9 +35,9 @@ export const INJ = {
   diseaseBoss: 0.15,
   /** 미궁에서 나오면 경상 자연 치유 판정(체력) DC */
   healDc: 12,
-  innCost: 10,
-  regenCost: 800,
-  prostheticCost: 120,
+  innCost: 40,
+  regenCost: 2000,
+  prostheticCost: 300,
 };
 
 export function emptyInjuries(): Record<Part, number> {

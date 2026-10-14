@@ -8,7 +8,7 @@ import { BLACK_MARKET_MULT, canTrain, innCost, gateOf, nextSkill, shopPrice, tra
 import type { GameState } from "../game/types";
 import { SKILLS } from "../game/skills";
 import { FRAGMENTS, fragStatText } from "../game/fragments";
-import { taxDue, yearOf } from "../game/core";
+import { maxHp, taxDue, yearOf } from "../game/core";
 import type { StatKey } from "../game/types";
 import type { Ctl } from "./App";
 import { josa } from "../game/josa";
@@ -81,7 +81,7 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
             onClick={() => dispatch({ t: "activity", a: "inn" })}
           />
           <ActivityButton title="훈련소 허수아비" sub={`시간이 들지 않는다 · ${DUMMY_ROUNDS}라운드 동안 준 피해를 잰다`} disabled={busy} onClick={() => setDummy(true)} />
-          <p className="dim small">{yearOf(s.month)}년차 · 다음 달 세금: {taxDue(s.month + 1, s.rank)}G (미납 시 처형 · 해가 바뀔 때마다 {BAL.taxPerYear}G씩 오른다)</p>
+          <p className="dim small">{yearOf(s.month)}년차 · 다음 달 세금: {taxDue(s.month + 1, s.rank)}G (미납 시 처형 · 해가 바뀔 때마다 {BAL.taxPerYear}G, 섹터를 클리어해 이름이 알려지면 더 오른다) · 상점가 물가 ×{(s.priceIndex ?? 1).toFixed(2)}</p>
           <div className="row">
             <button className="btn ghost small" onClick={onGraveyard}>
               묘지 들르기
@@ -291,6 +291,7 @@ function DungeonPrep({ s, busy, onShop, onEnter }: { s: GameState; busy: boolean
           {inv.herb > 0 && <> · 약초 탕약 <b>{inv.herb}</b></>} · 소지금 <b>{s.gold}G</b>
         </p>
         {inv.food < 3 && <p className="small warn">말린 고기가 적다 — 일주일을 버티기 어렵다.</p>}
+        {s.hero.hp < maxHp(s) && <p className="small warn">HP {s.hero.hp}/{maxHp(s)} — 다 차지 않은 채 들어간다. (여관은 1~3주에만 쓸 수 있다. 물약을 넉넉히 챙기자)</p>}
       </Card>
       <button className="btn" disabled={busy} onClick={onShop}>
         {s.heretic ? "암시장 들르기" : "상점가 · 대장간 들르기"}

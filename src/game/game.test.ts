@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Rng } from "./rng";
 import { enterDungeon, generateFloor } from "./dungeon";
-import { newRun } from "./town";
+import { newRun, trainCost } from "./town";
 import { act, apply } from "./engine";
 import { botAction } from "./bot";
 import { STAT_KEYS, BAL, MONSTERS } from "./data";
@@ -446,10 +446,11 @@ describe("신앙", () => {
     expect(s.phase).toBe("town"); // 세금을 못 내도 처형되지 않는다(관공서에 갈 수 없음)
     s.gold = 999;
     const potions = s.inventory.potion;
+    const blackPrice = Math.ceil(BAL.prices.potion * (s.priceIndex ?? 1)) * 2;
     apply(s, { t: "buy", item: "potion" });
     apply(s, { t: "activity", a: "rumor" });
     expect(s.inventory.potion).toBe(potions + 1); // 상점가 대신 암시장: 두 배 값
-    expect(s.gold).toBe(999 - BAL.prices.potion * 2);
+    expect(s.gold).toBe(999 - blackPrice);
     apply(s, { t: "buyGear", id: "shield" });
     expect(s.gear.offhand).toBeUndefined(); // 대장간은 여전히 못 쓴다
     expect(s.phase).toBe("town");
@@ -554,7 +555,7 @@ describe("부상·질병", () => {
     s.injuries.feet = 2;
     s.disease = 1;
     s.injuries.main = 3;
-    s.gold = 2000;
+    s.gold = 5000;
     expect(weaponOf(s).verb).toBe("주먹을 휘둘러");
     apply(s, { t: "activity", a: "inn" });
     expect(s.injuries.feet).toBe(1);
@@ -1156,5 +1157,40 @@ describe("자동 식사", () => {
     s.hero.satiety = 5;
     apply(s, { t: "camp" });
     expect(s.inventory.food).toBe(1);
+  });
+});
+
+describe("경제 개편(2026-10-14)", () => {
+  it("훈련비: 20·25·30G, 4레벨부터 레벨당 40G, 6→7은 수련비 600G 추가", () => {
+    const s = newRun(101);
+    apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    const at = (lv: number) => { s.hero.level = lv; return trainCost(s); };
+    expect([at(1), at(2), at(3), at(4), at(6), at(9)]).toEqual([20, 25, 30, 160, 840, 360]);
+  });
+  it("마을에서 한 주를 보내도 HP가 차지 않고, 여관에서 쉬면 다 찬다(여관비는 물가를 따른다)", () => {
+    const s = newRun(102);
+    apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    s.hero.hp = 3;
+    apply(s, { t: "activity", a: "rumor" });
+    expect(s.hero.hp).toBe(3);
+    apply(s, { t: "closeWeek" });
+    s.priceIndex = 1.5;
+    s.gold = 100;
+    apply(s, { t: "activity", a: "inn" });
+    expect(s.gold).toBe(100 - 60);
+    expect(s.hero.hp).toBe(maxHp(s));
+  });
+  it("세금은 1섹터 클리어 후 +120G, 2섹터 클리어 후 +250G, 물가는 매달 5~10% 오른다", () => {
+    expect(taxDue(1, 0)).toBe(20);
+    expect(taxDue(1, 1)).toBe(140);
+    expect(taxDue(1, 2)).toBe(270);
+    const s = newRun(103);
+    apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    for (let i = 0; i < 3000 && s.month < 4 && s.phase !== "dead"; i++) { const a = botAction(s); if (!a) break; apply(s, a); }
+    if (s.phase !== "dead") {
+      const lo = Math.pow(1.05, s.month - 1) - 1e-9, hi = Math.pow(1.1, s.month - 1) + 1e-9;
+      expect(s.priceIndex ?? 1).toBeGreaterThanOrEqual(lo);
+      expect(s.priceIndex ?? 1).toBeLessThanOrEqual(hi);
+    }
   });
 });

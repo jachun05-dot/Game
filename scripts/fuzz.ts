@@ -243,7 +243,8 @@ for (let i = 0; i < N; i++) {
       // 현상수배 중 buy는 암시장(두 배 값)으로 허용: 산 만큼 정확히 두 배 값이 빠져야 한다
       if (lockedBefore && a.t === "buy") {
         const was = JSON.parse(lockedBefore)[0] as number;
-        if (s.gold !== was && was - s.gold !== BAL.prices[a.item] * 2 && was - s.gold !== Math.ceil(BAL.prices[a.item] / 2) * 2) extra.push(`암시장 값이 두 배가 아님 ${a.item}`);
+        const listed = Math.ceil(BAL.prices[a.item] * (s.priceIndex ?? 1));
+        if (s.gold !== was && was - s.gold !== listed * 2 && was - s.gold !== Math.ceil(listed / 2) * 2) extra.push(`암시장 값이 두 배가 아님 ${a.item}`);
       }
       const townOnly = ["sell", "buyGear", "train", "eraseFrag", "regen", "prosthetic"].includes(a.t) || (a.t === "activity" && a.a !== "field");
       if (lockedBefore && townOnly && JSON.stringify([s.gold, s.inventory, s.gear, s.hero.level, s.fragments, s.injuries, s.prosthetic]) !== lockedBefore) extra.push(`현상수배 중 마을 시설 이용 ${a.t}`);

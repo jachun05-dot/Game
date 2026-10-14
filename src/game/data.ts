@@ -19,20 +19,20 @@ export const BAL = {
   /** 해가 바뀔 때마다 오르는 세금(1년차 30, 2년차 70, 3년차 110 …) */
   taxPerYear: 40,
   /** 등급(클리어한 섹터 수)에 따라 더 붙는 세금: 이름난 모험가에게 영주가 더 걷는다 */
-  taxRank: [0, 0, 0, 0] as number[],
+  taxRank: [0, 120, 250, 250] as number[],
   /** 섹터별 마석 환전 배율(희귀 개체 포함) */
-  manaSectorMult: [1, 1, 1, 1] as number[],
+  manaSectorMult: [1, 1, 0.35, 1] as number[],
   /** 0보다 크면 레벨 1~3 훈련비 = trainCostBase + trainCostPerLevel × (레벨 − 1) (첫 훈련 값이 trainCostBase) */
-  trainCostBase: 0,
+  trainCostBase: 20,
   /** 레벨 4부터의 훈련비(레벨당). 0이면 레벨 1~3과 같은 식 — 초반(1섹터)은 싸게, 뒤로 갈수록 비싸게 */
-  trainCostLate: 0,
+  trainCostLate: 40,
   /** true면 예전 규칙: 마을에서 한 주를 보내거나 미궁에서 돌아오면 HP가 다 차고, 경상은 체력 판정으로 저절로 낫는다.
    *  false면 HP·부상은 여관(돈)·물약·붕대·야영으로만 회복한다 */
-  freeHeal: true,
+  freeHeal: false,
   /** 매달 상점가 물가가 오르는 폭 [최소, 최대](0.05 = 5%). [0, 0]이면 오르지 않는다 */
-  inflation: [0, 0] as [number, number],
+  inflation: [0.05, 0.1] as [number, number],
   /** 특수 훈련(이 레벨 → 다음 레벨) 수련비 */
-  specialTrainFee: {} as Record<number, number>,
+  specialTrainFee: { 6: 600 } as Record<number, number>,
   weekTurns: 336,
   moveTurns: 4,
   campTurns: 16,
@@ -42,7 +42,7 @@ export const BAL = {
   trapDodgeDc: 12,
   trapDisarmDc: 13,
   fleeDcBase: 10,
-  prices: { food: 5, potion: 6, scroll: 45, bandage: 10, herb: 10 },
+  prices: { food: 5, potion: 6, scroll: 45, bandage: 25, herb: 25 },
   /** 치료 물약 회복량 = 2d4 + 이 값 */
   potionBase: 6,
   /** 이 레벨에서 다음 레벨로 가는 훈련은 보스 증표가 있어야 받을 수 있다 */
@@ -59,7 +59,7 @@ export const BAL = {
   /** 리젠: 이 턴(8시간)마다 비운 전투방이 respawnChance 확률로 다시 채워진다. 리젠 몬스터 마석은 respawnManaMult배 */
   respawnEveryTurns: 16,
   respawnChance: 0.3,
-  respawnManaMult: 0.5,
+  respawnManaMult: 0.15,
   /** 신전에서 편린 하나를 지우는 값 */
   fragEraseCost: 1000,
   /** 함정 발견 후 숨은 고블린을 알아채는 감각 DC */
