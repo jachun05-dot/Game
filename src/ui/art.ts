@@ -42,6 +42,12 @@ export const MONSTER_ART: Record<string, SpriteArt> = {
   harpy: { src: "./mon-harpy.png", w: 93, h: 85 },
   warhorse: { src: "./mon-warhorse.png", w: 85, h: 95 },  // 200격자 원본(도트 2배 촘촘) — 크기는 월드 스케일로 절반
   wraith: { src: "./mon-wraith.png", w: 75, h: 95 },  // 200격자 원본(도트 2배 촘촘) — 크기는 월드 스케일로 절반
+  goldwolf: { src: "./mon-goldwolf.png", w: 73, h: 48 },
+  manaharpy: { src: "./mon-manaharpy.png", w: 88, h: 85 },
+  manawraith: { src: "./mon-manawraith.png", w: 91, h: 95 },
+  harpyqueen: { src: "./mon-harpyqueen.png", w: 100, h: 97 },  // 정예
+  general: { src: "./mon-general.png", w: 92, h: 99 },  // 2섹터 보스, 200격자 원본 — 크기는 절반
+  inquisitor: { src: "./mon-inquisitor.png", w: 61, h: 93 },  // 미궁의 유일한 사람(도감 밖, 전투 로그용), 200격자 원본 — 크기는 절반
 };
 
 
