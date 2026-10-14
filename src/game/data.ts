@@ -18,6 +18,14 @@ export const BAL = {
   taxBase: 20,
   /** 해가 바뀔 때마다 오르는 세금(1년차 30, 2년차 70, 3년차 110 …) */
   taxPerYear: 40,
+  /** 등급(클리어한 섹터 수)에 따라 더 붙는 세금: 이름난 모험가에게 영주가 더 걷는다 */
+  taxRank: [0, 0, 0, 0] as number[],
+  /** 섹터별 마석 환전 배율(희귀 개체 포함) */
+  manaSectorMult: [1, 1, 1, 1] as number[],
+  /** 레벨 4부터의 훈련비(레벨당). 0이면 trainCostPerLevel 그대로 — 초반(1섹터)은 싸게, 뒤로 갈수록 비싸게 */
+  trainCostLate: 0,
+  /** 특수 훈련(이 레벨 → 다음 레벨) 수련비 */
+  specialTrainFee: {} as Record<number, number>,
   weekTurns: 336,
   moveTurns: 4,
   campTurns: 16,

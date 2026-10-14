@@ -4,7 +4,7 @@ import { CLASSES } from "./classes";
 import { INJ, PARTS } from "./injury";
 import { god, power } from "./faith";
 import { fragScore, fragSlots } from "./fragments";
-import { heroAc, maxHp, smod } from "./core";
+import { heroAc, maxHp, smod, taxDue } from "./core";
 import { canTrain, nextSkill, shopPrice, trainCost } from "./town";
 import type { Action } from "./engine";
 import { BRANCH_SKILLS, ELEMENTS, ELEMENT_KEYS, type BranchKey, type ElementKey, type StyleKey } from "./elements";
@@ -53,7 +53,8 @@ function townAction(s: GameState): Action {
   // 2섹터까지 갈 생각이면(1섹터 클리어 + 레벨 4) 고기를 더 챙긴다
   const foodNeed = s.rank >= 1 && s.hero.level >= 4 ? 9 : 4;
   const supply = Math.max(0, foodNeed - s.inventory.food) * shopPrice(s, "food") + Math.max(0, 4 - s.inventory.potion) * shopPrice(s, "potion");
-  const spare = s.gold - supply;
+  // 다음 세금도 남겨 둔다(4주차 미궁에서 벌어 오지만, 빈손으로 나올 수도 있다)
+  const spare = s.gold - supply - (s.heretic ? 0 : taxDue(s.month + 1, s.rank));
   if (s.week === 3) {
     if (s.inventory.food < foodNeed && s.gold >= shopPrice(s, "food")) return { t: "buy", item: "food" };
     if (s.inventory.potion < 4 && s.gold >= shopPrice(s, "potion")) return { t: "buy", item: "potion" };

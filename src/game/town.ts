@@ -133,7 +133,8 @@ export function createHero(s: GameState, name: string, candidate: number, faith:
 }
 
 export function trainCost(s: GameState): number {
-  return BAL.trainCostPerLevel * s.hero.level;
+  const per = s.hero.level >= 4 && BAL.trainCostLate > 0 ? BAL.trainCostLate : BAL.trainCostPerLevel;
+  return per * s.hero.level + (BAL.specialTrainFee[s.hero.level] ?? 0);
 }
 
 /** 레벨 3→4 훈련은 1섹터 보스의 마석 심장이 있어야 한다 */
@@ -448,8 +449,8 @@ export function beginSettlement(s: GameState, o: { mana: number; cleared: boolea
   for (const p of PARTS) if (s.injuries[p] === 2) lines.push(`${PART_NAME[p]} 중상은 저절로 낫지 않는다 — 여관이나 붕대가 필요하다.`);
   if (s.disease > 0) lines.push("쥐 열병은 저절로 낫지 않는다 — 탕약이나 여관이 필요하다.");
   // 세금은 다음 달 1주차에 낸다. 해가 바뀌면 오른다. 현상수배 중에는 관공서가 세금 대신 목에 현상금을 건다
-  let tax = s.heretic ? 0 : taxDue(s.month + 1) + (s.debt ?? 0);
-  if (!s.heretic && yearOf(s.month + 1) > yearOf(s.month)) lines.push(`해가 바뀐다. 영주가 세금을 올렸다 — ${taxDue(s.month)}G → ${taxDue(s.month + 1)}G.`);
+  let tax = s.heretic ? 0 : taxDue(s.month + 1, s.rank) + (s.debt ?? 0);
+  if (!s.heretic && yearOf(s.month + 1) > yearOf(s.month)) lines.push(`해가 바뀐다. 영주가 세금을 올렸다 — ${taxDue(s.month, s.rank)}G → ${taxDue(s.month + 1, s.rank)}G.`);
   if (s.debt) lines.push(`지난달 외상 ${s.debt}G가 세금에 붙었다.`);
   let debt = false;
   if (!s.heretic && s.gold < tax && power(s, "greed", 3) && !s.debtUsed) {

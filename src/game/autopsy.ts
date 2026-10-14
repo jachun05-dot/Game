@@ -62,7 +62,7 @@ export function deathNotes(s: GameState, cause: DeathCause): DeathNotes {
   if (cause === "oblivion" || (cause === "single" && s.injuries.body >= 3)) hints.push("머리·몸통이 이미 다친 상태에서 한 번 더 다치면 즉사한다. 머리·몸통 부상은 미궁에 들어가기 전에 치료하자.");
   if (cause === "starve") hints.push("미궁 일주일을 버틸 만큼 식량을 챙기자. 남은 시간이 길면 식량이 먼저 떨어진다.");
   if (cause === "tax") {
-    facts.push(`세금 ${taxDue(s.month)}G, 가진 돈 ${s.gold}G`);
+    facts.push(`세금 ${taxDue(s.month, s.rank)}G, 가진 돈 ${s.gold}G`);
     hints.push("월말에 세금을 낼 돈을 남겨 두자. 마석은 미궁을 나와야 돈이 된다.");
   }
   if (cause === "trap") hints.push("함정은 물러날 수도 있다. 민첩이 낮으면 해체보다 물러나기가 안전하다.");

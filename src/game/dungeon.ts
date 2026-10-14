@@ -820,8 +820,9 @@ export function afterDungeonCombat(s: GameState, outcome: "win" | "fled", c: Com
   }
   const roomFight = room.type === "combat" || room.type === "boss";
   // 리젠된 몬스터의 마석은 절반(희귀 개체 보너스는 그대로)
-  const loot = Math.round(c.loot * MANA_FLOOR_MULT[dg.floor] * (roomFight && room.respawned ? BAL.respawnManaMult : 1)) + c.bonus;
-  if (c.bonus > 0) remember(s, `희귀 개체를 잡아 마석 ${c.bonus}G 어치를 얻었다.`);
+  const sm = BAL.manaSectorMult[dg.sector] ?? 1;
+  const loot = Math.round(c.loot * MANA_FLOOR_MULT[dg.floor] * sm * (roomFight && room.respawned ? BAL.respawnManaMult : 1)) + Math.round(c.bonus * sm);
+  if (c.bonus > 0) remember(s, `희귀 개체를 잡아 마석 ${Math.round(c.bonus * sm)}G 어치를 얻었다.`);
   if (outcome === "win") {
     if (roomFight) {
       room.resolved = true; // 야영 중 기습 전투는 방 사건과 무관

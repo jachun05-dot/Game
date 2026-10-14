@@ -98,9 +98,9 @@ export function yearOf(month: number): number {
   return Math.floor((month - 1) / 12) + 1;
 }
 
-/** 그 달 1주차에 내는 세금. 해가 바뀔 때마다 오른다 */
-export function taxDue(month: number): number {
-  return BAL.taxBase + BAL.taxPerYear * (yearOf(month) - 1);
+/** 그 달 1주차에 내는 세금. 해가 바뀔 때마다 오르고, 등급(클리어한 섹터 수)이 높을수록 더 붙는다 */
+export function taxDue(month: number, rank = 0): number {
+  return BAL.taxBase + BAL.taxPerYear * (yearOf(month) - 1) + (BAL.taxRank[Math.min(rank, BAL.taxRank.length - 1)] ?? 0);
 }
 
 const CAUSE_TEXT: Record<DeathCause, string> = {

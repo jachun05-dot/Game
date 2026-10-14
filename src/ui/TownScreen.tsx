@@ -81,7 +81,7 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
             onClick={() => dispatch({ t: "activity", a: "inn" })}
           />
           <ActivityButton title="훈련소 허수아비" sub={`시간이 들지 않는다 · ${DUMMY_ROUNDS}라운드 동안 준 피해를 잰다`} disabled={busy} onClick={() => setDummy(true)} />
-          <p className="dim small">{yearOf(s.month)}년차 · 다음 달 세금: {taxDue(s.month + 1)}G (미납 시 처형 · 해가 바뀔 때마다 {BAL.taxPerYear}G씩 오른다)</p>
+          <p className="dim small">{yearOf(s.month)}년차 · 다음 달 세금: {taxDue(s.month + 1, s.rank)}G (미납 시 처형 · 해가 바뀔 때마다 {BAL.taxPerYear}G씩 오른다)</p>
           <div className="row">
             <button className="btn ghost small" onClick={onGraveyard}>
               묘지 들르기
