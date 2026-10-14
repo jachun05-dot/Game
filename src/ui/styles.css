@@ -525,3 +525,4 @@ html, body, #root { height: 100%; }
 .dummy-bar>span{display:block;height:100%;background:var(--accent)}
 .option-skill b.accent{color:var(--accent)}
 .topbar.sticky{position:sticky;top:0;z-index:5;background:var(--bg);padding-top:6px}
+.equip li .item{min-width:5.5em}

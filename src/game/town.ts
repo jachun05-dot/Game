@@ -9,7 +9,7 @@ import { FAITH_BAL, GODS, addPiety, faithManaMult, god, godOf, power, pray, tier
 import { makeEnemies, startCombat } from "./combat";
 import { Rng } from "./rng";
 import { CLASSES, type ClassId } from "./classes";
-import { GEAR, equip, targetSlot } from "./gear";
+import { GEAR, equip, gearEffect, targetSlot } from "./gear";
 import type { Activity, Candidate, CombatState, GameState, StatKey, Stats, Tactics, WeekResult } from "./types";
 
 // DESIGN 14.1 런 시작 / 14.2 마을(1주=1턴) / 14.4 월말 정산
@@ -115,6 +115,7 @@ export function createHero(s: GameState, name: string, candidate: number, faith:
   if (god(s) === "plague") s.disease = Math.max(s.disease, 1); // 역병의 신도는 병을 품고 시작한다
   const cls = CLASSES[s.hero.cls];
   s.gear = { ...cls.start };
+  if (s.hero.name.toLowerCase() === "grooty") s.gear.neck = "grooty"; // 테스터
   s.gold = BAL.startGold;
   s.inventory = { ...s.inventory, ...cls.items };
   s.hero.hp = maxHp(s);
@@ -127,6 +128,7 @@ export function createHero(s: GameState, name: string, candidate: number, faith:
   log(s, `${cls.motive} 지급품: ${kit}. 주머니는 비어 있다.`, "story");
   log(s, "직업교관이 말한다. \"훈련은 미궁에서 한 번 살아 돌아온 다음이다.\"", "story");
   if (faith) log(s, `당신은 몰래 ${josa(faith, "을")} 섬기기로 했다.`, "story");
+  if (s.gear.neck === "grooty") log(s, `【테스터】 ${GEAR.grooty.name}을 목에 걸었다 — ${gearEffect("grooty")}.`, "skill");
   log(s, `— 1월 1주차. 4주차에 미궁이 열린다.`, "system");
 }
 

@@ -1059,3 +1059,43 @@ describe("첫 미궁의 계단", () => {
     expect(s.dungeon!.floor).toBe(2);
   });
 });
+
+describe("테스터 부적(grooty)", () => {
+  it("이름이 grooty면 착용한 채 시작: 모든 능력치 +5, 미궁마다 죽음 2번 막기(세금 처형은 못 막음)", () => {
+    const s = newRun(93);
+    apply(s, { t: "create", name: "Grooty", candidate: 0, faith: null });
+    expect(s.gear.neck).toBe("grooty");
+    for (const k of STAT_KEYS) expect(stat(s, k)).toBe(Math.min(BAL.statMax, s.hero.stats[k] + 5));
+    s.month = 1;
+    enterDungeon(s);
+    s.hero.hp = 0;
+    kill(s, "single", "테스트");
+    expect(s.phase).toBe("dungeon");
+    expect(s.hero.hp).toBe(1);
+    kill(s, "trap");
+    expect(s.phase).toBe("dungeon");
+    kill(s, "trap");
+    expect(s.phase).toBe("dead");
+
+    const t = newRun(94);
+    apply(t, { t: "create", name: "grooty", candidate: 0, faith: null });
+    kill(t, "tax");
+    expect(t.phase).toBe("dead");
+
+    const u = newRun(95);
+    apply(u, { t: "create", name: "grooty2", candidate: 0, faith: null });
+    expect(u.gear.neck).toBeUndefined();
+  });
+  it("미궁에 다시 들어가면 횟수가 다시 채워진다", () => {
+    const s = newRun(96);
+    apply(s, { t: "create", name: "grooty", candidate: 0, faith: null });
+    enterDungeon(s);
+    kill(s, "trap");
+    kill(s, "trap");
+    s.dungeon = null;
+    s.phase = "town";
+    enterDungeon(s);
+    kill(s, "trap");
+    expect(s.phase).toBe("dungeon");
+  });
+});

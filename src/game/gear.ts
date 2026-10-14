@@ -58,6 +58,10 @@ export interface GearDef {
   sector?: number;
   /** 대장간에서 사려면 필요한 등급(클리어한 섹터 수) */
   rank?: number;
+  /** 능력치 보정(테스터 장비) */
+  stats?: Partial<Record<StatKey, number>>;
+  /** 미궁에 들어갈 때마다 죽음을 막아 주는 횟수(테스터 장비) */
+  lifeSaves?: number;
   /** 정신 상태이상 저항: 걸릴 확률 배율(0이면 면역) */
   mindRes?: Partial<Record<MindKey, number>>;
   flavor: string;
@@ -96,6 +100,8 @@ export const GEAR: Record<string, GearDef> = {
   // ── 2섹터(잊힌 전쟁터의 초원) ──
   wraithspear: { id: "wraithspear", name: "망령의 녹슨 창", slot: "main", bonus: { hit: 1 }, weapon: { dice: [1, 10], stat: "str", verb: "녹슨 창을 꽂아" }, loot: 2, sector: 2, flavor: "끝나지 않은 전쟁의 창. 아직도 찌를 곳을 찾는다." },
   warbanner: { id: "warbanner", name: "녹슨 군기 방패", slot: "offhand", bonus: { ac: 2 }, mindRes: { fear: 0.5 }, loot: 2, sector: 2, flavor: "찢어진 군기를 덧댄 방패. 들고 있으면 겁이 덜 난다." },
+  // 테스터용(비매품·드롭 없음): 이름을 grooty로 지으면 착용한 채로 시작한다
+  grooty: { id: "grooty", name: "시험자의 부적", slot: "neck", bonus: {}, stats: { str: 5, dex: 5, con: 5, int: 5, per: 5, luk: 5 }, lifeSaves: 2, flavor: "테스터에게 주어진 부적. 미궁에 들어갈 때마다 두 번, 죽음을 비껴가게 해 준다." },
   harpycharm: { id: "harpycharm", name: "하피 깃털 부적", slot: "neck", bonus: { perception: 1 }, mindRes: { confusion: 0.5 }, loot: 2, sector: 2, flavor: "비명을 견딘 깃털. 머릿속을 맑게 붙잡아 준다." },
   horseshoe: { id: "horseshoe", name: "군마의 편자 장화", slot: "feet", bonus: { ac: 1, flee: 3 }, loot: 2, sector: 2, flavor: "유령 군마의 편자를 박았다. 발이 가볍다." },
   battlering: { id: "battlering", name: "전장의 반지", slot: "ring", bonus: { hit: 2 }, loot: 2, sector: 2, flavor: "손가락뼈에 끼워진 채 발견됐다." },
@@ -126,6 +132,10 @@ export function gearEffect(id: string): string {
   for (const [k, v] of Object.entries(g.bonus) as [keyof GearBonus, number][]) {
     if (v) parts.push(`${BONUS_LABEL[k]} ${v > 0 ? "+" : ""}${v}`);
   }
+  const st = Object.entries(g.stats ?? {}) as [StatKey, number][];
+  if (st.length === 6 && st.every(([, v]) => v === st[0][1])) parts.push(`모든 능력치 +${st[0][1]}`);
+  else for (const [k, v] of st) parts.push(`${STAT_NAME[k]} +${v}`);
+  if (g.lifeSaves) parts.push(`사망 방지 ${g.lifeSaves}회/미궁`);
   return parts.join(" · ");
 }
 
@@ -136,6 +146,7 @@ export function gearScore(id: string | undefined): number {
   const b = g.bonus;
   let v = (b.ac ?? 0) * 3 + (b.hit ?? 0) * 2 + (b.dmg ?? 0) * 2 + (b.crit ?? 0) * 0.5 + (b.hp ?? 0) * 0.7 + (b.flee ?? 0) * 0.3 + (b.perception ?? 0) * 0.5 + (b.potion ?? 0) * 0.5;
   if (g.weapon) v += g.weapon.dice[1] * g.weapon.dice[0];
+  v += Object.values(g.stats ?? {}).reduce((a, x) => a + x, 0) * 2 + (g.lifeSaves ?? 0) * 20;
   return v;
 }
 
@@ -177,4 +188,11 @@ export function equip(s: GameState, id: string): string | undefined {
   const old = s.gear[slot];
   s.gear[slot] = id;
   return old;
+}
+
+/** 장비가 주는 능력치 보정 */
+export function gearStat(s: GameState, key: StatKey): number {
+  let t = 0;
+  for (const id of Object.values(s.gear)) if (id) t += GEAR[id]?.stats?.[key] ?? 0;
+  return t;
 }

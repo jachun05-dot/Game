@@ -7,6 +7,7 @@ import { fragStat } from "./fragments";
 import { abyssEdge, faithMaxHp, power } from "./faith";
 import { rageAc, rollMindPenalty } from "./mind";
 import { deathNotes } from "./autopsy";
+import { GEAR, gearStat } from "./gear";
 import { injuryAc, injuryMaxHp, injuryRollPenalty, offhandAcPenalty } from "./injury";
 import type { DeathCause, GameState, LogKind, StatKey, Stats } from "./types";
 
@@ -19,9 +20,9 @@ export function isDead(s: GameState): boolean {
   return s.phase === "dead";
 }
 
-/** 실제 능력치 = 타고난/훈련 능력치 + 편린 보정 */
+/** 실제 능력치 = 타고난/훈련 능력치 + 편린 보정 + 장비 보정(테스터 부적) */
 export function stat(s: GameState, key: StatKey): number {
-  return Math.min(BAL.statMax, s.hero.stats[key] + fragStat(s, key));
+  return Math.min(BAL.statMax, s.hero.stats[key] + fragStat(s, key) + gearStat(s, key));
 }
 
 /** 능력치 보정치 */
@@ -124,6 +125,7 @@ const CAUSE_FAITH: Partial<Record<DeathCause, string>> = {
 };
 
 export function kill(s: GameState, cause: DeathCause, detail?: string): void {
+  if (cause !== "tax" && lifeSave(s, detail ?? CAUSE_TEXT[cause])) return;
   const faiths: string[] = [];
   const f = CAUSE_FAITH[cause];
   if (f) faiths.push(f);
@@ -153,6 +155,26 @@ export function kill(s: GameState, cause: DeathCause, detail?: string): void {
   s.phase = "dead";
   log(s, `${josa(s.hero.name, "은")} ${detail ?? CAUSE_TEXT[cause]}.`, "hurt");
   for (const fa of faiths) log(s, `— ${fa}의 신앙이 해금되었다.`, "story");
+}
+
+/** 테스터 부적: 미궁에 들어갈 때마다 정해진 횟수만큼 죽음을 막는다(세금 처형은 막지 못한다) */
+function lifeSave(s: GameState, what: string): boolean {
+  const id = Object.values(s.gear).find((g) => g && GEAR[g]?.lifeSaves);
+  if (!id) return false;
+  const used = s.tripUsed.filter((x) => x === "lifeSave").length;
+  const max = GEAR[id].lifeSaves!;
+  if (used >= max) return false;
+  s.tripUsed.push("lifeSave");
+  s.hero.hp = Math.max(1, s.hero.hp);
+  // 죽음의 원인이 그대로 남아 곧바로 다시 죽지 않게: 머리·몸통 결손은 중상으로, 굶주림은 조금 채운다
+  if (s.injuries.head >= 3) s.injuries.head = 2;
+  if (s.injuries.body >= 3) s.injuries.body = 2;
+  if (s.hero.satiety <= 0) {
+    s.hero.satiety = 30;
+    if (s.dungeon) s.dungeon.starvingTurns = 0;
+  }
+  log(s, `【${GEAR[id].name}】 ${what} — 그 순간 부적이 깨질 듯 빛나며 죽음을 비껴갔다. (HP ${s.hero.hp}, 남은 횟수 ${max - used - 1})`, "skill");
+  return true;
 }
 
 function buildEpitaph(s: GameState, cause: DeathCause): string {
