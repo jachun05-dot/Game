@@ -318,4 +318,8 @@ export interface Meta {
   graveyard: Tomb[];
   faiths: string[];
   codex: Codex;
+  /** 이미 본 처음 안내(src/ui/tips.ts) */
+  tipsSeen?: string[];
+  /** 처음 안내 끄기 */
+  tipsOff?: boolean;
 }

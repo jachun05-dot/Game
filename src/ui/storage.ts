@@ -46,7 +46,7 @@ function fixRun(s: GameState | null): GameState | null {
 }
 
 function fixMeta(m: Partial<Meta> | null | undefined): Meta {
-  return { graveyard: m?.graveyard ?? [], faiths: m?.faiths ?? [], codex: m?.codex ? mergeCodex(emptyCodex(), m.codex) : emptyCodex() };
+  return { graveyard: m?.graveyard ?? [], faiths: m?.faiths ?? [], codex: m?.codex ? mergeCodex(emptyCodex(), m.codex) : emptyCodex(), tipsSeen: m?.tipsSeen ?? [], tipsOff: m?.tipsOff ?? false };
 }
 
 export function saveRun(s: GameState | null): void {

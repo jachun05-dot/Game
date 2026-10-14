@@ -36,6 +36,9 @@ export interface Ctl {
   /** 캐릭터(장비) 화면 열기/닫기 */
   sheet: boolean;
   setSheet: (v: boolean) => void;
+  /** 처음 안내를 봤다고 기록 / 안내 끄기·켜기 */
+  dismissTip: (id: string) => void;
+  setTipsOff: (off: boolean) => void;
 }
 
 const LINE_MS = 520;
@@ -170,6 +173,8 @@ export function App() {
     },
     sheet,
     setSheet,
+    dismissTip: (id) => setMeta((m) => ({ ...m, tipsSeen: [...new Set([...(m.tipsSeen ?? []), id])] })),
+    setTipsOff: (off) => setMeta((m) => ({ ...m, tipsOff: off })),
   };
 
   // 전투·던전이 끝나 결과 화면으로 넘어가도, 남은 로그(마지막 일격 등)는 먼저 다 보여준다

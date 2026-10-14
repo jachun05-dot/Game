@@ -502,3 +502,7 @@ html, body, #root { height: 100%; }
 .log-line.fold-sum button { all: unset; cursor: pointer; }
 .log-line.fold-sum button:focus-visible { outline: 2px solid var(--accent); }
 .log-line.folded { padding-left: 10px; border-left: 1px solid var(--border); font-size: 12.5px; }
+
+/* 처음 안내 카드 */
+.tip-card { border: 1px solid var(--accent); background: #2c2215; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+.tip-card p { margin: 0; }

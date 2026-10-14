@@ -15,6 +15,7 @@ import type { AutoGoal, GameState } from "../game/types";
 import type { Ctl, Speed } from "./App";
 import { CharacterSheet } from "./CharacterSheet";
 import { CLASS_ART, FRAG_ICON, GEAR_ICON, LINE_ICON, MONSTER_ART, SCENE_ART } from "./art";
+import { TIPS, currentTip } from "./tips";
 
 export function Shell({ children, wide }: { children: ReactNode; wide?: boolean }) {
   return <main className={`shell${wide ? " wide" : ""}`}>{children}</main>;
@@ -51,7 +52,10 @@ export function GameScreen({ ctl, title, header, children, dock, dockClass }: { 
     <div className="screen">
       <TopBar ctl={ctl} title={title} />
       {header && <div className="screen-head">{header}</div>}
-      <div className="screen-body">{children}</div>
+      <div className="screen-body">
+        <TipCard ctl={ctl} />
+        {children}
+      </div>
       {dock && <div className={`dock ${dockClass ?? ""}${ctl.busy ? " waiting" : ""}`}>{dock}</div>}
       {ctl.sheet && <CharacterSheet ctl={ctl} />}
     </div>
@@ -182,6 +186,7 @@ export function SpeedBar({ ctl }: { ctl: Ctl }) {
 
 export function TopBar({ ctl, title }: { ctl: Ctl; title: ReactNode }) {
   const [open, setOpen] = useState(false);
+  const [glossary, setGlossary] = useState(false);
   return (
     <div className="topbar">
       <button className="link" onClick={ctl.goTitle} aria-label="타이틀로">
@@ -194,6 +199,7 @@ export function TopBar({ ctl, title }: { ctl: Ctl; title: ReactNode }) {
       <button className={`gear-btn${open ? " on" : ""}`} onClick={() => setOpen(!open)} aria-expanded={open} aria-label="설정">
         ⚙ <span className="small">{ctl.speed === 0 ? "즉시" : `${ctl.speed}×`}{ctl.auto ? ` · 자동(${GOAL_SHORT[ctl.s.autoGoal] ?? "탐험"})` : ""}</span>
       </button>
+      {glossary && <Glossary onClose={() => setGlossary(false)} />}
       {open && <div className="settings-backdrop" onClick={() => setOpen(false)} />}
       {open && (
         <div className="settings-sheet" role="dialog" aria-label="설정">
@@ -203,6 +209,15 @@ export function TopBar({ ctl, title }: { ctl: Ctl; title: ReactNode }) {
           <GoalBar ctl={ctl} />
           <p className="eyebrow">전투 방침</p>
           <TacticsBar ctl={ctl} />
+          <p className="eyebrow">처음 안내</p>
+          <div className="tactics">
+            <button className={`chip${ctl.meta.tipsOff ? "" : " on"}`} onClick={() => ctl.setTipsOff(!ctl.meta.tipsOff)}>
+              {ctl.meta.tipsOff ? "꺼짐" : "켜짐"}
+            </button>
+            <button className="chip" onClick={() => { setGlossary(true); setOpen(false); }}>
+              용어 사전
+            </button>
+          </div>
           <p className="dim small">시드 #{(ctl.s.seed >>> 0).toString(36)}</p>
           <button className="btn small ghost" onClick={() => setOpen(false)}>
             닫기
@@ -549,5 +564,48 @@ export function BuildSummary({ s }: { s: GameState }) {
         </span>
       ))}
     </p>
+  );
+}
+
+/** 처음 안내 카드: 지금 상황에 맞는, 아직 안 본 안내 하나 */
+export function TipCard({ ctl }: { ctl: Ctl }) {
+  const tip = currentTip(ctl.s, ctl.meta.tipsSeen ?? [], !!ctl.meta.tipsOff);
+  if (!tip) return null;
+  return (
+    <div className="tip-card" role="note">
+      <p className="eyebrow">처음 안내 · {tip.title}</p>
+      <p className="small">{tip.text}</p>
+      <div className="row">
+        <button className="btn small primary" onClick={() => ctl.dismissTip(tip.id)}>
+          알겠다
+        </button>
+        <button className="btn small ghost" onClick={() => ctl.setTipsOff(true)}>
+          안내 끄기
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** 용어 사전: 모든 처음 안내를 다시 본다 */
+export function Glossary({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="sheet-backdrop" onClick={onClose}>
+      <div className="sheet" role="dialog" aria-label="용어 사전" onClick={(e) => e.stopPropagation()}>
+        <div className="sheet-head">
+          <b className="hero-name">용어 사전</b>
+          <button className="btn small ghost close" onClick={onClose}>
+            닫기
+          </button>
+        </div>
+        <div className="sheet-body">
+          {[...TIPS].reverse().map((t) => (
+            <Card key={t.id} title={t.title}>
+              <p className="small">{t.text}</p>
+            </Card>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
