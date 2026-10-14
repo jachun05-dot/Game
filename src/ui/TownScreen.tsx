@@ -68,7 +68,7 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
           )}
           <ActivityButton
             title="외부 탐험"
-            sub={`영지 밖 숲 · 작은 전투, 마석(반값)과 말린 고기${s.outlawTrainer?.week === `${s.month}-${s.week}` ? "" : ` · 외곽에서 떠돌이 교관을 만날 수도 있다(${Math.round(BAL.outlawTrainerChance * 100)}%)`}`}
+            sub={`영지 밖 숲 · 작은 전투, 마석(반값)과 말린 고기${s.outlawTrainer?.week === `${s.month}-${s.week}` ? "" : ` · 외곽에서 떠돌이 교관을 찾아본다(${Math.round((s.outlawTrainerKnown ? BAL.outlawTrainerChanceKnown : BAL.outlawTrainerChance) * 100)}%, 받을 훈련이 남아 있을 때)`}`}
             disabled={busy}
             onClick={() => dispatch({ t: "activity", a: "field" })}
           />

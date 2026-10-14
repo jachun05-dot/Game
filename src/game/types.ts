@@ -315,6 +315,8 @@ export interface GameState {
   /** 미궁 한 번 들어갈 때 1회 쓰는 기술 중 이미 쓴 것 */
   /** 현상수배 중 외곽에서 떠돌이 교관을 찾아본 주("월-주")와 만났는지 */
   outlawTrainer?: { week: string; met: boolean };
+  /** 떠돌이 교관을 한 번이라도 만났다(그다음부터는 찾기 쉽다) */
+  outlawTrainerKnown?: boolean;
   /** 상점가 물가 배율(매달 오른다, 없으면 1) */
   priceIndex?: number;
   tripUsed: string[];

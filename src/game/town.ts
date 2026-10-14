@@ -265,6 +265,13 @@ export function rumor(s: GameState): void {
   finishWeek(s, { title: "탐문", lines, statDelta: {}, goldDelta: gold }, gold > 0);
 }
 
+/** 돈 말고는 다음 훈련을 받을 수 있나(첫 달·최대 레벨·보스 증표) */
+function trainingLeft(s: GameState): boolean {
+  if (s.month < BAL.firstTrainMonth || s.hero.level >= BAL.maxLevel) return false;
+  const g = gateOf(s);
+  return !g || s.inventory[g.item] > 0;
+}
+
 /** 현상수배 중 이번 주에 떠돌이 교관을 만났나 */
 export function outlawTrainerHere(s: GameState): boolean {
   return !!s.heretic && s.outlawTrainer?.week === `${s.month}-${s.week}` && s.outlawTrainer.met;
@@ -273,16 +280,21 @@ export function outlawTrainerHere(s: GameState): boolean {
 export function goField(s: GameState): void {
   if (s.phase !== "town") return;
   const r = rngOf(s);
-  // 현상수배 중: 외곽으로 나서면 주마다 한 번, 떠돌이 교관을 만날 수 있다(이번 주에 훈련 가능, 숲으로는 아직 가지 않음)
+  // 현상수배 중: 외곽으로 나서면 주마다 한 번, 떠돌이 교관을 찾아본다(받을 훈련이 남아 있을 때만).
+  // 처음엔 20%, 한 번 만난 뒤로는 어디 있는지 알아 50%. 만나면 이번 주에 훈련 가능(숲으로는 아직 가지 않음)
   const wk = `${s.month}-${s.week}`;
-  if (s.heretic && s.outlawTrainer?.week !== wk && s.month >= BAL.firstTrainMonth) {
-    const met = r.chance(BAL.outlawTrainerChance);
+  if (s.heretic && s.outlawTrainer?.week !== wk && trainingLeft(s)) {
+    const known = !!s.outlawTrainerKnown;
+    const met = r.chance(known ? BAL.outlawTrainerChanceKnown : BAL.outlawTrainerChance);
     s.outlawTrainer = { week: wk, met };
     if (met) {
-      log(s, "외곽의 폐가 뒤에서 낡은 목검을 휘두르는 노인을 만났다. 성당을 떠난 교관이라고 한다.", "story");
-      log(s, "\"쫓기는 몸이라도 칼은 늘어야지. 이번 주라면 봐 주마.\" — 이번 주에 떠돌이 교관에게 훈련받을 수 있다. (숲으로 가려면 외부 탐험을 한 번 더)", "good");
+      s.outlawTrainerKnown = true;
+      if (known) log(s, "외곽의 폐가 뒤에서 그 노인이 목검을 휘두르고 있다. \"또 왔나. 이번 주도 봐 주마.\"", "story");
+      else log(s, "외곽의 폐가 뒤에서 낡은 목검을 휘두르는 노인을 만났다. 성당을 떠난 교관이라고 한다. \"쫓기는 몸이라도 칼은 늘어야지. 이번 주라면 봐 주마.\"", "story");
+      log(s, "이번 주에 떠돌이 교관에게 훈련받을 수 있다. (숲으로 가려면 외부 탐험을 한 번 더)", "good");
       return;
     }
+    if (known) log(s, "폐가 뒤를 둘러봤지만 노인은 보이지 않는다. 숲으로 향한다.", "system");
   }
   log(s, "영지 밖 숲으로 나섰다.", "system");
   s.tripUsed = [];

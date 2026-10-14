@@ -1274,4 +1274,27 @@ describe("현상수배 중 떠돌이 교관", () => {
     }
     expect(found).toBe(true);
   });
+  it("한 번 만난 뒤로는 50%, 받을 훈련이 없으면(보스 증표 없음) 찾지 않는다", () => {
+    let met = 0;
+    const N = 400;
+    for (let seed = 1; seed <= N; seed++) {
+      const s = newRun(seed);
+      apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+      s.month = 3;
+      s.heretic = true;
+      s.outlawTrainerKnown = true;
+      apply(s, { t: "activity", a: "field" });
+      if (s.outlawTrainer?.met) met++;
+    }
+    expect(met / N).toBeGreaterThan(0.4);
+    expect(met / N).toBeLessThan(0.6);
+    const g = newRun(5);
+    apply(g, { t: "create", name: "x", candidate: 0, faith: null });
+    g.month = 3;
+    g.heretic = true;
+    g.hero.level = 3;
+    g.inventory.heart = 0;
+    apply(g, { t: "activity", a: "field" });
+    expect(g.outlawTrainer).toBeUndefined();
+  });
 });
