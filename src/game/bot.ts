@@ -32,6 +32,8 @@ export function botAction(s: GameState): Action | null {
 }
 
 function townAction(s: GameState): Action {
+  // 4주차: 준비는 3주차에 마쳤으니 바로 미궁으로
+  if (s.week >= 4) return { t: "enterDungeon" };
   if (s.heretic) return { t: "activity", a: "field" };
   // 부상: 결손된 손·발엔 의수·의족, 중상·질병이면 여관에서 한 주 쉰다
   for (const p of ["main", "offhand", "feet"] as const) {

@@ -18,6 +18,8 @@ export type Action =
   | { t: "sell"; item: ShopItem }
   | { t: "buyGear"; id: string }
   | { t: "closeWeek" }
+  /** 4주차: 마을에서 준비를 마치고 미궁에 들어간다 */
+  | { t: "enterDungeon" }
   | { t: "move"; room: number }
   | { t: "pending"; choice: PendingChoice }
   | { t: "camp" }
@@ -59,13 +61,17 @@ function run(s: GameState, a: Action): void {
     case "reroll": return rerollCandidates(s);
     case "pickClass": return pickClass(s, a.cls);
     case "create": return createHero(s, a.name, a.candidate, a.faith);
-    case "activity": return doActivity(s, a.a);
-    case "train": return train(s, a.training, a.free);
+    // 4주차에는 마을 활동을 할 수 없다(상점만 들른 뒤 미궁으로)
+    case "activity": return s.week >= 4 ? undefined : doActivity(s, a.a);
+    case "train": return s.week >= 4 ? undefined : train(s, a.training, a.free);
     case "buy": return buy(s, a.item);
     case "sell": return sell(s, a.item);
     case "buyGear": return buyGear(s, a.id);
     case "closeWeek":
-      if (closeWeek(s) === "dungeon") enterDungeon(s);
+      closeWeek(s);
+      return;
+    case "enterDungeon":
+      if (s.phase === "town" && s.week >= 4) enterDungeon(s);
       return;
     case "move": return moveTo(s, a.room);
     case "pending": return resolvePending(s, a.choice);

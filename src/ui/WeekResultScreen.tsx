@@ -19,7 +19,7 @@ export function WeekResultScreen({ ctl }: { ctl: Ctl }) {
       header={<HeroHeader s={s} onOpen={() => ctl.setSheet(true)} />}
       dock={
         <button className="btn primary wide" onClick={() => dispatch({ t: "closeWeek" })}>
-          {toDungeon ? "미궁으로 →" : "다음 주 →"}
+          {toDungeon ? "4주차 — 미궁 준비로 →" : "다음 주 →"}
         </button>
       }
       dockClass="dock-cta"

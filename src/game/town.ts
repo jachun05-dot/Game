@@ -156,7 +156,7 @@ export function kitItems(items: { food: number; potion: number; scroll: number }
 }
 
 export function canTrain(s: GameState): boolean {
-  if (s.phase !== "town" || s.heretic || s.month < BAL.firstTrainMonth || s.hero.level >= BAL.maxLevel || s.gold < trainCost(s)) return false;
+  if (s.phase !== "town" || s.week >= 4 || s.heretic || s.month < BAL.firstTrainMonth || s.hero.level >= BAL.maxLevel || s.gold < trainCost(s)) return false;
   const g = gateOf(s);
   return !g || s.inventory[g.item] > 0;
 }
@@ -410,7 +410,10 @@ export function closeWeek(s: GameState): "town" | "dungeon" {
   s.weekResult = null;
   s.week += 1;
   s.phase = "town";
-  if (s.week >= 4) return "dungeon";
+  if (s.week >= 4) {
+    log(s, `— ${s.month}월 4주차. 미궁이 열렸다 — 상점가·대장간에 들러 준비를 마치고 들어가자.`, "system");
+    return "dungeon";
+  }
   log(s, `— ${s.month}월 ${s.week}주차.`, "system");
   return "town";
 }

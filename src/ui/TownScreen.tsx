@@ -55,7 +55,9 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
         </button>
       </div>
 
-      {tab === "act" && s.heretic && (
+      {tab === "act" && s.week >= 4 && <DungeonPrep s={s} busy={busy} onShop={() => setTab("shop")} onEnter={() => dispatch({ t: "enterDungeon" })} />}
+
+      {tab === "act" && s.week < 4 && s.heretic && (
         <div className="stack">
           <Card title="현상수배 중" className="warn">
             <p className="small">성당 문에 당신의 얼굴이 그려진 수배서가 붙어 있다. 마을 안으로는 들어갈 수 없다 — 영지 외곽만 다닐 수 있다.</p>
@@ -66,7 +68,7 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
         </div>
       )}
 
-      {tab === "act" && !training && !dummy && !s.heretic && (
+      {tab === "act" && s.week < 4 && !training && !dummy && !s.heretic && (
         <div className="stack">
           <p className="dim small">한 주에 한 가지 일을 합니다. 쇼핑은 시간이 들지 않습니다.{s.week === 3 && " 다음 주는 미궁이 열립니다 — 준비물을 챙기세요."}</p>
           <ActivityButton title="훈련" sub={trainSub(s)} disabled={busy || !canTrain(s)} onClick={() => setTraining(true)} />
@@ -91,8 +93,8 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
         </div>
       )}
 
-      {tab === "act" && training && <TrainingPanel ctl={ctl} onClose={() => setTraining(false)} />}
-      {tab === "act" && dummy && !s.heretic && <DummyPanel s={s} onClose={() => setDummy(false)} />}
+      {tab === "act" && s.week < 4 && training && <TrainingPanel ctl={ctl} onClose={() => setTraining(false)} />}
+      {tab === "act" && s.week < 4 && dummy && !s.heretic && <DummyPanel s={s} onClose={() => setDummy(false)} />}
 
       {tab === "shop" && s.heretic && <p className="hurt small">현상수배 중이라 상점가·대장간·신전에 들어갈 수 없다.</p>}
 
@@ -185,6 +187,11 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
               </div>
             ))}
           </Card>
+          {s.week >= 4 && (
+            <button className="btn primary wide" disabled={busy} onClick={() => dispatch({ t: "enterDungeon" })}>
+              준비 끝 — 미궁으로 들어간다 →
+            </button>
+          )}
         </div>
       )}
 
@@ -245,6 +252,32 @@ function WeekTrack({ month, week }: { month: number; week: number }) {
         </div>
       ))}
       <span className="dim small">{month}월</span>
+    </div>
+  );
+}
+
+/** 4주차: 미궁에 들어가기 전에 상점에 들를 기회 */
+function DungeonPrep({ s, busy, onShop, onEnter }: { s: GameState; busy: boolean; onShop: () => void; onEnter: () => void }) {
+  const inv = s.inventory;
+  return (
+    <div className="stack">
+      <Card title="4주차 — 미궁이 열렸다">
+        <p className="small">들어가면 7일 동안 나올 수 없다(귀환 주문서 제외). {s.heretic ? "현상수배 중이라 상점에는 들를 수 없다." : "모자란 것이 있으면 상점가·대장간에 먼저 들르자. 쇼핑은 시간이 들지 않는다."}</p>
+        <p className="small">
+          챙긴 것: 말린 고기 <b>{inv.food}</b> · 치료 물약 <b>{inv.potion}</b> · 귀환 주문서 <b>{inv.scroll}</b>
+          {inv.bandage > 0 && <> · 붕대 <b>{inv.bandage}</b></>}
+          {inv.herb > 0 && <> · 약초 탕약 <b>{inv.herb}</b></>} · 소지금 <b>{s.gold}G</b>
+        </p>
+        {inv.food < 3 && <p className="small warn">말린 고기가 적다 — 일주일을 버티기 어렵다.</p>}
+      </Card>
+      {!s.heretic && (
+        <button className="btn" disabled={busy} onClick={onShop}>
+          상점가 · 대장간 들르기
+        </button>
+      )}
+      <button className="btn primary wide" disabled={busy} onClick={onEnter}>
+        미궁으로 들어간다 →
+      </button>
     </div>
   );
 }

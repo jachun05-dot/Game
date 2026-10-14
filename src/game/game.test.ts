@@ -106,6 +106,7 @@ describe("자동 전투와 기술", () => {
       apply(s, { t: "train", training: "fighter", free: ["str", "con"] });
       expect(s.weekResult?.learned).toBe(want);
       apply(s, { t: "closeWeek" });
+    apply(s, { t: "enterDungeon" });
       if (s.phase !== "town") { s.phase = "town"; s.dungeon = null; s.week = 1; }
     }
     expect(s.skills).toContain("flashPowder");
@@ -261,9 +262,11 @@ describe("편린", () => {
     const s = newRun(5);
     apply(s, { t: "create", name: "x", candidate: 0, faith: null });
     apply(s, { t: "closeWeek" });
+    apply(s, { t: "enterDungeon" });
     s.phase = "week-result";
     s.week = 3;
     apply(s, { t: "closeWeek" });
+    apply(s, { t: "enterDungeon" });
     expect(s.phase).toBe("dungeon");
     const dex = stat(s, "dex");
     s.dungeon!.pending = { kind: "frag", frag: "rat" };
@@ -309,6 +312,7 @@ describe("편린 도감과 신전", () => {
     t.week = 3;
     t.phase = "week-result";
     apply(t, { t: "closeWeek" });
+    apply(t, { t: "enterDungeon" });
     expect(fragKnown(t, "rat")).toBe(false);
     t.dungeon!.pending = { kind: "frag", frag: "rat" };
     apply(t, { t: "pending", choice: "absorb" });
@@ -400,6 +404,7 @@ describe("몬스터 리젠", () => {
     s.week = 3;
     s.phase = "week-result";
     apply(s, { t: "closeWeek" });
+    apply(s, { t: "enterDungeon" });
     const dg = s.dungeon!;
     for (const r of dg.rooms) r.resolved = true;
     dg.current = dg.rooms.find((r) => r.type === "entrance")!.id;
@@ -460,6 +465,7 @@ describe("신앙", () => {
       s.week = 3;
       s.phase = "week-result";
       apply(s, { t: "closeWeek" });
+    apply(s, { t: "enterDungeon" });
       const before = s.piety;
       for (let i = 0; i < 300 && (s.phase as string) === "dungeon"; i++) {
         const a = botAction(s);
@@ -477,6 +483,7 @@ describe("신앙", () => {
     s.week = 3;
     s.phase = "week-result";
     apply(s, { t: "closeWeek" });
+    apply(s, { t: "enterDungeon" });
     s.dungeon!.pending = { kind: "shrine" };
     apply(s, { t: "pending", choice: `convert${s.faithsKnown.indexOf(FAITH.song)}` });
     expect(s.hero.faith).toBe(FAITH.song);
@@ -491,6 +498,7 @@ describe("부상·질병", () => {
     s.week = 3;
     s.phase = "week-result";
     apply(s, { t: "closeWeek" });
+    apply(s, { t: "enterDungeon" });
     return s;
   };
   it("같은 부위를 다시 다치면 악화되고, 머리 결손은 즉사하며 망각의 신이 해금된다", () => {
@@ -573,6 +581,7 @@ describe("정신 상태이상", () => {
     s.week = 3;
     s.phase = "week-result";
     apply(s, { t: "closeWeek" });
+    apply(s, { t: "enterDungeon" });
     return s;
   };
   it("걸려도 처음엔 숨겨져 있고, 방을 옮기다 눈치채면 드러난다", () => {
@@ -634,6 +643,7 @@ describe("새 세 신", () => {
     s.week = 3;
     s.phase = "week-result";
     apply(s, { t: "closeWeek" });
+    apply(s, { t: "enterDungeon" });
     return s;
   };
   it("역병의 신도는 병을 품고 시작하고, ★1: 병이 HP를 깎지 않는다, ★3: 병든 동안 최대 HP +4", () => {
@@ -678,6 +688,7 @@ describe("2섹터", () => {
     s.week = 3;
     s.phase = "week-result";
     apply(s, { t: "closeWeek" });
+    apply(s, { t: "enterDungeon" });
     const dg = s.dungeon!;
     dg.floor = 3;
     dg.rooms = generateFloor(new Rng({ s: seed }), 3, 1);
@@ -728,6 +739,7 @@ describe("2섹터", () => {
     s.week = 3;
     s.phase = "week-result";
     apply(s, { t: "closeWeek" });
+    apply(s, { t: "enterDungeon" });
     for (let k = 0; k < 2; k++) {
       const dg = s.dungeon!;
       dg.floor = 3;
@@ -764,6 +776,7 @@ describe("퍼징 회귀", () => {
     s.week = 3;
     s.phase = "week-result";
     apply(s, { t: "closeWeek" });
+    apply(s, { t: "enterDungeon" });
     return s;
   };
   it("체력 장비를 다른 장비로 바꾸면 HP가 새 최대치를 넘지 않는다", () => {
@@ -796,6 +809,7 @@ describe("퍼징 회귀", () => {
     s.week = 3;
     s.phase = "week-result";
     apply(s, { t: "closeWeek" });
+    apply(s, { t: "enterDungeon" });
     const dg = s.dungeon!;
     dg.sector = 2;
     dg.floor = 3;
@@ -849,6 +863,7 @@ describe("마법사 원소", () => {
     s.week = 3;
     s.phase = "week-result";
     apply(s, { t: "closeWeek" });
+    apply(s, { t: "enterDungeon" });
     s.skills.push("fireArrow", "fireMark");
     s.hero.hp = 999;
     s.combat = null;
@@ -919,6 +934,7 @@ describe("기술 점검", () => {
         s.week = 3;
         s.phase = "week-result";
         apply(s, { t: "closeWeek" });
+    apply(s, { t: "enterDungeon" });
         s.skills = [id];
         s.gear.offhand = "shield";
         s.inventory.potion = 0;
@@ -943,6 +959,7 @@ describe("전투 로그 접기", () => {
     s.week = 3;
     s.phase = "week-result";
     apply(s, { t: "closeWeek" });
+    apply(s, { t: "enterDungeon" });
     s.hero.hp = 999;
     s.combat = null;
     s.skills.push("fireArrow");
@@ -966,6 +983,7 @@ describe("묘비 사망 요약", () => {
     s.week = 3;
     s.phase = "week-result";
     apply(s, { t: "closeWeek" });
+    apply(s, { t: "enterDungeon" });
     s.hero.hp = 1;
     s.inventory.potion = 3;
     s.tactics.potionAt = 0;
@@ -1096,6 +1114,27 @@ describe("테스터 부적(grooty)", () => {
     s.phase = "town";
     enterDungeon(s);
     kill(s, "trap");
+    expect(s.phase).toBe("dungeon");
+  });
+});
+
+describe("4주차 준비", () => {
+  it("3주차가 끝나면 마을에 멈춰 상점만 들를 수 있고, 들어간다고 해야 미궁에 들어간다", () => {
+    const s = newRun(97);
+    apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    s.week = 3;
+    s.phase = "week-result";
+    s.month = 2;
+    apply(s, { t: "closeWeek" });
+    expect(s.phase).toBe("town");
+    expect(s.week).toBe(4);
+    s.gold = 500;
+    apply(s, { t: "activity", a: "rumor" });
+    expect(s.phase).toBe("town");
+    const potions = s.inventory.potion;
+    apply(s, { t: "buy", item: "potion" });
+    expect(s.inventory.potion).toBe(potions + 1);
+    apply(s, { t: "enterDungeon" });
     expect(s.phase).toBe("dungeon");
   });
 });
