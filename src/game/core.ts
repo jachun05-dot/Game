@@ -37,7 +37,7 @@ export function mod(v: number): number {
 export function maxHp(s: GameState): number {
   // DESIGN 7·8절: CON 보정치가 레벨마다 고정 누적. 기본 HP는 미정이라 임시값.
   const cls = CLASSES[s.hero.cls];
-  return Math.max(1, BAL.baseHp + cls.hp + (Math.max(BAL.minHpPerLevel, smod(s, "con")) + cls.hpPerLevel) * s.hero.level + passive(s, "hp") + injuryMaxHp(s) + faithMaxHp(s));
+  return Math.max(1, BAL.baseHp + cls.hp + (Math.max(BAL.minHpPerLevel, smod(s, "con")) + cls.hpPerLevel) * s.hero.level + passive(s, "hp") + injuryMaxHp(s) + faithMaxHp(s) - (s.bloodPrice ? 5 : 0));
 }
 
 export function heroAc(s: GameState): number {
@@ -61,9 +61,14 @@ export function rollPenalty(s: GameState): number {
 /** d20 + 보정치 vs DC. 자연 1 자동 실패, 자연 20 자동 성공(DESIGN 8절) */
 export function check(s: GameState, stat: StatKey, dc: number, bonus = 0): { ok: boolean; roll: number; total: number } {
   const roll = rngOf(s).die(20);
-  const total = roll + bonus + smod(s, stat) + rollPenalty(s) + (stat === "per" ? passive(s, "perception") : 0);
+  const total = roll + bonus + smod(s, stat) + rollPenalty(s) + sagaBonus(s) + (stat === "per" ? passive(s, "perception") : 0);
   const ok = roll === 20 || (roll !== 1 && total >= dc);
   return { ok, roll, total };
+}
+
+/** 시와 노래의 신 ★4 "영웅담": 이 미궁에서 읽은 기록물만큼 명중·판정 +(최대 3) */
+export function sagaBonus(s: GameState): number {
+  return Math.min(3, s.dungeon?.saga ?? 0);
 }
 
 export function log(s: GameState, text: string, kind: LogKind = "normal"): void {

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { Rng } from "./rng";
 import { enterDungeon, generateFloor, passTime } from "./dungeon";
 import { canTrain, newRun, trainCost } from "./town";
-import { endlessPool, generateEndlessFloor } from "./endless";
+import { ENDLESS_SECTOR, endlessPool, generateEndlessFloor } from "./endless";
 import { CLASSES } from "./classes";
 import { act, apply } from "./engine";
 import { botAction } from "./bot";
@@ -1163,11 +1163,11 @@ describe("자동 식사", () => {
 });
 
 describe("경제 개편(2026-10-14)", () => {
-  it("훈련비: 20·25·30G, 4레벨부터 레벨당 40G, 6→7은 수련비 600G 추가", () => {
+  it("훈련비: 20·25·30G, 4레벨부터 레벨당 40G, 6→7은 수련비 600G, 9→10은 1000G 추가", () => {
     const s = newRun(101);
     apply(s, { t: "create", name: "x", candidate: 0, faith: null });
     const at = (lv: number) => { s.hero.level = lv; return trainCost(s); };
-    expect([at(1), at(2), at(3), at(4), at(6), at(9)]).toEqual([20, 25, 30, 160, 840, 360]);
+    expect([at(1), at(2), at(3), at(4), at(6), at(9)]).toEqual([20, 25, 30, 160, 840, 1360]);
   });
   it("마을에서 한 주를 보내도 HP가 차지 않고, 여관에서 쉬면 다 찬다(여관비는 물가를 따른다)", () => {
     const s = newRun(102);
@@ -1308,19 +1308,36 @@ describe("끝없는 미궁", () => {
     s.hero.level = 12;
     enterDungeon(s);
     const dg = s.dungeon!;
-    dg.sector = 2;
+    dg.sector = 3;
     dg.floor = 3;
     dg.pending = { kind: "portal" };
     s.combat = null;
     apply(s, { t: "pending", choice: "enter" });
     return s;
   };
-  it("2섹터 차원문으로 들어가면 끝없는 미궁 1층: 함정·상자·기록물 없이 전투·빈 방·계단뿐", () => {
+  it("2섹터 차원문으로 들어가면 3섹터(물에 잠긴 사원) 1층, 남은 시간 두 배", () => {
+    const s = newRun(122);
+    apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    s.month = 6;
+    enterDungeon(s);
+    const dg = s.dungeon!;
+    dg.sector = 2;
+    dg.floor = 3;
+    dg.turnsLeft = 100;
+    dg.pending = { kind: "portal" };
+    apply(s, { t: "pending", choice: "enter" });
+    expect(s.dungeon!.endless).toBeFalsy();
+    expect(s.dungeon!.sector).toBe(3);
+    expect(s.dungeon!.turnsLeft).toBeGreaterThan(190);
+    expect(s.rank).toBe(2);
+  });
+  it("3섹터 차원문으로 들어가면 끝없는 미궁 1층: 함정·상자·기록물 없이 전투·빈 방·계단뿐", () => {
     const s = toEndless();
     const dg = s.dungeon!;
     expect(dg.endless).toBe(true);
+    expect(dg.sector).toBe(ENDLESS_SECTOR);
     expect(dg.floor).toBe(1);
-    expect(s.rank).toBe(2);
+    expect(s.rank).toBe(3);
     expect(dg.rooms.every((r) => ["entrance", "combat", "empty", "stairs"].includes(r.type))).toBe(true);
   });
   it("계단은 끝없이 이어지고, 깊을수록 몬스터가 강하며, 5층마다 보스가 계단 앞을 지킨다", () => {
@@ -1329,7 +1346,7 @@ describe("끝없는 미궁", () => {
       const rooms = generateEndlessFloor(r, n);
       expect(rooms.filter((x) => x.type === "stairs").length).toBe(1);
       expect(rooms.some((x) => x.type === "trap" || x.type === "treasure")).toBe(false);
-      const bossy = rooms.some((x) => x.encounter?.some((m) => ["boss", "harpyqueen", "general"].includes(m)));
+      const bossy = rooms.some((x) => x.encounter?.some((m) => ["boss", "harpyqueen", "general", "mycomother"].includes(m)));
       expect(bossy).toBe(n % 5 === 0);
     }
     const s = toEndless();
@@ -1344,5 +1361,114 @@ describe("끝없는 미궁", () => {
     expect(endlessPool()).not.toContain("sweeper1");
     expect(endlessPool()).toContain("rat");
     expect(endlessPool()).toContain("wraith");
+  });
+});
+
+describe("3섹터: 물에 잠긴 사원", () => {
+  const hero = (seed = 301) => {
+    const s = newRun(seed);
+    apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    s.month = 8;
+    return s;
+  };
+  it("층 생성: 3층 보스는 균모, 공양 제단·침수 방이 있고, 거머리는 물에 잠긴 방에만", () => {
+    const r = new Rng({ s: 9 });
+    let altar = 0, flooded = 0;
+    for (let i = 0; i < 60; i++) {
+      for (const floor of [1, 2, 3]) {
+        const rooms = generateFloor(r, floor, 3);
+        expect(reachable(rooms).size).toBe(rooms.length);
+        altar += rooms.filter((x) => x.type === "altar").length;
+        flooded += rooms.filter((x) => x.flooded).length;
+        expect(rooms.some((x) => x.type === "relic")).toBe(false);
+        for (const x of rooms) if (x.type === "combat" && x.encounter?.includes("leech")) expect(x.flooded).toBe(true);
+        if (floor === 3) expect(rooms.find((x) => x.type === "boss")!.encounter![0]).toBe("mycomother");
+      }
+    }
+    expect(altar).toBeGreaterThan(0);
+    expect(flooded).toBeGreaterThan(0);
+  });
+  it("부식: 장비는 부서지지 않고 단계별 패널티, 숫돌·대장간으로 고친다", () => {
+    const s = hero();
+    s.gear.body = "leather"; // AC +2
+    s.gear.main = "longsword";
+    const base = passive(s, "ac");
+    s.corrosion = { body: 1 };
+    expect(passive(s, "ac")).toBe(base - 1);
+    s.corrosion = { body: 3 };
+    expect(passive(s, "ac")).toBe(base - 2);
+    expect(s.gear.body).toBe("leather");
+    s.corrosion = { body: 3, main: 3 };
+    expect(weaponOf(s).dice).toEqual([1, 4]);
+    s.inventory.whetstone = 1;
+    apply(s, { t: "whetstone" });
+    expect(s.inventory.whetstone).toBe(0);
+    expect((s.corrosion.body ?? 0) + (s.corrosion.main ?? 0)).toBe(5);
+    s.gold = 1000;
+    apply(s, { t: "repair", slot: "body" });
+    apply(s, { t: "repair", slot: "main" });
+    expect(s.corrosion.body).toBe(0);
+    expect(s.corrosion.main).toBe(0);
+    expect(s.gold).toBeLessThan(1000);
+    expect(weaponOf(s).dice).toEqual([1, 8]);
+  });
+  it("독은 야영 때마다 한 단계, 마비는 미궁을 나오면 풀린다", () => {
+    const s = hero(302);
+    enterDungeon(s);
+    s.poison = 2;
+    s.paralysis = { main: 2, feet: 1 };
+    s.hero.satiety = 100;
+    apply(s, { t: "camp" });
+    if (s.phase === "dungeon" && !s.combat) {
+      expect(s.poison).toBe(1);
+      expect(s.paralysis!.main).toBe(1);
+    }
+    s.inventory.scroll = 1;
+    s.combat = null;
+    s.dungeon!.pending = null;
+    apply(s, { t: "scroll" });
+    expect(s.phase).toBe("settlement");
+    expect(Object.values(s.paralysis ?? {}).every((v) => !v)).toBe(true);
+    expect(s.poison ?? 0).toBeLessThanOrEqual(1);
+  });
+  it("해독초: 독 한 단계 + 마비 한 단계", () => {
+    const s = hero(303);
+    enterDungeon(s);
+    s.poison = 1;
+    s.paralysis = { feet: 2 };
+    s.inventory.antidote = 1;
+    apply(s, { t: "antidote" });
+    expect(s.poison).toBe(0);
+    expect(s.paralysis.feet).toBe(1);
+  });
+  it("신앙 ★4는 3섹터를 클리어해야 열리고, 신앙심 상한도 그때 200", () => {
+    const s = hero(304);
+    s.faithsKnown = [FAITH.mob];
+    s.hero.faith = FAITH.mob;
+    s.piety = 100;
+    s.rank = 2;
+    expect(tier(s)).toBe(3);
+    s.rank = 3;
+    s.piety = 150;
+    expect(tier(s)).toBe(4);
+  });
+  it("보스 증표 균모의 포자낭이 9→10 훈련의 대가, 수련비 1000G", () => {
+    const s = hero(305);
+    s.hero.level = 9;
+    s.gold = 5000;
+    s.week = 1;
+    expect(canTrain(s)).toBe(false);
+    s.inventory.spore = 1;
+    expect(canTrain(s)).toBe(true);
+    expect(trainCost(s)).toBe(360 + 1000);
+  });
+  it("3섹터 몬스터는 사람이 아니고, 끝없는 미궁에도 섞여 나온다", () => {
+    for (const id of ["plaguerat", "leech", "toad", "snail", "mold", "shroudmold", "gargoyle"]) {
+      expect(MONSTERS[id].human).toBeFalsy();
+      expect(endlessPool()).toContain(id);
+      expect(FRAGMENTS[id]).toBeDefined();
+    }
+    expect(endlessPool()).not.toContain("mycomother");
+    expect(endlessPool()).not.toContain("sweeper3");
   });
 });

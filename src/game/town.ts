@@ -5,7 +5,8 @@ import { addStat, check, emptyStats, kill, log, maxHp, rngOf, taxDue, topBehavio
 import { FRAGMENTS, emptyCodex, fragSlots } from "./fragments";
 import { MIND_KEYS, fadeAfterDungeon } from "./mind";
 import { INJ, LIMBS, PART_NAME, PARTS, emptyInjuries, treatWorst, type Part } from "./injury";
-import { FAITH_BAL, GODS, addPiety, faithManaMult, god, godOf, power, pray, tier } from "./faith";
+import { FAITH_BAL, GODS, addPiety, faithManaMult, god, godOf, inquisitionChance, power, pray, tier } from "./faith";
+import { clearCorrosion, poisonOf } from "./hazards";
 import { makeEnemies, startCombat } from "./combat";
 import { Rng } from "./rng";
 import { CLASSES, type ClassId } from "./classes";
@@ -24,7 +25,7 @@ export function newRun(seed: number): GameState {
     month: 1,
     week: 1,
     gold: BAL.startGold,
-    inventory: { food: 0, potion: 0, scroll: 0, heart: 0, banner: 0, bandage: 0, herb: 0 },
+    inventory: { food: 0, potion: 0, scroll: 0, heart: 0, banner: 0, spore: 0, bandage: 0, herb: 0, whetstone: 0, antidote: 0 },
     trophies: [],
     gear: {},
     skills: [],
@@ -112,7 +113,7 @@ export function createHero(s: GameState, name: string, candidate: number, faith:
   // 권능이 정해진 신만 섬길 수 있다(역병·심연·망각은 해금만 되고 권능은 준비 중)
   s.hero.faith = faith && godOf(faith) && (s.faithsKnown.includes(faith) || s.faithsKnown.length === 0) ? faith : null;
   s.piety = s.hero.faith ? FAITH_BAL.start : 0;
-  if (god(s) === "plague") s.disease = Math.max(s.disease, 1); // 역병의 신도는 병을 품고 시작한다
+  if (god(s) === "plague") giveFever(s); // 역병의 신도는 병을 품고 시작한다
   const cls = CLASSES[s.hero.cls];
   s.gear = { ...cls.start };
   if (s.hero.name.toLowerCase() === "grooty") s.gear.neck = "grooty"; // 테스터
@@ -222,7 +223,7 @@ export function train(s: GameState, trainingId: string, free: [StatKey, StatKey]
     `${t.name} — ${t.desc}. (${cost}G)`,
     `고정: ${t.stats.map((k) => STAT_LABEL[k]).join(", ")} / 자유: ${free.map((k) => STAT_LABEL[k]).join(", ")} / ${noBehavior ? "몸이 기억한 것(무작위)" : "몸이 기억한 것"}: ${behaviorPicks.map((k) => STAT_LABEL[k]).join(", ")}`,
   ];
-  if (paidHeart) lines.unshift(`교관이 ${josa(gate!.name, "을")} 받아 들고 고개를 끄덕였다. "${gate!.item === "heart" ? "이제야 진짜 훈련을 시작할 수 있겠군." : "차원문 너머에서 살아 돌아왔군. 다음 단계로 가자."}"`);
+  if (paidHeart) lines.unshift(`교관이 ${josa(gate!.name, "을")} 받아 들고 고개를 끄덕였다. "${gate!.item === "heart" ? "이제야 진짜 훈련을 시작할 수 있겠군." : gate!.item === "spore" ? "물에 잠긴 사원에서 이걸 들고 나왔다고? …이제 내가 가르칠 수 있는 것도 얼마 안 남았군." : "차원문 너머에서 살아 돌아왔군. 다음 단계로 가자."}"`);
   if (!learned) lines.push(hasLevelTable(t.id) ? "이 레벨에서 이 훈련으로 배울 기술은 없다." : "이 훈련에서 더 배울 기술은 없다. (히든 트레이닝은 준비 중)");
   if (fragSlots(s.hero.level) > fragSlots(from)) lines.push(`몸에 편린을 담을 자리가 하나 더 생겼다. (편린 칸 ${fragSlots(s.hero.level)})`);
   finishWeek(s, { title: "훈련", lines, statDelta: delta, levelUp: { from, to: s.hero.level }, learned: learned ?? undefined, goldDelta: -cost }, true);
@@ -345,9 +346,16 @@ export function inn(s: GameState): void {
     }
   }
   if (s.disease > 0) {
+    const name = s.diseaseKind === "mold" ? "곰팡이 폐병" : "쥐 열병";
     s.disease -= 1;
     pray(s, "plague", -5);
-    lines.push(s.disease ? "열이 조금 내렸다. (쥐 열병 경상)" : "열이 내렸다. 쥐 열병이 나았다.");
+    lines.push(s.disease ? `열이 조금 내렸다. (${name} 경상)` : `몸이 가벼워졌다. ${josa(name, "이")} 나았다.`);
+    if (!s.disease) s.diseaseKind = undefined;
+    healed++;
+  }
+  if (poisonOf(s) > 0) {
+    s.poison = poisonOf(s) - 1;
+    lines.push(s.poison ? "독이 조금 빠졌다. (중독 경상)" : "남아 있던 독이 다 빠졌다.");
     healed++;
   }
   if (MIND_KEYS.some((k) => s.mind[k])) {
@@ -395,6 +403,14 @@ export function useHerb(s: GameState): void {
   s.disease -= 1;
   pray(s, "plague", -5);
   log(s, s.disease ? "쓴 탕약을 삼켰다. 열이 조금 내렸다." : "쓴 탕약을 삼켰다. 열이 내렸다.", "good");
+  if (!s.disease) s.diseaseKind = undefined;
+}
+
+/** 역병의 신도: 쥐 열병(경상)을 품는다 */
+function giveFever(s: GameState): void {
+  if (s.disease > 0) return;
+  s.disease = 1;
+  s.diseaseKind = "rat";
 }
 
 /** 상점가 가격(탐욕/채무의 신 ★1: 반값) */
@@ -422,6 +438,7 @@ export function buyGear(s: GameState, id: string): void {
   if (Object.values(s.gear).includes(id) && g.slot !== "ring") return;
   s.gold -= g.price;
   pray(s, "greed", -Math.ceil(g.price / 20));
+  clearCorrosion(s, targetSlot(s, id));
   const old = equip(s, id);
   log(s, `대장간에서 ${josa(g.name, "을")} 샀다. (${g.price}G)${old ? ` ${josa(GEAR[old].name, "은")} 대장간에 넘겼다.` : ""}`, "system");
 }
@@ -463,7 +480,7 @@ export function closeWeek(s: GameState): "town" | "dungeon" {
   return "town";
 }
 
-export function beginSettlement(s: GameState, o: { mana: number; cleared: boolean; forced: boolean; deepest: number; sector?: number; rankUp?: boolean }): void {
+export function beginSettlement(s: GameState, o: { mana: number; cleared: boolean; forced: boolean; deepest: number; sector?: number; rankUp?: boolean; extra?: string[] }): void {
   const lines: string[] = [];
   lines.push(o.cleared ? `${o.sector ?? 1}섹터의 차원문에 도달하고 돌아왔다.` : o.forced ? "시간이 다 되어 마을로 끌려 나왔다." : "귀환 주문서로 돌아왔다.");
   lines.push(`가장 깊이 내려간 곳: ${o.deepest}층`);
@@ -477,6 +494,7 @@ export function beginSettlement(s: GameState, o: { mana: number; cleared: boolea
   if (o.cleared && o.rankUp) lines.push(`등급이 올랐다 — 클리어한 섹터 ${s.rank}개.`);
   faithMonthEnd(s, lines);
   fadeAfterDungeon(s, lines);
+  if (o.extra) lines.push(...o.extra);
   // 예전 규칙: 경상은 미궁 밖으로 나오면 체력 판정으로 저절로 낫는다
   for (const p of PARTS) {
     if (!BAL.freeHeal) break;
@@ -488,7 +506,7 @@ export function beginSettlement(s: GameState, o: { mana: number; cleared: boolea
   }
   for (const p of PARTS) if (s.injuries[p] === 2 || (!BAL.freeHeal && s.injuries[p] === 1)) lines.push(`${PART_NAME[p]} ${s.injuries[p] === 2 ? "중상" : "경상"}은 저절로 낫지 않는다 — 여관이나 붕대가 필요하다.`);
   if (!BAL.freeHeal && s.hero.hp < maxHp(s)) lines.push(`HP ${s.hero.hp}/${maxHp(s)} — 여관에서 쉬어야 회복된다.`);
-  if (s.disease > 0) lines.push("쥐 열병은 저절로 낫지 않는다 — 탕약이나 여관이 필요하다.");
+  if (s.disease > 0) lines.push(`${s.diseaseKind === "mold" ? "곰팡이 폐병" : "쥐 열병"}은 저절로 낫지 않는다 — 탕약이나 여관이 필요하다.`);
   // 세금은 다음 달 1주차에 낸다. 해가 바뀌면 오른다. 현상수배 중에는 관공서가 세금 대신 목에 현상금을 건다
   let tax = s.heretic ? 0 : taxDue(s.month + 1, s.rank) + (s.debt ?? 0);
   if (!s.heretic && yearOf(s.month + 1) > yearOf(s.month)) lines.push(`해가 바뀐다. 영주가 세금을 올렸다 — ${taxDue(s.month, s.rank)}G → ${taxDue(s.month + 1, s.rank)}G.`);
@@ -499,10 +517,16 @@ export function beginSettlement(s: GameState, o: { mana: number; cleared: boolea
     debt = true;
     lines.push(`【${GODS.greed.name}】 빚 문서가 서기의 손에 쥐어졌다. 이번 세금 ${tax}G는 외상 — 다음 달에 두 배로 갚아야 한다.`);
   }
-  const paid = debt || s.gold >= tax;
-  const inquisition = !s.heretic && tier(s) > 0 && rngOf(s).chance(FAITH_BAL.inquisitionPerTier * tier(s));
+  // 탐욕의 신 ★4 "피의 값": 빚 문서도 없으면 처형 대신 최대 HP −5(삶마다 1회)
+  let blood = false;
+  if (!s.heretic && !debt && s.gold < tax && power(s, "greed", 4) && !s.bloodPrice) {
+    blood = true;
+    lines.push(`【${GODS.greed.name}】 피의 값 — 세금 대신 피를 바치기로 했다. 처형은 면하지만 몸이 영영 약해진다. (최대 HP −5)`);
+  }
+  const paid = debt || blood || s.gold >= tax;
+  const inquisition = !s.heretic && tier(s) > 0 && rngOf(s).chance(inquisitionChance(s));
   if (inquisition) lines.push("성당의 사제가 당신을 오래 바라본다. 옛 신의 냄새를 맡은 것이다 — 이단 심문에 불려 간다.");
-  s.settlement = { month: s.month, manaSold: gold, tax, goldAfter: paid && !debt ? s.gold - tax : s.gold, paid, cleared: o.cleared, sector: o.sector, forced: o.forced, lines, inquisition, debt };
+  s.settlement = { month: s.month, manaSold: gold, tax: blood ? 0 : tax, goldAfter: paid && !debt && !blood ? s.gold - tax : s.gold, paid, cleared: o.cleared, sector: o.sector, forced: o.forced, lines, inquisition, debt, blood };
   s.phase = "settlement";
   s.hero.satiety = 100;
   s.hero.fatigue = 0;
@@ -558,7 +582,7 @@ export function convert(s: GameState, name: string): void {
   }
   s.hero.faith = name;
   s.piety = FAITH_BAL.start;
-  if (god(s) === "plague") s.disease = Math.max(s.disease, 1);
+  if (god(s) === "plague") giveFever(s);
   log(s, `${name} 앞에 무릎 꿇었다. 새로운 신앙이 시작된다.`, "story");
 }
 
@@ -580,7 +604,10 @@ export function closeSettlement(s: GameState): void {
     kill(s, "tax");
     return;
   }
-  if (st.debt) {
+  if (st.blood) {
+    s.bloodPrice = true;
+    s.debt = 0;
+  } else if (st.debt) {
     s.debtUsed = true;
     s.debt = st.tax;
   } else {
@@ -590,5 +617,5 @@ export function closeSettlement(s: GameState): void {
   if (BAL.freeHeal) s.hero.hp = maxHp(s); // 예전 규칙: 미궁에서 돌아오면 다 회복
   s.phase = "town";
   if (s.heretic) log(s, `— ${s.month}월 1주차. 현상수배 중이다. 영지 외곽의 폐가에 몸을 숨겼다.`, "system");
-  else log(s, `— ${s.month}월 1주차. ${st.debt ? `세금은 빚 문서로 미뤘다(다음 달 ${st.tax * 2}G).` : `세금 ${st.tax}G를 냈다.`} 남은 돈 ${s.gold}G.`, "system");
+  else log(s, `— ${s.month}월 1주차. ${st.debt ? `세금은 빚 문서로 미뤘다(다음 달 ${st.tax * 2}G).` : st.blood ? "세금 대신 피를 바쳤다." : `세금 ${st.tax}G를 냈다.`} 남은 돈 ${s.gold}G.`, "system");
 }

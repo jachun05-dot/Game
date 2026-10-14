@@ -8,6 +8,8 @@ import { god, power } from "./faith";
 import { fragScore, fragSlots } from "./fragments";
 import { heroAc, maxHp, smod, taxDue } from "./core";
 import { canTrain, innCost, nextSkill, outlawTrainerHere, shopPrice, trainCost } from "./town";
+import { anyParalysis, corrodedSlots, paraOf, poisonOf, repairCost } from "./hazards";
+import { corrosionOf } from "./gear";
 import type { Action } from "./engine";
 import { BRANCH_SKILLS, ELEMENTS, ELEMENT_KEYS, type BranchKey, type ElementKey, type StyleKey } from "./elements";
 import type { GameState } from "./types";
@@ -58,14 +60,24 @@ function townAction(s: GameState): Action {
   // 저절로 회복되지 않는 규칙이면: HP가 60% 아래이거나 경상이 있으면 여관에서 쉰다(4주차 미궁 전에는 장보기만)
   if (!BAL.freeHeal && s.week < 4 && (s.hero.hp < maxHp(s) * 0.6 || PARTS.some((p) => s.injuries[p] === 1)) && s.gold >= innCost(s)) return { t: "activity", a: "inn" };
   // 미궁 준비물(고기 4, 물약 4) 살 돈은 항상 남겨 둔다
-  // 2섹터까지 갈 생각이면(1섹터 클리어 + 레벨 4) 고기를 더 챙긴다
-  const foodNeed = s.rank >= 1 && s.hero.level >= 4 ? 9 : 4;
+  // 2섹터까지 갈 생각이면(1섹터 클리어 + 레벨 4) 고기를 더 챙긴다, 3섹터까지면 더
+  const deep3 = s.rank >= 2 && s.hero.level >= 7;
+  const foodNeed = deep3 ? 12 : s.rank >= 1 && s.hero.level >= 4 ? 9 : 4;
   const supply = Math.max(0, foodNeed - s.inventory.food) * shopPrice(s, "food") + Math.max(0, 4 - s.inventory.potion) * shopPrice(s, "potion");
   // 다음 세금도 남겨 둔다(4주차 미궁에서 벌어 오지만, 빈손으로 나올 수도 있다)
   const spare = s.gold - supply - (s.heretic ? 0 : taxDue(s.month + 1, s.rank));
   if (s.week === 3) {
     if (s.inventory.food < foodNeed && s.gold >= shopPrice(s, "food")) return { t: "buy", item: "food" };
     if (s.inventory.potion < 4 && s.gold >= shopPrice(s, "potion")) return { t: "buy", item: "potion" };
+    // 3섹터 준비: 해독초 2, 숫돌 1
+    if (deep3 && s.inventory.antidote < 2 && s.gold >= shopPrice(s, "antidote")) return { t: "buy", item: "antidote" };
+    if (deep3 && s.inventory.whetstone < 1 && s.gold >= shopPrice(s, "whetstone")) return { t: "buy", item: "whetstone" };
+    // 3섹터는 시간이 길다(차원문을 두 번 넘으면 남은 시간 ×4): 빠져나올 귀환 주문서 한 장
+    if (deep3 && s.inventory.scroll < 1 && s.gold >= shopPrice(s, "scroll") + taxDue(s.month + 1, s.rank)) return { t: "buy", item: "scroll" };
+  }
+  // 삭은 장비: 무기 2단계 이상이거나 방어구 3단계면 대장간에서 고친다
+  for (const k of corrodedSlots(s)) {
+    if ((k === "main" ? corrosionOf(s, k) >= 2 : corrosionOf(s, k) >= 3) && s.gold - repairCost(s, k) >= taxDue(s.month + 1, s.rank)) return { t: "repair", slot: k };
   }
   // 1) 훈련 2) 몸통·방패 3) 여유가 되면 물약을 더
   if (canTrain(s) && spare >= trainCost(s)) {
@@ -80,6 +92,15 @@ function townAction(s: GameState): Action {
     return pickTraining(s);
   }
   if (!s.gear.body && spare >= GEAR.leather.price!) return { t: "buyGear", id: "leather" };
+  // 2섹터를 클리어했으면 3섹터 장비(등급 2)를 여유가 될 때 산다
+  if (s.rank >= 2) {
+    for (const id of ["bronzeblade", "oiledleather", "waders"]) {
+      const g = GEAR[id];
+      const slot = targetSlot(s, id);
+      if (s.hero.cls === "mage" && g.weapon) continue;
+      if (s.gear[slot] !== id && gearScore(id) >= gearScore(s.gear[slot]) && spare >= g.price! + 50) return { t: "buyGear", id };
+    }
+  }
   if (!s.gear.offhand && spare >= GEAR.shield.price!) return { t: "buyGear", id: "shield" };
   // 돈이 넉넉하면(여윳돈 30G 이상 남길 때) 나머지 방어구도 산다
   for (const id of ["cap", "belt", "boots"]) {
@@ -136,6 +157,7 @@ function goalOf(s: GameState): "explore" | "rush" | "farm" {
   const dg = s.dungeon;
   if (dg && dg.sector === 1 && s.rank >= 1 && s.hero.level >= 4) return "rush";
   // 2섹터는 시간이 빠듯하다: 남은 시간이 4일 아래로 떨어지면 서두른다
+  if (dg && dg.sector === 2 && s.rank >= 2 && s.hero.level >= 7) return "rush";
   if (dg && dg.sector >= 2 && (s.autoGoal ?? "explore") === "explore") return "rush";
   return s.autoGoal ?? "explore";
 }
@@ -162,12 +184,15 @@ function dungeonAction(s: GameState): Action | null {
       case "lostScroll":
         return { t: "pending", choice: floorDone(s) || hp < 0.5 ? "use" : "stay" };
       case "portal": {
-        // 1섹터 차원문: 2섹터를 감당할 만하면 넘어가고, 아니면 마석을 들고 돌아간다
-        if (dg.sector >= 2) return { t: "pending", choice: "enter" };
-        const ready = s.hero.level >= 4 && s.inventory.potion >= 3 && hp >= 0.6 && dg.turnsLeft >= 96;
+        // 차원문: 다음 섹터를 감당할 만하면 넘어가고, 아니면 마석을 들고 돌아간다(3섹터 너머 끝없는 미궁은 그냥 들어간다)
+        // 끝없는 미궁은 식량이 넉넉할 때만(돌아올 길은 주문서뿐)
+        if (dg.endless || dg.sector >= 3) return { t: "pending", choice: s.inventory.food >= 4 || s.inventory.scroll > 0 ? "enter" : "return" };
+        const need = dg.sector === 2 ? 7 : 4;
+        const ready = s.hero.level >= need && s.inventory.potion >= 3 && hp >= 0.6 && dg.turnsLeft >= 96 && (dg.sector === 1 || s.inventory.food >= 5);
         return { t: "pending", choice: ready ? "enter" : "return" };
       }
       case "relic": return { t: "pending", choice: hp >= 0.6 ? "search" : "leave" };
+      case "altar": return { t: "pending", choice: god(s) === "plague" ? "pray" : hp >= 0.7 && poisonOf(s) === 0 ? "search" : "leave" };
       case "frag": {
         // 빈 칸이면 흡수, 꽉 찼으면 가장 약한 편린보다 나을 때만 바꾼다
         if (s.fragments.length < fragSlots(s.hero.level)) return { t: "pending", choice: "absorb" };
@@ -184,12 +209,16 @@ function dungeonAction(s: GameState): Action | null {
   }
   if (s.inventory.bandage > 0 && PARTS.some((p) => s.injuries[p] === 2)) return { t: "bandage" };
   if (s.inventory.herb > 0 && s.disease > 0 && god(s) !== "plague") return { t: "herb" };
+  if (s.inventory.antidote > 0 && (poisonOf(s) >= 1 || paraOf(s, "main") >= 1 || (anyParalysis(s) && poisonOf(s) + paraOf(s, "feet") >= 2))) return { t: "antidote" };
+  if (s.inventory.whetstone > 0 && corrosionOf(s, "main") >= 2) return { t: "whetstone" };
   if (hp < 0.4 && s.inventory.potion > 0) return { t: "potion" };
   if (hp < 0.45 && s.inventory.potion === 0 && s.inventory.scroll > 0) return { t: "scroll" };
   // 청소부가 바로 옆인데 출구가 옆에 없으면 주문서로 빠진다
   const sd = sweeperDistance(s);
   if (sd !== null && sd <= 1 && s.inventory.scroll > 0 && !dg.rooms[dg.current].edges.some((e) => ["stairs", "portal"].includes(dg.rooms[e].type))) return { t: "scroll" };
   if (s.hero.satiety < 25 && s.inventory.food > 0) return { t: "eat" };
+  // 식량이 떨어져 굶주리기 시작했으면 주문서로 빠진다
+  if (s.hero.satiety <= 0 && s.inventory.food === 0 && s.inventory.scroll > 0) return { t: "scroll" };
   // 청소부가 오고 있으면 야영하지 않는다(자는 동안 두 방 다가온다) — HP가 아주 낮을 때만 예외
   if ((s.hero.fatigue >= 90 || (hp < 0.5 && s.hero.satiety > 30)) && (!sweeperThreat(s) || hp < 0.2)) return { t: "camp" };
   const step = nextStep(s);
@@ -205,6 +234,8 @@ function dungeonAction(s: GameState): Action | null {
   }
   // 파밍: 전투방에 들어가기 전에 HP를 채운다
   if (goal === "farm" && step !== null && dg.rooms[step].type === "combat" && !dg.rooms[step].resolved && hp < 0.7 && s.hero.satiety > 30 && dg.turnsLeft > 40) return { t: "camp" };
+  // 더 갈 곳이 없는데 남은 시간을 버틸 식량이 없으면 주문서로 나간다
+  if (step === null && s.inventory.scroll > 0 && s.inventory.food * 40 + s.hero.satiety < dg.turnsLeft * 0.8) return { t: "scroll" };
   // 더 갈 곳이 없으면(혹은 계단 앞에서 멈췄으면) 시간이 다 될 때까지 야영하며 버틴다
   return step === null ? { t: "camp" } : { t: "move", room: step };
 }
@@ -213,6 +244,11 @@ function dungeonAction(s: GameState): Action | null {
 function comfortFloor(s: GameState): number {
   // 끝없는 미궁: 레벨 − 9층까지(물약 3개 이상이면 한 층 더)
   if (s.dungeon?.endless) return Math.max(1, s.hero.level - 9 + (s.inventory.potion >= 3 ? 1 : 0));
+  // 3섹터: 3층은 레벨 9 + 물약 3개 + AC 16 이상, 2층은 레벨 8부터
+  if ((s.dungeon?.sector ?? 1) === 3) {
+    if (s.hero.level >= 9 && s.inventory.potion >= 3 && heroAc(s) >= 16) return 3;
+    return s.hero.level >= 8 ? 2 : 1;
+  }
   // 2섹터: 3층은 레벨 6 + 물약 3개 + AC 15 이상, 2층은 레벨 5부터
   if ((s.dungeon?.sector ?? 1) >= 2) {
     if (s.hero.level >= 6 && s.inventory.potion >= 3 && heroAc(s) >= 15) return 3;

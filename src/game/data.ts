@@ -19,9 +19,13 @@ export const BAL = {
   /** 해가 바뀔 때마다 오르는 세금(1년차 30, 2년차 70, 3년차 110 …) */
   taxPerYear: 40,
   /** 등급(클리어한 섹터 수)에 따라 더 붙는 세금: 이름난 모험가에게 영주가 더 걷는다 */
-  taxRank: [0, 120, 250, 250] as number[],
-  /** 섹터별 마석 환전 배율(희귀 개체 포함) */
-  manaSectorMult: [1, 1, 0.35, 0.35] as number[],
+  taxRank: [0, 120, 250, 400] as number[],
+  /** 섹터별 마석 환전 배율 */
+  manaSectorMult: [1, 1, 0.35, 0.3] as number[],
+  /** 섹터별 희귀 개체 마석 배율(3섹터부터 큰 한 방이 재미라 덜 깎는다) */
+  rareSectorMult: [1, 1, 0.35, 0.6] as number[],
+  /** 끝없는 미궁 마석 배율(층 배율과 곱한다) */
+  endlessManaSectorMult: 0.35,
   /** 0보다 크면 레벨 1~3 훈련비 = trainCostBase + trainCostPerLevel × (레벨 − 1) (첫 훈련 값이 trainCostBase) */
   trainCostBase: 20,
   /** 레벨 4부터의 훈련비(레벨당). 0이면 레벨 1~3과 같은 식 — 초반(1섹터)은 싸게, 뒤로 갈수록 비싸게 */
@@ -35,11 +39,11 @@ export const BAL = {
   /** 미궁의 청소부: 이 층에 도착한 뒤 예고 1·2, 나타남 턴(48 = 하루). 보통 한 층 탐색은 50~100턴 */
   sweeperTurns: [96, 120, 144] as [number, number, number],
   /** 청소부를 쓰러뜨린 보상 마석(섹터별, 섹터 배율 적용 안 함) */
-  sweeperMana: [0, 400, 800] as number[],
+  sweeperMana: [0, 400, 800, 1200] as number[],
   /** 매달 상점가 물가가 오르는 폭 [최소, 최대](0.05 = 5%). [0, 0]이면 오르지 않는다 */
   inflation: [0.05, 0.1] as [number, number],
   /** 특수 훈련(이 레벨 → 다음 레벨) 수련비 */
-  specialTrainFee: { 6: 600 } as Record<number, number>,
+  specialTrainFee: { 6: 600, 9: 1000 } as Record<number, number>,
   weekTurns: 336,
   moveTurns: 4,
   campTurns: 16,
@@ -49,7 +53,14 @@ export const BAL = {
   trapDodgeDc: 12,
   trapDisarmDc: 13,
   fleeDcBase: 10,
-  prices: { food: 5, potion: 6, scroll: 45, bandage: 25, herb: 25 },
+  prices: { food: 5, potion: 6, scroll: 45, bandage: 25, herb: 25, whetstone: 15, antidote: 10 },
+  /** 대장간 부식 수리비(단계별, 그 슬롯을 새것처럼). 물가를 따라 오른다 */
+  repairCost: [0, 15, 40, 80],
+  /** 3섹터 침수 방 비율(층별), 3층 침수 방 중 깊은 물 비율 */
+  floodChance: [0, 0.3, 0.4, 0.5],
+  deepChance: 0.3,
+  /** 3섹터 젖은 경전: 말리며 읽는 데 드는 턴(4시간) */
+  wetReadTurns: 8,
   /** 치료 물약 회복량 = 2d4 + 이 값 */
   potionBase: 6,
   /** 이 레벨에서 다음 레벨로 가는 훈련은 보스 증표가 있어야 받을 수 있다 */
@@ -132,6 +143,43 @@ export interface MonsterDef {
   dummy?: boolean;
   /** 히든: 마주치기 전에는 도감에 실루엣도 나오지 않는다 */
   hidden?: boolean;
+  // ── 3섹터(hazards.ts·combat.ts) ──
+  /** 명중했을 때 장비 부식 확률 */
+  corrode?: number;
+  /** 명중했을 때 독 확률 */
+  poison?: number;
+  /** 명중했을 때 마비 확률 */
+  paralyze?: number;
+  /** 명중했을 때 곰팡이 폐병 확률 */
+  mold?: number;
+  /** 명중했을 때 쥐 열병 확률(없으면 쥐·보스 쥐 기본값) */
+  fever?: number;
+  /** 명중했을 때 절망 확률 */
+  despairHit?: number;
+  /** 피를 빤다: 명중하면 1 더 */
+  drain?: boolean;
+  /** 느리다: 짝수 라운드에는 공격하지 않는다 */
+  slow?: boolean;
+  /** 물에 산다: 물이 높을 때 침수 방에서 명중 +1, 도주 DC +2 */
+  water?: boolean;
+  /** 기도 흉내: 라운드마다 이 확률로 곰팡이 동족 HP +3 */
+  mimicPrayer?: number;
+  /** 곰팡이 동족(기도 흉내·뿌리 재생 대상) */
+  fungus?: boolean;
+  /** 불에 약하다: 화염 주문·불탐 피해 + */
+  fireWeak?: number;
+  /** 죽을 때 점액: 민첩 판정에 실패하면 마비 */
+  deathSplash?: number;
+  /** 석상인 척: 감각 판정에 실패하면 기습당한다 */
+  statue?: boolean;
+  /** 종소리: 라운드마다 이 확률로 공포 또는 혼란 */
+  bell?: number;
+  /** 포자 폭발: 3라운드마다 1d4 + 곰팡이 폐병 판정 */
+  spores?: boolean;
+  /** 뿌리 재생: 곰팡이 동족이 살아 있으면 라운드마다 HP + */
+  rootRegen?: number;
+  /** 역병의 신 ★2 이상이면 첫 라운드 공격하지 않는다 */
+  plaguePeace?: boolean;
 }
 
 // DESIGN 11절 "1섹터 몬스터(확정)" / "1섹터 보스"
@@ -160,6 +208,20 @@ export const MONSTERS: Record<string, MonsterDef> = {
   // 미궁의 청소부(히든 보스, sweeper.ts): 실력에 비해 얕은 층에 오래 머물면 나타나 쫓아온다. 그 섹터보다 3섹터 위 보스 급
   sweeper1: { id: "sweeper1", name: "미궁의 청소부", hp: 260, ac: 22, atk: 12, dice: [3, 8], mana: 0, hard: true, fearHit: 0.3, hidden: true, wound: { head: 2, body: 3, main: 2, offhand: 2, feet: 2 }, attackText: "녹슨 갈퀴 같은 팔로 쓸어 냈다", note: "미궁은 한곳에 오래 머무는 것을 싫어한다. 층을 치우러 온다. 계단 아래까지는 쫓아오지 않는다." },
   sweeper2: { id: "sweeper2", name: "전쟁터의 청소부", hp: 330, ac: 24, atk: 14, dice: [3, 10], mana: 0, hard: true, fearHit: 0.3, hidden: true, wound: { head: 2, body: 3, main: 2, offhand: 2, feet: 2 }, attackText: "부러진 깃대들을 엮은 팔로 후려쳤다", note: "끝나지 않은 전쟁의 잔해를 치우는 거대한 것. 머무는 자도 잔해로 여긴다." },
+  // ── 3섹터: 물에 잠긴 사원 ──
+  plaguerat: { id: "plaguerat", name: "역병 쥐떼", wound: { main: 3, offhand: 3, feet: 3, body: 1 }, hp: 10, ac: 13, atk: 6, dice: [1, 6], mana: 6, fever: 0.08, water: true, attackText: "떼로 달려들어 물어뜯었다", note: "물에 불은 쥐들이 떼 지어 헤엄친다. 물리면 열병이 옮는다. 물속에서는 따돌리기 어렵다." },
+  leech: { id: "leech", name: "진흙 거머리", wound: { feet: 4, main: 1, offhand: 1, body: 1 }, hp: 12, ac: 12, atk: 7, dice: [1, 6], mana: 10, drain: true, paralyze: 0.1, water: true, attackText: "다리에 달라붙어 피를 빨았다", note: "탁한 물속에서 다리에 달라붙는다. 피를 빨고, 침이 살을 저리게 한다." },
+  toad: { id: "toad", name: "독두꺼비", wound: { main: 2, offhand: 2, feet: 2, body: 1 }, hp: 20, ac: 14, atk: 6, dice: [1, 8], mana: 18, poison: 0.15, deathSplash: 0.2, water: true, attackText: "독 묻은 혀를 휘둘렀다", note: "피부의 점액이 독이다. 터질 때 튀는 점액에 닿으면 몸이 저린다." },
+  snail: { id: "snail", name: "산성 달팽이", wound: { main: 2, offhand: 2, feet: 2, body: 1 }, hp: 28, ac: 17, atk: 6, dice: [1, 8], mana: 22, hard: true, slow: true, corrode: 0.25, attackText: "산성 점액을 끼얹었다", note: "느리지만 단단하다. 점액이 쇠를 삭인다." },
+  mold: { id: "mold", name: "곰팡이 괴물", wound: { head: 2, body: 2, main: 1, offhand: 1, feet: 1 }, hp: 30, ac: 13, atk: 8, dice: [1, 10], mana: 24, mold: 0.1, fungus: true, fireWeak: 2, attackText: "포자 덩어리를 내리쳤다", note: "맞으면 포자를 들이마신다. 불에 약하다." },
+  shroudmold: { id: "shroudmold", name: "사제복 균사체", wound: { head: 2, body: 2, main: 1, offhand: 1, feet: 1 }, hp: 26, ac: 15, atk: 8, dice: [1, 10], mana: 30, mimicPrayer: 0.2, despairHit: 0.1, fungus: true, attackText: "썩은 소매로 휘감았다", note: "썩은 사제복 안에서 자란 균사가 옛 기도를 흉내 낸다. 그 기도에 곰팡이들이 되살아난다." },
+  gargoyle: { id: "gargoyle", name: "잠긴 석상", wound: { head: 2, body: 3, main: 1, offhand: 1, feet: 1 }, hp: 36, ac: 18, atk: 8, dice: [2, 6], mana: 34, hard: true, statue: true, attackText: "돌 주먹을 내리찍었다", note: "물에 잠긴 수호 석상. 움직이기 전까지는 그냥 석상처럼 보인다." },
+  pearlleech: { id: "pearlleech", name: "진주 먹은 거머리", wound: { feet: 4, main: 1 }, hp: 14, ac: 17, atk: 3, dice: [1, 4], mana: 650, rare: true, escapeAfter: 3, water: true, attackText: "진주 빛 입으로 물었다", note: "삼킨 마석이 몸속에서 진주처럼 빛난다. 금세 물속으로 달아난다." },
+  sporecap: { id: "sporecap", name: "마석 균모자", wound: { head: 2, body: 2 }, hp: 18, ac: 17, atk: 3, dice: [1, 4], mana: 700, rare: true, escapeAfter: 3, mold: 0.05, fungus: true, attackText: "마석 포자를 뿜었다", note: "갓에 마석이 맺혔다. 포자를 흩뿌리며 벽 틈으로 숨어든다." },
+  shellsnail: { id: "shellsnail", name: "마석 껍질 달팽이", wound: { main: 2, offhand: 2, feet: 2 }, hp: 26, ac: 19, atk: 3, dice: [1, 6], mana: 760, rare: true, escapeAfter: 4, hard: true, corrode: 0.25, attackText: "산성 점액을 뱉었다", note: "껍질이 통째로 마석이다. 오래 버티면 껍질 속에 숨어 버린다." },
+  drownedchoir: { id: "drownedchoir", name: "익사한 성가대", wound: { head: 3, body: 2, main: 1, offhand: 1, feet: 1 }, hp: 48, ac: 16, atk: 8, dice: [1, 10], mana: 50, elite: true, bell: 0.25, attackText: "녹청 종을 휘둘러 내리쳤다", note: "물에 잠긴 종탑의 따개비 군체. 종소리가 머릿속을 헤집는다. 녹청 종을 품고 있다." },
+  mycomother: { id: "mycomother", name: "가라앉은 본당의 균모", wound: { head: 2, body: 3, main: 2, offhand: 2, feet: 2 }, hp: 130, ac: 17, atk: 10, dice: [2, 8], mana: 160, spores: true, rootRegen: 2, corrode: 0.25, plaguePeace: true, fungus: true, attackText: "산성 체액을 쏟아부었다", note: "물에 잠긴 신상 전체에 뿌리를 내린 곰팡이 군체. 3라운드마다 포자를 터뜨리고, 곰팡이가 곁에 있으면 뿌리로 되살아난다." },
+  sweeper3: { id: "sweeper3", name: "사원의 청소부", hp: 420, ac: 26, atk: 16, dice: [3, 12], mana: 0, hard: true, fearHit: 0.3, hidden: true, wound: { head: 2, body: 3, main: 2, offhand: 2, feet: 2 }, attackText: "물이끼 엉킨 촉수로 휩쓸었다", note: "물에 잠긴 사원 바닥을 기어 다니며 머무는 것을 모두 쓸어 간다. 계단 아래까지는 따라오지 않는다." },
   // 훈련소 허수아비(dummy.ts): 복사한 상태에서만 등장한다
   dummy: { id: "dummy", name: "짚 허수아비", hp: 30, ac: 13, atk: 0, dice: [1, 1], mana: 0, dummy: true, attackText: "흔들렸다" },
   dummyPack: { id: "dummyPack", name: "작은 허수아비", hp: 10, ac: 12, atk: 0, dice: [1, 1], mana: 0, dummy: true, attackText: "흔들렸다" },
@@ -203,6 +265,30 @@ export const RARE_BY_FLOOR = ["", "goldrat", "jewelgoblin", "crystalskel"];
 /** 섹터별 조우표(1섹터 = ENCOUNTERS) */
 export const SECTOR_ENCOUNTERS: Record<number, Record<number, { item: string[]; w: number }[]>> = {
   1: ENCOUNTERS,
+  3: {
+    1: [
+      { item: ["plaguerat", "plaguerat", "plaguerat"], w: 2 },
+      { item: ["plaguerat", "plaguerat", "plaguerat", "plaguerat"], w: 1 },
+      { item: ["leech"], w: 2 },
+      { item: ["leech", "leech"], w: 1 },
+      { item: ["toad"], w: 2 },
+      { item: ["leech", "plaguerat", "plaguerat"], w: 1 },
+    ],
+    2: [
+      { item: ["toad", "toad"], w: 2 },
+      { item: ["mold"], w: 2 },
+      { item: ["snail"], w: 2 },
+      { item: ["shroudmold", "mold"], w: 2 },
+      { item: ["plaguerat", "plaguerat", "plaguerat", "plaguerat", "plaguerat"], w: 1 },
+    ],
+    3: [
+      { item: ["mold", "mold"], w: 2 },
+      { item: ["shroudmold", "mold"], w: 2 },
+      { item: ["gargoyle"], w: 2 },
+      { item: ["snail", "toad"], w: 2 },
+      { item: ["plaguerat", "plaguerat", "plaguerat", "plaguerat", "plaguerat", "plaguerat"], w: 1 },
+    ],
+  },
   2: {
     1: [
       { item: ["wolf"], w: 3 },
@@ -226,24 +312,30 @@ export const SECTOR_ENCOUNTERS: Record<number, Record<number, { item: string[]; 
   },
 };
 /** 섹터별 마석 희귀 개체(층마다 BAL.rareChance) */
-export const SECTOR_RARES: Record<number, string[]> = { 1: RARE_BY_FLOOR, 2: ["", "goldwolf", "manaharpy", "manawraith"] };
+export const SECTOR_RARES: Record<number, string[]> = { 1: RARE_BY_FLOOR, 2: ["", "goldwolf", "manaharpy", "manawraith"], 3: ["", "pearlleech", "sporecap", "shellsnail"] };
 /** 섹터별 정예 희귀 개체(마석 대신 고유 보상) */
 export const SECTOR_ELITES: Record<number, { id: string; escort: string[]; floors: number[]; reward: string }> = {
   2: { id: "harpyqueen", escort: ["harpy", "harpy"], floors: [2, 3], reward: "queencloak" },
+  3: { id: "drownedchoir", escort: ["shroudmold", "shroudmold"], floors: [2, 3], reward: "choirbell" },
 };
 /** 섹터별 보스 무리 */
 export function bossGroup(sector: number, r: { int: (a: number, b: number) => number }): string[] {
   if (sector === 2) return ["general", "wraith", "wraith"];
+  if (sector === 3) return ["mycomother", "mold", "mold"];
   return ["boss", ...Array(r.int(2, 3)).fill("rat")];
 }
 /** 섹터별 보스 증표(처음 쓰러뜨릴 때 한 번만) — 이 레벨에서 다음 레벨로 가는 훈련의 대가 */
-export const TROPHIES: { sector: number; item: "heart" | "banner"; name: string; gateLevel: number }[] = [
+export const TROPHIES: { sector: number; item: "heart" | "banner" | "spore"; name: string; gateLevel: number }[] = [
   { sector: 1, item: "heart", name: "거대 쥐의 마석 심장", gateLevel: 3 },
   { sector: 2, item: "banner", name: "장군의 녹슨 휘장", gateLevel: 6 },
+  { sector: 3, item: "spore", name: "균모의 포자낭", gateLevel: 9 },
 ];
+/** 섹터 이름(차원문을 넘을 때·화면 제목) */
+export const SECTOR_NAME: Record<number, string> = { 1: "지하 감옥", 2: "잊힌 전쟁터의 초원", 3: "물에 잠긴 사원" };
 /** 야영 중 기습하는 무리 */
 export function campAmbush(sector: number, floor: number): string[] {
   if (sector === 2) return floor >= 2 ? ["wolf", "wolf"] : ["wolf"];
+  if (sector === 3) return floor >= 2 ? ["leech", "leech"] : ["plaguerat", "plaguerat", "plaguerat"];
   return floor >= 2 ? ["rat", "rat"] : ["rat"];
 }
 
@@ -397,6 +489,38 @@ export const SECTOR_FLAVOR: Record<number, Partial<Record<string, string[]>>> = 
     portal: ["풀밭 한가운데, 하늘이 찢어진 듯 차원문이 일렁인다."],
   },
 };
+
+/** 3섹터 방 묘사 */
+SECTOR_FLAVOR[3] = {
+  arrival: ["차원문을 빠져나오자 무릎까지 물이 찬다. 이끼 낀 기둥 사이로 썩은 향 냄새가 흐른다.", "계단 아래가 물에 잠겨 있다. 물 위에 공양 그릇이 떠다닌다."],
+  empty: [
+    "물에 잠긴 회랑. 발밑에서 무언가 미끄러진다.",
+    "벽마다 흰 균사가 꽃처럼 피어 있다. 공기가 달고 무겁다.",
+    "무너진 신상의 머리가 물 위로 반쯤 나와 있다.",
+    "천장에서 물방울이 떨어진다. 일정한 소리가 기도처럼 들린다.",
+    "녹슨 향로가 물에 떠 있다. 아무도 없다.",
+    "바닥의 모자이크가 물 아래서 일렁인다. 옛 신의 얼굴이다.",
+  ],
+  combat: ["물결이 일렁인다. 무언가 물속에서 다가온다.", "벽의 균사가 숨을 쉬듯 부풀었다 가라앉는다.", "찰박이는 소리가 여럿, 사방에서 좁혀 온다."],
+  trap: ["물 위에 기름 같은 막이 번들거린다. 바닥이 이상하게 미끄럽다.", "돌바닥이 군데군데 삭아 있다. 산이 고인 웅덩이다."],
+  pit: ["물 아래 바닥이 보이지 않는다. 무너진 지하 묘실이다.", "물이 한쪽으로 빨려 들어간다. 아래가 비어 있다."],
+  treasure: ["물에 반쯤 잠긴 제물 상자가 있다.", "무너진 감실 안에 봉인된 궤짝이 보인다."],
+  record: ["물에 퉁퉁 불은 경전이 제단 위에 놓여 있다.", "젖은 양피지 두루마리가 기둥 틈에 끼어 있다."],
+  shrine: ["물 위로 솟은 작은 제단. 성당의 상징과는 다르다.", "균사에 덮이지 않은 작은 신상 하나가 남아 있다."],
+  altar: ["물에 잠긴 공양 제단. 썩은 제물 사이로 무언가 반짝인다.", "역병의 신에게 바친 제단이다. 그릇마다 곰팡이가 피어 있다."],
+  stairs: ["물이 흘러내리는 계단이 아래로 이어진다."],
+  boss: ["물에 잠긴 거대한 신상 전체가 곰팡이로 뒤덮여 있다. 그것이 숨을 쉰다."],
+  portal: ["물에 잠긴 본당 한가운데, 차원문이 수면 위에서 일렁인다."],
+};
+
+/** 3섹터 기록물: 물에 잠긴 사원과 역병의 신 */
+export const PLAGUE_RECORDS = [
+  "\"역병의 신은 죽이지 않는다. 다만 오래 살게 할 뿐이다.\"",
+  "\"물이 차오르던 날, 사제들은 달아나지 않았다. 기도가 끝나지 않았기 때문이다.\"",
+  "\"균모는 신의 축복을 가장 오래 받은 것. 우리는 그것을 성녀라 불렀다.\"",
+  "\"병을 품은 자만이 이 문을 지날 수 있다. 그렇게 믿었다.\"",
+  "\"짝을 잃은 신이 하늘에 홀로 앉은 뒤, 우리 신은 물 아래로 숨었다.\"",
+];
 
 /** 2섹터 기록물: 신들의 전쟁 */
 export const WAR_RECORDS = [

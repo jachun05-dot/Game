@@ -2,17 +2,20 @@ import { MONSTERS } from "./data";
 import type { Rng } from "./rng";
 import type { DungeonState, Enemy, Room, RoomType } from "./types";
 
-// 끝없는 미궁(2026-10-14): 2섹터 차원문 너머. 층은 끝없이 이어지고, 함정·상자·기록물 없이 몬스터만 나온다.
+// 끝없는 미궁(2026-10-14): 마지막으로 만든 섹터(LAST_SECTOR)의 차원문 너머. 층은 끝없이 이어지고, 함정·상자·기록물 없이 몬스터만 나온다.
 // 지금까지 만든 몬스터가 무작위로 섞여 나오고(사람·허수아비·히든 청소부·희귀 개체 제외),
-// 5층마다 보스(거대 쥐·하피 여왕·장군) 중 하나가 계단 앞을 지킨다. 층이 깊을수록 몬스터가 강해진다.
-// 던전 상태는 sector 3 + endless 플래그로 표시한다(층 번호 = 끝없는 미궁 몇 층).
+// 5층마다 보스(거대 쥐·하피 여왕·장군·균모) 중 하나가 계단 앞을 지킨다. 층이 깊을수록 몬스터가 강해진다.
+// 던전 상태는 sector ENDLESS_SECTOR + endless 플래그로 표시한다(층 번호 = 끝없는 미궁 몇 층).
+// 섹터 번호는 실제 섹터와 겹치지 않게 큰 수를 쓰고, 섹터별 표(조우·마석 배율 등)는 endless 플래그로 따로 고른다.
 
-export const ENDLESS_SECTOR = 3;
+/** 지금까지 만든 마지막 섹터: 이 섹터의 차원문 너머가 끝없는 미궁 */
+export const LAST_SECTOR = 3;
+export const ENDLESS_SECTOR = 99;
 export const ENDLESS_NAME = "끝없는 미궁";
 
 /** 보스는 5층마다 */
 export const ENDLESS_BOSS_EVERY = 5;
-const BOSSES = ["boss", "harpyqueen", "general"];
+const BOSSES = ["boss", "harpyqueen", "general", "mycomother"];
 
 /** 끝없는 미궁에 나오는 보통 몬스터(지금까지 만든 몬스터 전부, 특수한 것 제외) */
 export function endlessPool(): string[] {

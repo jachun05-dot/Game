@@ -52,7 +52,7 @@ export interface Enemy {
   shock?: number;
   /** 손버릇으로 찔렀다(쓰러뜨리면 마석 ×1.5) */
   stolen?: boolean;
-  /** 끝없는 미궁에서 강해진 몬스터: 최대 HP·명중·피해·AC 보정 */
+  /** 3섹터 사원의 청소부 등 끝없는 미궁에서 강해진 몬스터: 최대 HP·명중·피해·AC 보정 */
   hpMax?: number;
   atkUp?: number;
   dmgUp?: number;
@@ -110,6 +110,8 @@ export interface CombatState {
   limit?: number;
   /** 허수아비: 준 피해 기록(출처별·라운드별) */
   meter?: DamageMeter;
+  /** 전쟁의 신 ★4 "최후의 돌격": 이 전투 동안 명중 +2, 피해 +3 */
+  lastStand?: boolean;
 }
 
 /** 자동 결정의 미궁 목표: 구석구석 탐험 / 빠르게 다음 층 / 파밍(전투·상자 위주) */
@@ -137,7 +139,9 @@ export type RoomType =
   | "boss"
   | "portal"
   /** 2섹터: 전쟁의 흔적(조사하면 낡은 장비·망령·기록물) */
-  | "relic";
+  | "relic"
+  /** 3섹터: 공양 제단(조사하면 낡은 장비·독·역병의 신 기록물, 역병의 신도는 기도) */
+  | "altar";
 
 export interface Room {
   id: number;
@@ -162,6 +166,11 @@ export interface Room {
   ambushKnown?: boolean;
   /** 비웠던 전투방에 몬스터가 다시 들어왔다(마석 절반) */
   respawned?: boolean;
+  /** 3섹터: 물에 잠긴 방(물이 높을 때 이동 시간 ×1.5) / 깊은 물(헤엄, 이동 ×2) */
+  flooded?: boolean;
+  deep?: boolean;
+  /** 3섹터: 물이 낮을 때 바닥의 공양물(작은 마석)을 주울 수 있다 */
+  offering?: boolean;
   flavor: number;
 }
 
@@ -171,6 +180,7 @@ export type Pending =
   | { kind: "record" }
   | { kind: "shrine" }
   | { kind: "relic" }
+  | { kind: "altar" }
   | { kind: "stairs" }
   /** 첫 미궁의 1층 계단: 내려갈 수 없고, 떨어진 귀환 주문서를 쓸지 고른다 */
   | { kind: "lostScroll" }
@@ -198,7 +208,7 @@ export interface DungeonState {
   clock?: number;
   /** 리젠 판정까지 쌓인 턴 */
   respawnClock?: number;
-  /** 끝없는 미궁(2섹터 차원문 너머, endless.ts): floor = 끝없는 미궁 몇 층 */
+  /** 끝없는 미궁(마지막 섹터 차원문 너머, endless.ts): floor = 끝없는 미궁 몇 층 */
   endless?: boolean;
   /** 이번 삶의 첫 미궁(1월): 2층으로 내려갈 수 없다 */
   first?: boolean;
@@ -212,6 +222,10 @@ export interface DungeonState {
   sweeperDown?: boolean;
   /** 청소부 전투가 어디서 시작됐나(방 이동 / 야영) */
   sweeperFrom?: "move" | "camp";
+  /** 시와 노래의 신 ★4 "영웅담": 이 미궁에서 읽은 기록물만큼 명중·판정 +(최대 3) */
+  saga?: number;
+  /** 재앙의 신 ★4 "함정 다루기": 해체한 함정을 다음 전투 시작 때 터뜨린다 */
+  trapCharge?: boolean;
 }
 
 export type Activity = "train" | "rumor" | "field" | "inn";
@@ -235,6 +249,8 @@ export interface Settlement {
   inquisition?: boolean;
   /** 탐욕의 신 ★3 "빚 문서"로 이번 세금을 외상으로 넘겼다 */
   debt?: boolean;
+  /** 탐욕의 신 ★4 "피의 값"으로 처형을 면했다(최대 HP −5) */
+  blood?: boolean;
   manaSold: number;
   tax: number;
   goldAfter: number;
@@ -283,7 +299,8 @@ export interface GameState {
   week: number;
   gold: number;
   /** heart: 1섹터 보스가 남기는 "거대 쥐의 마석 심장"(레벨 3→4 훈련 대가) */
-  inventory: { food: number; potion: number; scroll: number; heart: number; banner: number; bandage: number; herb: number };
+  /** banner: 2섹터 "장군의 녹슨 휘장", spore: 3섹터 "균모의 포자낭". whetstone 숫돌(부식), antidote 해독초(독·마비) */
+  inventory: { food: number; potion: number; scroll: number; heart: number; banner: number; spore: number; bandage: number; herb: number; whetstone: number; antidote: number };
   /** 이미 얻은 보스 증표(섹터마다 한 번만 나온다) */
   trophies: string[];
   /** 착용 장비(슬롯 → gear.ts의 GEAR id) */
@@ -298,8 +315,18 @@ export interface GameState {
   injuries: Record<"head" | "body" | "main" | "offhand" | "feet", number>;
   /** 결손 부위에 단 의수·의족 */
   prosthetic: Partial<Record<"head" | "body" | "main" | "offhand" | "feet", boolean>>;
-  /** 쥐 열병 단계(0~2) */
+  /** 질병 단계(0~2) */
   disease: number;
+  /** 질병 종류(없으면 쥐 열병). mold = 곰팡이 폐병(3섹터, 야영 회복 절반) */
+  diseaseKind?: "rat" | "mold";
+  /** 3섹터 부식(hazards.ts): 장비 슬롯별 0~3. 장비는 부서지지 않고 단계별 패널티만 */
+  corrosion?: Partial<Record<"main" | "body" | "offhand" | "head", number>>;
+  /** 3섹터 마비: 부위별 0~2(결손 없음). 미궁을 나오면 풀린다 */
+  paralysis?: Partial<Record<"main" | "offhand" | "feet", number>>;
+  /** 3섹터 독(중독): 0~2. 야영·미궁을 나올 때마다 한 단계 */
+  poison?: number;
+  /** 탐욕의 신 ★4 "피의 값"을 썼다(삶마다 1회): 최대 HP −5 */
+  bloodPrice?: boolean;
   /** 정신 상태이상(mind.ts). 있으면 걸린 것, known이면 눈치채서 화면에 보인다 */
   mind: Partial<Record<"fear" | "rage" | "confusion" | "despair", { known: boolean }>>;
   /** 섬기는 신의 신앙심(0~100, faith.ts) */

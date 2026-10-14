@@ -1,5 +1,6 @@
 import { BAL } from "./data";
 import { log } from "./core";
+import { ENDLESS_SECTOR, LAST_SECTOR } from "./endless";
 import type { DungeonState, GameState } from "./types";
 
 // 미궁의 청소부(히든 보스): 실력에 비해 얕은 층에 오래 머물면 예고 → 나타남 → 추적.
@@ -7,13 +8,15 @@ import type { DungeonState, GameState } from "./types";
 // 계단으로 내려가거나 미궁을 나가면 피할 수 있다(층을 따라 내려오지 않는다). 첫 미궁(1월)에는 없다.
 // 전투는 dungeon.ts가 시작하고 끝낸다(여기는 시계·위치만).
 
-/** 이 층에서 다음 층으로 내려가도 될 만한 레벨: 1섹터 1·2·3층 = 3·5·7, 2섹터 = 6·8·10 */
+/** 이 층에서 다음 층으로 내려가도 될 만한 레벨: 1섹터 1·2·3층 = 3·5·7, 2섹터 = 6·8·10, 3섹터 = 9·11·13.
+ *  끝없는 미궁은 마지막 섹터 다음 섹터로 친다 */
 export function nextFloorLevel(sector: number, floor: number): number {
-  return (sector - 1) * 3 + floor * 2 + 1;
+  const sec = sector === ENDLESS_SECTOR ? LAST_SECTOR + 1 : sector;
+  return (sec - 1) * 3 + floor * 2 + 1;
 }
 
 export function sweeperId(sector: number): string {
-  return sector >= 2 ? "sweeper2" : "sweeper1";
+  return sector >= 3 ? "sweeper3" : sector === 2 ? "sweeper2" : "sweeper1";
 }
 
 /** 이 층에서 청소부 시계가 도는가 */

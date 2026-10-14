@@ -1,6 +1,8 @@
 import { autoEat, camp, drinkPotion, eat, enterDungeon, moveTo, resolvePending, useScroll, type PendingChoice } from "./dungeon";
 import { answerInquisition, surrender, regen, prosthetic, useBandage, useHerb, buy, buyGear, closeSettlement, closeWeek, createHero, doActivity, eraseFrag, pickClass, rerollCandidates, sell, setTactics, train } from "./town";
 import { maxHp } from "./core";
+import { repair, useAntidote, useWhetstone } from "./hazards";
+import type { CorrodeSlot } from "./gear";
 import type { ClassId } from "./classes";
 import type { Part } from "./injury";
 import type { Activity, AutoGoal, GameState, StatKey, Tactics } from "./types";
@@ -35,6 +37,10 @@ export type Action =
   | { t: "surrender" }
   | { t: "bandage" }
   | { t: "herb" }
+  /** 3섹터: 숫돌(부식 한 단계) / 해독초(독·마비 한 단계) / 대장간 수리 */
+  | { t: "whetstone" }
+  | { t: "antidote" }
+  | { t: "repair"; slot: CorrodeSlot }
   /** 신전 재생 의식(손·발 결손) */
   | { t: "regen"; part: Part }
   /** 대장간 의수·의족 */
@@ -86,6 +92,9 @@ function run(s: GameState, a: Action): void {
     case "surrender": return surrender(s);
     case "bandage": return useBandage(s);
     case "herb": return useHerb(s);
+    case "whetstone": return useWhetstone(s);
+    case "antidote": return useAntidote(s);
+    case "repair": return repair(s, a.slot);
     case "regen": return regen(s, a.part);
     case "prosthetic": return prosthetic(s, a.part);
     case "autoGoal":

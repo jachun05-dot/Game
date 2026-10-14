@@ -174,7 +174,7 @@ export function CreateScreen({ ctl }: { ctl: Ctl }) {
                 <span className="accent">★{i + 1}</span> {p}
               </p>
             ))}
-            <p className="dim small">신앙심 30(★1)에서 시작해 60·90에서 다음 권능이 열린다. 성당은 옛 신을 섬기는 자를 감시한다 — 신앙이 깊을수록 이단 심문에 걸리기 쉽다.</p>
+            <p className="dim small">신앙심 30(★1)에서 시작해 60·90에서 다음 권능이 열린다. ★4(130)는 3섹터를 클리어한 뒤에 열린다. 성당은 옛 신을 섬기는 자를 감시한다 — 신앙이 깊을수록 이단 심문에 걸리기 쉽다.</p>
           </div>
         )}
       </Card>

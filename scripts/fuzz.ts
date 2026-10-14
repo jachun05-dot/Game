@@ -14,9 +14,11 @@ import { generateFloor } from "../src/game/dungeon";
 import { MONSTERS } from "../src/game/data";
 import { FRAGMENTS } from "../src/game/fragments";
 import { Rng } from "../src/game/rng";
+import { pietyCap } from "../src/game/faith";
+import { ENDLESS_SECTOR, LAST_SECTOR } from "../src/game/endless";
 import type { AutoGoal, GameState, StatKey } from "../src/game/types";
 
-// SCEN=s2(2섹터에서 시작) | heretic(현상수배 상태) | hurt(부상·질병·정신) | strong(고레벨·편린·증표) | mix(판마다 무작위)
+// SCEN=s3(3섹터에서 시작) | s2(2섹터에서 시작) | heretic(현상수배 상태) | hurt(부상·질병·정신) | strong(고레벨·편린·증표) | mix(판마다 무작위)
 const SCEN = process.env.SCEN ?? "";
 
 const N = Number(process.argv[2] ?? 300);
@@ -30,7 +32,7 @@ const GOALS: AutoGoal[] = ["explore", "rush", "farm"];
 const GODS: (string | null)[] = [null, ...Object.values(FAITH)];
 const ITEMS = Object.keys(BAL.prices) as (keyof typeof BAL.prices)[];
 const PARTS = ["head", "body", "main", "offhand", "feet"] as const;
-const CHOICES = ["disarm", "force", "back", "open", "leave", "read", "pray", "descend", "stay", "jump", "return", "search", "enter", "equip", "absorb", "swap0", "swap1", "swap2", "convert0", "convert1", "convert5"];
+const CHOICES = ["disarm", "use", "force", "back", "open", "leave", "read", "pray", "descend", "stay", "jump", "return", "search", "enter", "equip", "absorb", "swap0", "swap1", "swap2", "convert0", "convert1", "convert5"];
 
 // 퍼저 자체 RNG(게임 RNG와 분리)
 let fz = 1;
@@ -63,7 +65,7 @@ function randomAction(s: GameState): Action {
     case 18: return { t: "tactics", tactics: { potionAt: pick([0, 10, 30, 50, 90, 100]), fleeAt: pick([0, 10, 30, 60]) } };
     case 19: return { t: "eraseFrag", index: Math.floor(rnd() * 5) - 1 };
     case 20: return { t: "inquisition", renounce: rnd() < 0.5 };
-    case 21: return pick([{ t: "surrender" }, { t: "bandage" }, { t: "herb" }] as Action[]);
+    case 21: return pick([{ t: "surrender" }, { t: "bandage" }, { t: "herb" }, { t: "whetstone" }, { t: "antidote" }, { t: "repair", slot: pick(["main", "body", "offhand", "head"] as const) }] as Action[]);
     case 22: return { t: rnd() < 0.5 ? "regen" : "prosthetic", part: pick(PARTS) } as Action;
     default: return { t: "closeSettlement" };
   }
@@ -103,7 +105,10 @@ function invariants(s: GameState): string[] {
   }
   if (s.gold < 0) e.push(`음수 골드 ${s.gold}`);
   for (const [k, v] of Object.entries(s.inventory)) if (v < 0 || !Number.isInteger(v)) e.push(`인벤토리 ${k}=${v}`);
-  if (s.piety < 0 || s.piety > 100) e.push(`신앙 범위 ${s.piety}`);
+  if (s.piety < 0 || s.piety > pietyCap(s)) e.push(`신앙 범위 ${s.piety}`);
+  for (const [k, v] of Object.entries(s.corrosion ?? {})) if (v! < 0 || v! > 3 || (v! > 0 && !s.gear[k as "main"])) e.push(`부식 범위 ${k}=${v}`);
+  for (const [k, v] of Object.entries(s.paralysis ?? {})) if (v! < 0 || v! > 2 || (v! > 0 && s.phase !== "dungeon" && s.phase !== "dead")) e.push(`마비 범위·미궁 밖 ${k}=${v} (${s.phase})`);
+  if ((s.poison ?? 0) < 0 || (s.poison ?? 0) > 2) e.push(`독 범위 ${s.poison}`);
   if (!h.faith && s.piety !== 0 && s.phase !== "create") e.push(`신앙 없는데 piety ${s.piety}`);
   if (s.heretic && !h.faith) e.push("신앙 없는 이단자");
   for (const [p, v] of Object.entries(s.injuries)) if (v < 0 || v > 3) e.push(`부상 범위 ${p}=${v}`);
@@ -137,8 +142,9 @@ function invariants(s: GameState): string[] {
   for (const id of s.fragments) if (!FRAGMENTS[id]) e.push(`없는 편린 ${id}`);
   if (s.dungeon) {
     const dg = s.dungeon;
-    if (dg.endless ? dg.sector !== 3 || dg.floor < 1 : dg.floor < 1 || dg.floor > 3 || dg.sector < 1 || dg.sector > 2) e.push(`층·섹터 범위 ${dg.sector}-${dg.floor}`);
-    if (dg.endless && dg.rooms.some((r) => r.type === "trap" || r.type === "treasure" || r.type === "record" || r.type === "shrine")) e.push("끝없는 미궁에 함정·상자·기록물·성소");
+    if (dg.endless ? dg.sector !== ENDLESS_SECTOR || dg.floor < 1 : dg.floor < 1 || dg.floor > 3 || dg.sector < 1 || dg.sector > LAST_SECTOR) e.push(`층·섹터 범위 ${dg.sector}-${dg.floor}`);
+    if (dg.endless && dg.rooms.some((r) => r.type === "trap" || r.type === "treasure" || r.type === "record" || r.type === "shrine" || r.type === "altar" || r.flooded)) e.push("끝없는 미궁에 함정·상자·기록물·성소·물");
+    if (dg.sector !== 3 && dg.rooms.some((r) => r.flooded || r.type === "altar")) e.push("3섹터가 아닌데 물·제단");
     if (!Number.isFinite(dg.mana)) e.push("마석 NaN");
     for (const room of dg.rooms) {
       for (const nb of room.edges) if (!dg.rooms[nb]?.edges.includes(room.id)) e.push("한쪽 통로");
@@ -152,11 +158,12 @@ function invariants(s: GameState): string[] {
 
 function setup(s: GameState, scen: string) {
   const r = new Rng({ s: s.seed + 99 });
-  if (scen === "strong" || scen === "s2") {
-    s.hero.level = scen === "s2" ? 6 : 5;
-    s.rank = 1;
+  if (scen === "strong" || scen === "s2" || scen === "s3") {
+    s.hero.level = scen === "s3" ? 9 : scen === "s2" ? 6 : 5;
+    s.rank = scen === "s3" ? 2 : 1;
     s.month = 4;
-    s.trophies = ["heart"];
+    s.trophies = scen === "s3" ? ["heart", "banner"] : ["heart"];
+    if (scen === "s3") for (const k of STAT_KEYS) s.hero.stats[k] += 6;
     for (const k of STAT_KEYS) s.hero.stats[k] += 6;
     s.inventory.potion += 5;
     s.inventory.food += 6;
@@ -165,16 +172,18 @@ function setup(s: GameState, scen: string) {
     s.fragments = [pick(ids), pick(ids)];
     s.hero.hp = maxHp(s);
   }
-  if (scen === "s2") {
-    // 미궁으로 바로 들어가 2섹터 1층에 세운다
+  if (scen === "s2" || scen === "s3") {
+    // 미궁으로 바로 들어가 2섹터(3섹터) 1층에 세운다
+    const sec = scen === "s3" ? 3 : 2;
+    if (sec === 3) { s.inventory.antidote = 2; s.inventory.whetstone = 1; s.inventory.food += 4; }
     s.week = 3;
     s.phase = "week-result";
     apply(s, { t: "closeWeek" });
     apply(s, { t: "enterDungeon" });
     const dg = s.dungeon!;
-    dg.sector = 2;
+    dg.sector = sec;
     dg.floor = 1;
-    dg.rooms = generateFloor(r, 1, 2);
+    dg.rooms = generateFloor(r, 1, sec);
     dg.current = 0;
     dg.prev = null;
     dg.turnsLeft = 300;
@@ -214,7 +223,7 @@ for (let i = 0; i < N; i++) {
     apply(s, { t: "pickClass", cls });
     apply(s, { t: "autoGoal", goal });
     apply(s, { t: "create", name: "퍼즈", candidate: 0, faith });
-    const scen = SCEN === "mix" ? pick(["", "s2", "heretic", "hurt", "strong"]) : SCEN;
+    const scen = SCEN === "mix" ? pick(["", "s2", "s3", "heretic", "hurt", "strong"]) : SCEN;
     setup(s, scen);
     let prevLevel = s.hero.level, prevRank = s.rank;
     for (; step < MAX_ACTIONS && s.phase !== "dead" && s.month <= 24; step++) {
@@ -269,6 +278,8 @@ for (let i = 0; i < N; i++) {
   steps += step;
   if (s.phase === "dead") { deaths++; hit(`죽음:${s.tomb?.cause}`); }
   if (s.dungeon?.sector === 2 || s.rank >= 2) hit("2섹터 도달");
+  if (s.dungeon?.sector === 3 || s.rank >= 3) hit("3섹터 도달");
+  if (s.rank >= 3) hit("3섹터 클리어");
   if (s.rank > 0) cleared++;
   if (VERBOSE && i % 100 === 0) console.error(`${i}/${N} ${((Date.now() - t0) / 1000).toFixed(0)}s`);
 }

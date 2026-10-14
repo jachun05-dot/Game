@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { DUMMY_ROUNDS, DUMMY_SCENARIOS, dummyAfterTraining, dummyTest, type DummyReport, type DummyScenario } from "../game/dummy";
 import { BAL, STAT_KEYS, STAT_LABEL, TRAININGS } from "../game/data";
-import { GEAR, SLOTS, gearEffect, hasShield, targetSlot } from "../game/gear";
+import { CORRODE_NAME, GEAR, SLOTS, corrosionOf, gearEffect, hasShield, targetSlot } from "../game/gear";
+import { corrodedSlots, corrosionEffect, repairCost } from "../game/hazards";
 import { CLASSES } from "../game/classes";
 import { hasLevelTable } from "../game/elements";
 import { BLACK_MARKET_MULT, canTrain, innCost, outlawTrainerHere, gateOf, nextSkill, shopPrice, trainCost } from "../game/town";
@@ -20,8 +21,15 @@ const ITEM_INFO = {
   potion: { name: "치료 물약", desc: `HP 2d4+${BAL.potionBase} 회복` },
   scroll: { name: "귀환 주문서", desc: "언제든 미궁에서 귀환" },
   bandage: { name: "붕대", desc: "가장 심한 부상 하나를 한 단계 낫게 한다(결손 제외)" },
-  herb: { name: "약초 탕약", desc: "쥐 열병을 한 단계 낫게 한다" },
+  herb: { name: "약초 탕약", desc: "질병(쥐 열병·곰팡이 폐병)을 한 단계 낫게 한다" },
+  antidote: { name: "해독초", desc: "독 한 단계 + 가장 심한 마비 한 단계 (3섹터)" },
+  whetstone: { name: "숫돌", desc: "가장 심하게 삭은 장비를 한 단계 손본다 (3섹터)" },
 } as const;
+
+/** 3섹터 소모품은 2섹터를 클리어했거나 가지고 있을 때만 보여 준다 */
+function shopItems(s: GameState): (keyof typeof ITEM_INFO)[] {
+  return (Object.keys(ITEM_INFO) as (keyof typeof ITEM_INFO)[]).filter((k) => (k !== "antidote" && k !== "whetstone") || s.rank >= 2 || s.inventory[k] > 0);
+}
 
 export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => void }) {
   const { s, dispatch, busy } = ctl;
@@ -108,7 +116,7 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
         <div className="stack">
           <Card title="암시장">
             <p className="dim small">현상수배 중이라 상점가·대장간·신전에는 들어갈 수 없다. 영지 외곽의 밀수꾼이 같은 물건을 {BLACK_MARKET_MULT}배 값에 넘겨준다.</p>
-            {(Object.keys(ITEM_INFO) as (keyof typeof ITEM_INFO)[]).map((k) => (
+            {shopItems(s).map((k) => (
               <div key={k} className="shop-row">
                 <div>
                   <b>{ITEM_INFO[k].name}</b> <span className="dim small">{ITEM_INFO[k].desc}</span>
@@ -132,7 +140,7 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
         <div className="stack">
           <Card title="상점가">
             <SceneBanner id="market" />
-            {(Object.keys(ITEM_INFO) as (keyof typeof ITEM_INFO)[]).map((k) => (
+            {shopItems(s).map((k) => (
               <div key={k} className="shop-row">
                 <div>
                   <b>{ITEM_INFO[k].name}</b> <span className="dim small">{ITEM_INFO[k].desc}</span>
@@ -168,6 +176,17 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
                 );
               })}
             <p className="dim small">반지·목걸이와 좋은 장비는 미궁 보물상자에서만 나온다.</p>
+            {corrodedSlots(s).map((k) => (
+              <div key={k} className="shop-row">
+                <div>
+                  <b>수리 — {GEAR[s.gear[k]!].name}</b>
+                  <div className="dim small">{CORRODE_NAME[corrosionOf(s, k)]} · {corrosionEffect(k, corrosionOf(s, k))} → 새것처럼</div>
+                </div>
+                <button className="btn small" disabled={busy || s.gold < repairCost(s, k)} onClick={() => dispatch({ t: "repair", slot: k })}>
+                  {repairCost(s, k)}G
+                </button>
+              </div>
+            ))}
             {LIMBS.filter((p) => s.injuries[p] >= 3 && !s.prosthetic[p]).map((p) => (
               <div key={p} className="shop-row">
                 <div>
@@ -296,7 +315,9 @@ function DungeonPrep({ s, busy, onShop, onEnter }: { s: GameState; busy: boolean
         <p className="small">
           챙긴 것: 말린 고기 <b>{inv.food}</b> · 치료 물약 <b>{inv.potion}</b> · 귀환 주문서 <b>{inv.scroll}</b>
           {inv.bandage > 0 && <> · 붕대 <b>{inv.bandage}</b></>}
-          {inv.herb > 0 && <> · 약초 탕약 <b>{inv.herb}</b></>} · 소지금 <b>{s.gold}G</b>
+          {inv.herb > 0 && <> · 약초 탕약 <b>{inv.herb}</b></>}
+          {inv.antidote > 0 && <> · 해독초 <b>{inv.antidote}</b></>}
+          {inv.whetstone > 0 && <> · 숫돌 <b>{inv.whetstone}</b></>} · 소지금 <b>{s.gold}G</b>
         </p>
         {inv.food < 3 && <p className="small warn">말린 고기가 적다 — 일주일을 버티기 어렵다.</p>}
         {s.hero.hp < maxHp(s) && <p className="small warn">HP {s.hero.hp}/{maxHp(s)} — 다 차지 않은 채 들어간다. (여관은 1~3주에만 쓸 수 있다. 물약을 넉넉히 챙기자)</p>}

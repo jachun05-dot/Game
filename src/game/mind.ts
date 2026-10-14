@@ -70,6 +70,7 @@ export function afflict(s: GameState, k: MindKey, p: number, hint: string): bool
   if (has(s, k) || res <= 0 || !rng(s).chance(p * faithMindMult(s) * res)) return false;
   s.mind[k] = { known: false };
   say(s, hint, "story"); // 무엇이 걸렸는지는 말하지 않는 분위기 문장
+  if (power(s, "oblivion", 4)) reveal(s, k, "이름 없는 자는 자기 마음을 숨기지 않는다"); // 망각의 신 ★4
   return true;
 }
 

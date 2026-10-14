@@ -1,17 +1,19 @@
 import { josa } from "./josa";
-import { BAL, MANA_FLOOR_MULT, MIN_COMBAT_ROOMS, MONSTERS, RECORDS, ROOM_FLAVOR, SECTOR_ELITES, SECTOR_ENCOUNTERS, SECTOR_FLAVOR, SECTOR_RARES, TRAP_AMBUSH, TROPHIES, WAR_RECORDS, bossGroup, campAmbush } from "./data";
+import { BAL, MANA_FLOOR_MULT, MIN_COMBAT_ROOMS, MONSTERS, PLAGUE_RECORDS, RECORDS, ROOM_FLAVOR, SECTOR_ELITES, SECTOR_ENCOUNTERS, SECTOR_FLAVOR, SECTOR_NAME, SECTOR_RARES, TRAP_AMBUSH, TROPHIES, WAR_RECORDS, bossGroup, campAmbush } from "./data";
 import { check, isDead, kill, log, maxHp, note, remember, rngOf, smod } from "./core";
 import { FRAGMENTS, fragKnown, fragSlots, fragStatText } from "./fragments";
 import { INJ, bleedPerMove, canPeek, moveMult, wound } from "./injury";
 import { MIND, MIND_KEYS, MIND_NAME, afflict, cure, has, noticeCheck, symptom } from "./mind";
-import { FAITH_BAL, faithFallMult, addPiety, faithPeek, faithTrapSense, god, power, pray } from "./faith";
+import { FAITH_BAL, GODS, faithFallMult, addPiety, faithPeek, faithTrapSense, god, power, pray } from "./faith";
 import { beginSettlement, convert } from "./town";
 import { SKILLS } from "./skills";
 import { describeGroup, makeEnemies, potionHeal, startCombat } from "./combat";
 import { hungerMult } from "./skills";
-import { GEAR, equip, targetSlot } from "./gear";
+import { GEAR, equip, gearHas, targetSlot } from "./gear";
+import { campHealMult, clearCorrosion, corrode, leaveHazards, paraFires, poisonAfflict, restHazards } from "./hazards";
+import { fragSkills } from "./fragments";
 import { resetSweeper, sweeperId, sweeperStep, sweeperTick } from "./sweeper";
-import { ENDLESS_BOSS_EVERY, ENDLESS_NAME, ENDLESS_SECTOR, endlessGroup, endlessManaMult, generateEndlessFloor } from "./endless";
+import { ENDLESS_BOSS_EVERY, ENDLESS_NAME, ENDLESS_SECTOR, LAST_SECTOR, endlessGroup, endlessManaMult, generateEndlessFloor } from "./endless";
 import type { Rng } from "./rng";
 import type { CombatState, DungeonState, GameState, Pending, Room, RoomType } from "./types";
 
@@ -30,12 +32,13 @@ export const ROOM_LABEL: Record<RoomType, string> = {
   boss: "보스",
   portal: "차원문",
   relic: "전쟁의 흔적",
+  altar: "공양 제단",
 };
 
 /** 지도 노드 위 짧은 라벨 */
 export const ROOM_SHORT: Record<RoomType, string> = {
   entrance: "입구", empty: "빈방", combat: "적", trap: "함정", treasure: "보물",
-  record: "기록", shrine: "성소", stairs: "계단", boss: "보스", portal: "문", relic: "흔적",
+  record: "기록", shrine: "성소", stairs: "계단", boss: "보스", portal: "문", relic: "흔적", altar: "제단",
 };
 
 export function generateFloor(r: Rng, floor: number, sector = 1): Room[] {
@@ -94,7 +97,8 @@ export function generateFloor(r: Rng, floor: number, sector = 1): Room[] {
   take("combat", Math.max(MIN_COMBAT_ROOMS[floor], Math.round(free.length * 0.25)));
   take("trap", 1 + floor); // 함정: 층이 깊을수록 증가
   take("record", r.int(1, 2), isDeadEnd);
-  if (sector >= 2) take("relic", r.int(1, 2)); // 전쟁의 흔적
+  if (sector === 2) take("relic", r.int(1, 2)); // 전쟁의 흔적
+  if (sector === 3) take("altar", r.int(1, 2)); // 공양 제단
   if (r.chance(0.35)) take("shrine", 1);
 
   // 고블린 매복은 1섹터에만(2섹터에는 고블린이 없다)
@@ -117,7 +121,23 @@ export function generateFloor(r: Rng, floor: number, sector = 1): Room[] {
     const combatRooms = rooms.filter((x) => x.type === "combat" && !x.encounter?.some((m) => MONSTERS[m].rare));
     if (combatRooms.length) r.pick(combatRooms).encounter = [elite.id, ...elite.escort];
   }
+  if (sector === 3) floodFloor(r, rooms, floor);
   return rooms;
+}
+
+/** 3섹터: 물에 잠긴 방·깊은 물·공양물. 거머리는 물에 잠긴 방에만 산다 */
+function floodFloor(r: Rng, rooms: Room[], floor: number): void {
+  for (const room of rooms) {
+    if (room.id === 0 || room.type === "stairs" || room.type === "portal") continue;
+    if (!r.chance(BAL.floodChance[floor] ?? 0)) continue;
+    room.flooded = true;
+    if (floor >= 3 && room.type !== "boss" && r.chance(BAL.deepChance)) room.deep = true;
+    if (["empty", "combat"].includes(room.type) && r.chance(0.35)) room.offering = true;
+  }
+  for (const room of rooms) {
+    if (room.type !== "combat" || room.flooded || !room.encounter?.includes("leech")) continue;
+    room.encounter = room.encounter.map((m) => (m === "leech" ? "plaguerat" : m));
+  }
 }
 
 export function enterDungeon(s: GameState): void {
@@ -159,8 +179,10 @@ export function passTime(s: GameState, turns: number): void {
   if (!dg || isDead(s)) return;
   dg.turnsLeft -= turns;
   const wasNight = isNight(s);
+  const wasHigh = highTide(s);
   dg.clock = (dg.clock ?? 0) + turns;
   if (dg.sector === 2 && isNight(s) !== wasNight) log(s, isNight(s) ? "해가 졌다. 풀숲 너머에서 늑대 울음이 번진다. (밤)" : "동이 튼다. 바람이 풀을 눕힌다. (낮)", "system");
+  if (dg.sector === 3 && !dg.endless && highTide(s) !== wasHigh) log(s, highTide(s) ? "물이 차오른다. 잠긴 방들의 수면이 가슴께까지 올라왔다. (밀물)" : "물이 빠져나간다. 잠겨 있던 바닥이 드러난다. (썰물)", "system");
   const h = s.hero;
   const wasFed = h.satiety > 0;
   h.satiety = Math.max(0, h.satiety - turns * 0.5 * hungerMult(s));
@@ -230,8 +252,12 @@ export function moveTo(s: GameState, id: number): void {
   }
   dg.prev = dg.current;
   dg.current = id;
-  passTime(s, BAL.moveTurns * moveMult(s)); // 발 부상이면 느리다
+  // 발 마비: 다리가 말을 듣지 않아 한참 걸린다
+  const numb = paraFires(s, "feet");
+  if (numb) log(s, "다리가 저려 말을 듣지 않는다. 한참을 끌고 갔다.", "hurt");
+  passTime(s, Math.round(BAL.moveTurns * moveMult(s) * waterMult(s, dg.rooms[id]) * (numb ? 2 : 1))); // 발 부상이면 느리다
   if (isDead(s)) return;
+  if (dg.rooms[id].deep && !swim(s)) return;
   if (s.disease > 0) pray(s, "plague", 1); // 역병의 신은 병을 앓은 채 버티는 것을 좋아한다
   // 정신 상태이상: 눈치채기 판정, 절망(탈진·굶주림), 주저앉기
   noticeCheck(s, smod(s, "per") + smod(s, "int"));
@@ -240,22 +266,23 @@ export function moveTo(s: GameState, id: number): void {
   if (symptom(s, "despair", MIND.symptom, "주저앉아 한참을 움직이지 못했다. (2시간)", "잠깐 앉았다가, 정신을 차려 보니 한참이 지나 있었다. (2시간)")) passTime(s, 4);
   if (isDead(s)) return;
   // 출혈(몸통 부상)·쥐 열병
-  const { bleed, disease } = bleedPerMove(s);
-  if (bleed + disease > 0) {
-    s.hero.hp -= bleed + disease;
-    log(s, [bleed ? `상처에서 피가 배어 나온다 (−${bleed})` : "", disease ? `열에 들떠 비틀거린다 (−${disease})` : ""].filter(Boolean).join(", "), "hurt");
+  const { bleed, disease, poison } = bleedPerMove(s);
+  if (bleed + disease + poison > 0) {
+    s.hero.hp -= bleed + disease + poison;
+    log(s, [bleed ? `상처에서 피가 배어 나온다 (−${bleed})` : "", disease ? `${s.diseaseKind === "mold" ? "기침이 멎지 않는다" : "열에 들떠 비틀거린다"} (−${disease})` : "", poison ? `독이 온몸을 돈다 (−${poison})` : ""].filter(Boolean).join(", "), "hurt");
     if (s.hero.hp <= 0) {
       s.hero.hp = 0;
-      if (disease > 0) kill(s, "plague", "쥐 열병에 쓰러졌다");
+      if (disease > 0) kill(s, "plague", s.diseaseKind === "mold" ? "곰팡이 폐병에 쓰러졌다" : "쥐 열병에 쓰러졌다");
+      else if (poison > 0) kill(s, "plague", "독이 온몸에 퍼져 쓰러졌다");
       else kill(s, "single", "피를 너무 많이 흘려 쓰러졌다");
-      return;
+      if (isDead(s)) return;
     }
   }
   if (checkTimeUp(s)) return;
   // 미궁의 청소부: 내가 한 방 옮기면 한 방 다가온다
   if (sweeperStep(s, 1)) return sweeperFight(s, "move");
   // 현상수배 중이면 성당의 이단심문관이 뒤를 밟는다
-  if (s.heretic && rngOf(s).chance(FAITH_BAL.inquisitorChance)) {
+  if (s.heretic && !power(s, "oblivion", 4) && rngOf(s).chance(FAITH_BAL.inquisitorChance)) {
     log(s, "등 뒤에서 쇠사슬 끌리는 소리 — 성당의 이단심문관이 길을 막아선다!", "hurt");
     log(s, "\"옛 신의 이름을 입에 올린 자여, 여기가 네 무덤이다.\"", "story");
     startCombat(s, "dungeon", makeEnemies(s, ["inquisitor"]));
@@ -265,8 +292,43 @@ export function moveTo(s: GameState, id: number): void {
 }
 
 function flavor(s: GameState, room: Room, key: string): string {
-  const list = (s.dungeon && SECTOR_FLAVOR[s.dungeon.sector]?.[key]) || ROOM_FLAVOR[key];
+  const list = (s.dungeon && SECTOR_FLAVOR[s.dungeon.sector]?.[key]) || ROOM_FLAVOR[key] || ROOM_FLAVOR.empty;
   return list[room.flavor % list.length];
+}
+
+/** 3섹터 물 높이: 12시간마다 밀물·썰물이 바뀐다(2섹터 낮·밤과 같은 주기) */
+export function highTide(s: GameState): boolean {
+  const dg = s.dungeon;
+  if (!dg || dg.sector !== 3 || dg.endless) return false;
+  return Math.floor((dg.clock ?? 0) / BAL.dayNightTurns) % 2 === 1;
+}
+
+/** 물에 잠긴 방으로 들어가는 이동 시간 배율: 깊은 물 ×2, 밀물 때 침수 방 ×1.5(물장화면 침수 방은 그대로) */
+function waterMult(s: GameState, room: Room): number {
+  if (room.deep) return 2;
+  if (room.flooded && highTide(s) && !gearHas(s, (g) => g.wade).length) return 1.5;
+  return 1;
+}
+
+/** 깊은 물 헤엄: 무거운 갑옷(도주 −)이면 체력 판정, 실패하면 물을 먹는다. 죽으면 false */
+function swim(s: GameState): boolean {
+  const body = s.gear.body ? GEAR[s.gear.body] : null;
+  const heavy = (body?.bonus.flee ?? 0) < 0;
+  const bonus = gearHas(s, (g) => g.swim).reduce((a, g) => a + g.swim!, 0) - (heavy ? 4 : 0);
+  const c = check(s, "con", 12, bonus);
+  if (c.ok) {
+    log(s, "가슴까지 차는 물을 헤엄쳐 건넜다.", "system");
+    return true;
+  }
+  const dmg = rngOf(s).dice(1, 6);
+  s.hero.hp -= dmg;
+  log(s, `${heavy ? "갑옷이 물을 먹어 가라앉는다 — " : ""}발이 바닥에 닿지 않는다. 물을 잔뜩 먹었다. ${dmg} 피해 (체력 ${c.total} vs 12)`, "hurt");
+  if (s.hero.hp <= 0) {
+    s.hero.hp = 0;
+    kill(s, "abyss", "물에 잠긴 사원에서 익사했다");
+    return !isDead(s);
+  }
+  return true;
 }
 
 /** 2섹터부터 낮·밤이 있다(12시간마다 바뀜) */
@@ -283,6 +345,13 @@ function arrive(s: GameState, firstOfFloor: boolean): void {
   const firstVisit = !room.visited;
   room.visited = true;
 
+  // 썰물 때 물에 잠긴 방 바닥의 공양물(작은 마석)
+  if (room.offering && !highTide(s)) {
+    room.offering = false;
+    const mana = rngOf(s).int(8, 20) * dg.floor;
+    dg.mana += mana;
+    log(s, `물이 빠진 바닥에 공양 그릇이 드러났다. 가라앉아 있던 마석 조각을 주웠다. (${mana}G 어치)`, "good");
+  } else if (room.offering && firstVisit) log(s, "물 아래에서 무언가 반짝인다. 물이 빠지면 주울 수 있겠다.", "system");
   if (room.type === "entrance") {
     if (firstVisit) log(s, flavor(s, room, dg.floor === 1 && firstOfFloor ? "entrance" : "arrival"), "story");
     room.known = true;
@@ -332,6 +401,7 @@ function arrive(s: GameState, firstOfFloor: boolean): void {
       case "record":
       case "shrine":
       case "relic":
+      case "altar":
         room.known = true;
         log(s, flavor(s, room, room.type), "story");
         dg.pending = { kind: room.type };
@@ -394,10 +464,14 @@ function fall(s: GameState): boolean {
   const dmg = Math.max(1, Math.round(r.dice(deep ? 3 : 2, 6) * faithFallMult(s)));
   s.hero.hp -= dmg;
   log(s, deep ? `바닥이 꺼졌다 — 끝이 보이지 않는 틈으로 미끄러져 내려갔다! ${dmg} 피해` : `바닥이 꺼졌다 — 아래층으로 곤두박질쳤다! ${dmg} 피해`, "hurt");
+  if (s.hero.hp <= 0 && power(s, "abyss", 4)) {
+    s.hero.hp = 1;
+    log(s, `【${GODS.abyss.name}】 떨어지는 자의 축복 — 바닥에 부딪히기 직전, 몸이 깃털처럼 가벼워졌다. (HP 1)`, "skill");
+  }
   if (s.hero.hp <= 0) {
     s.hero.hp = 0;
     kill(s, "abyss", deep ? "바닥 없는 틈으로 떨어져 죽었다" : "꺼진 바닥 아래로 떨어져 죽었다");
-    return false;
+    if (isDead(s)) return false;
   }
   if (r.chance(INJ.fallFeet)) wound(s, "feet", "떨어지며 발목이 꺾였다");
   pray(s, "trap", 3);
@@ -435,15 +509,18 @@ function springTrap(s: GameState, room: Room): boolean {
   } else {
     const dmg = rngOf(s).dice(1, 6);
     s.hero.hp -= dmg;
-    log(s, `${d(s).sector >= 2 ? "녹슨 곰덫" : "가시함정"}을 밟았다! ${dmg} 피해 (민첩 ${c.total} vs ${BAL.trapDodgeDc})`, "hurt");
+    const sec = d(s).sector;
+    const name = sec === 3 ? "산성 웅덩이" : sec === 2 ? "녹슨 곰덫" : "가시함정";
+    log(s, `${josa(name, "을")} 밟았다! ${dmg} 피해 (민첩 ${c.total} vs ${BAL.trapDodgeDc})`, "hurt");
     if (s.hero.hp <= 0) {
       s.hero.hp = 0;
-      kill(s, "trap", d(s).sector >= 2 ? "녹슨 곰덫에 걸려 목숨을 잃었다" : "가시함정에 목숨을 잃었다");
-      return false;
+      kill(s, "trap", sec === 3 ? "산성 웅덩이에 빠져 목숨을 잃었다" : sec === 2 ? "녹슨 곰덫에 걸려 목숨을 잃었다" : "가시함정에 목숨을 잃었다");
+      if (isDead(s)) return false;
     }
     note(s, "con");
     hurt = true;
-    if (rngOf(s).chance(d(s).sector >= 2 ? 0.6 : INJ.spikeFeet)) wound(s, "feet", d(s).sector >= 2 ? "녹슨 곰덫이 발목을 물었다" : "가시가 발등을 꿰뚫었다");
+    if (sec === 3) corrode(s, 0.6, "산이 장비에 튀었다");
+    else if (rngOf(s).chance(sec === 2 ? 0.6 : INJ.spikeFeet)) wound(s, "feet", sec === 2 ? "녹슨 곰덫이 발목을 물었다" : "가시가 발등을 꿰뚫었다");
   }
   pray(s, "trap", 3); // 재앙을 맞고도 살아남았다
   if (!room.ambush) return false;
@@ -536,6 +613,10 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
           dg.mana += dg.floor * 10;
           log(s, `함정 장치에 박혀 있던 마석 조각을 빼냈다. (${dg.floor * 10}G 어치)`, "good");
         }
+        if (power(s, "trap", 4) && !dg.trapCharge) {
+          dg.trapCharge = true;
+          log(s, `【${GODS.trap.name}】 함정 다루기 — 해체한 장치를 챙겼다. 다음 전투에서 적에게 터뜨린다.`, "skill");
+        }
         if (room.ambush) {
           log(s, `숨어 있던 고블린 ${room.ambush.length}마리가 겁을 먹고 달아났다. 비겁한 놈들이다.`, "system");
           room.ambush = undefined;
@@ -589,6 +670,7 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
   if (kind === "gear" && pend.kind === "gear") {
     const g = GEAR[pend.item];
     if (choice === "equip") {
+      clearCorrosion(s, targetSlot(s, pend.item));
       const old = equip(s, pend.item);
       remember(s, `미궁에서 ${josa(g.name, "을")} 얻었다.`);
       log(s, `${josa(g.name, "을")} 착용했다.${old ? ` ${josa(GEAR[old].name, "은")} 여기 두고 간다.` : ""}`, "good");
@@ -618,12 +700,33 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
       log(s, "갑옷 더미가 덜그럭거리며 일어선다 — 잠든 망령을 깨웠다!", "hurt");
       startCombat(s, "dungeon", makeEnemies(s, ["wraith"]));
     } else {
-      s.recordsRead += 1;
-      note(s, "int");
-      pray(s, "song", 4);
-      pray(s, "oblivion", -5);
-      log(s, WAR_RECORDS[(room.flavor + s.recordsRead) % WAR_RECORDS.length], "story");
-      log(s, `(찢어진 군기에 적힌 기록 — 읽은 기록물 ${s.recordsRead}개)`, "system");
+      readRecord(s, room, WAR_RECORDS, "찢어진 군기에 적힌 기록");
+    }
+    return;
+  }
+
+  if (kind === "altar") {
+    room.resolved = true;
+    if (choice === "pray" && god(s) === "plague") {
+      passTime(s, 2);
+      addPiety(s, 3);
+      log(s, `썩은 공양 그릇 앞에 무릎 꿇었다. 익숙한 열기가 가슴에 번진다. (신앙심 ${s.piety})`, "story");
+      return;
+    }
+    if (choice !== "search") {
+      log(s, "썩은 제물에는 손대지 않기로 했다.");
+      return;
+    }
+    passTime(s, 2);
+    const roll = r.float();
+    if (roll < 0.4) {
+      log(s, "썩은 제물 사이에서 아직 쓸 만한 것을 건져 냈다.", "good");
+      offerGear(s, rollLoot(s));
+    } else if (roll < 0.7) {
+      log(s, "제물 그릇에 손을 넣었다가 무언가에 찔렸다.", "hurt");
+      poisonAfflict(s, 1, "썩은 제물의 독이 손끝으로 스민다");
+    } else {
+      readRecord(s, room, PLAGUE_RECORDS, "제단 밑에 깔린 기도문");
     }
     return;
   }
@@ -631,11 +734,16 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
   if (kind === "record") {
     room.resolved = true;
     if (choice === "read") {
-      passTime(s, 1);
+      // 3섹터의 경전은 물에 젖어 있어 말리면서 읽는다
+      const wet = dg.sector === 3;
+      if (wet) log(s, "물에 불은 경전을 한 장씩 펼쳐 말리며 읽었다. (4시간)", "system");
+      passTime(s, wet ? BAL.wetReadTurns : 1);
+      if (isDead(s) || !s.dungeon) return;
       s.recordsRead += 1;
       note(s, "int");
-      log(s, RECORDS[(room.flavor + s.recordsRead) % RECORDS.length], "story");
+      log(s, wet ? PLAGUE_RECORDS[(room.flavor + s.recordsRead) % PLAGUE_RECORDS.length] : RECORDS[(room.flavor + s.recordsRead) % RECORDS.length], "story");
       log(s, `(읽은 기록물 ${s.recordsRead}개)`, "system");
+      saga(s);
       pray(s, "song", 4);
       pray(s, "oblivion", -5);
       if (power(s, "song", 1)) {
@@ -665,7 +773,7 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
       }
       if (god(s)) {
         // 2섹터의 제단은 전쟁의 신 것: 전쟁의 신 신도는 기도 효과 두 배
-        addPiety(s, dg.sector >= 2 && god(s) === "war" ? 10 : 5);
+        addPiety(s, (dg.sector === 2 && god(s) === "war" ? 10 : 5) + (fragSkills(s).includes("fragMimicPrayer") ? 2 : 0));
         log(s, `${s.hero.faith}의 기척이 가까이 느껴진다. (신앙심 ${s.piety})`, "story");
       }
     } else if (choice.startsWith("convert")) {
@@ -724,8 +832,8 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
       leaveDungeon(s, { cleared: true, forced: false, rankUp: first });
       return;
     }
-    // 2섹터 차원문 너머: 끝없는 미궁(남은 시간은 그대로)
-    if (dg.sector >= 2) {
+    // 마지막 섹터 차원문 너머: 끝없는 미궁(남은 시간은 그대로)
+    if (dg.sector >= LAST_SECTOR) {
       dg.sector = ENDLESS_SECTOR;
       dg.endless = true;
       dg.floor = 1;
@@ -750,8 +858,8 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
     resetSweeper(dg);
     dg.current = 0;
     dg.prev = null;
-    remember(s, `${dg.sector}섹터 — 잊힌 전쟁터의 초원에 발을 디뎠다.`);
-    log(s, `차원문을 넘었다. — ${dg.sector}섹터, 잊힌 전쟁터의 초원. (남은 시간 ${Math.round(before / 2)}시간 → ${before}시간)`, "story");
+    remember(s, `${dg.sector}섹터 — ${SECTOR_NAME[dg.sector]}에 발을 디뎠다.`);
+    log(s, `차원문을 넘었다. — ${dg.sector}섹터, ${SECTOR_NAME[dg.sector]}. (남은 시간 ${Math.round(before / 2)}시간 → ${before}시간)`, "story");
     arrive(s, true);
   }
 }
@@ -840,7 +948,7 @@ export function afterDungeonCombat(s: GameState, outcome: "win" | "fled", c: Com
     if (outcome === "win") {
       dg.sweeperDown = true;
       dg.sweeperRoom = null;
-      const mana = BAL.sweeperMana[dg.sector] ?? 0;
+      const mana = BAL.sweeperMana[dg.endless ? LAST_SECTOR : dg.sector] ?? 0;
       dg.mana += mana;
       remember(s, `${josa(MONSTERS[sw.defId].name, "을")} 쓰러뜨렸다.`);
       log(s, `${josa(MONSTERS[sw.defId].name, "이")} 무너져 내린다. 녹과 먼지 속에서 커다란 마석(${mana}G 어치)이 굴러 나왔다.`, "crit");
@@ -880,10 +988,11 @@ export function afterDungeonCombat(s: GameState, outcome: "win" | "fled", c: Com
   }
   const roomFight = room.type === "combat" || room.type === "boss";
   // 리젠된 몬스터의 마석은 절반(희귀 개체 보너스는 그대로)
-  const sm = BAL.manaSectorMult[dg.sector] ?? 1;
+  const sm = dg.endless ? BAL.endlessManaSectorMult : BAL.manaSectorMult[dg.sector] ?? 1;
+  const rm = dg.endless ? BAL.endlessManaSectorMult : BAL.rareSectorMult[dg.sector] ?? sm;
   const floorMult = dg.endless ? endlessManaMult(dg.floor) : MANA_FLOOR_MULT[dg.floor];
-  const loot = Math.round(c.loot * floorMult * sm * (roomFight && room.respawned ? BAL.respawnManaMult : 1)) + Math.round(c.bonus * sm);
-  if (c.bonus > 0) remember(s, `희귀 개체를 잡아 마석 ${Math.round(c.bonus * sm)}G 어치를 얻었다.`);
+  const loot = Math.round(c.loot * floorMult * sm * (roomFight && room.respawned ? BAL.respawnManaMult : 1)) + Math.round(c.bonus * rm);
+  if (c.bonus > 0) remember(s, `희귀 개체를 잡아 마석 ${Math.round(c.bonus * rm)}G 어치를 얻었다.`);
   if (outcome === "win") {
     if (roomFight) {
       room.resolved = true; // 야영 중 기습 전투는 방 사건과 무관
@@ -914,10 +1023,11 @@ export function afterDungeonCombat(s: GameState, outcome: "win" | "fled", c: Com
       } else if (t) {
         log(s, `이번에는 ${t.name} 같은 것은 남지 않았다.`, "system");
       }
-      if (dg.sector >= 2) {
+      if (dg.sector === 2 || dg.sector === 3) {
         s.recordsRead += 1;
-        log(s, WAR_RECORDS[(s.recordsRead + room.flavor) % WAR_RECORDS.length], "story");
-        log(s, `(장군의 안장 주머니에서 나온 기록 — 읽은 기록물 ${s.recordsRead}개)`, "system");
+        const list = dg.sector === 3 ? PLAGUE_RECORDS : WAR_RECORDS;
+        log(s, list[(s.recordsRead + room.flavor) % list.length], "story");
+        log(s, `(${dg.sector === 3 ? "균모의 뿌리에 감겨 있던 기도문" : "장군의 안장 주머니에서 나온 기록"} — 읽은 기록물 ${s.recordsRead}개)`, "system");
       }
       log(s, "보스가 지키던 자리에서 무언가 반짝인다.", "system");
       offerGear(s, rollLoot(s));
@@ -951,14 +1061,18 @@ export function camp(s: GameState): void {
   if (isDead(s)) return;
   s.hero.satiety = Math.max(0, s.hero.satiety - 6); // 휴식하면 포만감이 더 빨리 닳는다(DESIGN 11절 트레이드오프)
   s.hero.fatigue = Math.max(0, s.hero.fatigue - 60);
-  const heal = 4 + Math.max(0, smod(s, "con")) + (power(s, "song", 2) ? 3 : 0);
+  const heal = Math.max(1, Math.floor((4 + Math.max(0, smod(s, "con")) + (power(s, "song", 2) ? 3 : 0)) * campHealMult(s)));
   s.hero.hp = Math.min(maxHp(s), s.hero.hp + heal);
-  log(s, `피로가 풀렸다. HP +${heal}`, "good");
+  log(s, `피로가 풀렸다. HP +${heal}${campHealMult(s) < 1 ? " (기침 때문에 깊이 잠들지 못했다)" : ""}`, "good");
+  restHazards(s);
   // 미궁의 청소부: 8시간 자는 동안 두 방 다가온다
   if (sweeperStep(s, 2)) return sweeperFight(s, "camp");
-  if (r.chance(isNight(s) ? 0.3 : 0.15)) {
+  // 물에 잠긴 방 옆에서 자면 거머리가 더 잘 꼬인다
+  const wet = dg.sector === 3 && dg.floor >= 2 && (currentRoom(s).flooded || currentRoom(s).edges.some((e) => dg.rooms[e].flooded));
+  if (r.chance(isNight(s) || wet ? 0.3 : 0.15)) {
     log(s, "잠결에 무언가 다가오는 소리!", "hurt");
-    const ids = dg.endless ? endlessGroup(r, dg.floor).slice(0, 2) : campAmbush(dg.sector, dg.floor);
+    let ids = dg.endless ? endlessGroup(r, dg.floor).slice(0, 2) : campAmbush(dg.sector, dg.floor);
+    if (ids.includes("leech") && !currentRoom(s).flooded) ids = ["plaguerat", "plaguerat", "plaguerat"]; // 거머리는 물에 잠긴 방에만
     startCombat(s, "dungeon", makeEnemies(s, ids));
     return;
   }
@@ -1011,7 +1125,28 @@ function leaveDungeon(s: GameState, opts: { cleared: boolean; forced: boolean; r
   const deepest = dg.deepestFloor;
   s.dungeon = null;
   s.hero.hp = Math.max(1, s.hero.hp);
-  beginSettlement(s, { mana, cleared: opts.cleared, forced: opts.forced, deepest, sector, rankUp: !!opts.rankUp });
+  const lines: string[] = [];
+  leaveHazards(s, lines);
+  beginSettlement(s, { mana, cleared: opts.cleared, forced: opts.forced, deepest, sector, rankUp: !!opts.rankUp, extra: lines });
+}
+
+/** 기록물 한 편 읽기(전쟁의 흔적·공양 제단에서 나온 것) */
+function readRecord(s: GameState, room: Room, list: string[], where: string): void {
+  s.recordsRead += 1;
+  note(s, "int");
+  pray(s, "song", 4);
+  pray(s, "oblivion", -5);
+  log(s, list[(room.flavor + s.recordsRead) % list.length], "story");
+  log(s, `(${where} — 읽은 기록물 ${s.recordsRead}개)`, "system");
+  saga(s);
+}
+
+/** 시와 노래의 신 ★4 "영웅담": 기록물을 읽을 때마다 이 미궁 동안 명중·판정 +1(최대 3) */
+function saga(s: GameState): void {
+  const dg = s.dungeon;
+  if (!dg || !power(s, "song", 4) || (dg.saga ?? 0) >= 3) return;
+  dg.saga = (dg.saga ?? 0) + 1;
+  log(s, `【${GODS.song.name}】 영웅담 — 읽은 이야기가 몸에 붙는다. (이 미궁 동안 명중·판정 +${dg.saga})`, "skill");
 }
 
 export function monsterName(id: string): string {

@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { maxHp, heroAc, smod, stat } from "../game/core";
 import { FRAGMENTS, TIER_LABEL, fragSlots, fragStat, fragStatText } from "../game/fragments";
-import { PIETY_TIERS, godOf, tier } from "../game/faith";
+import { FAITH_BAL, PIETY_TIERS, godOf, pietyCap, tier } from "../game/faith";
+import { PARA_NAME, PARA_PARTS, PARA_PART_NAME, POISON_NAME, corrodedSlots, corrosionEffect, paraEffect, paraOf, poisonOf } from "../game/hazards";
+import { CORRODE_NAME, corrosionOf } from "../game/gear";
 import { MIND_EFFECT, MIND_KEYS, MIND_NAME, known, mindSummary } from "../game/mind";
-import { DISEASE_NAME, INJ, LEVEL_NAME, PARTS, PART_NAME, injurySummary, partEffect } from "../game/injury";
+import { INJ, LEVEL_NAME, PARTS, PART_NAME, diseaseName, injurySummary, partEffect } from "../game/injury";
 import { STAT_KEYS, STAT_LABEL } from "../game/data";
 import { GEAR } from "../game/gear";
 import { CLASSES } from "../game/classes";
@@ -355,23 +357,23 @@ export function FaithCard({ s }: { s: GameState }) {
       ) : (
         <>
           <p className="small">
-            <b>{g.name}</b> <span className="dim">· {g.align}</span> <span className="accent">{"★".repeat(t)}{"☆".repeat(3 - t)}</span>
+            <b>{g.name}</b> <span className="dim">· {g.align}</span> <span className="accent">{"★".repeat(t)}{"☆".repeat(Math.max(0, (s.rank >= FAITH_BAL.tier4Rank ? 4 : 3) - t))}</span>
           </p>
           <div className="faith-line">
             <span className="small dim">신앙심</span>
-            <Bar value={s.piety} max={100} tone="food" />
+            <Bar value={s.piety} max={pietyCap(s)} tone="food" />
             <span className="num small">{Math.floor(s.piety)}</span>
           </div>
           <ul className="skills">
             {g.powers.map((p, i) => (
               <li key={i} className={t > i ? "" : "empty"}>
                 <span className={`skill-kind${t > i ? " active" : ""}`}>★{i + 1} · {PIETY_TIERS[i]}</span>
-                <span className={`small${t > i ? "" : " dim"}`}>{p}</span>
+                <span className={`small${t > i ? "" : " dim"}`}>{p}{i === 3 && s.rank < FAITH_BAL.tier4Rank ? " (3섹터를 클리어하면 열린다 — 신앙심 상한도 200으로)" : ""}</span>
               </li>
             ))}
           </ul>
           <p className="dim small">
-            좋아함: {g.likes} · 싫어함: {g.dislikes}. 신앙심은 매달 5씩 줄고, ★이 높을수록 성당의 이단 심문에 걸리기 쉽다(★당 5%).
+            좋아함: {g.likes} · 싫어함: {g.dislikes}. 신앙심은 매달 5씩 줄고, ★이 높을수록 성당의 이단 심문에 걸리기 쉽다(★당 5%, 최대 15%).
           </p>
         </>
       )}
@@ -405,9 +407,30 @@ export function InjuryCard({ s }: { s: GameState }) {
         })}
         <li className={s.disease ? "hurt-row" : "empty"}>
           <span className="slot">질병</span>
-          <span className="item">{s.disease ? DISEASE_NAME[s.disease] : "없음"}</span>
-          <span className="effect">{s.disease === 2 ? "방을 옮길 때마다 HP −2, 판정 −2" : s.disease === 1 ? "방을 옮길 때마다 HP −1" : ""}</span>
+          <span className="item">{s.disease ? diseaseName(s) : "없음"}</span>
+          <span className="effect">{s.disease === 2 ? "방을 옮길 때마다 HP −2, 판정 −2" : s.disease === 1 ? "방을 옮길 때마다 HP −1" : ""}{s.disease && s.diseaseKind === "mold" ? ", 야영 회복 절반" : ""}</span>
         </li>
+        {poisonOf(s) > 0 && (
+          <li className="hurt-row">
+            <span className="slot">독</span>
+            <span className="item">{POISON_NAME[poisonOf(s)]}</span>
+            <span className="effect">{poisonOf(s) >= 2 ? "방을 옮길 때마다 HP −2, 판정 −1" : "방을 옮길 때마다 HP −1"} · 야영·미궁을 나올 때 한 단계</span>
+          </li>
+        )}
+        {PARA_PARTS.filter((p) => paraOf(s, p) > 0).map((p) => (
+          <li key={`para-${p}`} className="hurt-row">
+            <span className="slot">마비</span>
+            <span className="item">{PARA_PART_NAME[p]} {PARA_NAME[paraOf(s, p)]}</span>
+            <span className="effect">{paraEffect(p, paraOf(s, p))} · 미궁을 나오면 풀린다</span>
+          </li>
+        ))}
+        {corrodedSlots(s).map((k) => (
+          <li key={`cor-${k}`} className="hurt-row">
+            <span className="slot">부식</span>
+            <span className="item">{CORRODE_NAME[corrosionOf(s, k)]}</span>
+            <span className="effect">{corrosionEffect(k, corrosionOf(s, k))} · 대장간 수리·숫돌</span>
+          </li>
+        ))}
       </ul>
       <p className="eyebrow">정신</p>
       {MIND_KEYS.some((k) => known(s, k)) ? (

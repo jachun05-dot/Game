@@ -13,6 +13,17 @@ export const PARTS: Part[] = ["head", "body", "main", "offhand", "feet"];
 export const PART_NAME: Record<Part, string> = { head: "머리", body: "몸통", main: "오른손", offhand: "왼손", feet: "발" };
 export const LEVEL_NAME = ["멀쩡함", "경상", "중상", "결손"];
 export const DISEASE_NAME = ["", "쥐 열병(경상)", "쥐 열병(중상)"];
+const MOLD_NAME = ["", "곰팡이 폐병(경상)", "곰팡이 폐병(중상)"];
+
+/** 지금 앓는 질병 이름(종류별) */
+export function diseaseName(s: GameState, stage = s.disease): string {
+  return (s.diseaseKind === "mold" ? MOLD_NAME : DISEASE_NAME)[stage] ?? "";
+}
+
+/** 질병 종류만(단계 없이) */
+export function diseaseKindName(s: GameState): string {
+  return s.diseaseKind === "mold" ? "곰팡이 폐병" : "쥐 열병";
+}
 
 /** 의수·의족을 달 수 있는 부위 */
 export const LIMBS: Part[] = ["main", "offhand", "feet"];
@@ -55,7 +66,7 @@ export function lvl(s: GameState, p: Part): number {
 /** 판정 페널티(머리·질병) */
 export function injuryRollPenalty(s: GameState): number {
   const h = lvl(s, "head");
-  const p = (h >= 2 ? -4 : h === 1 ? -2 : 0) + (s.disease >= 2 && !plagueImmune(s) ? -2 : 0);
+  const p = (h >= 2 ? -4 : h === 1 ? -2 : 0) + (s.disease >= 2 && !plagueImmune(s) ? -2 : 0) + ((s.poison ?? 0) >= 2 ? -1 : 0);
   return s.skills.includes("painless") ? Math.trunc(p / 2) : p; // 전사 "고통 무시"
 }
 
@@ -115,14 +126,14 @@ export function canPeek(s: GameState): boolean {
 }
 
 /** 방을 옮길 때 깎이는 HP(출혈 + 질병)와 그 원인 */
-export function bleedPerMove(s: GameState): { bleed: number; disease: number } {
+export function bleedPerMove(s: GameState): { bleed: number; disease: number; poison: number } {
   const b = s.injuries.body ?? 0;
-  const dz = plagueImmune(s) ? 0 : s.disease >= 2 ? 2 : s.disease === 1 ? 1 : 0; // 역병의 신 ★1
-  return { bleed: b >= 2 ? 2 : b === 1 ? 1 : 0, disease: dz };
+  const dz = plagueImmune(s) ? 0 : s.disease >= 2 ? 2 : s.disease === 1 ? 1 : 0; // 역병의 신 ★1(질병만, 독은 막지 않는다)
+  return { bleed: b >= 2 ? 2 : b === 1 ? 1 : 0, disease: dz, poison: [0, 1, 2][s.poison ?? 0] ?? 0 };
 }
 
 export function anyInjury(s: GameState): boolean {
-  return PARTS.some((p) => (s.injuries[p] ?? 0) > 0) || s.disease > 0;
+  return PARTS.some((p) => (s.injuries[p] ?? 0) > 0) || s.disease > 0 || (s.poison ?? 0) > 0 || Object.values(s.paralysis ?? {}).some((v) => (v ?? 0) > 0);
 }
 
 /** 지금 상태 요약(헤더·로그용) */
@@ -132,7 +143,9 @@ export function injurySummary(s: GameState): string[] {
     const v = s.injuries[p] ?? 0;
     if (v > 0) out.push(`${PART_NAME[p]} ${LEVEL_NAME[v]}${v >= 3 && s.prosthetic?.[p] ? (p === "feet" ? "(의족)" : "(의수)") : ""}`);
   }
-  if (s.disease > 0) out.push(DISEASE_NAME[s.disease]);
+  if (s.disease > 0) out.push(diseaseName(s));
+  if ((s.poison ?? 0) > 0) out.push(["", "중독(경상)", "중독(중상)"][s.poison!]);
+  for (const [p, v] of Object.entries(s.paralysis ?? {})) if (v) out.push(`${PART_NAME[p as Part]} ${v >= 2 ? "마비" : "저림"}`);
   return out;
 }
 
@@ -168,10 +181,13 @@ export function wound(s: GameState, p: Part, why: string): "oblivion" | "body" |
   return null;
 }
 
-export function infect(s: GameState): void {
+/** 질병에 걸린다(이미 앓고 있으면 그 병이 한 단계 깊어진다) */
+export function infect(s: GameState, kind: "rat" | "mold" = "rat"): void {
   if (s.disease >= 2) return;
+  if (s.disease === 0) s.diseaseKind = kind;
   s.disease += 1;
-  s.log.push({ text: `【질병】 상처가 화끈거린다 — ${DISEASE_NAME[s.disease]}. 방을 옮길 때마다 HP가 깎인다.`, kind: "hurt" });
+  const how = s.diseaseKind === "mold" ? "포자를 들이마셨다. 가슴이 답답하다" : "상처가 화끈거린다";
+  s.log.push({ text: `【질병】 ${how} — ${diseaseName(s)}. 방을 옮길 때마다 HP가 깎인다.${s.diseaseKind === "mold" ? " (야영 회복 절반)" : ""}`, kind: "hurt" });
   s.logCount += 1;
 }
 

@@ -30,7 +30,9 @@ export type SkillEffect =
   | { type: "stunAll"; rounds: number }
   | { type: "heal"; dice: [number, number]; plusInt: boolean }
   | { type: "endure" }
-  | { type: "stunOne"; rounds: number }
+  | { type: "stunOne"; rounds: number; text?: string }
+  /** 석상: 이번 라운드 받는 피해 절반 */
+  | { type: "stone"; text: string }
   /** 주문: 반드시 명중, 피해 = 주사위 + 지능 보정. all이면 모든 적 */
   | { type: "spell"; dice: [number, number]; all: boolean; text: string }
   /** 원소 주문: 반드시 명중, 피해 = 주사위 + 원소 주 능력치 보정 */
@@ -210,6 +212,24 @@ Object.assign(SKILLS, {
     id: "fragVanguard", name: "선봉의 일격", kind: "active", desc: "전투 시작 시 첫 공격 명중 +4, 피해 +4",
     trigger: { on: "start" }, effect: { type: "strike", hit: 4, dmg: 4 }, uses: 1,
   },
+} satisfies Record<string, SkillDef>);
+
+// 편린 능력(3섹터). 거머리·두꺼비·달팽이·곰팡이·균사체·균모는 combat.ts·hazards.ts·dungeon.ts가 id로 처리
+Object.assign(SKILLS, {
+  fragLeech: { id: "fragLeech", name: "흡혈", kind: "passive", desc: "치명타를 내면 HP +2" },
+  fragToadSkin: { id: "fragToadSkin", name: "독 피부", kind: "passive", desc: "독에 걸릴 확률 절반" },
+  fragShell: { id: "fragShell", name: "껍질", kind: "passive", desc: "장비가 부식될 확률 절반" },
+  fragSporeArmor: { id: "fragSporeArmor", name: "포자 갑옷", kind: "passive", desc: "맞으면 10% 확률로 때린 적이 기침하며 1라운드 행동 불가" },
+  fragMimicPrayer: { id: "fragMimicPrayer", name: "흉내 낸 기도", kind: "passive", desc: "성소에서 기도하면 신앙심 +2 더" },
+  fragStatue: {
+    id: "fragStatue", name: "석상", kind: "active", desc: "내 HP 50% 이하가 되면 그 라운드 받는 피해 절반(전투당 1회)",
+    trigger: { on: "selfBelow", pct: 50 }, effect: { type: "stone", text: "몸이 돌처럼 굳는다" }, uses: 1,
+  },
+  fragChoirBell: {
+    id: "fragChoirBell", name: "종소리", kind: "active", desc: "전투 시작 시 가장 강한 적이 1라운드 행동 불가",
+    trigger: { on: "start" }, effect: { type: "stunOne", rounds: 1, text: "귓가의 종이 울린다 —" }, uses: 1,
+  },
+  fragMycelium: { id: "fragMycelium", name: "균사 재생", kind: "passive", desc: "전투 라운드마다 HP +1(병을 앓는 동안 +2)" },
 } satisfies Record<string, SkillDef>);
 
 // 마법사 원소 기술(elements.ts의 레벨표). 효과 처리는 combat.ts

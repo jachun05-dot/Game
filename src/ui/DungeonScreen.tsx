@@ -1,6 +1,9 @@
 import type { CSSProperties } from "react";
 import { maxHp } from "../game/core";
-import { ROOM_LABEL, ROOM_SHORT, currentRoom, isNight } from "../game/dungeon";
+import { ROOM_LABEL, ROOM_SHORT, currentRoom, highTide, isNight } from "../game/dungeon";
+import { SECTOR_NAME } from "../game/data";
+import { anyParalysis, corrodedSlots, poisonOf } from "../game/hazards";
+import { LAST_SECTOR } from "../game/endless";
 import type { PendingChoice } from "../game/dungeon";
 import type { DungeonState, GameState } from "../game/types";
 import { sweeperDistance, sweeperThreat } from "../game/sweeper";
@@ -27,7 +30,7 @@ export function DungeonScreen({ ctl }: { ctl: Ctl }) {
   return (
     <GameScreen
       ctl={ctl}
-      title={dg.endless ? `끝없는 미궁 ${dg.floor}층` : `${dg.sector}섹터 ${dg.floor}층 · ${dg.sector >= 2 ? (isNight(s) ? "밤" : "낮") : "미궁"}`}
+      title={dg.endless ? `끝없는 미궁 ${dg.floor}층` : `${dg.sector}섹터 ${dg.floor}층 · ${dg.sector === 3 ? (highTide(s) ? "밀물" : "썰물") : dg.sector === 2 ? (isNight(s) ? "밤" : "낮") : "미궁"}`}
       header={
         <>
           <HeroHeader s={s} onOpen={() => ctl.setSheet(true)} extra={<span>마석 {dg.mana}G</span>} />
@@ -90,6 +93,11 @@ const PENDING_OPTIONS: Record<string, { choice: PendingChoice; label: string; pr
   relic: [
     { choice: "search", label: "녹슨 무기 더미를 뒤진다 (1시간)", primary: true },
     { choice: "leave", label: "죽은 자들의 물건은 건드리지 않는다" },
+  ],
+  altar: [
+    { choice: "search", label: "썩은 제물을 뒤진다 (1시간)", primary: true },
+    { choice: "pray", label: "역병의 신에게 기도한다 (1시간)" },
+    { choice: "leave", label: "제단을 지나친다" },
   ],
 };
 
@@ -204,11 +212,15 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
         {dg.pending.kind === "lostScroll" && (
           <p className="dim small">첫 미궁에서는 2층으로 내려갈 수 없다. 주문서는 여기 그대로 있으니, 1층을 더 돌다가 다시 와서 써도 된다. 쓰지 않으면 시간이 다 될 때까지 1층에 머문다.</p>
         )}
-        {dg.pending.kind === "portal" && dg.sector === 2 && (
-          <p className="dim small">2섹터 클리어. 들어가면 끝없는 미궁 — 함정 없이 몬스터만, 층마다 더 강해지고 계단은 끝없이 이어진다. 돌아오는 길은 귀환 주문서뿐(아니면 시간이 다 될 때까지). 남은 시간은 그대로다.</p>
+        {dg.pending.kind === "portal" && dg.sector >= LAST_SECTOR && (
+          <p className="dim small">{dg.sector}섹터 클리어. 들어가면 끝없는 미궁 — 함정 없이 몬스터만, 층마다 더 강해지고 계단은 끝없이 이어진다. 돌아오는 길은 귀환 주문서뿐(아니면 시간이 다 될 때까지). 남은 시간은 그대로다.</p>
         )}
-        {dg.pending.kind === "portal" && dg.sector === 1 && (
-          <p className="dim small">들어가면 2섹터 — 잊힌 전쟁터의 초원. 남은 시간이 두 배가 된다({fmtTime(dg.turnsLeft)} → {fmtTime(dg.turnsLeft * 2)}). 돌아가도 1섹터 클리어는 인정된다.</p>
+        {dg.pending.kind === "portal" && dg.sector < LAST_SECTOR && (
+          <p className="dim small">들어가면 {dg.sector + 1}섹터 — {SECTOR_NAME[dg.sector + 1]}. 남은 시간이 두 배가 된다({fmtTime(dg.turnsLeft)} → {fmtTime(dg.turnsLeft * 2)}). 돌아가도 {dg.sector}섹터 클리어는 인정된다.</p>
+        )}
+        {dg.pending.kind === "record" && dg.sector === 3 && <p className="dim small">물에 불은 경전이다. 말리면서 읽어야 해서 4시간이 걸린다.</p>}
+        {dg.pending.kind === "altar" && (
+          <p className="dim small">뒤지면 낡은 장비나 기도문이 나오기도 하지만, 썩은 제물에 독이 있을 수 있다.{s.hero.faith && godOf(s.hero.faith)?.key === "plague" ? " 역병의 신도는 기도할 수 있다(신앙심 +3)." : ""}</p>
         )}
         {dg.pending.kind === "shrine" && (
           <p className="dim small">
@@ -222,9 +234,10 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
         <div className="choices">
           {PENDING_OPTIONS[dg.pending.kind]
             .filter((o) => o.choice !== "back" || dg.prev !== null)
+            .filter((o) => dg.pending!.kind !== "altar" || o.choice !== "pray" || godOf(s.hero.faith)?.key === "plague")
             .map((o) => (
               <button key={o.choice} className={`btn${o.primary ? " primary" : ""}`} disabled={busy} onClick={() => go({ t: "pending", choice: o.choice })}>
-                {o.label}
+                {dg.pending!.kind === "record" && o.choice === "read" && dg.sector === 3 ? "말리며 읽는다 (4시간)" : o.label}
               </button>
             ))}
           {dg.pending.kind === "trap" && room.trapKind === "pit" && power(s, "abyss", 1) && dg.floor < 3 && (
@@ -271,13 +284,24 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
             탕약 {s.inventory.herb}
           </button>
         )}
+        {s.inventory.antidote > 0 && (poisonOf(s) > 0 || anyParalysis(s)) && (
+          <button className="btn small" disabled={busy} onClick={() => go({ t: "antidote" })}>
+            해독초 {s.inventory.antidote}
+          </button>
+        )}
+        {s.inventory.whetstone > 0 && corrodedSlots(s).length > 0 && (
+          <button className="btn small" disabled={busy} onClick={() => go({ t: "whetstone" })}>
+            숫돌 {s.inventory.whetstone}
+          </button>
+        )}
       </div>
       <p className="dock-title">{ROOM_LABEL[room.type]} — 어디로 갈까? <span className="dim small">(한 방 2시간)</span></p>
       <div className="choices">
         {room.edges.map((id) => {
           const nb = dg.rooms[id];
           const label = nb.visited || nb.known ? (nb.respawned && !nb.resolved ? "새로운 기척" : ROOM_LABEL[nb.type]) + (nb.ambushKnown && nb.ambush ? " · 고블린 매복" : "") : "???";
-          const note = id === dg.prev ? "왔던 길" : nb.visited ? "가 본 곳" : "";
+          const water = (nb.visited || nb.known) && nb.flooded ? (nb.deep ? "깊은 물" : highTide(s) ? "물에 잠김(느림)" : "물에 잠김") : "";
+          const note = [id === dg.prev ? "왔던 길" : nb.visited ? "가 본 곳" : "", water].filter(Boolean).join(" · ");
           const danger = (nb.known || nb.visited) && !nb.resolved && ["combat", "trap", "boss"].includes(nb.type);
           return (
             <button key={id} className={`btn path${danger ? " risky" : ""}`} disabled={busy} onClick={() => go({ t: "move", room: id })}>
@@ -299,7 +323,7 @@ function RoomIcon({ type }: { type: string | null }) {
 
 /** 지도 칸 배경: 섹터 장소 그림을 2배로 깔고 어둡게 눌러 지도 점·선이 먼저 읽히게 한다 */
 function mapBackdrop(dg: DungeonState): CSSProperties | undefined {
-  const a = SCENE_ART[`dungeon${dg.sector}`];
+  const a = SCENE_ART[dg.endless ? "endless" : `dungeon${dg.sector}`];
   if (!a) return undefined;
   return {
     backgroundImage: `linear-gradient(rgba(12, 10, 7, 0.62), rgba(12, 10, 7, 0.62)), url(${a.src})`,

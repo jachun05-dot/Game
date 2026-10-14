@@ -40,6 +40,9 @@ function fixRun(s: GameState | null): GameState | null {
   s.trophies ??= s.inventory.heart > 0 || s.hero.level > 3 ? ["heart"] : [];
   s.inventory.bandage ??= 0;
   s.inventory.herb ??= 0;
+  s.inventory.spore ??= 0;
+  s.inventory.whetstone ??= 0;
+  s.inventory.antidote ??= 0;
   s.faithsKnown ??= s.hero.faith ? [s.hero.faith] : [];
   s.codex = mergeCodex(s.codex ?? emptyCodex(), { ...emptyCodex(), fragKnown: s.fragments });
   return s;
