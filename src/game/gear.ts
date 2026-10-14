@@ -68,7 +68,7 @@ export const GEAR: Record<string, GearDef> = {
   shortsword: { id: "shortsword", name: "숏소드", slot: "main", bonus: {}, weapon: { dice: [1, 6], stat: "str", verb: "칼을 휘둘러", finesse: true }, price: 20, flavor: "모험가 등록소에서 받는 표준 한손검. 힘이나 민첩 중 나은 쪽으로 다룬다." },
   longsword: { id: "longsword", name: "장검", slot: "main", bonus: {}, weapon: { dice: [1, 8], stat: "str", verb: "장검을 내리쳐" }, price: 70, flavor: "무겁지만 한 번 들어가면 깊다." },
   dagger: { id: "dagger", name: "가는 단검", slot: "main", bonus: { crit: 5 }, weapon: { dice: [1, 4], stat: "dex", verb: "단검을 찔러 넣어" }, loot: 3, flavor: "급소를 노리기 좋다. 민첩으로 다룬다." },
-  staff: { id: "staff", name: "참나무 지팡이", slot: "main", bonus: {}, weapon: { dice: [1, 4], stat: "int", verb: "마력탄을 날려" }, price: 40, flavor: "마력을 모아 쏘는 수습생의 지팡이. 지능으로 다룬다." },
+  staff: { id: "staff", name: "참나무 지팡이", slot: "main", bonus: {}, weapon: { dice: [1, 6], stat: "int", verb: "마력탄을 날려" }, price: 40, flavor: "마력을 모아 쏘는 수습생의 지팡이. 지능으로 다룬다." },
   bonewand: { id: "bonewand", name: "뼈 지팡이", slot: "main", bonus: { hit: 1 }, weapon: { dice: [1, 8], stat: "int", verb: "검은 마력을 쏘아" }, loot: 1, flavor: "스켈레톤의 손가락뼈를 엮어 만들었다." },
   // 몸통
   robe: { id: "robe", name: "수습생 로브", slot: "body", bonus: { ac: 1, perception: 1 }, price: 30, flavor: "주머니가 많다. 칼은 못 막는다." },
