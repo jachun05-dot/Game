@@ -2141,3 +2141,18 @@ describe("저장 보정", () => {
     expect(back.fragments).toEqual(["rat"]);
   });
 });
+
+describe("테스트 결과 수집(telemetry)", () => {
+  it("끝난 삶만 요약하고, 묘비 id는 db 경로에 쓸 수 있게 바꾼다", async () => {
+    const { lifeReport, pathSafe } = await import("../ui/telemetry");
+    const s = playBot(7, 1);
+    expect(lifeReport(s)).toBeNull();
+    s.tomb = { id: "7-3-2-100", name: "가", level: 3, months: 3, reached: "1섹터 2층", cause: "쥐", faithsUnlocked: [], epitaph: "", faith: null, seed: 7, diedAt: "x" };
+    const r = lifeReport(s)!;
+    expect(r.cause).toBe("쥐");
+    expect(r.cls).toBe(s.hero.cls);
+    expect(JSON.stringify(r).length).toBeLessThan(256 * 1024);
+    expect(pathSafe("7-3-2-100-true")).toBe("7-3-2-100-true");
+    expect(pathSafe("a/b c")).toBe("a_b_c");
+  });
+});

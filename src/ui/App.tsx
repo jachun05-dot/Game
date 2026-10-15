@@ -4,6 +4,7 @@ import { botAction } from "../game/bot";
 import { newRun } from "../game/town";
 import type { GameState, Meta } from "../game/types";
 import { buryTomb, loadMeta, loadRun, saveMeta, saveRun } from "./storage";
+import { reportLife } from "./telemetry";
 import { TitleScreen } from "./TitleScreen";
 import { CreateScreen } from "./CreateScreen";
 import { TownScreen } from "./TownScreen";
@@ -61,6 +62,14 @@ export function App() {
   // 사망하면 묘지에 묻고 신앙 해금을 기록한다
   useEffect(() => {
     if (s?.phase === "dead" && s.tomb) setMeta((m) => buryTomb(m, s.tomb!));
+  }, [s?.phase, s?.tomb]);
+
+  // 테스트 결과: 아티팩트로 열었으면 끝난 삶을 db에 남긴다(telemetry.ts)
+  const reported = useRef<string | null>(null);
+  useEffect(() => {
+    if (s?.phase !== "dead" || !s.tomb || reported.current === s.tomb.id) return;
+    reported.current = s.tomb.id;
+    void reportLife(s);
   }, [s?.phase, s?.tomb]);
 
   // 도감은 삶을 넘어 이어진다: 진행 중인 삶의 도감을 Meta에 합친다
