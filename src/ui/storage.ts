@@ -1,5 +1,6 @@
 import type { GameState, Meta, Tomb } from "../game/types";
-import { emptyCodex, mergeCodex } from "../game/fragments";
+import { FRAGMENTS, emptyCodex, mergeCodex } from "../game/fragments";
+import { SKILLS } from "../game/skills";
 
 const RUN_KEY = "ddd-run-v1";
 const META_KEY = "ddd-meta-v1";
@@ -17,7 +18,10 @@ export function loadRun(): GameState | null {
 }
 
 /** 예전 저장 데이터 보정 */
-function fixRun(s: GameState | null): GameState | null {
+/** 2026-10-15 지운 모험가 16레벨 기술(마을 화신) — 신의 가르침 이전 저장에서 "신에게 배운 자"로 바꾼다 */
+const OLD_ADV_AVATARS = ["fighterAvatar", "casterAvatar", "rogueAvatar"];
+
+export function fixRun(s: GameState | null): GameState | null {
   if (!s || s.version !== 1) return null;
   // 기술·자동 전투·편린 이전 저장 데이터 보정
   s.skills ??= [];
@@ -52,6 +56,10 @@ function fixRun(s: GameState | null): GameState | null {
   s.inventory.whetstone ??= 0;
   s.inventory.antidote ??= 0;
   s.faithsKnown ??= s.hero.faith ? [s.hero.faith] : [];
+  // 지운 기술 정리: 옛 모험가 16레벨 화신은 "신에게 배운 자"(영구 보너스)로, 그 밖에 없는 기술 id는 뺀다(화면이 깨지지 않게)
+  if (s.skills.some((id) => OLD_ADV_AVATARS.includes(id)) && !s.skills.includes("godTaught")) s.skills.push("godTaught");
+  s.skills = s.skills.filter((id) => !!SKILLS[id]);
+  s.fragments = s.fragments.filter((id) => !!FRAGMENTS[id]);
   s.codex = mergeCodex(s.codex ?? emptyCodex(), { ...emptyCodex(), fragKnown: s.fragments });
   return s;
 }

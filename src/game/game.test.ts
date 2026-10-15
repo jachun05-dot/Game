@@ -2127,3 +2127,17 @@ describe("모험가 히든 16레벨: 신의 가르침", () => {
     }
   });
 });
+
+describe("저장 보정", () => {
+  it("지운 모험가 16레벨 기술은 '신에게 배운 자'로, 없는 기술·편린 id는 빠진다", async () => {
+    const { fixRun } = await import("../ui/storage");
+    const s = newRun(901);
+    apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    s.hero.level = 16;
+    s.skills = ["swordHand", "fighterAvatar", "noSuchSkill"];
+    s.fragments = ["rat", "noSuchFrag"];
+    const back = fixRun(JSON.parse(JSON.stringify(s)))!;
+    expect(back.skills).toEqual(["swordHand", "godTaught"]);
+    expect(back.fragments).toEqual(["rat"]);
+  });
+});
