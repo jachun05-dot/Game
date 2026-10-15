@@ -72,6 +72,7 @@ export const SCENE_ART: Record<string, SpriteArt> = {
   graveyard: { src: "./scene-grave.png", w: 179, h: 80 },
   dungeon1: { src: "./scene-dungeon1.png", w: 179, h: 100 },
   dungeon2: { src: "./scene-dungeon2.png", w: 179, h: 100 },
+  dungeon2night: { src: "./scene-dungeon2night.png", w: 179, h: 100 },  // 밤(화면 연결은 VISUAL_TODO "게임 세션 메모")
   title: { src: "./scene-title.png", w: 179, h: 160, focus: 0.65 },
 };
 

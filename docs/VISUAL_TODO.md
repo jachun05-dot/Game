@@ -21,7 +21,7 @@
 ## 단계 (플레이어가 많이 보는 순서)
 
 ### A. 2섹터 마무리
-- [ ] 장면 낮 `dungeon2` (프롬프트 038) · 밤 `dungeon2night` (039, 화면 코드 필요)
+- [x] 장면 낮 `dungeon2` (038) · 밤 `dungeon2night` (039) — 밤 연결은 아래 게임 세션 메모
 - [ ] 여관 장면 (040) · 방 아이콘 relic 전쟁의 흔적 (041)
 - [ ] 장비 10: wraithspear 망령의 녹슨 창, warbanner 녹슨 군기 방패, harpycharm 하피 깃털 부적, horseshoe 군마의 편자 장화, battlering 전장의 반지, wolfhide 늑대 가죽 갑옷, steelsword 강철 장검, steelshield 강철 방패, oakstaff 마력이 깃든 지팡이, queencloak 하피 여왕의 깃털 망토
 
@@ -59,3 +59,7 @@
 
 ## 생성 횟수 어림
 몬스터는 한 장에 한 마리(희귀는 기본형 첨부 변형) 약 60회, 장비는 시트 8~9개씩 6회, 방 아이콘 시트 1~2회, 장면·엔딩 10회, 증표·허수아비 시트 2회 → **약 80회**.
+
+## 게임 세션 메모(화면 코드가 필요한 그림)
+
+- **2섹터 밤 배경**: `DungeonScreen.tsx` `mapBackdrop()`에서 `SCENE_ART[\`dungeon${dg.sector}\`]` 대신, 밤(`isNight(s)`)이면 `SCENE_ART[\`dungeon${dg.sector}night\`] ?? SCENE_ART[\`dungeon${dg.sector}\`]`. 밤 그림이 이미 매우 어두워 덧칠(`rgba(12,10,7,0.62)`)을 밤에는 0.35 정도로
