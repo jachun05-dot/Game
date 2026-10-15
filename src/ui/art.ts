@@ -71,6 +71,7 @@ export const SCENE_ART: Record<string, SpriteArt> = {
   office: { src: "./scene-office.png", w: 179, h: 100, focus: 0.85 },
   graveyard: { src: "./scene-grave.png", w: 179, h: 80 },
   dungeon1: { src: "./scene-dungeon1.png", w: 179, h: 100 },
+  dungeon2: { src: "./scene-dungeon2.png", w: 179, h: 100 },
   title: { src: "./scene-title.png", w: 179, h: 160, focus: 0.65 },
 };
 
