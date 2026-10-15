@@ -1,7 +1,7 @@
 import type { GameState } from "../game/types";
 
 // 테스트 결과 수집(2026-10-15): claude.ai 아티팩트로 열었을 때만, 삶이 끝나면(죽음·엔딩) 그 삶의 요약을 아티팩트 db에 남긴다.
-// 경로: runs/<플레이어 id>/lives/<묘비 id> — 플레이어는 자기 줄만 쓰고, 전체는 아티팩트 주인만 읽는다(게시할 때 rules).
+// 경로: runs/<플레이어 id>(표시 문서) 아래 lives/<묘비 id> — 플레이어는 자기 줄만 쓰고, 전체는 아티팩트 주인만 읽는다(게시할 때 rules).
 // GitHub Pages나 로그인하지 않은 보기에서는 claude.use가 없거나 null이라 아무것도 하지 않는다.
 
 /** 이 기록 형식의 버전(필드를 바꾸면 올린다) */
@@ -64,6 +64,8 @@ export async function reportLife(s: GameState): Promise<void> {
     if (!uid) return;
     // 같은 묘비는 같은 문서: 다시 불려도 한 줄만 남는다
     await db.collection(`runs/${uid}/lives`).doc(pathSafe(String(report.tomb))).set(report);
+    // 플레이어 표시 문서: 하위 기록만으로는 목록에 안 잡히므로 runs/<id>에도 마지막 기록 시각을 남긴다
+    await db.doc(`runs/${uid}`).set({ lastAt: report.at, lastTomb: report.tomb });
   } catch {
     // 권한 없음(보기 전용)·한도 초과 등: 기록만 빠진다
   }
