@@ -292,7 +292,7 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
         {seal && <p className="dim small">{seal.flavor} 실패하거나 강행하면 봉인의 수호자(HP 150)와 싸워야 지난다. 지면 죽지 않고 HP 1로 문 밖에 쓰러진다.{s.heretic && s.hero.faith ? " 이단의 고집: 판정 +3." : ""}</p>}
         {dg.pending.kind === "altars" && (
           <p className="dim small">
-            {s.hero.faith ? `섬기는 신(${s.hero.faith})의 제단: 신앙심 +10${s.relic ? "" : ", 그 신의 유물 하나(삶마다 하나)"}. ` : ""}
+            {s.hero.faith ? `섬기는 신(${s.hero.faith})의 제단: 신앙심 +10${s.hero.cls === "adventurer" ? (s.godTeaching ? "" : " — 무언가 더 기다리는 기척이 있다") : s.relic ? "" : ", 그 신의 유물 하나(삶마다 하나)"}. ` : ""}
             다른 해금된 신의 제단마다 응답 하나 — 화신과 싸울 때 한 번씩 돕는다(2d6). HP +10. {s.faithsKnown.some((f) => f !== s.hero.faith) && "여기서 개종할 수도 있다."}
           </p>
         )}

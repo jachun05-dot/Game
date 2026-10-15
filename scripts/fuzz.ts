@@ -135,6 +135,7 @@ function invariants(s: GameState): string[] {
     case "settlement": if (!s.settlement) e.push("settlement 단계인데 정산 없음"); break;
     case "week-result": if (!s.weekResult) e.push("week-result 단계인데 결과 없음"); break;
     case "dead":
+      if (s.godTeaching && s.hero.cls !== "adventurer") e.push("모험가가 아닌데 신의 가르침");
       if (!s.tomb) e.push("죽었는데 묘비 없음");
       if (s.tomb?.ending && s.tomb.ending !== "fallen" && s.rank < 6) e.push(`셉터 없이 엔딩 ${s.tomb.ending}`);
       if (s.tomb?.ending === "true" && (!s.edict || !s.hero.faith)) e.push("진엔딩 조건 없이 진엔딩");
@@ -192,6 +193,8 @@ function setup(s: GameState, scen: string) {
       if (r.chance(0.4)) { s.clues.push("edict"); s.edict = true; }
       if (r.chance(0.3)) s.relic = pick(["war", "hunger", "trap", "greed", "song", "plague", "abyss", "oblivion"]);
       s.inventory.incense = r.int(0, 2);
+      // 모험가는 15레벨 + 아귀의 이빨로(16은 제단에서 섬기는 신에게)
+      if (s.hero.cls === "adventurer") { s.hero.level = 15; s.inventory.fang = 1; s.hero.hp = maxHp(s); }
     }
     for (const k of STAT_KEYS) s.hero.stats[k] += 6;
     s.inventory.potion += 5;
@@ -346,6 +349,7 @@ for (let i = 0; i < N; i++) {
   if (s.dungeon?.sector === 6 || s.rank >= 6) hit("6섹터 도달");
   if (s.rank >= 6) hit("6섹터 클리어");
   if (s.tomb?.ending) hit(`엔딩:${s.tomb.ending}`);
+  if (s.godTeaching) hit(`가르침:${s.godTeaching}`);
   if (s.rank > 0) cleared++;
   if (VERBOSE && i % 100 === 0) console.error(`${i}/${N} ${((Date.now() - t0) / 1000).toFixed(0)}s`);
 }

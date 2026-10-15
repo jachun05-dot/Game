@@ -4,7 +4,7 @@ import { CLASSES } from "./classes";
 import { BAL } from "./data";
 import { sweeperDistance, sweeperThreat } from "./sweeper";
 import { INJ, PARTS } from "./injury";
-import { god, power } from "./faith";
+import { god, power, tier } from "./faith";
 import { fragScore, fragSlots } from "./fragments";
 import { heroAc, maxHp, smod, taxDue } from "./core";
 import { canTrain, innCost, nextSkill, outlawTrainerHere, shopPrice, trainCost } from "./town";
@@ -419,6 +419,8 @@ function ready4(s: GameState): boolean {
 
 /** 이 섹터(숏컷·차원문 너머)를 감당할 만한가: 4섹터 레벨 11 + 물약 4, 5섹터 레벨 14 + 물약 5, 6섹터 레벨 15 + 물약 6 */
 function readyFor(s: GameState, sector: number): boolean {
+  // 모험가는 16레벨을 6섹터 제단에서 섬기는 신에게 받으니 15레벨에 들어간다(무신앙 모험가는 16에 닿지 못해 들어가지 않는다)
+  if (sector >= 6 && s.hero.cls === "adventurer") return (s.hero.level >= 16 || (s.hero.level >= 15 && tier(s) >= 1 && s.inventory.fang > 0)) && s.inventory.potion >= 6;
   if (sector >= 6) return s.hero.level >= 16 && s.inventory.potion >= 6;
   if (sector === 5) return s.hero.level >= 14 && s.inventory.potion >= 5;
   return ready4(s);

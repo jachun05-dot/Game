@@ -6,7 +6,7 @@ import { passive } from "../game/skills";
 import type { Ctl } from "./App";
 import { BuildSummary, Card, FaithCard, GearIcon, InjuryCard, FragList, LevelTable, SkillList, StatGrid, TacticsBar, fmtMod } from "./components";
 import { CLASS_ART } from "./art";
-import { godOf } from "../game/faith";
+import { TEACHINGS, godOf } from "../game/faith";
 import { relicDesc, relicName } from "../game/temple";
 import { CLUES, clueCount, knowsClue } from "../game/truth";
 
@@ -110,6 +110,20 @@ export function CharacterSheet({ ctl }: { ctl: Ctl }) {
 
           <Card title="신앙">
             <FaithCard s={s} />
+            {s.godTeaching && (() => {
+              const te = TEACHINGS[s.godTeaching as keyof typeof TEACHINGS];
+              const on = godOf(s.hero.faith)?.key === s.godTeaching;
+              return (
+                <>
+                  <p className="small">
+                    신의 가르침 【{te.name}】 {te.boost}{!on && <span className="dim"> — 그 신을 섬기지 않아 꺼져 있다</span>}
+                  </p>
+                  <p className="small">
+                    마지막 기술 【{te.final}】 {te.finalDesc}
+                  </p>
+                </>
+              );
+            })()}
             {s.relic && (
               <p className="small">
                 유물 【{relicName(s)}】 {relicDesc(s)}

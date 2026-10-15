@@ -46,7 +46,7 @@ if (mode === "snap") {
       if (process.env.FAITHFUL) {
         const gods = ["전쟁의 신", "기아/풍요의 신", "재앙(함정)의 신", "탐욕/채무의 신", "시와 노래의 신", "역병의 신", "심연의 신", "망각의 신"];
         s.faithsKnown = gods;
-        s.hero.faith = gods[si++ % gods.length];
+        s.hero.faith = process.env.GOD ? gods[Number(process.env.GOD)] : gods[si++ % gods.length];
         s.piety = 140;
         s.clues = ["lostgod", "lock", "ageless", "oldgods"];
       }
@@ -79,7 +79,12 @@ if (mode === "snap") {
     }
     const k = snaps.length;
     const p = (x: number, of = k) => `${((x / Math.max(1, of)) * 100).toFixed(1)}%`;
-    console.log(`${cls.padEnd(10)} ${n}판 중 5섹터 클리어 ${k}명 → 6개월 안 엔딩 ${p(ending)} (헌납 ${offering} · 진엔딩 ${trueEnd}) | 6섹터 진입 ${p(entered)} | 첫 진입 달 사망 ${p(firstDeath, entered)} | 6섹터 사망 ${p(sector6Death)} | 6개월 안 사망 ${p(dead6)} | 화신 앞 ${avatarSeen} → 셉터 ${avatarWin} | 결전 패배 ${fallen}`);
+    const taught = snaps.filter(({ s }) => s.godTeaching).length;
+    const taughtWin = snaps.filter(({ s }) => s.godTeaching && s.rank >= 6).length;
+    const lv16 = snaps.filter(({ s }) => s.hero.level >= 16 && s.dungeon === null).length;
+    if (cls === "adventurer") console.log(`   신의 가르침(16레벨) ${taught}명 → 셉터까지 ${taughtWin}명 (${((taughtWin / Math.max(1, taught)) * 100).toFixed(0)}%)`);
+    void lv16;
+    console.log(`${cls.padEnd(10)}${process.env.GOD ? ` [${process.env.GOD}]` : ""} ${n}판 중 5섹터 클리어 ${k}명 → 6개월 안 엔딩 ${p(ending)} (헌납 ${offering} · 진엔딩 ${trueEnd}) | 6섹터 진입 ${p(entered)} | 첫 진입 달 사망 ${p(firstDeath, entered)} | 6섹터 사망 ${p(sector6Death)} | 6개월 안 사망 ${p(dead6)} | 화신 앞 ${avatarSeen} → 셉터 ${avatarWin} | 결전 패배 ${fallen}`);
     console.log("   사망 원인 " + [...causes].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([c, x]) => `${c} ${p(x)}`).join(" · "));
   }
 }

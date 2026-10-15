@@ -474,7 +474,6 @@ Object.assign(SKILLS, {
   duel: { id: "duel", name: "결전", kind: "active", desc: "궁극기. 전투 시작 시 2라운드 동안 매 라운드 한 번 더 공격", trigger: { on: "start" }, effect: { type: "rampage", rounds: 2, text: "숨을 고르고 결전에 나선다" }, uses: 1 },
   battleSense: { id: "battleSense", name: "전장 감각", kind: "passive", desc: "명중 +1, 치명타 확률 +5%", passive: { hit: 1, crit: 5 } },
   counterStance: { id: "counterStance", name: "반격 자세", kind: "active", desc: "내 HP 50% 이하가 되면 2라운드 AC +3, 그동안 빗나간 공격마다 반격", trigger: { on: "selfBelow", pct: 50 }, effect: { type: "eguard", ac: 3, rounds: 2, counter: true, text: "칼을 낮추고 받아칠 자세를 잡는다" }, uses: 1 },
-  fighterAvatar: { id: "fighterAvatar", name: "백전노장", kind: "passive", desc: "피해 +3, 최대 HP +10, 맞았을 때 부상 확률 절반", passive: { dmg: 3, hp: 10 } },
   // 모험가 마법사형
   casterSeal: { id: "casterSeal", name: "주문꾼의 낙인", kind: "passive", desc: "최대 HP +6, 주문 피해 +3, 마법사형 액티브 전투당 +1회", passive: { hp: 6 } },
   elemArrow: { id: "elemArrow", name: "원소 화살", kind: "active", desc: "전투 시작 시 가장 강한 적에게 원소 화살(2d6 + 지능 보정), 무작위로 불탐·얼림·감전", trigger: { on: "start" }, effect: { type: "espell", el: "bolt", dice: [2, 6], pick: "strongest", rider: true, text: "손끝에서 원소가 뒤섞여 날아간다" }, uses: 1 },
@@ -482,7 +481,6 @@ Object.assign(SKILLS, {
   elemStorm: { id: "elemStorm", name: "원소 폭풍", kind: "active", desc: "궁극기. 전투 시작 시 적 전원에게 원소 폭풍(2d4 + 지능 보정), 각자 무작위로 불탐·얼림·감전", trigger: { on: "start" }, effect: { type: "espell", el: "bolt", dice: [2, 4], all: true, rider: true, text: "불·얼음·번개가 한꺼번에 휘몰아친다" }, uses: 1 },
   manaShield: { id: "manaShield", name: "마력 방패", kind: "passive", desc: "AC +2", passive: { ac: 2 } },
   blink: { id: "blink", name: "순간 이동", kind: "active", desc: "내 HP 30% 이하가 되면 반드시 도주한다(전투당 1회)", trigger: { on: "selfBelow", pct: 30 }, effect: { type: "blink", text: "공간이 접히며 몸이 사라진다" }, uses: 1 },
-  casterAvatar: { id: "casterAvatar", name: "대마도사의 길", kind: "passive", desc: "모든 주문 피해 +4, 마법사형 액티브 전투당 +1회 더" },
   // 모험가 민첩형
   shadowSeal: { id: "shadowSeal", name: "그림자의 낙인", kind: "passive", desc: "최대 HP +6, AC +2, 치명타 확률 +10%, 민첩형 액티브 전투당 +1회", passive: { hp: 6, ac: 2, crit: 10 } },
   poisonBlade: { id: "poisonBlade", name: "독 바른 칼", kind: "active", desc: "전투 시작 시 가장 강한 적을 3라운드 중독시킨다(라운드마다 1d6)", trigger: { on: "start" }, effect: { type: "venom", rounds: 3, dice: [1, 6], text: "칼날에 독을 바른다" }, uses: 1 },
@@ -490,7 +488,11 @@ Object.assign(SKILLS, {
   assassinate: { id: "assassinate", name: "암살", kind: "active", desc: "궁극기. 전투 시작 시 가장 강한 적에게 확정 치명타, 피해 ×2", trigger: { on: "start" }, effect: { type: "strikeStrong", mult: 2, crit: true, text: "그림자 속에서 급소를 꿰뚫는다" }, uses: 1 },
   shadowBody: { id: "shadowBody", name: "그림자 몸", kind: "passive", desc: "도주 +5, 적의 명중 −1", passive: { flee: 5 } },
   vanish: { id: "vanish", name: "사라지기", kind: "active", desc: "내 HP 30% 이하가 되면 적 전원 2라운드 행동 불가", trigger: { on: "selfBelow", pct: 30 }, effect: { type: "stunAll", rounds: 2 }, uses: 1 },
-  rogueAvatar: { id: "rogueAvatar", name: "그림자 군주", kind: "passive", desc: "치명타 확률 +10%, 치명타 피해 주사위 ×4, 손버릇으로 쓰러뜨린 적 마석 ×2", passive: { crit: 10 } },
+} satisfies Record<string, SkillDef>);
+
+// 모험가 히든 16레벨: 신에게 배운 자(영구 — 최대 HP +10). 강화·마지막 기술은 faith.ts TEACHINGS, 효과는 combat.ts가 teachOn으로
+Object.assign(SKILLS, {
+  godTaught: { id: "godTaught", name: "신에게 배운 자", kind: "passive", desc: "섬기는 신이 직접 16레벨로 이끌었다. 최대 HP +30, 명중 +3, 피해 +5, AC +2 (그 신의 가르침은 그 신을 섬기는 동안)", passive: { hp: 30, hit: 3, dmg: 5, ac: 2 } },
 } satisfies Record<string, SkillDef>);
 
 // "고통 무시": 공포 면역

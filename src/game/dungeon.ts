@@ -952,7 +952,10 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
     } else if (choice.startsWith("convert")) {
       passTime(s, 2);
       const name = s.faithsKnown[Number(choice.slice(7))];
-      if (name) convert(s, name);
+      if (name) {
+        convert(s, name);
+        dg.converted = true;
+      }
     } else log(s, "제단들을 지나쳤다. (다시 오면 기도할 수 있다)");
     return;
   }
@@ -1310,7 +1313,10 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
     } else if (choice.startsWith("convert")) {
       passTime(s, 2);
       const name = s.faithsKnown[Number(choice.slice(7))];
-      if (name) convert(s, name);
+      if (name) {
+        convert(s, name);
+        dg.converted = true;
+      }
     } else {
       log(s, "성당의 눈을 떠올리고, 제단을 지나쳤다.");
     }

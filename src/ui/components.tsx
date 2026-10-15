@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { maxHp, heroAc, smod, stat } from "../game/core";
 import { FRAGMENTS, TIER_LABEL, fragSlots, fragStat, fragStatText } from "../game/fragments";
-import { FAITH_BAL, PIETY_TIERS, godOf, pietyCap, tier } from "../game/faith";
+import { FAITH_BAL, PIETY_TIERS, TEACHINGS, godOf, pietyCap, tier } from "../game/faith";
 import { PARA_NAME, PARA_PARTS, PARA_PART_NAME, POISON_NAME, corrodedSlots, corrosionEffect, paraEffect, paraOf, poisonOf } from "../game/hazards";
 import { CORRODE_NAME, corrosionOf } from "../game/gear";
 import { MIND_EFFECT, MIND_KEYS, MIND_NAME, known, mindSummary } from "../game/mind";
@@ -549,6 +549,11 @@ export function LevelTable({ s, selected, onPick }: { s: GameState; selected?: s
                 </th>
                 {lines.map((line) => {
                   const id = levelSkill(line, lv);
+                  // 모험가 16레벨: 레벨표가 아니라 섬기는 신의 가르침(히든)
+                  if (!id && lv === 16 && s.hero.cls === "adventurer") {
+                    const te = s.godTeaching ? TEACHINGS[s.godTeaching as keyof typeof TEACHINGS] : null;
+                    return <td key={line} className={te ? "lt-learned" : "lt-future dim"} title={te ? `${te.boost} / ${te.final}: ${te.finalDesc}` : "교관에게서는 배울 수 없다"}>{te ? te.name : "???"}</td>;
+                  }
                   if (!id) return <td key={line} className="lt-future dim">—</td>;
                   const sk = SKILLS[id];
                   const learned = s.skills.includes(id);

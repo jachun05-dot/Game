@@ -162,8 +162,13 @@ export function kitItems(items: { food: number; potion: number; scroll: number }
   return out;
 }
 
+/** 마을에서 오를 수 있는 최대 레벨: 모험가는 15(16은 6섹터 옛 신들의 제단에서 섬기는 신이 직접) */
+export function townMaxLevel(s: GameState): number {
+  return s.hero.cls === "adventurer" ? BAL.maxLevel - 1 : BAL.maxLevel;
+}
+
 export function canTrain(s: GameState): boolean {
-  if (s.phase !== "town" || s.week >= 4 || (s.heretic && !outlawTrainerHere(s)) || s.month < BAL.firstTrainMonth || s.hero.level >= BAL.maxLevel || s.gold < trainCost(s)) return false;
+  if (s.phase !== "town" || s.week >= 4 || (s.heretic && !outlawTrainerHere(s)) || s.month < BAL.firstTrainMonth || s.hero.level >= townMaxLevel(s) || s.gold < trainCost(s)) return false;
   const g = gateOf(s);
   return !g || s.inventory[g.item] > 0;
 }
@@ -270,7 +275,7 @@ export function rumor(s: GameState): void {
 
 /** 돈 말고는 다음 훈련을 받을 수 있나(첫 달·최대 레벨·보스 증표) */
 function trainingLeft(s: GameState): boolean {
-  if (s.month < BAL.firstTrainMonth || s.hero.level >= BAL.maxLevel) return false;
+  if (s.month < BAL.firstTrainMonth || s.hero.level >= townMaxLevel(s)) return false;
   const g = gateOf(s);
   return !g || s.inventory[g.item] > 0;
 }

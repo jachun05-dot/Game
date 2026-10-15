@@ -10,7 +10,7 @@ import { STAT_KEYS, BAL, MONSTERS } from "./data";
 import { FRAGMENTS, FRAG_MAX_CHANCE, fragKnown, fragSlots } from "./fragments";
 import { kill, stat, taxDue } from "./core";
 import { allSkills } from "./skills";
-import { tier } from "./faith";
+import { teachOn, tier } from "./faith";
 import { FAITH } from "./data";
 import { maxHp } from "./core";
 import { injuryHit, injuryRollPenalty, lvl, wound } from "./injury";
@@ -1477,9 +1477,11 @@ describe("3섹터: 물에 잠긴 사원", () => {
 
 describe("직업 기술 10~16레벨", () => {
   const tables = [...Object.values(ELEMENT_SKILLS), ...Object.values(STYLE_SKILLS), ...Object.values(BRANCH_SKILLS)];
-  it("10갈래 모두 2~16레벨이 채워져 있고, 짝수는 패시브·홀수는 액티브", () => {
+  it("10갈래 모두 2~16레벨(모험가는 15레벨 — 16은 신의 가르침)이 채워져 있고, 짝수는 패시브·홀수는 액티브", () => {
     for (const tb of tables) {
-      for (let lv = 2; lv <= 16; lv++) {
+      const top = Object.values(BRANCH_SKILLS).includes(tb as never) ? 15 : 16;
+      expect(tb[16]).toBe(top === 16 ? tb[16] : undefined);
+      for (let lv = 2; lv <= top; lv++) {
         const id = tb[lv];
         expect(SKILLS[id], `${lv} ${id}`).toBeDefined();
         expect(SKILLS[id].kind).toBe(lv % 2 === 0 ? "passive" : "active");
@@ -1489,7 +1491,7 @@ describe("직업 기술 10~16레벨", () => {
   it("각인·낙인이 갈래 액티브를 1회씩 더(합쳐 +2), 궁극기는 늘지 않는다", () => {
     expect(MARK_FOR_SKILL.fireLance).toEqual(["fireMark", "fireSeal"]);
     expect(MARK_FOR_SKILL.fireMeteor).toBeUndefined();
-    expect(MARK_FOR_SKILL.elemArrow).toContain("casterAvatar");
+    expect(MARK_FOR_SKILL.elemArrow).toEqual(["casterMark", "casterSeal"]);
   });
   it("12→13·15→16 훈련은 4·5섹터 증표가 있어야(아직 없는 섹터)", () => {
     const s = newRun(401);
@@ -1832,6 +1834,8 @@ describe("6섹터: 타락한 신전과 차원문의 성소·엔딩", () => {
 
   it("옛 신들의 제단: 섬기는 신은 신앙심 +10과 유물(삶마다 하나), 다른 해금 신은 응답. 유물은 그 신을 섬길 때만", () => {
     const s = hero(FAITH.tax);
+    apply(s, { t: "pickClass", cls: "warrior" }); // create 뒤라 바뀌지 않는다 — 직업을 직접
+    s.hero.cls = "warrior";
     s.piety = 100;
     sanctum(s);
     at(s, "altars");
@@ -2024,5 +2028,102 @@ describe("6섹터: 타락한 신전과 차원문의 성소·엔딩", () => {
   it("세금 등급 6 +1000G, 15→16 수련비 1000G(시뮬 조정)", () => {
     expect(taxDue(1, 6) - taxDue(1, 5)).toBe(200);
     expect(BAL.specialTrainFee[15]).toBe(1000);
+  });
+});
+
+describe("모험가 히든 16레벨: 신의 가르침", () => {
+  const adv = (faith: string | null, seed = 801) => {
+    const s = newRun(seed);
+    s.faithsKnown = Object.values(FAITH);
+    apply(s, { t: "create", name: "x", candidate: 0, faith });
+    s.month = 30;
+    s.rank = 5;
+    s.hero.level = 15;
+    s.inventory.fang = 1;
+    if (faith) s.piety = 100;
+    for (const k of STAT_KEYS) s.hero.stats[k] += 12;
+    s.hero.hp = maxHp(s);
+    enterDungeon(s);
+    const dg = s.dungeon!;
+    dg.sector = 6;
+    dg.floor = 3;
+    dg.rooms = generateFloor(new Rng({ s: 5 }), 3, 6);
+    const i = dg.rooms.findIndex((x) => x.type === "altars");
+    dg.current = i;
+    dg.prev = i - 1;
+    dg.pending = { kind: "altars" };
+    return s;
+  };
+  it("마을에서는 15레벨까지만(전사·마법사는 16까지)", () => {
+    const s = newRun(811);
+    apply(s, { t: "create", name: "x", candidate: 0, faith: null });
+    s.month = 30;
+    s.gold = 99999;
+    s.inventory.fang = 1;
+    s.hero.level = 15;
+    expect(s.hero.cls).toBe("adventurer");
+    expect(canTrain(s)).toBe(false);
+    s.hero.cls = "warrior";
+    expect(canTrain(s)).toBe(true);
+  });
+  it("레벨 15·★1·아귀의 이빨이면 제단에서 섬기는 신이 16레벨로 — 유물 대신 가르침", () => {
+    const s = adv(FAITH.mob);
+    const before = maxHp(s);
+    apply(s, { t: "pending", choice: "pray" });
+    expect(s.hero.level).toBe(16);
+    expect(s.godTeaching).toBe("war");
+    expect(s.relic).toBeUndefined();
+    expect(s.inventory.fang).toBe(0);
+    expect(s.skills).toContain("godTaught");
+    expect(maxHp(s)).toBeGreaterThanOrEqual(before + 10);
+    expect(teachOn(s, "war")).toBe(true);
+    // 신앙을 바꾸면 레벨은 남고 가르침은 꺼진다
+    s.hero.faith = FAITH.song;
+    expect(s.hero.level).toBe(16);
+    expect(teachOn(s, "war")).toBe(false);
+  });
+  it("무신앙·레벨 14·이빨 없음이면 16레벨이 되지 않는다", () => {
+    const n = adv(null);
+    apply(n, { t: "pending", choice: "pray" });
+    expect(n.hero.level).toBe(15);
+    const y = adv(FAITH.mob);
+    y.hero.level = 14;
+    apply(y, { t: "pending", choice: "pray" });
+    expect(y.hero.level).toBe(14);
+    const z = adv(FAITH.mob);
+    z.inventory.fang = 0;
+    apply(z, { t: "pending", choice: "pray" });
+    expect(z.hero.level).toBe(15);
+    // 제단에서 갓 개종한 신은 가르치지 않는다
+    const c = adv(FAITH.mob);
+    apply(c, { t: "pending", choice: `convert${c.faithsKnown.indexOf(FAITH.song)}` as never });
+    expect(c.hero.faith).toBe(FAITH.song);
+    apply(c, { t: "pending", choice: "pray" });
+    expect(c.hero.level).toBe(15);
+  });
+  it("8신 모두 마지막 기술이 전투에서 나간다", () => {
+    const keys = ["war", "hunger", "trap", "greed", "song", "plague", "abyss", "oblivion"] as const;
+    const names = Object.values(FAITH);
+    const gods = { war: FAITH.mob, hunger: FAITH.starve, trap: FAITH.trap, greed: FAITH.tax, song: FAITH.song, plague: FAITH.plague, abyss: FAITH.abyss, oblivion: FAITH.oblivion };
+    void names;
+    for (const k of keys) {
+      let fired = false;
+      for (let seed = 0; seed < 20 && !fired; seed++) {
+        const s = adv(gods[k], 820 + seed);
+        apply(s, { t: "pending", choice: "pray" });
+        expect(s.godTeaching).toBe(k);
+        s.combat = null;
+        s.dungeon!.pending = null;
+        s.dungeon!.mana = 3000;
+        if (k === "hunger" || k === "abyss") s.hero.hp = Math.floor(maxHp(s) * 0.35);
+        if (k === "song") { s.hero.hp = 1; for (const st of STAT_KEYS) s.hero.stats[st] = 2; }
+        const from = s.logCount;
+        startCombat(s, "dungeon", makeEnemies(s, ["seraph", "seraph", "seraph"]));
+        const text = s.log.slice(-(s.logCount - from)).map((l) => l.text).join("\n");
+        const final = { war: "최후의 군세", hunger: "두 얼굴의 식탁", trap: "재앙의 문", greed: "빚 독촉", song: "영웅의 노래", plague: "역병의 행진", abyss: "바닥 없는 일격", oblivion: "이름 지우기" }[k];
+        if (text.includes(`【${final}】`)) fired = true;
+      }
+      expect(fired, k).toBe(true);
+    }
   });
 });

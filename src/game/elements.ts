@@ -58,9 +58,9 @@ export const BRANCHES: Record<BranchKey, { name: string; mark: string }> = {
   rogue: { name: "민첩형", mark: "shadowMark" },
 };
 export const BRANCH_SKILLS: Record<BranchKey, Record<number, string>> = {
-  fighter: { 2: "swordHand", 3: "sweep", 4: "fighterMark", 5: "parry", 6: "tough", 7: "doubleSlash", 8: "toughMuscle", 9: "finisher", 10: "fighterSeal", 11: "spinSlash", 12: "veteran", 13: "duel", 14: "battleSense", 15: "counterStance", 16: "fighterAvatar" },
-  caster: { 2: "manaSense", 3: "magicMissile", 4: "casterMark", 5: "fireBurst", 6: "firstAid", 7: "frostPrison", 8: "keenSense", 9: "boltChain", 10: "casterSeal", 11: "elemArrow", 12: "scholar", 13: "elemStorm", 14: "manaShield", 15: "blink", 16: "casterAvatar" },
-  rogue: { 2: "lightStep", 3: "pickpocket", 4: "shadowMark", 5: "shadowStep", 6: "trapHand", 7: "smoke", 8: "luckyStrike", 9: "vitalStab", 10: "shadowSeal", 11: "poisonBlade", 12: "trapMaster", 13: "assassinate", 14: "shadowBody", 15: "vanish", 16: "rogueAvatar" },
+  fighter: { 2: "swordHand", 3: "sweep", 4: "fighterMark", 5: "parry", 6: "tough", 7: "doubleSlash", 8: "toughMuscle", 9: "finisher", 10: "fighterSeal", 11: "spinSlash", 12: "veteran", 13: "duel", 14: "battleSense", 15: "counterStance" },
+  caster: { 2: "manaSense", 3: "magicMissile", 4: "casterMark", 5: "fireBurst", 6: "firstAid", 7: "frostPrison", 8: "keenSense", 9: "boltChain", 10: "casterSeal", 11: "elemArrow", 12: "scholar", 13: "elemStorm", 14: "manaShield", 15: "blink" },
+  rogue: { 2: "lightStep", 3: "pickpocket", 4: "shadowMark", 5: "shadowStep", 6: "trapHand", 7: "smoke", 8: "luckyStrike", 9: "vitalStab", 10: "shadowSeal", 11: "poisonBlade", 12: "trapMaster", 13: "assassinate", 14: "shadowBody", 15: "vanish" },
 };
 
 /** 레벨표가 있는 훈련(마법사 원소·전사 방향·모험가 갈래) */
@@ -91,10 +91,10 @@ export const SPECIAL_LEVELS = [4, 7, 10, 13, 16];
 /** 궁극기 레벨: 각인·낙인으로 횟수가 늘지 않는다 */
 export const ULTIMATE_LEVEL = 13;
 
-/** 이 기술을 전투당 1회 더 쓰게 해 주는 특화들: 그 레벨표의 각인(4)·낙인(10), 마법사형 화신(16 "대마도사의 길")은 한 번 더 */
+/** 이 기술을 전투당 1회 더 쓰게 해 주는 특화들: 그 레벨표의 각인(4)·낙인(10). 모험가 16레벨은 레벨표가 아니라 신의 가르침(faith.ts TEACHINGS) */
 export const MARK_FOR_SKILL: Record<string, string[]> = {};
 for (const [line, table] of Object.entries(LEVEL_TABLES)) {
-  const boosters = [MARK_OF_LINE[line], table[10], ...(line === "caster" ? [table[16]] : [])].filter(Boolean);
+  const boosters = [MARK_OF_LINE[line], table[10]].filter(Boolean);
   for (const [lv, id] of Object.entries(table)) {
     if (Number(lv) === ULTIMATE_LEVEL || boosters.includes(id)) continue;
     for (const b of boosters) if (!(MARK_FOR_SKILL[id] ??= []).includes(b)) MARK_FOR_SKILL[id].push(b);

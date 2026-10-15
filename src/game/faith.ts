@@ -132,6 +132,32 @@ export const RELICS: Record<GodKey, { name: string; desc: string }> = {
   oblivion: { name: "이름 없는 가면", desc: "정화가 통하지 않고, 성광 피해 절반" },
 };
 
+// ── 모험가 히든 16레벨: 신의 가르침(사용자 결정 2026-10-15) ──
+// 모험가는 마을에서 15레벨까지만 배운다. 6섹터 3층 옛 신들의 제단에서 섬기는 신에게 기도하면(레벨 15, ★1 이상, 아귀의 검은 이빨을 바침)
+// 그 신이 직접 16레벨로 이끈다: 능력치 +6·최대 HP +10(영구) + 그 신의 강화와 마지막 기술(그 신을 섬기는 동안만). 무신앙은 16에 닿지 못한다.
+// 모험가는 유물 대신 가르침을 받는다.
+
+export const TEACHINGS: Record<GodKey, { name: string; boost: string; final: string; finalDesc: string }> = {
+  war: { name: "끝나지 않는 행군", boost: "여럿을 치는 기술(휩쓸기·회전 베기·연쇄 번개·원소 폭풍)이 적 수와 상관없이 나가고 회전 베기는 피해 ×1, 적을 쓰러뜨릴 때마다 그 전투 피해 +1(최대 +5)", final: "최후의 군세", finalDesc: "적이 3마리 이상이거나 보스면 전투 시작 때 망령 군세가 3라운드 동안 적 전원 1d10, 그동안 적 명중 −2(전투당 1회)" },
+  hunger: { name: "한 몸의 두 얼굴", boost: "물약·회복 기술 회복량 2배, 포만감 70 이상이면 받는 피해 −3, 30 이하면 피해 +4", final: "두 얼굴의 식탁", finalDesc: "HP 40% 이하가 되면 가장 강한 적에게서 4d10을 빼앗아 그만큼 회복, 포만감 100(전투당 1회)" },
+  trap: { name: "먼저 오는 재앙", boost: "전투 시작 기술(손버릇·그림자 걸음·얼음 감옥·원소 화살·독 바른 칼·암살 등) 피해 ×1.5, 기습당하지 않는다", final: "재앙의 문", finalDesc: "전투 시작 때 적 전원 발밑에서 함정이 터진다 — 2d10, 1라운드 행동 불가(보스 포함, 전투당 1회)" },
+  greed: { name: "모든 것의 값", boost: "들고 있는 마석 500G마다 치명타 +2%(최대 +10%), 쓰러뜨린 모든 적의 마석 ×1.5(손버릇처럼)", final: "빚 독촉", finalDesc: "전투 시작 때 가장 강한 적에게 빚 문서 — 3라운드 동안 그 적이 받는 피해 2배, 그 사이 쓰러지면 마석 ×3(전투당 1회)" },
+  song: { name: "노래가 된 영웅", boost: "모든 액티브 전투당 +1회, 읽은 기록물 10개마다 명중·판정 +1(최대 +3)", final: "영웅의 노래", finalDesc: "쓰러질 피해를 받으면 HP 100%로 일어서고 그 전투 동안 명중 +3·피해 +3(미궁마다 1회)" },
+  plague: { name: "번지는 것", boost: "불탐·독 바른 칼 지속 2배(독 1d8), 감전 +1라운드, 명중하면 25%로 적이 병든다(병을 앓지 않아도)", final: "역병의 행진", finalDesc: "전투 시작 때 적 전원 5라운드 중독(라운드마다 2d8, 보스 포함, 전투당 1회)" },
+  abyss: { name: "바닥을 아는 자", boost: "HP 50% 이하면 피해 +4, 30% 이하면 피해 +8·AC +2, 사라지기·순간 이동은 HP 20%까지 버틴 뒤에", final: "바닥 없는 일격", finalDesc: "잃은 HP가 최대 HP의 40% 이상이 되면 가장 강한 적에게 반드시 맞는 일격 — 피해 = 잃은 HP(전투당 1회)" },
+  oblivion: { name: "이름 없는 자", boost: "연막·사라지기 +1라운드, 사라지기는 HP 50%에서, 적 명중 −1", final: "이름 지우기", finalDesc: "전투 시작 때 가장 강한 적이 3라운드(보스 2라운드) 동안 나를 잊는다 — 행동 불가, 그동안 그 적에게 내 공격은 모두 치명타(전투당 1회)" },
+};
+
+/** 모험가가 그 신의 가르침을 받았고 지금 그 신을 섬기는가(강화·마지막 기술이 켜져 있다) */
+export function teachOn(s: GameState, key: GodKey): boolean {
+  return s.hero.cls === "adventurer" && s.godTeaching === key && god(s) === key;
+}
+
+/** 가르침 AC(심연: HP 30% 이하 +2) */
+export function teachAc(s: GameState, hpRatio: number): number {
+  return teachOn(s, "abyss") && hpRatio <= 0.3 ? 2 : 0;
+}
+
 /** 그 신의 유물이 힘을 내는가(유물을 받았고, 지금 그 신을 섬긴다) */
 export function relicOn(s: GameState, key: GodKey): boolean {
   return s.relic === key && god(s) === key;

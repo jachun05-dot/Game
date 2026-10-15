@@ -1,7 +1,7 @@
 import { josa } from "./josa";
 import { BAL, MONSTERS } from "./data";
 import { check, kill, log, maxHp, remember, rngOf, smod } from "./core";
-import { GODS, RELICS, addPiety, god, godOf, power, relicOn, tier } from "./faith";
+import { GODS, RELICS, TEACHINGS, addPiety, god, godOf, power, relicOn, tier, type GodKey } from "./faith";
 import { FRAGMENTS, activeFragments, fragSkills } from "./fragments";
 import { gearHas } from "./gear";
 import { afflict } from "./mind";
@@ -137,7 +137,8 @@ export function prayAltars(s: GameState): void {
   if (mine) {
     addPiety(s, 10);
     log(s, `${josa(s.hero.faith!, "이")} 가까이 있다. (신앙심 +10 → ${Math.floor(s.piety)}, HP +10)`, "good");
-    if (!s.relic) {
+    if (s.hero.cls === "adventurer") godTeaching(s, mine);
+    else if (!s.relic) {
       s.relic = mine;
       const rel = RELIC_TEXT[mine];
       log(s, `제단 아래 돌 틈에서 무언가 빛난다 — ${rel}`, "story");
@@ -148,6 +149,40 @@ export function prayAltars(s: GameState): void {
   dg.answers = others;
   if (others.length) log(s, `${others.join(", ")} — 대답이 돌아온다. 화신과 싸울 때 한 번씩 돕겠다고. (응답 ${others.length})`, "skill");
   else log(s, "다른 제단들은 비어 있다. 아직 이름을 아는 신이 없다. (죽음으로 신을 해금할수록 응답이 늘어난다)", "system");
+}
+
+/** 모험가 히든 16레벨: 섬기는 신이 직접 가르친다(레벨 15, ★1 이상, 아귀의 검은 이빨을 바침). 모험가는 유물 대신 가르침 */
+function godTeaching(s: GameState, key: GodKey): void {
+  if (s.godTeaching) return;
+  const g = GODS[key];
+  if (s.hero.level < BAL.maxLevel - 1) {
+    log(s, `${josa(g.name, "이")} 당신을 내려다본다. 아직 이르다 — 사람에게서 더 배워 와라. (레벨 ${BAL.maxLevel - 1}부터)`, "story");
+    return;
+  }
+  if (s.dungeon?.converted) {
+    log(s, `${josa(g.name, "이")} 당신을 낯설게 본다. 이 미궁에서 갓 섬기기 시작한 신은 아직 당신을 가르치지 않는다. (미궁에 들어오기 전부터 섬긴 신이어야)`, "story");
+    return;
+  }
+  if (tier(s) < 1) {
+    log(s, `${josa(g.name, "이")} 당신을 알아보지 못한다. 기척이 너무 옅다. (신앙심 ★1부터)`, "story");
+    return;
+  }
+  if (s.inventory.fang <= 0) {
+    log(s, `${josa(g.name, "이")} 무언가를 기다린다. 바닥에서 가져온 것 — 아귀의 검은 이빨을 바쳐야 한다.`, "story");
+    return;
+  }
+  s.inventory.fang -= 1;
+  s.godTeaching = key;
+  s.hero.level = BAL.maxLevel;
+  for (const k of ["str", "dex", "con", "int", "per", "luk"] as const) s.hero.stats[k] = Math.min(BAL.statMax, s.hero.stats[k] + 1);
+  if (!s.skills.includes("godTaught")) s.skills.push("godTaught");
+  s.hero.hp = maxHp(s);
+  const te = TEACHINGS[key];
+  log(s, `아귀의 검은 이빨을 제단에 올렸다. 교관이 가르칠 수 없던 마지막 한 걸음 — ${josa(g.name, "이")} 직접 손을 뻗는다.`, "story");
+  log(s, `【히든】 신에게 배운 자 — 레벨 ${BAL.maxLevel}! (모든 능력치 +1, 최대 HP +30, 명중 +3, 피해 +5, AC +2)`, "crit");
+  log(s, `【${te.name}】 ${te.boost}`, "skill");
+  log(s, `【${te.final}】 ${te.finalDesc}`, "skill");
+  remember(s, `${g.name}에게 직접 배워 ${BAL.maxLevel}레벨이 되었다.`);
 }
 
 const RELIC_TEXT: Record<string, string> = {

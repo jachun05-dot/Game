@@ -61,6 +61,10 @@ export interface Enemy {
   venom?: { rounds: number; dice: [number, number] };
   /** 한 번 쓰러졌다가 다시 일어섰다(화신 2단계) */
   reborn?: boolean;
+  /** 빚 독촉(탐욕의 가르침): 남은 라운드 — 받는 피해 2배, 쓰러지면 마석 ×3 */
+  debt?: number;
+  /** 이름 지우기(망각의 가르침): 행동 불가인 동안 내 공격은 치명타 */
+  forgotten?: boolean;
 }
 
 /** 허수아비 측정용 피해 기록. rounds의 칸 = 측정 시작부터 센 라운드 */
@@ -130,6 +134,14 @@ export interface CombatState {
   regrow?: { count: number; at: number[] };
   /** 끝나지 않는 전쟁(전쟁의 신 ★5): 쌓인 피해 보너스 */
   warStack?: number;
+  // ── 모험가 신의 가르침(faith.ts TEACHINGS) ──
+  /** 전쟁: 이 전투에서 쓰러뜨린 수(피해 +, 최대 5) / 최후의 군세 남은 라운드 */
+  teachKills?: number;
+  legion?: number;
+  /** 영웅의 노래로 일어섰다: 명중 +3·피해 +3 */
+  heroSong?: boolean;
+  /** 이번 전투에서 쓴 마지막 기술 */
+  finalUsed?: boolean;
   // ── 6섹터(temple.ts) ──
   /** 참회의 사슬: 이 전투 도주 DC + */
   fleeLock?: number;
@@ -297,6 +309,8 @@ export interface DungeonState {
   answers?: string[];
   /** 이 미궁에서 옛 신들의 제단에 이미 기도했다 */
   prayedAltars?: boolean;
+  /** 이 미궁 안에서 개종했다(갓 섬긴 신은 모험가에게 16레벨을 가르치지 않는다) */
+  converted?: boolean;
 }
 
 export type Activity = "train" | "rumor" | "field" | "inn";
@@ -417,6 +431,8 @@ export interface GameState {
   piety: number;
   /** 6섹터 옛 신들의 제단에서 받은 섬기는 신의 유물(삶마다 하나, 그 신을 섬기는 동안만 힘을 낸다) */
   relic?: string;
+  /** 모험가 히든 16레벨: 가르침을 준 신(faith.ts TEACHINGS) */
+  godTeaching?: string;
   /** 진실 조각(truth.ts) — 삶을 넘어 쌓인다(새 삶 시작 때 Meta에서 복사, 바뀌면 다시 Meta에 합친다) */
   clues?: string[];
   /** 조각의 반쪽(늙지 않는 영주: 소문과 기록을 둘 다 봐야 한다) */

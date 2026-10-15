@@ -7,7 +7,7 @@ import { CLASSES } from "../game/classes";
 import { hasLevelTable } from "../game/elements";
 import { LAST_SECTOR } from "../game/endless";
 import { shortcutSectors } from "../game/dungeon";
-import { BLACK_MARKET_MULT, canTrain, innCost, outlawTrainerHere, gateOf, nextSkill, shopPrice, trainCost } from "../game/town";
+import { townMaxLevel, BLACK_MARKET_MULT, canTrain, innCost, outlawTrainerHere, gateOf, nextSkill, shopPrice, trainCost } from "../game/town";
 import type { GameState } from "../game/types";
 import { SKILLS } from "../game/skills";
 import { FRAGMENTS, fragStatText } from "../game/fragments";
@@ -288,6 +288,8 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
 
 function trainSub(s: GameState): string {
   if (s.hero.level >= BAL.maxLevel) return "최대 레벨";
+  // 모험가: 교관이 가르칠 수 있는 건 15레벨까지(16은 히든 — 섬기는 신에게서)
+  if (s.hero.level >= townMaxLevel(s)) return "\"내가 가르칠 건 여기까지다. 더는 네 신에게 물어라.\" — 교관";
   if (s.month < BAL.firstTrainMonth) return "첫 달에는 훈련을 받을 수 없다 — 미궁에서 살아 돌아오면 교관이 받아 준다";
   const base = `직업교관 · ${trainCost(s)}G · 레벨 ${s.hero.level} → ${s.hero.level + 1}`;
   const gate = gateOf(s);
