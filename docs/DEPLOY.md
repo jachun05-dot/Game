@@ -17,6 +17,7 @@
    - 폴더에 아티팩트용 페이지 조각(`index.html`)을 만들고, `dist/`와 다른 파일만 복사, 없어진 파일은 지운다
    - 게시할 `files` 맵은 `<폴더>/.publish.json` (새·바뀐 파일 → 경로, 지운 파일 → `null`)
    - Artifact publish: `file_path` = `<폴더>/index.html`, `root` = `<폴더>`, `files` = 위 맵. capabilities는 생략(저장된 선언 유지)
+   - 스테이징 폴더는 라이브 아티팩트와 같은 파일을 들고 있어야 맵이 맞다(폴더가 새로 생겼거나 의심되면 Artifact `list` scope `files`로 라이브 목록을 보고 맵을 고친다)
    - 처음 올리는 그림은 게시 전에 눈으로 확인한다
 
 ## 버전
