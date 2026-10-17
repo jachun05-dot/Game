@@ -71,11 +71,13 @@ export const SCENE_ART: Record<string, SpriteArt> = {
   office: { src: "./scene-office.png", w: 179, h: 100, focus: 0.85 },
   graveyard: { src: "./scene-grave.png", w: 179, h: 80 },
   dungeon1: { src: "./scene-dungeon1.png", w: 179, h: 100 },
+  dungeon2: { src: "./scene-dungeon2.png", w: 179, h: 100 },
+  dungeon2night: { src: "./scene-dungeon2night.png", w: 179, h: 100 },  // 밤(화면 연결은 VISUAL_TODO "게임 세션 메모")
   title: { src: "./scene-title.png", w: 179, h: 160, focus: 0.65 },
 };
 
 /** 주간 결과 카드 제목 → 장소 그림 */
-export const WEEK_SCENE: Record<string, string> = { 훈련: "training", 탐문: "tavern", "외부 탐험": "forest" };
+export const WEEK_SCENE: Record<string, string> = { 훈련: "training", 탐문: "tavern", "외부 탐험": "forest", 여관: "inn" };
 
 // 미궁 방 종류 아이콘(원래 도트 크기, 갈림길 버튼에 1배). 위험한 방은 붉은색, 계단·차원문은 보라, 보물은 금색 — 지도 테두리 색 규칙과 같다
 export const ROOM_ICON: Record<string, SpriteArt> = {
