@@ -1,5 +1,6 @@
 import type { GameState, Meta } from "../game/types";
 import { Card, SceneBanner, Shell } from "./components";
+import { BUILD } from "../platform/build";
 
 interface Props {
   run: GameState | null;
@@ -67,7 +68,8 @@ export function TitleScreen({ run, meta, onNew, onContinue, onGraveyard, onCodex
       )}
 
       <p className="dim small center">기록은 이 브라우저에만 저장됩니다(다른 기기로 옮길 수 없고, 브라우저 데이터를 지우면 사라집니다).</p>
-      <p className="dim small center">프로토타입 v0.1 · 6섹터 · 엔딩 + 끝없는 미궁 · 아동 사망·처형 등 무거운 장면이 나옵니다</p>
+      <p className="dim small center">프로토타입 v{BUILD.version} · 6섹터 · 엔딩 + 끝없는 미궁 · 아동 사망·처형 등 무거운 장면이 나옵니다</p>
+      <p className="dim small center">빌드 {BUILD.commit}</p>
     </Shell>
   );
 }

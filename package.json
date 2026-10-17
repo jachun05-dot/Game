@@ -12,7 +12,11 @@
     "sim": "vite-node scripts/sim.ts",
     "sim:month1": "vite-node scripts/sim-month1.ts",
     "sim:all": "vite-node scripts/sim-all.ts",
-    "sim:boss": "vite-node scripts/sim-boss.ts"
+    "sim:boss": "vite-node scripts/sim-boss.ts",
+    "build:app": "tsc -b && VITE_TARGET=app vite build",
+    "release:pages": "npm run build && scripts/release/pages.sh",
+    "release:artifact": "npm run build && node scripts/release/stage-artifact.mjs",
+    "check": "tsc -b && vitest run"
   },
   "dependencies": {
     "react": "^18.3.1",

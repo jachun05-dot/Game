@@ -131,6 +131,7 @@
 43. **엔딩 일러스트** — 헌납 2장(영주에게 셉터를 바침 / 떠나는 배와 가라앉는 섬), 진엔딩 3장(영주성 결전 / 멈춘 성당 종 / 돌아온 여덟 신), 결전 패배 1장(꽃 놓인 묘비). 지금은 엔딩 묘비 카드(`.tomb-ending`, `.end-true`·`.end-offering`)에 글만 나온다
 44. **6섹터 장비 아이콘 9종**: sunsteel, relicstaff, towershield, pilgrimboots, hollowplate, confessmask, chainbelt, pairring, oldsigil / 소모품 옛 신의 향 `incense` / 유물 8종(신마다 하나 — 캐릭터 시트 신앙 카드에 이름만)
 45. (선택) 타이틀 화면: 진엔딩을 본 뒤에는 성당 대신 여덟 제단(지금은 "옛 신들이 돌아왔다" 카드만), 셉터의 제단 선택 카드(잠긴 진엔딩은 ??? 버튼)
+46. (2026-10-17) **앱 아이콘** — 정사각 `icon-192.png`·`icon-512.png`(홈 화면 설치·앱 포장용, 배경 꽉 채움). `public/manifest.webmanifest`의 `icons`에 두 줄. 지금은 `hero.png`(37×90)라 설치 아이콘이 찌그러진다 / 새 버전 알림 띠 `.update-banner`(지금은 기본 색만)
 
 ### 2026-10-14 — 4섹터 "불타는 광산 갱도"
 4섹터가 들어갔다(기획 `docs/SECTOR4_DRAFT.md`, 이름·설명은 `src/game/data.ts`·`gear.ts`). 그림이 없으면 글자만 나온다.

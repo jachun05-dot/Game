@@ -382,6 +382,8 @@ export type Phase = "create" | "town" | "week-result" | "dungeon" | "settlement"
 
 export interface GameState {
   version: 1;
+  /** 저장 형식 판(src/save/migrate.ts SAVE_REV). 없으면 0(판 표시 이전 저장) */
+  saveRev?: number;
   seed: number;
   rng: RngState;
   phase: Phase;
@@ -510,4 +512,6 @@ export interface Meta {
   clues?: string[];
   /** 본 엔딩 */
   endings?: string[];
+  /** 저장 형식 판(src/save/migrate.ts SAVE_REV) */
+  saveRev?: number;
 }

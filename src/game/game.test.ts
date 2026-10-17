@@ -2130,7 +2130,7 @@ describe("모험가 히든 16레벨: 신의 가르침", () => {
 
 describe("저장 보정", () => {
   it("지운 모험가 16레벨 기술은 '신에게 배운 자'로, 없는 기술·편린 id는 빠진다", async () => {
-    const { fixRun } = await import("../ui/storage");
+    const { fixRun } = await import("../save");
     const s = newRun(901);
     apply(s, { t: "create", name: "x", candidate: 0, faith: null });
     s.hero.level = 16;
@@ -2144,7 +2144,8 @@ describe("저장 보정", () => {
 
 describe("테스트 결과 수집(telemetry)", () => {
   it("끝난 삶만 요약하고, 묘비 id는 db 경로에 쓸 수 있게 바꾼다", async () => {
-    const { lifeReport, pathSafe } = await import("../ui/telemetry");
+    const { lifeReport } = await import("../ui/lifeReport");
+    const { pathSafe } = await import("../platform/telemetry");
     const s = playBot(7, 1);
     expect(lifeReport(s)).toBeNull();
     s.tomb = { id: "7-3-2-100", name: "가", level: 3, months: 3, reached: "1섹터 2층", cause: "쥐", faithsUnlocked: [], epitaph: "", faith: null, seed: 7, diedAt: "x" };
@@ -2154,5 +2155,31 @@ describe("테스트 결과 수집(telemetry)", () => {
     expect(JSON.stringify(r).length).toBeLessThan(256 * 1024);
     expect(pathSafe("7-3-2-100-true")).toBe("7-3-2-100-true");
     expect(pathSafe("a/b c")).toBe("a_b_c");
+  });
+});
+
+describe("저장 이전·백업(src/save)", () => {
+  it("판 표시 이전 저장은 지금 판으로 올리고 원본을 백업한다, 깨진 저장은 지우기 전에 옮겨 둔다", async () => {
+    const { setKv, memoryKv } = await import("../platform/kv");
+    const { KEYS, SAVE_REV, loadRun, loadMeta } = await import("../save");
+    setKv(memoryKv);
+    const s = playBot(11, 50);
+    delete (s as any).saveRev;
+    s.skills.push("fighterAvatar");
+    const raw = JSON.stringify(s);
+    memoryKv.set(KEYS.run, raw);
+    const got = loadRun()!;
+    expect(got.saveRev).toBe(SAVE_REV);
+    expect(got.skills).toContain("godTaught");
+    expect(got.skills).not.toContain("fighterAvatar");
+    expect(memoryKv.get(`${KEYS.run}.bak-r0`)).toBe(raw);
+    // 깨진 저장
+    memoryKv.set(KEYS.run, "{oops");
+    expect(loadRun()).toBeNull();
+    expect(memoryKv.get(`${KEYS.run}.broken`)).toBe("{oops");
+    // 더 새 빌드의 저장
+    memoryKv.set(KEYS.meta, JSON.stringify({ graveyard: [], faiths: ["x"], saveRev: SAVE_REV + 5 }));
+    expect(loadMeta().faiths).toEqual(["x"]);
+    expect(memoryKv.get(`${KEYS.meta}.newer`)).not.toBeNull();
   });
 });

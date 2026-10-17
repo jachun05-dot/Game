@@ -5,8 +5,9 @@
 ## 프로젝트
 - 레포 `jachun05-dot/Game`, 브랜치 `master`. 텍스트 기반 던전크롤 로그라이크 웹게임 "DDD — 열여섯 살, 미궁으로"
 - 플레이 링크(아티팩트, 링크가 있으면 누구나): https://claude.ai/artifact/3hRQb1UtFGqHvFAGstGNdy
-  - 배포: `npx vite build` → `dist/assets/index-*.js/css`를 스크래치패드 `artifact/assets`로 복사, `artifact/index.html`의 파일명 교체 → 라이브 페이지와 이전 파일을 먼저 읽어 내 사본과 같은지 확인 → Artifact publish(`files`: 새 파일 경로, 이전 해시 파일은 `null`). 비주얼 세션이 올린 새 PNG(`public/*.png`)는 확인한 뒤 함께 올린다
-- 외부 웹 페이지(GitHub Pages, 공개): https://jachun05-dot.github.io/Game/ — `gh-pages` 브랜치에 `dist/` 결과물 + `.nojekyll`을 올리면 자동 배포. 아티팩트와 달리 외부 전송이 막히지 않아 테스터 기록 자동 수집용(2026-10-14 시험: 아티팩트는 connect-src·img-src로 모든 외부 전송 차단)
+  - 배포(2026-10-17부터 `docs/DEPLOY.md`): 커밋 → `npm run release:artifact -- <스크래치패드>/artifact` → 라이브 페이지와 이전 파일을 먼저 읽어 내 사본과 같은지 확인 → Artifact publish(`root` = 스테이징 폴더, `files` = `.publish.json`의 맵). 처음 올리는 PNG는 확인한 뒤
+  - 플레이 기록: 아티팩트 db `runs/<플레이어>/lives/<묘비>`(ArtifactData로 읽는다)
+- 외부 웹 페이지(GitHub Pages, 공개): https://jachun05-dot.github.io/Game/ — `npm run release:pages <gh-pages worktree>`(`dist/` + `.nojekyll`을 gh-pages 브랜치에). 아티팩트와 달리 외부 전송이 막히지 않아 테스터 기록 자동 수집용(2026-10-14 시험: 아티팩트는 connect-src·img-src로 모든 외부 전송 차단)
 - 밸런스 대시보드: https://claude.ai/artifact/EdnPKEXh8AyH3kpxd8nL42 (데이터 `docs/balance/*.json`)
 - 참고작: slbcareer.com(이번 생은 야구다), kickru.com(벤치에서 발롱까지), 1in8b.life(80억 분의 1) — 텍스트+카드, 턴 결과 리포트, 성장
 

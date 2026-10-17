@@ -3,8 +3,9 @@ import { act, type Action } from "../game/engine";
 import { botAction } from "../game/bot";
 import { newRun } from "../game/town";
 import type { GameState, Meta } from "../game/types";
-import { buryTomb, loadMeta, loadRun, saveMeta, saveRun } from "./storage";
-import { reportLife } from "./telemetry";
+import { buryTomb, loadMeta, loadRun, saveMeta, saveRun } from "../save";
+import { reportLife } from "./lifeReport";
+import { useUpdateNotice } from "./useUpdateNotice";
 import { TitleScreen } from "./TitleScreen";
 import { CreateScreen } from "./CreateScreen";
 import { TownScreen } from "./TownScreen";
@@ -46,6 +47,28 @@ export interface Ctl {
 const LINE_MS = 520;
 
 export function App() {
+  const newer = useUpdateNotice();
+  return (
+    <>
+      {newer && <UpdateBanner />}
+      <Game />
+    </>
+  );
+}
+
+/** 새 버전 알림: 진행은 상태가 바뀔 때마다 저장되므로 바로 새로고침해도 된다 */
+function UpdateBanner() {
+  return (
+    <div className="update-banner" role="status">
+      새 버전이 나왔어요
+      <button className="btn small" onClick={() => window.location.reload()}>
+        새로고침
+      </button>
+    </div>
+  );
+}
+
+function Game() {
   const [s, setS] = useState<GameState | null>(() => loadRun());
   const [meta, setMeta] = useState<Meta>(() => loadMeta());
   const [view, setView] = useState<"title" | "game" | "graveyard" | "codex">("title");
@@ -64,7 +87,7 @@ export function App() {
     if (s?.phase === "dead" && s.tomb) setMeta((m) => buryTomb(m, s.tomb!));
   }, [s?.phase, s?.tomb]);
 
-  // 테스트 결과: 아티팩트로 열었으면 끝난 삶을 db에 남긴다(telemetry.ts)
+  // 테스트 결과: 아티팩트로 열었으면 끝난 삶을 db에 남긴다(lifeReport.ts)
   const reported = useRef<string | null>(null);
   useEffect(() => {
     if (s?.phase !== "dead" || !s.tomb || reported.current === s.tomb.id) return;

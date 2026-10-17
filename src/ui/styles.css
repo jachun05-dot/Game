@@ -536,3 +536,12 @@ html, body, #root { height: 100%; }
 .end-offering .tomb-cross{color:#8fb3c9}
 .tomb-epilogue{text-align:left;border-top:1px solid #4d4230;margin-top:10px;padding-top:8px}
 .tomb-epilogue p{margin:4px 0;line-height:1.6}
+
+/* 새 버전 알림(src/ui/App.tsx UpdateBanner) */
+.update-banner {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  padding: calc(6px + env(safe-area-inset-top)) 16px 6px;
+  background: #2c2215; color: var(--bright); border-bottom: 1px solid var(--accent);
+  font-size: 13px;
+}

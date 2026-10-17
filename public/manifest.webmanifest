@@ -1,0 +1,13 @@
+{
+  "name": "DDD — 열여섯 살, 미궁으로",
+  "short_name": "DDD",
+  "description": "섬의 영지, 미궁, 그리고 매달의 세금. 열여섯 살 모험가의 텍스트 던전크롤 로그라이크.",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#100d0a",
+  "theme_color": "#100d0a",
+  "icons": [{ "src": "./hero.png", "sizes": "37x90", "type": "image/png" }]
+}
