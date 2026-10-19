@@ -554,3 +554,13 @@ Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, 
 - 041 전쟁의 흔적: 1024 이미지에 200격자로 그려져 기존 방 아이콘(약 30도트)의 1.6배였다 → `--grid 128`로 복원해 31×38(덫 아이콘과 같은 크기) = `public/room-relic.png`
 - 042·043 장비 시트: 1024 이미지·100격자(지시가 먹힘), 연결 성분으로 5개씩 → `public/gear-{wraithspear,warbanner,steelsword,steelshield,oakstaff,wolfhide,horseshoe,harpycharm,battlering,queencloak}.png`(11~24도트 — 기존 장비보다 조금 작다)
 - 044 로그: 100격자 54×91(후드는 등 뒤로 넘어간 망토 깃, 역수 단검), 얼굴 `(17,0)`에서 30×30 → `public/rogue.png`·`rogue-face.png`, `CLASS_ART.rogue`
+
+## U01 — 앱 아이콘 (ref_boy 첨부, UI_ART_REQUESTS 프롬프트 + "중요한 것은 가운데 80% 원 안에")
+
+결과(2026-10-19): 1차 채택. 우물 같은 미궁 구멍 앞에 금빛 날밑 칼, 금빛 후광. 1024 이미지, 도트 약 9.75px → 격자 100~108을 원본과 비교해 **105격자**가 가장 잘 맞음. 워터마크(회색) 8픽셀만 주변 중앙값으로 메움(금빛 후광은 빨강≫파랑이라 색으로 구분). 원본 `assets/ui/app_icon_105.png`.
+- `public/icon-512.png`(×5=525에서 가운데 512), `icon-192.png`(×2=210에서 가운데 192), `icon-maskable-512.png`(×4=420을 배경색 #110801 512 캔버스 가운데, 원형 안전영역 확인), `favicon-32.png`(BOX 축소)
+- 연결은 게임 세션: `manifest.webmanifest` icons, `index.html` icon·apple-touch-icon
+
+## U02 — 공유 미리보기 (1차 불채택)
+
+오른쪽 40%를 비우라는 지시를 단색 사각형 덧붙이기로 처리 — 섬이 x=672에서 수직으로 잘리고 오른쪽 아래가 무늬 없는 판. 해안선·바다를 자연스럽게 잇도록 지시를 보강해 다시 뽑는다
