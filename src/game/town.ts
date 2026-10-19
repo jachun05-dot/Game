@@ -364,7 +364,10 @@ export function inn(s: GameState): void {
       lines.push(`${PART_NAME[p]}: ${["멀쩡함", "경상", "중상"][v - 1]}으로 나아졌다.`);
     }
   }
-  if (s.disease > 0) {
+  // 역병의 신도는 여관에서 쥐 열병을 고치지 않는다(신이 품게 한 병 — 곰팡이 폐병은 고친다)
+  if (s.disease > 0 && god(s) === "plague" && s.diseaseKind !== "mold") {
+    lines.push("열이 올라도 약을 물렸다. 역병의 신이 품게 한 병이다. (쥐 열병은 그대로)");
+  } else if (s.disease > 0) {
     const name = s.diseaseKind === "mold" ? "곰팡이 폐병" : "쥐 열병";
     s.disease -= 1;
     pray(s, "plague", -5);
@@ -658,6 +661,11 @@ export function closeSettlement(s: GameState): void {
   if (!st.paid) {
     kill(s, "tax");
     return;
+  }
+  // 역병의 신도가 병이 나아 있으면 새 달에 신이 병을 돌려준다(쥐 열병 경상)
+  if (god(s) === "plague" && s.disease === 0) {
+    giveFever(s);
+    log(s, `【${GODS.plague.name}】 밤새 열이 올랐다. 신이 병을 돌려주었다. (쥐 열병 경상)`, "skill");
   }
   if (st.blood) {
     s.bloodPrice = true;

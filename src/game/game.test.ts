@@ -2327,3 +2327,25 @@ describe("테스터 Dabong", () => {
     expect(t.codex.seen.length).toBe(0);
   });
 });
+
+describe("역병의 신도와 쥐 열병", () => {
+  it("여관에서도 쥐 열병은 그대로이고, 병이 나아 있으면 새 달에 신이 돌려준다", () => {
+    const s = newRun(81);
+    s.faithsKnown = [FAITH.plague];
+    apply(s, { t: "create", name: "테스트", candidate: 0, faith: FAITH.plague });
+    expect(s.disease).toBe(1);
+    s.gold = 999;
+    apply(s, { t: "activity", a: "inn" });
+    expect(s.disease).toBe(1);
+    // 탕약으로 고친 뒤 달이 바뀌면 다시 앓는다
+    s.phase = "town"; s.weekResult = null;
+    s.inventory.herb = 1;
+    apply(s, { t: "herb" });
+    expect(s.disease).toBe(0);
+    s.settlement = { month: s.month, manaSold: 0, tax: 0, goldAfter: s.gold, paid: true, cleared: false, forced: false, lines: [], inquisition: false };
+    s.phase = "settlement";
+    apply(s, { t: "closeSettlement" });
+    expect(s.disease).toBe(1);
+    expect(s.diseaseKind).toBe("rat");
+  });
+});
