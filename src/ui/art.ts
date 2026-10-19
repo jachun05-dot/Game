@@ -123,6 +123,7 @@ export const ROOM_ICON: Record<string, SpriteArt> = {
   portal: { src: "./room-portal.png", w: 26, h: 33 },
   relic: { src: "./room-relic.png", w: 31, h: 38 },
   altar: { src: "./room-altar.png", w: 30, h: 29 },
+  magazine: { src: "./room-magazine.png", w: 30, h: 38 },
 };
 
 // 장비 아이콘(원래 도트 크기, 목록 1배 · 장비 발견 카드 2배). 아이콘이 없는 장비는 글자만 나온다
@@ -166,6 +167,15 @@ export const GEAR_ICON: Record<string, SpriteArt> = {
   leechcharm: { src: "./gear-leechcharm.png", w: 19, h: 28 },
   tidestaff: { src: "./gear-tidestaff.png", w: 27, h: 32 },
   choirbell: { src: "./gear-choirbell.png", w: 16, h: 28 },
+  minerpick: { src: "./gear-minerpick.png", w: 27, h: 28 },
+  frostwand: { src: "./gear-frostwand.png", w: 26, h: 27 },
+  hingeshield: { src: "./gear-hingeshield.png", w: 26, h: 26 }, // 임시: 미믹 턱 이빨이 안 나와 재생성 대기
+  fireleather: { src: "./gear-fireleather.png", w: 24, h: 24 },
+  furcoat: { src: "./gear-furcoat.png", w: 31, h: 30 },
+  minerhelm: { src: "./gear-minerhelm.png", w: 24, h: 17 },
+  safetyboots: { src: "./gear-safetyboots.png", w: 25, h: 24 },
+  canary: { src: "./gear-canary.png", w: 16, h: 30 },
+  emberring: { src: "./gear-emberring.png", w: 19, h: 21 },
   queencloak: { src: "./gear-queencloak.png", w: 23, h: 22 },
 };
 

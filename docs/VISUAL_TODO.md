@@ -10,10 +10,10 @@
 | 구분 | 전체 | 있음 | 남음 |
 |---|---|---|---|
 | 직업 그림(전신+얼굴) | 4 | 4 | 0 |
-| 몬스터 스프라이트 | 83 | 32 | **51** |
-| 장비 아이콘 | 75 | 40 | **35** |
-| 방 아이콘 | 18 | 12 | **6** |
-| 미궁 장면(지도 배경) | 섹터 6 + 2섹터 밤 + 끝없는 미궁 | 4 | **4** |
+| 몬스터 스프라이트 | 83 | 44 | **39** |
+| 장비 아이콘 | 75 | 49 | **26** |
+| 방 아이콘 | 18 | 13 | **5** |
+| 미궁 장면(지도 배경) | 섹터 6 + 2섹터 밤 + 끝없는 미궁 | 5 | **3** |
 | 마을 장면 | 9 | 9 | 0 |
 | 훈련 갈래 아이콘(`LINE_ICON`) | 10 | 0 | **10** |
 | 엔딩 일러스트 | 4 | 0 | **4** (숨겨진 엔딩 "섬을 떠난 자" 추가) |
@@ -41,8 +41,8 @@ UI·출시용 그림(앱 아이콘·공유 미리보기·소모품·상태·신�
 ### C. 4섹터 "불타는 광산 갱도"
 - [x] (061) 장면 `dungeon4`
 - [x] 몬스터 12 (062~073): emberbat 불씨 박쥐, salamander 불도롱뇽, orebeetle 광석 갑충, fireelem 화염 정령, burrower 굴착 벌레, frostwraith 서리 망령, icetroll 얼음 트롤 / 희귀 goldbat 금맥 박쥐, manabeetle 마석 광석 갑충, frostspirit 마석 서리 정령 / 정예 cartmimic 광차 미믹 / 보스 furnacemother 화로 어미 도롱뇽
-- [ ] 장비 약 9: canary 카나리아 새장, emberring 불씨 반지, frostwand 서리 광맥 지팡이, fireleather 내화 가죽 갑옷, furcoat 털 안감 외투, minerpick 광부 곡괭이, minerhelm 등불 달린 갱도모, safetyboots 징 박은 안전화, hingeshield 미믹의 경첩 방패
-- [ ] 방 아이콘 magazine 버려진 화약고
+- [x] 장비 9 (074·075, hingeshield는 077 재생성 대기): canary 카나리아 새장, emberring 불씨 반지, frostwand 서리 광맥 지팡이, fireleather 내화 가죽 갑옷, furcoat 털 안감 외투, minerpick 광부 곡괭이, minerhelm 등불 달린 갱도모, safetyboots 징 박은 안전화, hingeshield 미믹의 경첩 방패
+- [x] (076) 방 아이콘 magazine 버려진 화약고
 
 ### D. 5섹터 "바닥없는 균열"
 - [ ] 장면 `dungeon5`

@@ -611,6 +611,15 @@ Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, 
 - 마석 서리 정령 55×63 — 오른쪽 아래 외곽선 없는 흐릿한 김 덩어리(61픽셀)와 마젠타 낀 연보라 점 7개를 지움
 - 광차 미믹 87×70, 화로 어미 도롱뇽 88×95(꼬리 위 워터마크 6픽셀을 주변색으로)
 
-## 074~076 (2026-10-19) — 4섹터 장비 9·버려진 화약고 (생성 대기)
+## 074~076 (2026-10-19) — 4섹터 장비 9·버려진 화약고
 
 074 시트 A(곡괭이·지팡이·경첩 방패·내화 갑옷·털 외투), 075 시트 B(갱도모·안전화·카나리아 새장·불씨 반지), 076 방 아이콘 magazine. 첨부: ref_boy + ref_icons_weapons(074·075), ref_boy + ref_icons_rooms(076). 경첩 방패는 072 광차 미믹의 턱과 같은 디자인(ref_s4 미믹은 원본 없음 → 설명으로). 프롬프트는 채팅 기록 그대로.
+
+결과: 074·075 시트 100격자, 076은 200격자로 그려 다른 방 아이콘 크기에 맞게 **160격자로 복원**(30×38).
+- 074: 곡괭이가 두 번 그려져 하나 버림. **경첩 방패가 이빨 없는 둥근 나무 방패**로 와서 임시 등록, 077로 다시 뽑기
+- 마젠타 낀 어두운 보라 외곽 픽셀(화약고 18, 장비 11)을 외곽선 색으로
+- `public/gear-{minerpick,frostwand,hingeshield,fireleather,furcoat,minerhelm,safetyboots,canary,emberring}.png`, `public/room-magazine.png`
+
+## 077 (2026-10-19) — 미믹의 경첩 방패 다시 (생성 대기)
+
+첨부: ref_icons_weapons + ref_s4_cartmimic(072 원본). 프롬프트는 채팅 기록 그대로.
