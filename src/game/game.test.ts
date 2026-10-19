@@ -2239,3 +2239,73 @@ describe("나이 제한·18세 추적(age.ts)", () => {
     expect(s.log.some((l) => l.text.includes("17번째 생일"))).toBe(true);
   });
 });
+
+describe("로그(민첩 직업)", () => {
+  function rogue(seed = 41): GameState {
+    const s = newRun(seed);
+    apply(s, { t: "pickClass", cls: "rogue" });
+    apply(s, { t: "create", name: "테스트", candidate: 0, faith: null });
+    s.month = 2;
+    return s;
+  }
+  it("단검 한 자루로 시작하고, 첫 훈련에 뒤잡기, 도주 +3·함정 해체 +2", () => {
+    const s = rogue();
+    expect(s.hero.cls).toBe("rogue");
+    expect(s.gear.main).toBe("dagger");
+    expect(s.gear.offhand).toBeUndefined();
+    expect(s.inventory.scroll).toBe(1);
+    s.gold = 999;
+    apply(s, { t: "train", training: "assassin", free: ["dex", "con"] });
+    expect(s.skills).toContain("rgBackstab");
+    expect(s.skills).toContain("rgEye");
+  });
+  for (const [line, gear, off] of [["assassin", "rgOffDagger", "dagger"], ["venom", "rgToxFlask", "flask"], ["xbow", "rgHandXbow", "xbow"]] as const) {
+    it(`4레벨 ${line} 각인 → 왼손 ${gear}, 10레벨 다른 갈래 낙인이면 바꾼다`, async () => {
+      const { offOf } = await import("./gear");
+      const s = rogue(50);
+      s.gold = 99999;
+      s.inventory.heart = 1;
+      s.gear.offhand = "shield"; // 1~3레벨에는 방패를 들 수 있다
+      for (let lv = 2; lv <= 4; lv++) {
+        apply(s, { t: "train", training: line, free: ["dex", "con"] });
+        apply(s, { t: "closeWeek" });
+        if (s.phase !== "town") { s.phase = "town"; s.dungeon = null; s.week = 1; }
+      }
+      expect(s.hero.level).toBe(4);
+      expect(s.gear.offhand).toBe(gear);
+      expect(offOf(s)).toBe(off);
+      if (line === "xbow") expect(s.inventory.bolt).toBe(20);
+      // 10레벨 낙인: 다른 갈래
+      const other = line === "assassin" ? "xbow" : "assassin";
+      s.hero.level = 9;
+      s.inventory.banner = 5; s.inventory.spore = 5; s.inventory.heart = 5;
+      s.week = 1;
+      s.phase = "town";
+      apply(s, { t: "train", training: other, free: ["dex", "con"] });
+      expect(s.hero.level).toBe(10);
+      expect(s.gear.offhand).toBe(other === "xbow" ? "rgHandXbow" : "rgOffDagger");
+    });
+  }
+  it("다른 직업은 왼손 무기를 살 수 없고, 볼트도 쇠뇌 로그만 산다", () => {
+    const w = newRun(3);
+    apply(w, { t: "create", name: "테스트", candidate: 0, faith: null });
+    w.gold = 999;
+    w.phase = "town";
+    apply(w, { t: "buyGear", id: "rgOffDagger" });
+    expect(w.gear.offhand).not.toBe("rgOffDagger");
+    apply(w, { t: "buy", item: "bolt" });
+    expect(w.inventory.bolt).toBe(0);
+  });
+  it("전투: 쌍단검·독병·손쇠뇌가 각자 일을 한다(로그에 흔적)", () => {
+    for (const [mark, gear, needle] of [["rgAssassinMark", "rgOffDagger", "왼손 단검"], ["rgVenomMark", "rgToxFlask", "독병"], ["rgXbowMark", "rgHandXbow", "볼트"]] as const) {
+      const s = rogue(60);
+      s.skills.push(mark);
+      s.gear.offhand = gear;
+      s.inventory.bolt = 10;
+      s.hero.level = 6;
+      s.hero.hp = maxHp(s) + 200;
+      startCombat(s, "field", makeEnemies(s, ["skeleton", "skeleton", "skeleton", "skeleton"]));
+      expect(s.log.some((l) => l.text.includes(needle))).toBe(true);
+    }
+  });
+});

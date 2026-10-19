@@ -69,6 +69,7 @@ function normalize(s: GameState): void {
   s.clues ??= [];
   s.inventory.whetstone ??= 0;
   s.inventory.antidote ??= 0;
+  s.inventory.bolt ??= 0;
   s.faithsKnown ??= s.hero.faith ? [s.hero.faith] : [];
   // 없는 기술·편린 id는 뺀다(화면이 깨지지 않게)
   s.skills = s.skills.filter((id) => !!SKILLS[id]);

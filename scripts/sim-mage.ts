@@ -15,10 +15,10 @@ const GOAL = (process.env.GOAL ?? "explore") as AutoGoal;
 const NAME: Record<ElementKey, string> = { fire: "화염", frost: "서리", bolt: "번개", earth: "대지" };
 
 import { PLANS as plans } from "./plans";
-import { BRANCH_SKILLS, ELEMENT_SKILLS, STYLE_SKILLS } from "../src/game/elements";
+import { BRANCH_SKILLS, ELEMENT_SKILLS, ROGUE_SKILLS, STYLE_SKILLS } from "../src/game/elements";
 // 기술 → 레벨표(직업마다 따로: 같은 기술이 여러 직업 표에 있을 수 있다)
 const lineMap = (tables: Record<string, Record<number, string>>) => Object.fromEntries(Object.entries(tables).flatMap(([line, tb]) => Object.values(tb).map((id) => [id, line])));
-const LINE_BY_CLASS: Record<string, Record<string, string>> = { mage: lineMap(ELEMENT_SKILLS), warrior: lineMap(STYLE_SKILLS), adventurer: lineMap(BRANCH_SKILLS) };
+const LINE_BY_CLASS: Record<string, Record<string, string>> = { mage: lineMap(ELEMENT_SKILLS), warrior: lineMap(STYLE_SKILLS), adventurer: lineMap(BRANCH_SKILLS), rogue: lineMap(ROGUE_SKILLS) };
 
 type Row = {
   id: string; kind: string; label: string; n: number;

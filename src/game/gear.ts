@@ -2,6 +2,7 @@ import type { GameState, StatKey } from "./types";
 import { mainLost, slotWorks } from "./injury";
 import { MIND_NAME, mindResist, type MindKey } from "./mind";
 import { pietyCapBonus } from "./faith";
+import type { OffKind } from "./elements";
 
 // 장비(DESIGN 10절): 슬롯 9개. 장비는 파워 스케일링이 아니라 생존 최소 기준선이고,
 // 미궁에서 주운 장비는 착용해야만 가지고 나올 수 있다(DESIGN 6절).
@@ -49,6 +50,8 @@ export interface GearDef {
   id: string;
   name: string;
   slot: GearSlot;
+  /** 로그의 왼손 무기(4레벨 각인이 준다, combat.ts 로그 절). 방패로 치지 않는다 */
+  rogueOff?: OffKind;
   bonus: GearBonus;
   weapon?: Weapon;
   /** 대장간 판매가(없으면 비매품 — 미궁에서만 나온다) */
@@ -131,6 +134,10 @@ export const GEAR: Record<string, GearDef> = {
   leather: { id: "leather", name: "가죽 갑옷", slot: "body", bonus: { ac: 2 }, price: 50, flavor: "질긴 소가죽을 덧댔다." },
   chain: { id: "chain", name: "녹슨 사슬 갑옷", slot: "body", bonus: { ac: 4, flee: -2 }, loot: 2, flavor: "무겁고 시끄럽지만 단단하다." },
   // 왼손
+  // 로그 왼손 무기(2026-10-19): 4레벨 각인을 받으면 교관이 준다. 잃으면 각인·낙인을 가진 로그만 대장간에서 다시 산다
+  rgOffDagger: { id: "rgOffDagger", name: "왼손 단검", slot: "offhand", rogueOff: "dagger", bonus: { crit: 3 }, price: 30, flavor: "오른손이 시선을 끄는 동안 왼손이 찌른다. 로그 전용(암습)." },
+  rgToxFlask: { id: "rgToxFlask", name: "독병 주머니", slot: "offhand", rogueOff: "flask", bonus: {}, price: 30, flavor: "허리에 매단 작은 병들. 깨지면 공기가 썩는다. 로그 전용(독술)." },
+  rgHandXbow: { id: "rgHandXbow", name: "손쇠뇌", slot: "offhand", rogueOff: "xbow", bonus: {}, price: 40, flavor: "한 손으로 쏘는 작은 쇠뇌. 한 발 쏘면 장전해야 한다. 볼트가 있어야 쏜다. 로그 전용(쇠뇌)." },
   shield: { id: "shield", name: "나무 방패", slot: "offhand", bonus: { ac: 1 }, price: 25, flavor: "몇 번은 막아 준다." },
   ironshield: { id: "ironshield", name: "쇠테 방패", slot: "offhand", bonus: { ac: 2 }, loot: 2, flavor: "누군가의 이름이 긁혀 지워져 있다." },
   // 머리
@@ -161,6 +168,11 @@ export const GEAR: Record<string, GearDef> = {
   steelsword: { id: "steelsword", name: "강철 장검", slot: "main", bonus: {}, weapon: { dice: [1, 10], stat: "str", verb: "강철 장검을 내리쳐" }, price: 160, rank: 1, flavor: "등급을 올린 모험가에게만 파는 칼." },
   steelshield: { id: "steelshield", name: "강철 방패", slot: "offhand", bonus: { ac: 2 }, price: 110, rank: 1, flavor: "가볍고 단단하다." },
   oakstaff: { id: "oakstaff", name: "마력이 깃든 지팡이", slot: "main", bonus: { hit: 1 }, weapon: { dice: [1, 8], stat: "int", verb: "짙은 마력탄을 날려" }, price: 150, rank: 1, flavor: "차원문 너머의 나무로 깎았다." },
+  // 로그 단검 사다리(2026-10-19): 전사의 장검·마법사의 지팡이처럼 등급마다 대장간에서 산다. 민첩으로 다루고 치명타가 붙는다
+  steeldagger: { id: "steeldagger", name: "강철 단검", slot: "main", bonus: { crit: 3 }, weapon: { dice: [1, 6], stat: "dex", verb: "강철 단검을 찔러 넣어" }, price: 150, rank: 1, flavor: "얇고 단단하다. 갑옷 이음매를 찾아 들어간다." },
+  bronzedagger: { id: "bronzedagger", name: "청동 단검", slot: "main", bonus: { crit: 3 }, weapon: { dice: [1, 8], stat: "dex", verb: "청동 단검을 찔러 넣어" }, corrodeRes: 0, price: 250, rank: 2, flavor: "녹슬지 않는다. 물에 잠긴 사원에서도." },
+  abyssdagger: { id: "abyssdagger", name: "심연강 단검", slot: "main", bonus: { hit: 1, crit: 4 }, weapon: { dice: [1, 10], stat: "dex", verb: "심연강 단검을 찔러 넣어" }, price: 880, rank: 4, flavor: "빛을 먹는 검은 날. 들어간 자리가 보이지 않는다." },
+  sundagger: { id: "sundagger", name: "성광 단검", slot: "main", bonus: { hit: 2, crit: 4 }, weapon: { dice: [2, 6], stat: "dex", verb: "성광 단검을 찔러 넣어" }, price: 1380, rank: 5, flavor: "성인의 이름이 새겨진 단검. 신전이 버린 것을 대장장이가 주워 왔다." },
   // ── 5섹터(바닥없는 균열) ──
   abyssblade: { id: "abyssblade", name: "심연강 장검", slot: "main", bonus: { hit: 1 }, weapon: { dice: [2, 6], stat: "str", verb: "심연강 장검을 내리쳐" }, price: 900, rank: 4, flavor: "균열 바닥에서 건진 검은 쇠로 벼렸다." },
   voidstaff: { id: "voidstaff", name: "공허 수정 지팡이", slot: "main", bonus: { hit: 1 }, weapon: { dice: [2, 6], stat: "int", verb: "공허의 마력을 쏘아" }, price: 900, rank: 4, flavor: "속이 빈 수정. 그 안에서 무언가 끝없이 떨어진다." },
@@ -230,6 +242,9 @@ export function gearEffect(id: string): string {
   const st = Object.entries(g.stats ?? {}) as [StatKey, number][];
   if (st.length === 6 && st.every(([, v]) => v === st[0][1])) parts.push(`모든 능력치 +${st[0][1]}`);
   else for (const [k, v] of st) parts.push(`${STAT_NAME[k]} +${v}`);
+  if (g.rogueOff === "dagger") parts.push("두 라운드에 한 번 왼손 찌르기 1d3(로그)");
+  if (g.rogueOff === "flask") parts.push("4라운드마다 독병 — 적 전원 독·명중 −1(로그)");
+  if (g.rogueOff === "xbow") parts.push("볼트 1d6 · AC 2 관통 · 쏘고 나면 장전(로그)");
   if (g.lifeSaves) parts.push(`사망 방지 ${g.lifeSaves}회/미궁`);
   if (g.corrodeRes !== undefined) parts.push(g.corrodeRes === 0 ? "부식되지 않음" : "부식 확률 절반");
   if (g.poisonRes) parts.push("독·마비 확률 절반");
@@ -322,7 +337,14 @@ export function weaponOf(s: GameState): Weapon {
 /** 쓸 수 있는 방패를 들고 있나(무기가 아닌 왼손 장비, 왼손 중상·결손이면 못 씀) */
 export function hasShield(s: GameState): boolean {
   const id = s.gear.offhand;
-  return !!id && !GEAR[id]?.weapon && slotWorks(s, "offhand");
+  return !!id && !GEAR[id]?.weapon && !GEAR[id]?.rogueOff && slotWorks(s, "offhand");
+}
+
+/** 로그가 쓸 수 있는 왼손 무기(로그가 아니거나, 왼손을 못 쓰면 null) */
+export function offOf(s: GameState): OffKind | null {
+  const id = s.gear.offhand;
+  if (s.hero.cls !== "rogue" || !id || !slotWorks(s, "offhand")) return null;
+  return GEAR[id]?.rogueOff ?? null;
 }
 
 /** 이 장비가 들어갈 슬롯(반지는 빈 쪽, 둘 다 차 있으면 약한 쪽) */

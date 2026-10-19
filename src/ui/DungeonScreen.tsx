@@ -381,6 +381,11 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
         <button className="btn small" disabled={busy || s.inventory.scroll <= 0} onClick={() => go({ t: "scroll" })}>
           <Icon name="scroll" />귀환 {s.inventory.scroll}
         </button>
+        {s.gear.offhand === "rgHandXbow" && (
+          <span className="btn small util-count" title="손쇠뇌 볼트(이긴 전투에서 쏜 것의 절반을 주워 온다)">
+            볼트 {s.inventory.bolt}
+          </span>
+        )}
         {s.inventory.bandage > 0 && (
           <button className="btn small" disabled={busy} onClick={() => go({ t: "bandage" })}>
             붕대 {s.inventory.bandage}

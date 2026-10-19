@@ -688,3 +688,7 @@ body {
 /* 숨겨진 엔딩: 섬을 떠난 자(밤바다) */
 .end-escape { background: radial-gradient(ellipse at 50% 0%, rgba(173, 196, 214, 0.14), transparent 65%), linear-gradient(180deg, #1a2128, #0f1317); border-color: #3f5262; }
 .end-escape .tomb-cross { color: #c9d8e4; }
+.util-count { cursor: default; opacity: 0.8; box-shadow: none; background: rgba(0, 0, 0, 0.25); }
+/* 직업 4개(2026-10-19 로그 추가): 2×2 */
+.class-row { grid-template-columns: repeat(2, 1fr); }
+@media (min-width: 520px) { .class-row { grid-template-columns: repeat(4, 1fr); } }

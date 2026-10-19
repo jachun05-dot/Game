@@ -57,7 +57,7 @@ export const BAL = {
   trapDodgeDc: 12,
   trapDisarmDc: 13,
   fleeDcBase: 10,
-  prices: { food: 5, potion: 6, scroll: 45, bandage: 25, herb: 25, whetstone: 15, antidote: 10, salve: 25, firewood: 10, rope: 25, incense: 120 },
+  prices: { food: 5, potion: 6, scroll: 45, bandage: 25, herb: 25, whetstone: 15, antidote: 10, salve: 25, firewood: 10, rope: 25, incense: 120, bolt: 5 },
   /** 대장간 부식 수리비(단계별, 그 슬롯을 새것처럼). 물가를 따라 오른다 */
   repairCost: [0, 15, 40, 80],
   /** 3섹터 침수 방 비율(층별), 3층 침수 방 중 깊은 물 비율 */
@@ -569,6 +569,10 @@ export const TRAININGS: { id: string; name: string; desc: string; stats: [StatKe
   { id: "caster", name: "마법사형 훈련", desc: "모험가. 여러 원소의 잡다한 주문", stats: ["int", "per"], skills: [] },
   { id: "rogue", name: "민첩형 훈련", desc: "모험가. 먼저 찌르고 급소를 노리는 법", stats: ["dex", "luk"], skills: [] },
   { id: "berserk", name: "광전 훈련", desc: "전사 전용. 피를 보면 더 세게 휘두르는 법", stats: ["str", "str"], skills: [] },
+  // 로그 갈래(elements.ts ROGUE_SKILLS): 4레벨 각인이 왼손 무기를 정한다
+  { id: "assassin", name: "암습 훈련", desc: "로그 전용. 두 자루 단검으로 급소를 찌르는 법", stats: ["dex", "luk"], skills: [] },
+  { id: "venom", name: "독술 훈련", desc: "로그 전용. 독을 바르고, 던지고, 기다리는 법", stats: ["dex", "int"], skills: [] },
+  { id: "xbow", name: "쇠뇌 훈련", desc: "로그 전용. 손쇠뇌로 묶고 꿰뚫는 법", stats: ["dex", "per"], skills: [] },
 ];
 
 export const NAMES = [

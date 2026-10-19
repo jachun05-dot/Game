@@ -1,5 +1,5 @@
 import { josa } from "./josa";
-import { ELEMENTS, hasLevelTable, isElement, levelSkill } from "./elements";
+import { ELEMENTS, ROGUE_KEYS, ROGUE_LINES, hasLevelTable, isElement, isRogueLine, levelSkill } from "./elements";
 import { BAL, TROPHIES, FEED, FIELD_ENCOUNTERS, NAMES, RIVAL_NEWS, RIVALS, RUMORS, STAT_KEYS, STAT_LABEL, TRAININGS } from "./data";
 import { addStat, check, emptyStats, kill, log, maxHp, rngOf, taxDue, topBehavior, yearOf } from "./core";
 import { FRAGMENTS, emptyCodex, fragSlots } from "./fragments";
@@ -27,7 +27,7 @@ export function newRun(seed: number): GameState {
     month: 1,
     week: 1,
     gold: BAL.startGold,
-    inventory: { food: 0, potion: 0, scroll: 0, heart: 0, banner: 0, spore: 0, scale: 0, fang: 0, salve: 0, firewood: 0, powder: 0, rope: 0, incense: 0, bandage: 0, herb: 0, whetstone: 0, antidote: 0 },
+    inventory: { food: 0, potion: 0, scroll: 0, heart: 0, banner: 0, spore: 0, scale: 0, fang: 0, salve: 0, firewood: 0, powder: 0, rope: 0, incense: 0, bandage: 0, herb: 0, whetstone: 0, antidote: 0, bolt: 0 },
     trophies: [],
     gear: {},
     skills: [],
@@ -219,6 +219,7 @@ export function train(s: GameState, trainingId: string, free: [StatKey, StatKey]
   const learned = nextSkill(s, t.id);
   s.hero.level += 1;
   if (learned) s.skills.push(learned);
+  const offLine = learned ? rogueOffhand(s, t.id, learned) : null;
   // 첫 훈련의 기본기(마법사: 어느 원소를 수련하든 마력 화살을 함께 배운다)
   const basic = CLASSES[s.hero.cls].firstSkill;
   if (basic && !s.skills.includes(basic)) {
@@ -232,6 +233,7 @@ export function train(s: GameState, trainingId: string, free: [StatKey, StatKey]
   ];
   if (paidHeart) lines.unshift(`교관이 ${josa(gate!.name, "을")} 받아 들고 고개를 끄덕였다. "${gate!.item === "heart" ? "이제야 진짜 훈련을 시작할 수 있겠군." : gate!.item === "spore" ? "물에 잠긴 사원에서 이걸 들고 나왔다고? …이제 내가 가르칠 수 있는 것도 얼마 안 남았군." : "차원문 너머에서 살아 돌아왔군. 다음 단계로 가자."}"`);
   if (!learned) lines.push(hasLevelTable(t.id) ? "이 레벨에서 이 훈련으로 배울 기술은 없다." : "이 훈련에서 더 배울 기술은 없다. (히든 트레이닝은 준비 중)");
+  if (offLine) lines.push(offLine);
   if (fragSlots(s.hero.level) > fragSlots(from)) lines.push(`몸에 편린을 담을 자리가 하나 더 생겼다. (편린 칸 ${fragSlots(s.hero.level)})`);
   finishWeek(s, { title: "훈련", lines, statDelta: delta, levelUp: { from, to: s.hero.level }, learned: learned ?? undefined, goldDelta: -cost }, true);
 }
@@ -440,17 +442,42 @@ export const BLACK_MARKET_MULT = 2;
 /** 이 등급부터 파는 소모품(옛 신의 향은 5섹터 클리어 뒤 외곽 밀수꾼이 들여온다) */
 export const ITEM_RANK: Partial<Record<keyof typeof BAL.prices, number>> = { incense: 5 };
 
+/** 한 번에 사는 묶음 수(볼트는 10발 묶음) */
+export const ITEM_BUNDLE: Partial<Record<keyof typeof BAL.prices, number>> = { bolt: 10 };
+
 export function buy(s: GameState, item: keyof typeof BAL.prices): void {
   if (s.phase !== "town" || s.rank < (ITEM_RANK[item] ?? 0)) return;
+  if (item === "bolt" && !rogueGearOk(s, "rgHandXbow")) return;
   const price = shopPrice(s, item);
   if (s.gold < price) return;
   s.gold -= price;
-  s.inventory[item] += 1;
+  s.inventory[item] += ITEM_BUNDLE[item] ?? 1;
+}
+
+/** 로그 왼손 무기를 받는다/바꾼다: 4레벨 각인은 그 갈래 무기를, 10레벨 낙인은 다른 갈래면 그 갈래 무기로 바꾼다 */
+function rogueOffhand(s: GameState, trainingId: string, learned: string): string | null {
+  if (s.hero.cls !== "rogue" || !isRogueLine(trainingId)) return null;
+  const line = ROGUE_LINES[trainingId];
+  if (learned !== line.mark && learned !== line.seal) return null;
+  if (s.gear.offhand === line.gear) return null;
+  const old = s.gear.offhand;
+  s.gear.offhand = line.gear;
+  clearCorrosion(s, "offhand");
+  if (line.off === "xbow") s.inventory.bolt += 20;
+  return `교관이 ${josa(GEAR[line.gear].name, "을")} 건넸다. "이제 왼손도 일을 해야지."${old ? ` ${josa(GEAR[old].name, "은")} 내려놓았다.` : ""}${line.off === "xbow" ? " (볼트 20발)" : ""}`;
+}
+
+/** 로그 왼손 무기를 대장간에서 다시 살 수 있나: 그 갈래의 각인이나 낙인이 있어야 */
+export function rogueGearOk(s: GameState, id: string): boolean {
+  const g = GEAR[id];
+  if (!g?.rogueOff) return true;
+  if (s.hero.cls !== "rogue") return false;
+  return ROGUE_KEYS.some((k) => ROGUE_LINES[k].gear === id && (s.skills.includes(ROGUE_LINES[k].mark) || s.skills.includes(ROGUE_LINES[k].seal)));
 }
 
 export function buyGear(s: GameState, id: string): void {
   const g = GEAR[id];
-  if (s.phase !== "town" || s.heretic || !g || g.price === undefined || s.gold < g.price || (g.rank ?? 0) > s.rank) return;
+  if (s.phase !== "town" || s.heretic || !g || g.price === undefined || s.gold < g.price || (g.rank ?? 0) > s.rank || !rogueGearOk(s, id)) return;
   if (Object.values(s.gear).includes(id) && g.slot !== "ring") return;
   s.gold -= g.price;
   pray(s, "greed", -Math.ceil(g.price / 20));

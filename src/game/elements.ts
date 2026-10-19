@@ -63,12 +63,32 @@ export const BRANCH_SKILLS: Record<BranchKey, Record<number, string>> = {
   rogue: { 2: "lightStep", 3: "pickpocket", 4: "shadowMark", 5: "shadowStep", 6: "trapHand", 7: "smoke", 8: "luckyStrike", 9: "vitalStab", 10: "shadowSeal", 11: "poisonBlade", 12: "trapMaster", 13: "assassinate", 14: "shadowBody", 15: "vanish" },
 };
 
-/** 레벨표가 있는 훈련(마법사 원소·전사 방향·모험가 갈래) */
-const LEVEL_TABLES: Record<string, Record<number, string>> = { ...ELEMENT_SKILLS, ...STYLE_SKILLS, ...BRANCH_SKILLS };
+// ── 로그 훈련(2026-10-19): 암습(민첩·행운)·독술(민첩·지능)·쇠뇌(민첩·감각). 4레벨 각인이 왼손 무기를 정하고,
+// 10레벨 낙인을 다른 갈래로 찍으면 그 갈래 무기로 바꾼다(town.ts rogueOffhand). docs/ROGUE.md ──
+export type RogueKey = "assassin" | "venom" | "xbow";
+export const ROGUE_KEYS: RogueKey[] = ["assassin", "venom", "xbow"];
+export type OffKind = "dagger" | "flask" | "xbow";
+export const ROGUE_LINES: Record<RogueKey, { name: string; mark: string; seal: string; off: OffKind; gear: string }> = {
+  assassin: { name: "암습", mark: "rgAssassinMark", seal: "rgAssassinSeal", off: "dagger", gear: "rgOffDagger" },
+  venom: { name: "독술", mark: "rgVenomMark", seal: "rgVenomSeal", off: "flask", gear: "rgToxFlask" },
+  xbow: { name: "쇠뇌", mark: "rgXbowMark", seal: "rgXbowSeal", off: "xbow", gear: "rgHandXbow" },
+};
+export const ROGUE_SKILLS: Record<RogueKey, Record<number, string>> = {
+  assassin: { 2: "rgEye", 3: "rgThroat", 4: "rgAssassinMark", 5: "rgShade", 6: "rgDualHands", 7: "rgVital", 8: "rgWeakSpot", 9: "rgExecute", 10: "rgAssassinSeal", 11: "rgBladeDance", 12: "rgDeathSense", 13: "rgOneKill", 14: "rgShadowBody", 15: "rgVanish", 16: "rgAssassinAvatar" },
+  venom: { 2: "rgToxEdge", 3: "rgToxThrow", 4: "rgVenomMark", 5: "rgWither", 6: "rgAntidote", 7: "rgToxFog", 8: "rgToxStack", 9: "rgRot", 10: "rgVenomSeal", 11: "rgToxBurst", 12: "rgRotBlood", 13: "rgPlagueBlade", 14: "rgToxBody", 15: "rgLastToxin", 16: "rgVenomAvatar" },
+  xbow: { 2: "rgSight", 3: "rgKnife", 4: "rgXbowMark", 5: "rgAnkle", 6: "rgQuickLoad", 7: "rgWrist", 8: "rgTarget", 9: "rgSnipe", 10: "rgXbowSeal", 11: "rgPierce", 12: "rgWind", 13: "rgNail", 14: "rgHunterStep", 15: "rgLastBolt", 16: "rgXbowAvatar" },
+};
+export function isRogueLine(id: string): id is RogueKey {
+  return id in ROGUE_LINES;
+}
+
+/** 레벨표가 있는 훈련(마법사 원소·전사 방향·모험가 갈래·로그 갈래) */
+const LEVEL_TABLES: Record<string, Record<number, string>> = { ...ELEMENT_SKILLS, ...STYLE_SKILLS, ...BRANCH_SKILLS, ...ROGUE_SKILLS };
 const MARK_OF_LINE: Record<string, string> = {
   ...Object.fromEntries(ELEMENT_KEYS.map((k) => [k, ELEMENTS[k].mark])),
   ...Object.fromEntries(STYLE_KEYS.map((k) => [k, STYLES[k].mark])),
   ...Object.fromEntries(BRANCH_KEYS.map((k) => [k, BRANCHES[k].mark])),
+  ...Object.fromEntries(ROGUE_KEYS.map((k) => [k, ROGUE_LINES[k].mark])),
 };
 
 export function hasLevelTable(trainingId: string): boolean {

@@ -4,7 +4,7 @@ import type { StatKey } from "./types";
 // 직업(DESIGN 9절). 모험가는 모든 일반 훈련을 받을 수 있는 대신 전용 훈련이 없고,
 // 전사·마법사는 일반 훈련 일부와 전용 훈련을 받는다. 히든 트레이닝은 아직 없다.
 
-export type ClassId = "adventurer" | "warrior" | "mage";
+export type ClassId = "adventurer" | "warrior" | "mage" | "rogue";
 
 export interface ClassDef {
   id: ClassId;
@@ -19,6 +19,8 @@ export interface ClassDef {
   start: Partial<Record<SlotKey, string>>;
   /** 시작 소모품 */
   items: { food: number; potion: number; scroll: number };
+  /** 직업 특성(로그: 도주·함정 해체) */
+  trait?: { flee?: number; disarm?: number };
   /** 첫 훈련 때 함께 배우는 기본기(마법사: 마력 화살) */
   firstSkill?: string;
   /** 받을 수 있는 훈련 id */
@@ -89,6 +91,33 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     ],
     lean: ["int"],
   },
+  // 로그(2026-10-19, docs/ROGUE.md): 단검 한 자루로 시작해 4레벨 각인이 왼손 무기를 정한다
+  // (암습 = 두 번째 단검, 독술 = 독병 주머니, 쇠뇌 = 손쇠뇌). 모든 훈련이 민첩을 올린다.
+  rogue: {
+    id: "rogue",
+    name: "로그",
+    motive: "뒷골목에서 자랐다. 훔치는 법은 알아도 갚는 법은 모른다.",
+    desc: "단검 한 자루로 시작한다. 빠르고 약하다. 훈련은 암습·독술·쇠뇌 세 가지뿐 — 4레벨 특수 훈련에서 고른 갈래가 왼손 무기(두 번째 단검·독병·손쇠뇌)를 정한다. 도주 +2, 함정 해체 +2.",
+    hp: 0,
+    hpPerLevel: 1,
+    start: { main: "dagger", body: "leather" },
+    items: { food: 3, potion: 2, scroll: 1 },
+    firstSkill: "rgBackstab",
+    trait: { flee: 2, disarm: 2 },
+    trainings: ["assassin", "venom", "xbow"],
+    archetypes: [
+      { name: "날랜 손", favor: ["dex", "luk"] },
+      { name: "그림자", favor: ["dex", "per"] },
+      { name: "뒷골목 약장수", favor: ["dex", "int"] },
+      { name: "질긴 들쥐", favor: ["dex", "con"] },
+    ],
+    lean: ["dex"],
+  },
 };
 
-export const CLASS_IDS: ClassId[] = ["adventurer", "warrior", "mage"];
+export const CLASS_IDS: ClassId[] = ["adventurer", "warrior", "mage", "rogue"];
+
+/** 직업 특성(skills.ts passive·dungeon.ts 함정 해체가 읽는다) */
+export const CLASS_TRAIT: Partial<Record<ClassId, { flee?: number; disarm?: number }>> = Object.fromEntries(
+  Object.values(CLASSES).filter((c) => c.trait).map((c) => [c.id, c.trait!]),
+);
