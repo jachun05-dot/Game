@@ -52,6 +52,12 @@
 - [ ] 방 아이콘 4: offerbox 봉헌함, confession 고해실, altars 옛 신들의 제단, scepter 셉터의 제단
 - [ ] 엔딩 3: offering 헌납, true 돌아온 신들(진엔딩), fallen 영주에게 맞선 자 (화면 코드 필요)
 
+### G. 로그(민첩 직업, 2026-10-19) — 지금은 모험가 그림을 빌려 쓴다
+- [ ] 로그 전신 `rogue.png`(약 37×90) · 얼굴 `rogue-face.png`(30×30) — 뒷골목 출신 열여섯 살, 후드 달린 낡은 가죽 조끼, 허리에 단검. `CLASS_ART.rogue`에 등록
+- [ ] 왼손 무기 아이콘 3: rgOffDagger 왼손 단검, rgToxFlask 독병 주머니, rgHandXbow 손쇠뇌
+- [ ] 단검 사다리 아이콘 4: steeldagger 강철 단검, bronzedagger 청동 단검, abyssdagger 심연강 단검, sundagger 성광 단검
+- [ ] 소모품 볼트 묶음 `bolt`(UI_ART_REQUESTS U04와 함께)
+
 ### F. 공통·기타
 - [ ] 영주의 추적자 `pursuer`(2026-10-19, 18세 추적 — 영주 문장이 새겨진 철퇴를 든 병사, 사람. 지금은 이단심문관 그림을 빌림) · 심문관장 `grandinquisitor`
 - [ ] 청소부 5종(sweeper1~5, 숨김 몬스터 — 한 디자인을 섹터별로 변형)

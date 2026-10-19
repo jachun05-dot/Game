@@ -174,8 +174,7 @@ export function setMagePlan(fn: ((s: GameState) => string) | null): void {
 
 /** 로그가 이번 훈련에 고를 갈래. 기본: 암습에 몰아준다(시뮬로 고른 기본, docs/ROGUE.md) */
 export function defaultRoguePlan(_s: GameState): RogueKey {
-  const probe = (globalThis as any).process?.env?.ROGUE_LINE as RogueKey | undefined;
-  return probe ?? "assassin";
+  return "assassin";
 }
 
 /** 이 직업이 손에 들 만한 무기인가(마법사 = 지능, 로그 = 민첩·숏소드, 나머지 = 지능이 아닌 것) */

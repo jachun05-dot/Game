@@ -47,7 +47,7 @@ function dealt(s: GameState, c: CombatState, t: Enemy, dmg: number, src: string)
   // 모험가 가르침: 재앙(전투 시작 기술 ×1.5), 탐욕(빚 독촉 — 받는 피해 2배)
   if (c.round === 1 && teachOn(s, "trap") && SKILLS[src]?.trigger?.on === "start") dmg = Math.round(dmg * 1.5);
   if ((t.debt ?? 0) > 0) dmg *= 2;
-  if ((t.rot ?? 0) > 0) dmg = Math.round(dmg * 1.25); // 로그 부패
+  if ((t.rot ?? 0) > 0) dmg = Math.round(dmg * 1.2); // 로그 부패
   t.hp -= dmg;
   if (t.hp <= 0 && MONSTERS[t.defId].rebirth) rebirth(s, c, t); // 화신: 한 번 다시 일어선다
   const m = c.meter;
@@ -358,9 +358,7 @@ function castSpell(s: GameState, c: CombatState, dice: [number, number], all: bo
 
 // ── 마법사 원소(elements.ts) ──
 
-const PROBE_OFF = ((globalThis as any).process?.env?.PROBE_OFF ? (globalThis as any).process.env.PROBE_OFF.split(",") : []) as string[];
 function has(s: GameState, id: string): boolean {
-  if (PROBE_OFF.includes(id)) return false;
   return s.skills.includes(id);
 }
 
@@ -1108,7 +1106,7 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
     return;
   }
   if (!st.autoHit && roll !== 20 && roll + bonus < ac) {
-    log(s, `${josa(def.name, "을")} 노렸지만 빗나갔다. (${roll}+${bonus} vs AC ${ac})`, "miss");
+    log(s, `${josa(def.name, "을")} ${st.off ? "왼손 단검으로 " : ""}노렸지만 빗나갔다. (${roll}+${bonus} vs AC ${ac})`, "miss");
     return;
   }
   const greedCrit = teachOn(s, "greed") ? Math.min(10, Math.floor((s.dungeon?.mana ?? 0) / 500) * 2) : 0; // 탐욕의 가르침
@@ -1130,13 +1128,13 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
     + (c.pain ?? 0) + (has(s, "berserkSeal") && hpPct(s) <= 50 ? 5 : 0) + (w.magic && has(s, "fireAvatar") ? 4 : 0) + riftDmg(s, c)
     + (crit && has(s, "rgAssassinMark") ? 2 : 0) + (crit && has(s, "rgDeathSense") ? 3 : 0) + (c.round === 1 && has(s, "rgAssassinSeal") ? 5 : 0) - (st.off ? passive(s, "dmg") : 0);
   let dmg = Math.max(1, Math.round(base * st.mult * abyssFinisher(s, target))); // 심연 ★5 화신전 특례
-  if (st.execute && !bossy(target)) dmg = Math.max(dmg, target.hp); // 로그 처형
+  if (st.execute && !bossy(target)) dmg = Math.round(dmg * 4 / 3); // 로그 처형: 보스·정예가 아니면 ×2(1.5 × 4/3)
   dealt(s, c, target, dmg, st.src ?? "attack");
   if (crit) note(s, "luk");
   log(s, `${def.name}에게 ${w.verb} 명중! ${dmg} 피해${crit ? " (치명타!)" : ""}`, crit ? "crit" : "hit");
   // 로그: 독 바른 칼날(25% 독 1겹), 죽음의 감각(치명타 HP +2), 급소 연타(치명타 → 같은 적 한 번 더)
-  if (target.hp > 0 && has(s, "rgToxEdge") && !w.magic && r.chance(0.25)) addTox(s, target, 1, 3);
-  if (crit && has(s, "rgDeathSense") && c.context !== "dummy") s.hero.hp = Math.min(maxHp(s), s.hero.hp + 2);
+  if (target.hp > 0 && has(s, "rgToxEdge") && !w.magic && r.chance(0.15)) addTox(s, target, 1, 3);
+  if (crit && has(s, "rgDeathSense") && c.context !== "dummy") s.hero.hp = Math.min(maxHp(s), s.hero.hp + 1);
   if (crit && target.hp > 0 && st.src !== "rgVital" && has(s, "rgVital") && canUse(s, c, SKILLS.rgVital)) {
     useSkill(s, c, SKILLS.rgVital, "벌어진 급소를 한 번 더 찌른다");
     attack(s, c, target, { ...PLAIN, src: "rgVital" });
@@ -1364,8 +1362,10 @@ function enemyPhase(s: GameState, c: CombatState): void {
     // 로그 그림자의 몸: 전투마다 나를 노린 첫 공격은 빗나간다
     if (has(s, "rgShadowBody") && !c.shadowDodged) {
       c.shadowDodged = true;
-      log(s, `【그림자의 몸】 ${josa(def.name, "이")} 그림자를 베었다.`, "miss");
-      continue;
+      if (r.chance(0.5)) {
+        log(s, `【그림자의 몸】 ${josa(def.name, "이")} 그림자를 베었다.`, "miss");
+        continue;
+      }
     }
     const roll = r.die(20);
     const atk = def.atk + (e.atkUp ?? 0) + enemyHitBonus(s, c, e) - (e.hitDown?.n ?? 0);
@@ -1655,7 +1655,7 @@ function addTox(s: GameState, e: Enemy, n: number, rounds: number): void {
 /** 독 한 번의 피해 */
 function toxDmg(s: GameState, e: Enemy): number {
   // 겹친 수만큼 주사위를 더 굴리고, 각인·낙인 보정은 한 번만(겹에 곱하지 않는다)
-  const per = rngOf(s).dice(e.tox!.n, 3) + (has(s, "rgVenomMark") ? 1 : 0) + (has(s, "rgVenomSeal") ? 2 : 0);
+  const per = rngOf(s).dice(e.tox!.n, 2) + (has(s, "rgVenomMark") ? 1 : 0) + (has(s, "rgVenomSeal") ? 1 : 0);
   return Math.round(per * (has(s, "rgVenomAvatar") ? 1.5 : 1));
 }
 
@@ -1674,7 +1674,7 @@ function rogueToxTick(s: GameState, c: CombatState): void {
   const rot = SKILLS.rgRot;
   if (has(s, "rgRot") && canUse(s, c, rot) && (poisoned.length >= 3 || poisoned.some(bossy))) {
     for (const e of poisoned) e.rot = 2;
-    useSkill(s, c, rot, "독이 살을 무르게 한다 — 중독된 적이 받는 피해 ×1.25 (2라운드)");
+    useSkill(s, c, rot, "독이 살을 무르게 한다 — 중독된 적이 받는 피해 ×1.2 (2라운드)");
   }
   const burst = SKILLS.rgToxBurst;
   for (const e of alive(c).filter((x) => (x.tox?.n ?? 0) >= 2 && (x.tox?.rounds ?? 0) >= 2)) {
@@ -1733,10 +1733,12 @@ function strongestUnmarked(c: CombatState): Enemy {
 
 /** 라운드 끝 왼손 행동: 두 번째 단검·독병·손쇠뇌 */
 function rogueOffhand(s: GameState, c: CombatState): void {
-  if (PROBE_OFF.includes("offhand")) return;
   const off = offOf(s);
   if (!off) return;
+  // 두 번 행동할 만큼 빨라지면(민첩 35) 왼손은 오른손을 거든다 — 따로 한 번 더 움직이지 않는다(화신 제외)
+  if (actionsPerRound(s) >= 2 && !has(s, "rgAssassinAvatar") && !has(s, "rgVenomAvatar") && !has(s, "rgXbowAvatar")) return;
   if (off === "dagger") {
+    if (c.round % 2 === 0 && !has(s, "rgAssassinAvatar")) return; // 왼손은 두 라운드에 한 번
     const n = has(s, "rgAssassinAvatar") ? 2 : 1;
     for (let k = 0; k < n && alive(c).length; k++) attack(s, c, [...alive(c)].sort((a, b) => a.hp - b.hp)[0], { ...PLAIN, off: true, src: "rgOffDagger" });
   } else if (off === "flask") {

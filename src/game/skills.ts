@@ -508,32 +508,32 @@ Object.assign(SKILLS, {
   // 암습(민첩·행운): 치명타
   rgEye: { id: "rgEye", name: "그림자 눈", kind: "passive", desc: "명중 +1, 치명타 확률 +4%", passive: { hit: 1, crit: 4 } },
   rgThroat: { id: "rgThroat", name: "목 긋기", kind: "active", desc: "전투 시작 시 가장 약한 적에게 첫 공격이 반드시 명중, 피해 ×1.5", trigger: { on: "start" }, effect: { type: "strike", hit: 0, dmg: 0, dmgMult: 1.5, autoHit: true }, uses: 1 },
-  rgAssassinMark: { id: "rgAssassinMark", name: "암습의 각인", kind: "passive", desc: "왼손에 두 번째 단검(라운드마다 왼손 찌르기). 최대 HP +4, 치명타 확률 +8%, 치명타 피해 +2, 암습 액티브 전투당 +1회", passive: { hp: 4, crit: 8 } },
-  rgShade: { id: "rgShade", name: "그림자 숨기", kind: "active", desc: "내 HP 50% 이하가 되면 2라운드 동안 적 명중 −4", trigger: { on: "selfBelow", pct: 50 }, effect: { type: "fog", hit: 4, rounds: 2, text: "그림자 속으로 몸을 낮췄다" }, uses: 1 },
+  rgAssassinMark: { id: "rgAssassinMark", name: "암습의 각인", kind: "passive", desc: "왼손에 두 번째 단검(두 라운드에 한 번 왼손 찌르기). 최대 HP +4, 치명타 확률 +5%, 치명타 피해 +2, 암습 액티브 전투당 +1회", passive: { hp: 4, crit: 5 } },
+  rgShade: { id: "rgShade", name: "그림자 숨기", kind: "active", desc: "내 HP 50% 이하가 되면 2라운드 동안 적 명중 −2", trigger: { on: "selfBelow", pct: 50 }, effect: { type: "fog", hit: 2, rounds: 2, text: "그림자 속으로 몸을 낮췄다" }, uses: 1 },
   rgDualHands: { id: "rgDualHands", name: "양손 놀림", kind: "passive", desc: "왼손 찌르기 피해 1d3 → 1d4", off: "dagger" },
   rgVital: { id: "rgVital", name: "급소 연타", kind: "active", desc: "치명타가 터지면 같은 적을 한 번 더 찌른다(전투당 1회)", trigger: { on: "react" }, uses: 1 },
   rgWeakSpot: { id: "rgWeakSpot", name: "약점 간파", kind: "passive", desc: "보스·정예에게 치명타 확률 +8%" },
-  rgExecute: { id: "rgExecute", name: "처형", kind: "active", desc: "HP 20% 이하인 적을 그 자리에서 끝낸다(보스·정예는 반드시 명중, 피해 ×1.5)", trigger: { on: "targetBelow", pct: 20 }, effect: { type: "strike", hit: 0, dmg: 0, dmgMult: 1.5, autoHit: true, execute: true }, uses: 1 },
+  rgExecute: { id: "rgExecute", name: "처형", kind: "active", desc: "HP 20% 이하인 적에게 반드시 명중, 피해 ×2(보스·정예는 ×1.5)", trigger: { on: "targetBelow", pct: 20 }, effect: { type: "strike", hit: 0, dmg: 0, dmgMult: 1.5, autoHit: true, execute: true }, uses: 1 },
   rgAssassinSeal: { id: "rgAssassinSeal", name: "암습의 낙인", kind: "passive", desc: "치명타 확률 +5%, 첫 라운드 피해 +5, 암습 액티브 전투당 +1회. 왼손이 다른 무기면 두 번째 단검으로 바꾼다", passive: { crit: 5 } },
   rgBladeDance: { id: "rgBladeDance", name: "칼춤", kind: "active", desc: "전투 시작 시 1라운드 동안 한 번 더 공격", trigger: { on: "start" }, effect: { type: "rampage", rounds: 1, text: "두 자루가 번갈아 춤춘다" }, uses: 1 },
-  rgDeathSense: { id: "rgDeathSense", name: "죽음의 감각", kind: "passive", desc: "치명타 피해 +3, 치명타를 낼 때마다 HP +2" },
+  rgDeathSense: { id: "rgDeathSense", name: "죽음의 감각", kind: "passive", desc: "치명타 피해 +3, 치명타를 낼 때마다 HP +1" },
   rgOneKill: { id: "rgOneKill", name: "일격필살", kind: "active", desc: "궁극기. 전투 시작 시 가장 강한 적에게 확정 치명타, 피해 ×3", trigger: { on: "start" }, effect: { type: "strikeStrong", mult: 3, crit: true, text: "숨을 멈추고, 한 번에 끝낸다" }, uses: 1 },
-  rgShadowBody: { id: "rgShadowBody", name: "그림자의 몸", kind: "passive", desc: "AC +2, 전투마다 나를 노린 첫 공격은 빗나간다", passive: { ac: 2 } },
-  rgVanish: { id: "rgVanish", name: "사라지기", kind: "active", desc: "내 HP 30% 이하가 되면 반드시 전투에서 빠져나간다(전투당 1회)", trigger: { on: "selfBelow", pct: 30 }, effect: { type: "blink", text: "그림자에 녹아 사라졌다" }, uses: 1 },
+  rgShadowBody: { id: "rgShadowBody", name: "그림자의 몸", kind: "passive", desc: "AC +2, 전투마다 나를 노린 첫 공격은 50% 확률로 빗나간다", passive: { ac: 2 } },
+  rgVanish: { id: "rgVanish", name: "사라지기", kind: "active", desc: "내 HP 30% 이하가 되면 그림자에 녹아 적 전원 1라운드 행동 불가(전투당 1회)", trigger: { on: "selfBelow", pct: 30 }, effect: { type: "stunAll", rounds: 1 }, uses: 1 },
   rgAssassinAvatar: { id: "rgAssassinAvatar", name: "그림자의 화신", kind: "passive", desc: "최대 HP +10, 치명타 확률 +10%, 왼손 찌르기가 라운드마다 두 번", passive: { hp: 10, crit: 10 } },
   // 독술(민첩·지능): 지속 피해 + 서서히 약화
-  rgToxEdge: { id: "rgToxEdge", name: "독 바른 칼날", kind: "passive", desc: "단검이 맞힐 때마다 20% 확률로 독 1겹(3라운드, 겹마다 라운드당 1d3)" },
+  rgToxEdge: { id: "rgToxEdge", name: "독 바른 칼날", kind: "passive", desc: "단검이 맞힐 때마다 15% 확률로 독 1겹(3라운드, 겹마다 라운드당 1d2)" },
   rgToxThrow: { id: "rgToxThrow", name: "독 단검 투척", kind: "active", desc: "전투 시작 시 가장 약한 적 둘에게 독 1겹(3라운드)", trigger: { on: "start" }, effect: { type: "tox", n: 1, to: "two", rounds: 3, text: "독 묻은 단검 두 자루를 던졌다" }, uses: 1 },
   rgVenomMark: { id: "rgVenomMark", name: "독술의 각인", kind: "passive", desc: "왼손에 독병 주머니(4라운드마다 적 전원에게 독병). 최대 HP +5, 독 피해 +1, 독 지속 +1라운드, 중독된 적 명중 −1, 독술 액티브 전투당 +1회", passive: { hp: 5 } },
-  rgWither: { id: "rgWither", name: "쇠약 독", kind: "active", desc: "전투 시작 시 가장 강한 적이 주는 피해 −3(4라운드)", trigger: { on: "start" }, effect: { type: "cripple", n: 3, rounds: 4, text: "팔다리를 녹이는 독을 먹였다" }, uses: 1 },
+  rgWither: { id: "rgWither", name: "쇠약 독", kind: "active", desc: "전투 시작 시 가장 강한 적이 주는 피해 −2(4라운드)", trigger: { on: "start" }, effect: { type: "cripple", n: 2, rounds: 4, text: "팔다리를 녹이는 독을 먹였다" }, uses: 1 },
   rgAntidote: { id: "rgAntidote", name: "해독 지식", kind: "passive", desc: "독·마비에 걸릴 확률 절반, 해독초가 두 단계씩 듣는다" },
-  rgToxFog: { id: "rgToxFog", name: "독안개", kind: "active", desc: "전투 시작 시 독병을 깨뜨려 적 전원에게 독 1겹 + 명중 −2(3라운드)", trigger: { on: "start" }, effect: { type: "tox", n: 1, to: "all", rounds: 3, hitDown: 2, text: "독병이 깨지며 푸른 안개가 번진다" }, uses: 1, off: "flask" },
+  rgToxFog: { id: "rgToxFog", name: "독안개", kind: "active", desc: "전투 시작 시 독병을 깨뜨려 적 전원에게 독 1겹 + 명중 −1(3라운드)", trigger: { on: "start" }, effect: { type: "tox", n: 1, to: "all", rounds: 3, hitDown: 1, text: "독병이 깨지며 푸른 안개가 번진다" }, uses: 1, off: "flask" },
   rgToxStack: { id: "rgToxStack", name: "맹독", kind: "passive", desc: "독이 3겹까지 쌓인다(없으면 2겹)" },
-  rgRot: { id: "rgRot", name: "부패", kind: "active", desc: "중독된 적이 셋 이상이거나 보스가 중독되면 그 적들이 2라운드 동안 받는 피해 ×1.25", trigger: { on: "react" }, uses: 1 },
-  rgVenomSeal: { id: "rgVenomSeal", name: "독술의 낙인", kind: "passive", desc: "독 피해 +2, 중독된 적 AC −1, 독술 액티브 전투당 +1회. 왼손이 다른 무기면 독병 주머니로 바꾼다" },
+  rgRot: { id: "rgRot", name: "부패", kind: "active", desc: "중독된 적이 셋 이상이거나 보스가 중독되면 그 적들이 2라운드 동안 받는 피해 ×1.2", trigger: { on: "react" }, uses: 1 },
+  rgVenomSeal: { id: "rgVenomSeal", name: "독술의 낙인", kind: "passive", desc: "독 피해 +1, 중독된 적 AC −1, 독술 액티브 전투당 +1회. 왼손이 다른 무기면 독병 주머니로 바꾼다" },
   rgToxBurst: { id: "rgToxBurst", name: "독 폭발", kind: "active", desc: "독이 2겹 이상 쌓인 적의 남은 독 피해를 한 번에 터뜨린다(전투당 1회)", trigger: { on: "react" }, uses: 1 },
   rgRotBlood: { id: "rgRotBlood", name: "썩은 피", kind: "passive", desc: "중독된 적을 쓰러뜨리면 HP +4" },
-  rgPlagueBlade: { id: "rgPlagueBlade", name: "역병의 칼", kind: "active", desc: "궁극기. 전투 시작 시 적 전원에게 독 2겹(4라운드) + 명중 −2", trigger: { on: "start" }, effect: { type: "tox", n: 2, to: "all", rounds: 4, hitDown: 2, text: "칼끝에서 역병이 번진다" }, uses: 1 },
+  rgPlagueBlade: { id: "rgPlagueBlade", name: "역병의 칼", kind: "active", desc: "궁극기. 전투 시작 시 적 전원에게 독 2겹(4라운드) + 명중 −1", trigger: { on: "start" }, effect: { type: "tox", n: 2, to: "all", rounds: 4, hitDown: 1, text: "칼끝에서 역병이 번진다" }, uses: 1 },
   rgToxBody: { id: "rgToxBody", name: "독의 몸", kind: "passive", desc: "받는 피해 −1, 독에 걸리지 않는다" },
   rgLastToxin: { id: "rgLastToxin", name: "궁지의 독", kind: "active", desc: "내 HP 30% 이하가 되면 남은 독병을 모두 던진다 — 적 전원 독 2겹 + 명중 −3(2라운드)", trigger: { on: "selfBelow", pct: 30 }, effect: { type: "tox", n: 2, to: "all", rounds: 3, hitDown: 3, text: "허리의 독병을 모두 깨뜨렸다" }, uses: 1, off: "flask" },
   rgVenomAvatar: { id: "rgVenomAvatar", name: "독의 화신", kind: "passive", desc: "최대 HP +10, 독 피해 ×1.5, 독병을 2라운드마다", passive: { hp: 10 } },
@@ -567,12 +567,7 @@ mindResist.push((s, k) => (k === "fear" && s.skills.includes("painless") ? 0 : 1
 mindResist.push((s, k) => (k === "fear" && fragSkills(s).includes("fragDeadNerve") ? 0 : 1));
 
 /** 배운 기술 + 흡수한 편린의 능력 */
-const PROBE_OFF_S = ((globalThis as any).process?.env?.PROBE_OFF ? (globalThis as any).process.env.PROBE_OFF.split(",") : []) as string[];
 export function allSkills(s: GameState): string[] {
-  if (PROBE_OFF_S.length) return allSkills0(s).filter((id) => !PROBE_OFF_S.includes(id));
-  return allSkills0(s);
-}
-function allSkills0(s: GameState): string[] {
   return [...s.skills, ...fragSkills(s)];
 }
 

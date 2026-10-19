@@ -2304,7 +2304,7 @@ describe("로그(민첩 직업)", () => {
       s.inventory.bolt = 10;
       s.hero.level = 6;
       s.hero.hp = maxHp(s) + 200;
-      startCombat(s, "field", makeEnemies(s, ["goblin", "goblin", "skeleton"]));
+      startCombat(s, "field", makeEnemies(s, ["skeleton", "skeleton", "skeleton", "skeleton"]));
       expect(s.log.some((l) => l.text.includes(needle))).toBe(true);
     }
   });
