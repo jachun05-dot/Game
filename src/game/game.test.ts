@@ -2309,3 +2309,21 @@ describe("로그(민첩 직업)", () => {
     }
   });
 });
+
+describe("테스터 Dabong", () => {
+  it("이름을 Dabong으로 지으면 도감·옛 신·진실 조각이 모두 열리고, 아무 신이나 섬길 수 있다", async () => {
+    const { META_CLUES, ALL_FAITHS, fullCodex } = await import("./tester");
+    const s = newRun(77);
+    s.faithsKnown = [];
+    apply(s, { t: "create", name: " dabong ", candidate: 0, faith: FAITH.abyss });
+    expect(s.hero.faith).toBe(FAITH.abyss);
+    expect(new Set(s.faithsKnown)).toEqual(new Set(ALL_FAITHS));
+    expect(s.codex.seen.length).toBe(fullCodex().seen.length);
+    expect(s.codex.fragKnown.length).toBe(Object.keys(FRAGMENTS).length);
+    expect(new Set(s.clues)).toEqual(new Set(META_CLUES));
+    expect(s.edict).toBeFalsy(); // 칙서는 삶마다
+    const t = newRun(78);
+    apply(t, { t: "create", name: "다봉", candidate: 0, faith: null });
+    expect(t.codex.seen.length).toBe(0);
+  });
+});

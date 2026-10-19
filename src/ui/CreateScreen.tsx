@@ -10,6 +10,7 @@ import type { Ctl } from "./App";
 import { Bar, Card, Shell, fmtMod } from "./components";
 import { CLASS_ART } from "./art";
 import { Icon } from "./icons";
+import { ALL_FAITHS, isUnlockTester } from "../game/tester";
 
 /** 뒤집은 후보 카드에 가장 높은 능력치 둘 */
 function topStats(stats: Record<string, number>): string {
@@ -33,6 +34,8 @@ export function CreateScreen({ ctl }: { ctl: Ctl }) {
   const setOpen = (v: boolean[] | ((o: boolean[]) => boolean[])) => setOpenBy((m) => ({ ...m, [cls]: typeof v === "function" ? v(m[cls] ?? [false, false, false]) : v }));
   const setPick = (v: number | null) => setPickBy((m) => ({ ...m, [cls]: v }));
   const [faith, setFaith] = useState<string | null>(null);
+  // 테스터 Dabong: 이름을 치면 모든 옛 신을 고를 수 있다(tester.ts)
+  const faithList = isUnlockTester(name) ? [...new Set([...s.faithsKnown, ...ALL_FAITHS])] : meta.faiths;
 
   if (intro < INTRO.length) {
     return (
@@ -153,14 +156,14 @@ export function CreateScreen({ ctl }: { ctl: Ctl }) {
       </Card>
 
       <Card title="섬길 옛 신">
-        {meta.faiths.length === 0 ? (
+        {faithList.length === 0 ? (
           <p className="dim small">아직 해금된 신이 없습니다. 죽는 방식에 따라 다음 삶에서 섬길 수 있는 옛 신이 해금됩니다.</p>
         ) : (
           <div className="chips">
             <button className={`chip${faith === null ? " on" : ""}`} onClick={() => setFaith(null)}>
               섬기지 않음
             </button>
-            {meta.faiths.map((f) =>
+            {faithList.map((f) =>
               godOf(f) ? (
                 <button key={f} className={`chip${faith === f ? " on" : ""}`} onClick={() => setFaith(f)}>
                   {f}

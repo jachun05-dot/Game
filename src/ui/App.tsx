@@ -18,6 +18,7 @@ import { CodexScreen } from "./CodexScreen";
 import { mergeCodex } from "../game/fragments";
 import { FAITH } from "../game/data";
 import { GameScreen, HeroHeader, LogView } from "./components";
+import { ALL_ENDINGS, ALL_FAITHS, META_CLUES, fullCodex, isUnlockTester } from "../game/tester";
 
 export type Speed = 1 | 2 | 4 | 8 | 0; // 0 = 즉시
 
@@ -106,6 +107,19 @@ function Game() {
       return JSON.stringify(c) === JSON.stringify(m.codex) ? m : { ...m, codex: c };
     });
   }, [s?.codex]);
+
+  // 테스터 Dabong: 다음 삶에도 모두 열려 있게 Meta에 신앙·엔딩·조각·도감을 합친다(tester.ts)
+  useEffect(() => {
+    if (!s || s.phase === "create" || !isUnlockTester(s.hero.name)) return;
+    setMeta((m) => {
+      const faiths = [...new Set([...m.faiths, ...ALL_FAITHS])];
+      const endings = [...new Set([...(m.endings ?? []), ...ALL_ENDINGS])];
+      const clues = [...new Set([...(m.clues ?? []), ...META_CLUES])];
+      const codex = mergeCodex(m.codex, fullCodex());
+      const same = faiths.length === m.faiths.length && endings.length === (m.endings ?? []).length && clues.length === (m.clues ?? []).length && JSON.stringify(codex) === JSON.stringify(m.codex);
+      return same ? m : { ...m, faiths, endings, clues, codex };
+    });
+  }, [s?.hero.name, s?.phase]);
 
   // 진실 조각도 삶을 넘어 이어진다(영주의 칙서만은 진엔딩에 그 삶에서 다시 들어야 한다)
   useEffect(() => {

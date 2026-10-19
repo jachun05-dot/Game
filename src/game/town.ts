@@ -14,6 +14,7 @@ import { CLASSES, type ClassId } from "./classes";
 import { GEAR, equip, gearEffect, targetSlot } from "./gear";
 import type { Activity, Candidate, CombatState, GameState, StatKey, Stats, Tactics, WeekResult } from "./types";
 import { AGE, ageMonthStart, ageSettlementLines, startChase } from "./age";
+import { isUnlockTester, unlockAll } from "./tester";
 
 // DESIGN 14.1 런 시작 / 14.2 마을(1주=1턴) / 14.4 월말 정산
 
@@ -112,6 +113,8 @@ export function createHero(s: GameState, name: string, candidate: number, faith:
   const c = s.candidates[candidate];
   s.hero.name = name.trim() || "이름 없는 소년";
   s.hero.stats = { ...c.stats };
+  const unlock = isUnlockTester(s.hero.name);
+  if (unlock) unlockAll(s); // 테스터 Dabong: 잠긴 것을 모두 연다(tester.ts)
   // 권능이 정해진 신만 섬길 수 있다(역병·심연·망각은 해금만 되고 권능은 준비 중)
   s.hero.faith = faith && godOf(faith) && (s.faithsKnown.includes(faith) || s.faithsKnown.length === 0) ? faith : null;
   s.piety = s.hero.faith ? FAITH_BAL.start : 0;
@@ -131,6 +134,7 @@ export function createHero(s: GameState, name: string, candidate: number, faith:
   log(s, `${cls.motive} 지급품: ${kit}. 주머니는 비어 있다.`, "story");
   log(s, "직업교관이 말한다. \"훈련은 미궁에서 한 번 살아 돌아온 다음이다.\"", "story");
   if (faith) log(s, `당신은 몰래 ${josa(faith, "을")} 섬기기로 했다.`, "story");
+  if (unlock) log(s, "【테스터】 잠긴 것이 모두 열렸다 — 몬스터 도감·편린, 옛 신 여덟, 진실 조각, 엔딩 기록.", "skill");
   if (s.gear.neck === "grooty") log(s, `【테스터】 ${GEAR.grooty.name}을 목에 걸었다 — ${gearEffect("grooty")}.`, "skill");
   log(s, `— 1월 1주차. 4주차에 미궁이 열린다.`, "system");
 }
