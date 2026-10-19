@@ -58,6 +58,11 @@ export const MONSTER_ART: Record<string, SpriteArt> = {
   mold: { src: "./mon-mold.png", w: 94, h: 94 },
   shroudmold: { src: "./mon-shroudmold.png", w: 44, h: 95 },
   gargoyle: { src: "./mon-gargoyle.png", w: 86, h: 101 },
+  pearlleech: { src: "./mon-pearlleech.png", w: 36, h: 16 },  // 희귀
+  shellsnail: { src: "./mon-shellsnail.png", w: 47, h: 36 },  // 희귀, 두 배로 그려 절반
+  sporecap: { src: "./mon-sporecap.png", w: 38, h: 39 },  // 희귀, 두 배로 그려 절반(무릎~허리)
+  drownedchoir: { src: "./mon-drownedchoir.png", w: 84, h: 98 },  // 정예
+  mycomother: { src: "./mon-mycomother.png", w: 100, h: 99 },  // 3섹터 보스, 200격자 원본 — 절반
 };
 
 
