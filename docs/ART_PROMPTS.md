@@ -588,3 +588,8 @@ Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, 
 ## 058~060 (2026-10-19) — 3섹터 장비 9·공양 제단
 
 결과: 모두 채택. 시트 둘 다 100격자. 058 시트에 코르크 방패가 하나 더 그려져(6개) 중복 1개 버림. 물장화 아래 워터마크 4픽셀을 주변색으로. 공양 제단은 작게 그려져 **180격자**로 복원해 30×29(다른 방 아이콘 크기). `public/gear-{bronzeblade,corkshield,tidestaff,oiledleather,waders,sporemask,leechcharm,antidotering,choirbell}.png`, `public/room-altar.png`
+
+## 061~068 (2026-10-19) — 4섹터 장면 + 기본 몬스터 7 (생성 대기)
+
+4섹터 "불타는 광산 갱도" 규칙: 석탄 검정·녹슨 쇠·그을린 갱목. 1~2층은 불(강조색 불씨 주황 `#d9632b`), 3층은 얼음(강조색 서리 흰청 `#cfe3ea`, 2섹터 망령 회청 `#9fb4c0`보다 밝고 하얗게). 청록은 여전히 마석 전용. 몬스터 프롬프트에 "100격자"와 화면 차지 비율을 함께 지시. 첨부는 `assets/prompt_refs/`(장면: ref_scene_training + ref_s3_scene, 몬스터: ref_boy). 프롬프트는 채팅 기록 그대로.
+- 061 장면 `dungeon4` · 062 불씨 박쥐 · 063 불도롱뇽 · 064 광석 갑충 · 065 화염 정령 · 066 굴착 벌레 · 067 서리 망령 · 068 얼음 트롤
