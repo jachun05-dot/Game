@@ -50,6 +50,14 @@ export const MONSTER_ART: Record<string, SpriteArt> = {
   general: { src: "./mon-general.png", w: 92, h: 99 },  // 2섹터 보스, 200격자 원본 — 크기는 절반
   inquisitor: { src: "./mon-inquisitor.png", w: 61, h: 93 },  // 미궁의 유일한 사람(도감 밖, 전투 로그용), 200격자 원본 — 크기는 절반
   pursuer: { src: "./mon-inquisitor.png", w: 61, h: 93 },  // 18세 추적자(age.ts) — 전용 그림이 나올 때까지 이단심문관 그림을 빌린다
+  // 3섹터 물에 잠긴 사원
+  plaguerat: { src: "./mon-plaguerat.png", w: 37, h: 25 },  // Gemini가 두 배로 그려 크기를 절반으로(무릎 높이)
+  leech: { src: "./mon-leech.png", w: 35, h: 16 },
+  toad: { src: "./mon-toad.png", w: 76, h: 62 },
+  snail: { src: "./mon-snail.png", w: 50, h: 45 },  // 두 배로 그려 절반(허리~가슴 높이)
+  mold: { src: "./mon-mold.png", w: 94, h: 94 },
+  shroudmold: { src: "./mon-shroudmold.png", w: 44, h: 95 },
+  gargoyle: { src: "./mon-gargoyle.png", w: 86, h: 101 },
 };
 
 
@@ -75,6 +83,7 @@ export const SCENE_ART: Record<string, SpriteArt> = {
   graveyard: { src: "./scene-grave.png", w: 179, h: 80 },
   dungeon1: { src: "./scene-dungeon1.png", w: 179, h: 100 },
   dungeon2: { src: "./scene-dungeon2.png", w: 179, h: 100 },
+  dungeon3: { src: "./scene-dungeon3.png", w: 179, h: 100 },
   dungeon2night: { src: "./scene-dungeon2night.png", w: 179, h: 100 },  // 밤(화면 연결은 VISUAL_TODO "게임 세션 메모")
   title: { src: "./scene-title.png", w: 179, h: 160, focus: 0.65 },
 };

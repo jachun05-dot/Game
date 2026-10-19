@@ -10,10 +10,10 @@
 | 구분 | 전체 | 있음 | 남음 |
 |---|---|---|---|
 | 직업 그림(전신+얼굴) | 4 | 4 | 0 |
-| 몬스터 스프라이트 | 83 | 20 | **63** |
+| 몬스터 스프라이트 | 83 | 27 | **56** |
 | 장비 아이콘 | 75 | 31 | **44** |
 | 방 아이콘 | 18 | 11 | **7** |
-| 미궁 장면(지도 배경) | 섹터 6 + 2섹터 밤 + 끝없는 미궁 | 3 | **5** |
+| 미궁 장면(지도 배경) | 섹터 6 + 2섹터 밤 + 끝없는 미궁 | 4 | **4** |
 | 마을 장면 | 9 | 9 | 0 |
 | 훈련 갈래 아이콘(`LINE_ICON`) | 10 | 0 | **10** |
 | 엔딩 일러스트 | 4 | 0 | **4** (숨겨진 엔딩 "섬을 떠난 자" 추가) |
@@ -32,8 +32,9 @@ UI·출시용 그림(앱 아이콘·공유 미리보기·소모품·상태·신�
 - [x] (042·043) 장비 10: wraithspear 망령의 녹슨 창, warbanner 녹슨 군기 방패, harpycharm 하피 깃털 부적, horseshoe 군마의 편자 장화, battlering 전장의 반지, wolfhide 늑대 가죽 갑옷, steelsword 강철 장검, steelshield 강철 방패, oakstaff 마력이 깃든 지팡이, queencloak 하피 여왕의 깃털 망토
 
 ### B. 3섹터 "물에 잠긴 사원"
-- [ ] 장면 `dungeon3`
-- [ ] 몬스터 12: plaguerat 역병 쥐떼, leech 진흙 거머리, toad 독두꺼비, snail 산성 달팽이, mold 곰팡이 괴물, shroudmold 사제복 균사체, gargoyle 잠긴 석상 / 희귀 pearlleech 진주 먹은 거머리, sporecap 마석 균모자, shellsnail 마석 껍질 달팽이 / 정예 drownedchoir 익사한 성가대 / 보스 mycomother 가라앉은 본당의 균모
+- [x] 장면 `dungeon3` (045)
+- [x] 기본 몬스터 7 (046~052): plaguerat 역병 쥐떼, leech 진흙 거머리, toad 독두꺼비, snail 산성 달팽이, mold 곰팡이 괴물, shroudmold 사제복 균사체, gargoyle 잠긴 석상
+- [ ] 희귀·정예·보스 5 + 청소부: 희귀 pearlleech 진주 먹은 거머리, sporecap 마석 균모자, shellsnail 마석 껍질 달팽이 / 정예 drownedchoir 익사한 성가대 / 보스 mycomother 가라앉은 본당의 균모
 - [ ] 장비 약 9: antidotering 해독의 반지, sporemask 포자 가면, leechcharm 거머리 이빨 부적, tidestaff 조수의 지팡이, choirbell 성가대의 녹청 종, bronzeblade 청동 장검, corkshield 코르크 방패, waders 물장화, oiledleather 기름 먹인 가죽 갑옷
 - [ ] 방 아이콘 altar 공양 제단
 
