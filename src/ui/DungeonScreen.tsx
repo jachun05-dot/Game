@@ -19,6 +19,7 @@ import { SEAL_DOOR, isSealDoor } from "../game/temple";
 import { CLUES, clueCount, clueNeed, trueEndingLock, trueEndingOpen } from "../game/truth";
 import { Bar, FragIcon, GameScreen, GearIcon, HeroHeader, LogView } from "./components";
 import { ROOM_ICON, SCENE_ART } from "./art";
+import { Icon } from "./icons";
 
 function fmtTime(turns: number): string {
   const h = Math.max(0, turns) / 2;
@@ -36,18 +37,18 @@ export function DungeonScreen({ ctl }: { ctl: Ctl }) {
       title={dg.endless ? `끝없는 미궁 ${dg.floor}층` : `${dg.sector}섹터 ${dg.floor}층 · ${dg.sector === 6 ? (dg.floor >= 3 ? "성소" : "성가") : dg.sector === 5 ? (isNight(s) ? "들숨" : "날숨") : dg.sector === 4 ? (stagnant(s) ? "고임" : "바람") : dg.sector === 3 ? (highTide(s) ? "밀물" : "썰물") : dg.sector === 2 ? (isNight(s) ? "밤" : "낮") : "미궁"}`}
       header={
         <>
-          <HeroHeader s={s} onOpen={() => ctl.setSheet(true)} extra={<span>마석 {dg.mana}G</span>} />
+          <HeroHeader s={s} onOpen={() => ctl.setSheet(true)} extra={<span className="stat-pill mana" title="들고 있는 마석(나가야 돈이 된다)"><Icon name="gem" />{dg.mana}G</span>} />
           <div className="survival">
             <div>
-              <span className="dim small">시간 <b className="num">{fmtTime(dg.turnsLeft)}</b></span>
+              <span className="dim small"><Icon name="clock" />시간 <b className="num">{fmtTime(dg.turnsLeft)}</b></span>
               <Bar value={dg.turnsLeft} max={BAL.weekTurns} tone="tired" />
             </div>
             <div>
-              <span className="dim small">포만감 <b className="num">{Math.round(s.hero.satiety)}</b></span>
+              <span className="dim small"><Icon name="meat" />포만감 <b className="num">{Math.round(s.hero.satiety)}</b></span>
               <Bar value={s.hero.satiety} max={100} tone="food" />
             </div>
             <div>
-              <span className="dim small">피로도 <b className="num">{Math.round(s.hero.fatigue)}</b></span>
+              <span className="dim small"><Icon name="tired" />피로도 <b className="num">{Math.round(s.hero.fatigue)}</b></span>
               <Bar value={s.hero.fatigue} max={100} tone="tired" />
             </div>
           </div>
@@ -55,7 +56,7 @@ export function DungeonScreen({ ctl }: { ctl: Ctl }) {
       }
       dock={<RoomDock ctl={ctl} />}
     >
-      <FloorMap dg={dg} />
+      <FloorMap dg={dg} night={isNight(s)} />
       <SweeperWarn s={s} />
       <LogView ctl={ctl} fill />
     </GameScreen>
@@ -369,16 +370,16 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
     <>
       <div className="util">
         <button className="btn small" disabled={busy} onClick={() => go({ t: "camp" })}>
-          야영 8h
+          <Icon name="camp" />야영 8h
         </button>
         <button className="btn small" disabled={busy || s.inventory.food <= 0} onClick={() => go({ t: "eat" })}>
-          먹기 {s.inventory.food}
+          <Icon name="meat" />먹기 {s.inventory.food}
         </button>
         <button className={`btn small${hpLow ? " primary" : ""}`} disabled={busy || s.inventory.potion <= 0} onClick={() => go({ t: "potion" })}>
-          물약 {s.inventory.potion}
+          <Icon name="potion" />물약 {s.inventory.potion}
         </button>
         <button className="btn small" disabled={busy || s.inventory.scroll <= 0} onClick={() => go({ t: "scroll" })}>
-          귀환 {s.inventory.scroll}
+          <Icon name="scroll" />귀환 {s.inventory.scroll}
         </button>
         {s.inventory.bandage > 0 && (
           <button className="btn small" disabled={busy} onClick={() => go({ t: "bandage" })}>
@@ -418,7 +419,8 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
           return (
             <button key={id} className={`btn path${danger ? " risky" : ""}`} disabled={busy} onClick={() => go({ t: "move", room: id })}>
               <RoomIcon type={nb.visited || nb.known ? (nb.respawned && !nb.resolved ? "combat" : nb.type) : null} />
-              {label} {note && <span className="dim small">· {note}</span>}
+              <span>{label} {note && <span className="dim small">· {note}</span>}</span>
+              <span className="path-go"><Icon name="chev" /></span>
             </button>
           );
         })}
@@ -434,11 +436,14 @@ function RoomIcon({ type }: { type: string | null }) {
 }
 
 /** 지도 칸 배경: 섹터 장소 그림을 2배로 깔고 어둡게 눌러 지도 점·선이 먼저 읽히게 한다 */
-function mapBackdrop(dg: DungeonState): CSSProperties | undefined {
-  const a = SCENE_ART[dg.endless ? "endless" : `dungeon${dg.sector}`];
+function mapBackdrop(dg: DungeonState, night: boolean): CSSProperties | undefined {
+  // 밤 그림이 있는 섹터는 밤에 바꿔 깐다(이미 어두운 그림이라 덧칠을 옅게)
+  const nightArt = night && !dg.endless ? SCENE_ART[`dungeon${dg.sector}night`] : undefined;
+  const a = nightArt ?? SCENE_ART[dg.endless ? "endless" : `dungeon${dg.sector}`];
   if (!a) return undefined;
+  const shade = nightArt ? 0.35 : 0.62;
   return {
-    backgroundImage: `linear-gradient(rgba(12, 10, 7, 0.62), rgba(12, 10, 7, 0.62)), url(${a.src})`,
+    backgroundImage: `linear-gradient(rgba(12, 10, 7, ${shade}), rgba(12, 10, 7, ${shade})), url(${a.src})`,
     backgroundSize: `auto, ${a.w * 2}px ${a.h * 2}px`,
     backgroundPosition: "center, center 40%",
     backgroundRepeat: "no-repeat",
@@ -446,7 +451,7 @@ function mapBackdrop(dg: DungeonState): CSSProperties | undefined {
 }
 
 /** 방 그래프 지도: 입구에서의 거리로 가로 배치. 가 본 방과 그 이웃만 그린다 */
-function FloorMap({ dg }: { dg: DungeonState }) {
+function FloorMap({ dg, night }: { dg: DungeonState; night: boolean }) {
   const visible = new Set<number>();
   for (const r of dg.rooms) {
     if (r.visited) {
@@ -470,7 +475,7 @@ function FloorMap({ dg }: { dg: DungeonState }) {
     });
   }
   return (
-    <svg className="floormap" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="층 지도" style={mapBackdrop(dg)}>
+    <svg className="floormap" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="층 지도" style={mapBackdrop(dg, night)}>
       {dg.rooms.map((r) =>
         r.edges
           .filter((e) => e > r.id && visible.has(e) && visible.has(r.id) && (r.visited || dg.rooms[e].visited))
@@ -487,6 +492,7 @@ function FloorMap({ dg }: { dg: DungeonState }) {
           const cls = r.id === dg.current ? "here" : r.visited ? "visited" : r.known ? "known" : "unknown";
           return (
             <g key={r.id}>
+              {r.id === dg.current && <circle cx={p.x} cy={p.y} r={7} className="map-here-ring" />}
               <circle cx={p.x} cy={p.y} r={r.id === dg.current ? 7 : 5} className={`map-node ${cls} t-${r.type}`} />
               {dg.sweeperRoom === r.id && !dg.sweeperDown && <circle cx={p.x} cy={p.y} r={10} className="map-sweeper" />}
               {(r.known || r.visited) && <text x={p.x} y={p.y - 9} className="map-label">{ROOM_SHORT[r.type]}</text>}

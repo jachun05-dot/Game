@@ -5,6 +5,7 @@ import { SKILLS } from "../game/skills";
 import type { Codex } from "../game/types";
 import { Card, FragIcon, Shell } from "./components";
 import { MONSTER_ART } from "./art";
+import { Icon } from "./icons";
 
 // 몬스터 도감: 마주친 몬스터만 정보가 열리고, 편린 능력치는 흡수해 본 것만 보인다.
 // 도감은 삶을 넘어 이어진다(Meta에 저장).
@@ -45,11 +46,11 @@ export function CodexScreen({ codex, onBack }: { codex: Codex; onBack: () => voi
   return (
     <Shell>
       <div className="topbar sticky">
-        <button className="link" onClick={onBack}>
-          ← 돌아가기
+        <button className="link" onClick={onBack} aria-label="돌아가기">
+          <Icon name="back" />
         </button>
         <span className="topbar-title">몬스터 도감</span>
-        <span />
+        <span className="link-spacer" />
       </div>
       <p className="eyebrow">BESTIARY · 몬스터 도감</p>
       <h1 className="h1">몬스터 도감</h1>

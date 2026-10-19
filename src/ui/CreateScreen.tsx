@@ -9,6 +9,16 @@ import { godOf } from "../game/faith";
 import type { Ctl } from "./App";
 import { Bar, Card, Shell, fmtMod } from "./components";
 import { CLASS_ART } from "./art";
+import { Icon } from "./icons";
+
+/** 뒤집은 후보 카드에 가장 높은 능력치 둘 */
+function topStats(stats: Record<string, number>): string {
+  return [...STAT_KEYS]
+    .sort((a, b) => stats[b] - stats[a])
+    .slice(0, 2)
+    .map((k) => `${STAT_LABEL[k]} ${stats[k]}`)
+    .join(" · ");
+}
 
 export function CreateScreen({ ctl }: { ctl: Ctl }) {
   const { s, meta, dispatch } = ctl;
@@ -57,7 +67,7 @@ export function CreateScreen({ ctl }: { ctl: Ctl }) {
 
   return (
     <Shell>
-      <p className="eyebrow">CHAPTER 01 · 모험가 등록</p>
+      <p className="eyebrow">CHAPTER I · 모험가 등록</p>
       <h1 className="h1">어떤 소년으로 살아볼까요?</h1>
 
       <Card title="직업">
@@ -70,6 +80,7 @@ export function CreateScreen({ ctl }: { ctl: Ctl }) {
                 className={`class-card${s.hero.cls === id ? " on" : ""}`}
                 onClick={() => dispatch({ t: "pickClass", cls: id })}
               >
+                <img className="class-face" src={CLASS_ART[id].face} width={60} height={60} alt="" />
                 <b>{c.name}</b>
                 <span className="dim small">{c.motive}</span>
               </button>
@@ -109,7 +120,8 @@ export function CreateScreen({ ctl }: { ctl: Ctl }) {
           {s.candidates.map((c, i) => (
             <button key={i} className={`cand${open[i] ? " open" : ""}${pick === i ? " picked" : ""}`} onClick={() => flip(i)}>
               <span className="cand-num">0{i + 1}</span>
-              <span className="cand-face">{open[i] ? c.archetype : "?"}</span>
+              <span className="cand-face">{open[i] ? c.archetype : <Icon name="eye" />}</span>
+              {open[i] && <span className="cand-top">{topStats(c.stats)}</span>}
             </button>
           ))}
         </div>
@@ -179,8 +191,8 @@ export function CreateScreen({ ctl }: { ctl: Ctl }) {
         )}
       </Card>
 
-      <button className="btn primary" disabled={pick === null} onClick={() => pick !== null && dispatch({ t: "create", name: name || NAMES[Math.floor(Math.random() * NAMES.length)], candidate: pick, faith })}>
-        {CLASSES[s.hero.cls].name}로 등록하기 →
+      <button className="btn primary wide" disabled={pick === null} onClick={() => pick !== null && dispatch({ t: "create", name: name || NAMES[Math.floor(Math.random() * NAMES.length)], candidate: pick, faith })}>
+        {pick === null ? "후보 카드를 골라 주세요" : `${CLASSES[s.hero.cls].name}로 등록하기`}
       </button>
     </Shell>
   );

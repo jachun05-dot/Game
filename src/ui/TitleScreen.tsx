@@ -1,6 +1,7 @@
 import type { GameState, Meta } from "../game/types";
 import { Card, SceneBanner, Shell } from "./components";
 import { BUILD } from "../platform/build";
+import { Icon } from "./icons";
 
 interface Props {
   run: GameState | null;
@@ -16,33 +17,56 @@ export function TitleScreen({ run, meta, onNew, onContinue, onGraveyard, onCodex
 
   return (
     <Shell>
-      <div className="title-wrap">
+      <div className="title-wrap title-screen">
         <SceneBanner id="title" className="title-art">
           <img className="title-hero" src="./hero.png" width={74} height={180} alt="숏소드를 든 열여섯 살 모험가 소년" />
         </SceneBanner>
-        <h1 className="logo">
-          <span className="accent">D</span>DD
-        </h1>
-        <p className="tagline">열여섯 살, 미궁으로</p>
-        <p className="dim small center">섬의 영지 · 미궁 · 매달의 세금 · 단 한 번의 삶</p>
+        <div className="logo-block">
+          <h1 className="logo">DDD</h1>
+          <div className="logo-rule">◆</div>
+          <p className="tagline">열여섯 살, 미궁으로</p>
+          <p className="title-sub">섬의 영지 · 미궁 · 매달의 세금 · 단 한 번의 삶</p>
+        </div>
       </div>
 
-      <div className="stack">
+      <nav className="menu" aria-label="메뉴">
         {canContinue && (
           <button className="btn primary" onClick={onContinue}>
-            이어하기 <span className="dim">— {run!.hero.name}, {run!.month}월 {run!.week}주차</span>
+            <Icon name="flame" />
+            <span className="menu-text">
+              <b>이어하기</b>
+              <small>
+                {run!.hero.name} · {run!.month}월 {run!.week}주차 · Lv {run!.hero.level}
+              </small>
+            </span>
+            <Icon name="chev" className="chev" />
           </button>
         )}
         <button className={`btn ${canContinue ? "" : "primary"}`} onClick={onNew}>
-          새로운 인생 시작 →
+          <Icon name="sword" />
+          <span className="menu-text">
+            <b>새로운 인생 시작</b>
+            <small>열여섯 살, 처음 미궁에 들어서는 날부터</small>
+          </span>
+          <Icon name="chev" className="chev" />
         </button>
         <button className="btn" onClick={onGraveyard}>
-          묘지 <span className="dim">— 잠든 모험가 {meta.graveyard.length}명</span>
+          <Icon name="grave" />
+          <span className="menu-text">
+            <b>묘지</b>
+            <small>잠든 모험가 {meta.graveyard.length}명</small>
+          </span>
+          <Icon name="chev" className="chev" />
         </button>
         <button className="btn" onClick={onCodex}>
-          몬스터 도감 <span className="dim">— 발견 {meta.codex.seen.length}종</span>
+          <Icon name="book" />
+          <span className="menu-text">
+            <b>몬스터 도감</b>
+            <small>발견 {meta.codex.seen.length}종</small>
+          </span>
+          <Icon name="chev" className="chev" />
         </button>
-      </div>
+      </nav>
 
       {((meta.clues?.length ?? 0) > 0 || (meta.endings?.length ?? 0) > 0) && (
         <Card title={meta.endings?.includes("true") ? "옛 신들이 돌아왔다" : "진실 조각"}>
@@ -67,9 +91,11 @@ export function TitleScreen({ run, meta, onNew, onContinue, onGraveyard, onCodex
         </Card>
       )}
 
-      <p className="dim small center">기록은 이 브라우저에만 저장됩니다(다른 기기로 옮길 수 없고, 브라우저 데이터를 지우면 사라집니다).</p>
-      <p className="dim small center">프로토타입 v{BUILD.version} · 6섹터 · 엔딩 + 끝없는 미궁 · 아동 사망·처형 등 무거운 장면이 나옵니다</p>
-      <p className="dim small center">빌드 {BUILD.commit}</p>
+      <footer className="title-foot">
+        <p className="dim small center">기록은 이 기기에만 저장됩니다</p>
+        <p className="dim small center">아동 사망·처형 등 무거운 장면이 나옵니다</p>
+        <p className="dim small center">v{BUILD.version} · {BUILD.commit}</p>
+      </footer>
     </Shell>
   );
 }

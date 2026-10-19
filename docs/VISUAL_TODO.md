@@ -1,5 +1,7 @@
 # 비주얼 남은 작업 (2026-10-15, 게임 개발 완료 시점)
 
+> 2026-10-19: 화면 틀(UI) 그림 요청은 따로 `docs/UI_ART_REQUESTS.md`(앱 아이콘·공유 그림·소모품/상태 아이콘·신의 문장 등). UI 스킨은 `src/ui/theme.css`, 선 아이콘은 `src/ui/icons.tsx`.
+
 게임은 6섹터·엔딩까지 완성. 그림은 1섹터·2섹터 일부만 있다. 이 문서는 남은 그림 체크리스트다.
 작업 방식: 비주얼 세션이 파일만 넣고 `src/ui/art.ts`에 등록(VISUAL_HANDOFF 1-1절), 빌드·배포는 게임 세션.
 
@@ -62,4 +64,4 @@
 
 ## 게임 세션 메모(화면 코드가 필요한 그림)
 
-- **2섹터 밤 배경**: `DungeonScreen.tsx` `mapBackdrop()`에서 `SCENE_ART[\`dungeon${dg.sector}\`]` 대신, 밤(`isNight(s)`)이면 `SCENE_ART[\`dungeon${dg.sector}night\`] ?? SCENE_ART[\`dungeon${dg.sector}\`]`. 밤 그림이 이미 매우 어두워 덧칠(`rgba(12,10,7,0.62)`)을 밤에는 0.35 정도로
+- ~~**2섹터 밤 배경**~~ (연결 완료 2026-10-19 — 밤 그림이 있는 섹터는 `dungeon<섹터>night`을 자동으로 쓴다): `DungeonScreen.tsx` `mapBackdrop()`에서 `SCENE_ART[\`dungeon${dg.sector}\`]` 대신, 밤(`isNight(s)`)이면 `SCENE_ART[\`dungeon${dg.sector}night\`] ?? SCENE_ART[\`dungeon${dg.sector}\`]`. 밤 그림이 이미 매우 어두워 덧칠(`rgba(12,10,7,0.62)`)을 밤에는 0.35 정도로

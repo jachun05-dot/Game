@@ -17,6 +17,7 @@ import type { Ctl } from "./App";
 import { josa } from "../game/josa";
 import { INJ, LIMBS, PART_NAME, anyInjury } from "../game/injury";
 import { Card, GameScreen, GearIcon, GearList, HeroHeader, LevelTable, LogView, FaithCard, InjuryCard, FragList, SPECIAL_LEVELS, SceneBanner, buildAdvice, SkillList, StatGrid, TacticsBar } from "./components";
+import { Icon, type IconName } from "./icons";
 
 const ITEM_INFO = {
   food: { name: "말린 고기", desc: "포만감 +40" },
@@ -351,12 +352,26 @@ function DungeonPrep({ s, busy, onShop, onEnter }: { s: GameState; busy: boolean
   );
 }
 
+/** 할 일 이름으로 고른 아이콘(없으면 칼) */
+const ACTIVITY_ICON: [RegExp, IconName][] = [
+  [/훈련|교관/, "sword"],
+  [/탐문/, "eye"],
+  [/외부 탐험/, "map"],
+  [/여관/, "camp"],
+  [/허수아비/, "stone"],
+  [/자수/, "grave"],
+  [/사냥|숲/, "leaf"],
+  [/밀수/, "coin"],
+];
+
 function ActivityButton({ title, sub, disabled, onClick }: { title: string; sub: string; disabled?: boolean; onClick: () => void }) {
+  const icon = ACTIVITY_ICON.find(([re]) => re.test(title))?.[1] ?? "sword";
   return (
     <button className="activity" disabled={disabled} onClick={onClick}>
+      <span className="act-icon"><Icon name={icon} /></span>
       <b>{title}</b>
       <span className="dim small">{sub}</span>
-      <span className="arrow">→</span>
+      <span className="arrow"><Icon name="arrow" /></span>
     </button>
   );
 }

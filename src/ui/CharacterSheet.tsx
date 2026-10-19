@@ -36,7 +36,7 @@ export function CharacterSheet({ ctl }: { ctl: Ctl }) {
           <img className="portrait big" src={CLASS_ART[h.cls].face} alt="" />
           <div>
             <div className="hero-name">
-              {h.name} <span className="dim">{CLASSES[h.cls].name} Lv.{h.level}</span>
+              <span>{h.name}</span> <span className="lv-badge">Lv {h.level}</span> <span className="dim">{CLASSES[h.cls].name}</span>
               {h.faith && <span className="faith-tag">{h.faith}</span>}
             </div>
             <div className="dim small">

@@ -71,7 +71,10 @@ function UpdateBanner() {
 function Game() {
   const [s, setS] = useState<GameState | null>(() => loadRun());
   const [meta, setMeta] = useState<Meta>(() => loadMeta());
-  const [view, setView] = useState<"title" | "game" | "graveyard" | "codex">("title");
+  // ?view=game 이면 타이틀을 건너뛰고 저장된 화면으로(화면 점검용 — 스크린샷 스크립트)
+  const [view, setView] = useState<"title" | "game" | "graveyard" | "codex">(() =>
+    typeof location !== "undefined" && new URLSearchParams(location.search).get("view") === "game" && loadRun() ? "game" : "title",
+  );
   const [shown, setShown] = useState(() => loadRun()?.logCount ?? 0);
   const [speed, setSpeed] = useState<Speed>(2);
   const [auto, setAuto] = useState(false);

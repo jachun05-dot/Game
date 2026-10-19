@@ -20,6 +20,7 @@ import type { Ctl, Speed } from "./App";
 import { CharacterSheet } from "./CharacterSheet";
 import { CLASS_ART, FRAG_ICON, GEAR_ICON, LINE_ICON, MONSTER_ART, SCENE_ART } from "./art";
 import { TIPS, currentTip } from "./tips";
+import { Icon } from "./icons";
 
 export function Shell({ children, wide }: { children: ReactNode; wide?: boolean }) {
   return <main className={`shell${wide ? " wide" : ""}`}>{children}</main>;
@@ -37,7 +38,7 @@ export function Card({ title, children, className }: { title?: ReactNode; childr
 export function Bar({ value, max, tone }: { value: number; max: number; tone: "hp" | "food" | "tired" | "enemy" }) {
   const pct = Math.max(0, Math.min(100, (value / max) * 100));
   return (
-    <div className={`bar bar-${tone}`}>
+    <div className={`bar bar-${tone}${tone === "hp" && pct <= 30 ? " low" : ""}`}>
       <div className="bar-fill" style={{ width: `${pct}%` }} />
     </div>
   );
@@ -73,23 +74,23 @@ export function HeroHeader({ s, extra, onOpen }: { s: GameState; extra?: ReactNo
       <img className="portrait" src={CLASS_ART[s.hero.cls].face} alt="" />
       <div className="hero-info">
         <div className="hero-name">
-          {s.hero.name} <span className="dim">{CLASSES[s.hero.cls].name} Lv.{s.hero.level}</span>
+          <span>{s.hero.name}</span> <span className="lv-badge">Lv {s.hero.level}</span> <span className="dim">{CLASSES[s.hero.cls].name}</span>
           {s.hero.faith && <span className="faith-tag">{s.hero.faith} {"★".repeat(tier(s))}</span>}
           {s.heretic && <span className="faith-tag heretic">현상수배</span>}
         </div>
         <div className="hp-line">
-          <span>HP</span>
+          <span aria-label="HP"><Icon name="heart" /></span>
           <Bar value={s.hero.hp} max={hp} tone="hp" />
           <span className="num">
             {s.hero.hp}/{hp}
           </span>
         </div>
         <div className="hero-meta">
-          <span>{s.gold}G</span>
-          <span>AC {heroAc(s)}</span>
-          <span>등급 {s.rank}</span>
+          <span className="stat-pill gold" title="가진 돈"><Icon name="coin" />{s.gold}G</span>
+          <span className="stat-pill ac" title="방어도(AC)"><Icon name="shield" />AC {heroAc(s)}</span>
+          <span className="stat-pill rank" title="등급(클리어한 섹터 수)"><Icon name="crest" />등급 {s.rank}</span>
           {extra}
-          {onOpen && <span className="accent">장비 ›</span>}
+          {onOpen && <span className="more">장비 <Icon name="chev" /></span>}
         </div>
         <InjuryTags s={s} />
       </div>
@@ -194,14 +195,15 @@ export function TopBar({ ctl, title }: { ctl: Ctl; title: ReactNode }) {
   return (
     <div className="topbar">
       <button className="link" onClick={ctl.goTitle} aria-label="타이틀로">
-        ≡
+        <Icon name="menu" />
       </button>
       <span className="topbar-title">{title}</span>
       <button className="gear-btn" onClick={() => ctl.setSheet(true)} aria-label="캐릭터와 장비">
+        <Icon name="bag" />
         장비
       </button>
       <button className={`gear-btn${open ? " on" : ""}`} onClick={() => setOpen(!open)} aria-expanded={open} aria-label="설정">
-        ⚙ <span className="small">{ctl.speed === 0 ? "즉시" : `${ctl.speed}×`}{ctl.auto ? ` · 자동(${GOAL_SHORT[ctl.s.autoGoal] ?? "탐험"})` : ""}</span>
+        <Icon name="gear" /> <span className="small">{ctl.speed === 0 ? "즉시" : `${ctl.speed}×`}{ctl.auto ? ` · 자동(${GOAL_SHORT[ctl.s.autoGoal] ?? "탐험"})` : ""}</span>
       </button>
       {glossary && <Glossary onClose={() => setGlossary(false)} />}
       {open && <div className="settings-backdrop" onClick={() => setOpen(false)} />}
