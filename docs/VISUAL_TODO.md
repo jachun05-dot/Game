@@ -11,8 +11,8 @@
 |---|---|---|---|
 | 직업 그림(전신+얼굴) | 4 | 4 | 0 |
 | 몬스터 스프라이트 | 83 | 32 | **51** |
-| 장비 아이콘 | 75 | 31 | **44** |
-| 방 아이콘 | 18 | 11 | **7** |
+| 장비 아이콘 | 75 | 40 | **35** |
+| 방 아이콘 | 18 | 12 | **6** |
 | 미궁 장면(지도 배경) | 섹터 6 + 2섹터 밤 + 끝없는 미궁 | 4 | **4** |
 | 마을 장면 | 9 | 9 | 0 |
 | 훈련 갈래 아이콘(`LINE_ICON`) | 10 | 0 | **10** |
@@ -35,8 +35,8 @@ UI·출시용 그림(앱 아이콘·공유 미리보기·소모품·상태·신�
 - [x] 장면 `dungeon3` (045)
 - [x] 기본 몬스터 7 (046~052): plaguerat 역병 쥐떼, leech 진흙 거머리, toad 독두꺼비, snail 산성 달팽이, mold 곰팡이 괴물, shroudmold 사제복 균사체, gargoyle 잠긴 석상
 - [x] 희귀·정예·보스 5 (053~057) — 청소부 sweeper3는 F절(1섹터 청소부부터): 희귀 pearlleech 진주 먹은 거머리, sporecap 마석 균모자, shellsnail 마석 껍질 달팽이 / 정예 drownedchoir 익사한 성가대 / 보스 mycomother 가라앉은 본당의 균모
-- [ ] (058·059 생성 대기) 장비 9: antidotering 해독의 반지, sporemask 포자 가면, leechcharm 거머리 이빨 부적, tidestaff 조수의 지팡이, choirbell 성가대의 녹청 종, bronzeblade 청동 장검, corkshield 코르크 방패, waders 물장화, oiledleather 기름 먹인 가죽 갑옷
-- [ ] (060 생성 대기) 방 아이콘 altar 공양 제단
+- [x] (058·059) 장비 9: antidotering 해독의 반지, sporemask 포자 가면, leechcharm 거머리 이빨 부적, tidestaff 조수의 지팡이, choirbell 성가대의 녹청 종, bronzeblade 청동 장검, corkshield 코르크 방패, waders 물장화, oiledleather 기름 먹인 가죽 갑옷
+- [x] (060) 방 아이콘 altar 공양 제단
 
 ### C. 4섹터 "불타는 광산 갱도"
 - [ ] 장면 `dungeon4`

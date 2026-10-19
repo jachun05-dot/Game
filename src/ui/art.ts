@@ -109,6 +109,7 @@ export const ROOM_ICON: Record<string, SpriteArt> = {
   boss: { src: "./room-boss.png", w: 30, h: 35 },
   portal: { src: "./room-portal.png", w: 26, h: 33 },
   relic: { src: "./room-relic.png", w: 31, h: 38 },
+  altar: { src: "./room-altar.png", w: 30, h: 29 },
 };
 
 // 장비 아이콘(원래 도트 크기, 목록 1배 · 장비 발견 카드 2배). 아이콘이 없는 장비는 글자만 나온다
@@ -143,6 +144,15 @@ export const GEAR_ICON: Record<string, SpriteArt> = {
   steelsword: { src: "./gear-steelsword.png", w: 21, h: 21 },
   steelshield: { src: "./gear-steelshield.png", w: 18, h: 18 },
   oakstaff: { src: "./gear-oakstaff.png", w: 21, h: 22 },
+  oiledleather: { src: "./gear-oiledleather.png", w: 22, h: 29 },
+  bronzeblade: { src: "./gear-bronzeblade.png", w: 32, h: 32 },
+  corkshield: { src: "./gear-corkshield.png", w: 29, h: 29 },
+  waders: { src: "./gear-waders.png", w: 28, h: 34 },
+  antidotering: { src: "./gear-antidotering.png", w: 16, h: 17 },
+  sporemask: { src: "./gear-sporemask.png", w: 29, h: 27 },
+  leechcharm: { src: "./gear-leechcharm.png", w: 19, h: 28 },
+  tidestaff: { src: "./gear-tidestaff.png", w: 27, h: 32 },
+  choirbell: { src: "./gear-choirbell.png", w: 16, h: 28 },
   queencloak: { src: "./gear-queencloak.png", w: 23, h: 22 },
 };
 

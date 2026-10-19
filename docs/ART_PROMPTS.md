@@ -584,3 +584,7 @@ Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, 
 - 익사한 성가대 84×98(103격자) — 녹청 청동 종 군체, 얼굴들이 노래함. 녹청은 의도한 색이라 보정 안 함
 - 가라앉은 본당의 균모 200×198(200격자) → **절반 등록** 100×99. 장면의 신상이 곰팡이에 뚫린 상반신(아래가 화면 밖으로 잘림 — 물에서 솟은 모습으로 읽혀 그대로). 뿌리 위 워터마크 18픽셀(저채도 회색)을 주변색으로
 - 058·059 장비 시트, 060 공양 제단 아이콘은 생성 대기
+
+## 058~060 (2026-10-19) — 3섹터 장비 9·공양 제단
+
+결과: 모두 채택. 시트 둘 다 100격자. 058 시트에 코르크 방패가 하나 더 그려져(6개) 중복 1개 버림. 물장화 아래 워터마크 4픽셀을 주변색으로. 공양 제단은 작게 그려져 **180격자**로 복원해 30×29(다른 방 아이콘 크기). `public/gear-{bronzeblade,corkshield,tidestaff,oiledleather,waders,sporemask,leechcharm,antidotering,choirbell}.png`, `public/room-altar.png`
