@@ -1,5 +1,5 @@
 // 직업별 테스트 봇의 성장 방식(훈련 선택). sim-mage.ts·sim-gate.ts가 같이 쓴다.
-import { BRANCH_KEYS, ELEMENT_KEYS, STYLE_KEYS, type BranchKey, type ElementKey, type StyleKey } from "../src/game/elements";
+import { BRANCH_KEYS, ELEMENT_KEYS, ROGUE_KEYS, STYLE_KEYS, type BranchKey, type ElementKey, type RogueKey, type StyleKey } from "../src/game/elements";
 import type { ClassId } from "../src/game/classes";
 import type { GameState } from "../src/game/types";
 
@@ -39,3 +39,11 @@ for (const a of BRANCH_KEYS) for (const b of BRANCH_KEYS) if (a !== b) {
 }
 plans.push({ id: "a-rotate", kind: "모험가 셋", label: "세 갈래 돌아가며", cls: "adventurer", pick: (_s, lv) => BRANCH_KEYS[lv % 3] });
 plans.push({ id: "a-random", kind: "모험가 셋", label: "매번 무작위", cls: "adventurer", pick: (s) => BRANCH_KEYS[(s.seed * 31 + s.hero.level * 17) % 3] });
+
+// ── 로그: 암습·독술·쇠뇌(4레벨 각인이 왼손 무기를 정한다) ──
+const RN: Record<RogueKey, string> = { assassin: "암습", venom: "독술", xbow: "쇠뇌" };
+for (const k of ROGUE_KEYS) plans.push({ id: `r-mono-${k}`, kind: "로그 단일", label: `${RN[k]} 몰빵`, cls: "rogue", pick: () => k });
+for (const a of ROGUE_KEYS) for (const b of ROGUE_KEYS) if (a !== b) {
+  plans.push({ id: `r-dual-${a}-${b}`, kind: "로그 두 갈래", label: `${RN[a]} 액티브·특화 + ${RN[b]} 패시브`, cls: "rogue", pick: (_s, lv) => (lv === 4 || lv === 7 || lv % 2 === 1 ? a : b) });
+}
+plans.push({ id: "r-random", kind: "로그 셋", label: "매번 무작위", cls: "rogue", pick: (s) => ROGUE_KEYS[(s.seed * 31 + s.hero.level * 17) % 3] });

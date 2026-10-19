@@ -15,6 +15,8 @@ export const CLASS_ART: Record<ClassId, ClassArt> = {
   adventurer: { full: "./hero.png", w: 37, h: 90, face: "./hero-face.png" },
   warrior: { full: "./warrior.png", w: 35, h: 86, face: "./warrior-face.png" },
   mage: { full: "./mage.png", w: 44, h: 86, face: "./mage-face.png" },
+  // 로그: 전용 그림이 나올 때까지 모험가 그림을 빌린다(docs/VISUAL_TODO.md)
+  rogue: { full: "./hero.png", w: 37, h: 90, face: "./hero-face.png" },
 };
 
 // 몬스터 도트 그림(public/mon-*.png). 모두 기준 이미지와 같은 도트 크기라 크기 차이가 곧 덩치 차이다.

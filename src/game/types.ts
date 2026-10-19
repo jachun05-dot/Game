@@ -59,6 +59,14 @@ export interface Enemy {
   acUp?: number;
   /** 독 바른 칼: 남은 라운드와 라운드 피해 주사위 */
   venom?: { rounds: number; dice: [number, number] };
+  /** 로그 독(겹친 수·남은 라운드): 라운드마다 겹친 수 × (1d4 + 독 보정) */
+  tox?: { n: number; rounds: number };
+  /** 로그 약화: 주는 피해 −n */
+  cripple?: { n: number; rounds: number };
+  /** 부패: 받는 피해 ×1.5(남은 라운드) */
+  rot?: number;
+  /** 쇠뇌 표식: AC·명중 −(쇠뇌의 각인 1, 낙인 2) */
+  marked?: boolean;
   /** 한 번 쓰러졌다가 다시 일어섰다(화신 2단계) */
   reborn?: boolean;
   /** 빚 독촉(탐욕의 가르침): 남은 라운드 — 받는 피해 2배, 쓰러지면 마석 ×3 */
@@ -111,6 +119,13 @@ export interface CombatState {
   rampage?: number;
   /** 연막: 이 전투의 도주 보너스 */
   smoke?: number;
+  /** 로그: 손쇠뇌가 장전돼 있다 / 독병을 다시 던질 수 있을 때까지 / 그림자 몸으로 첫 공격을 흘렸다 / 쏜 볼트 수(회수) */
+  xbowReady?: boolean;
+  flaskCd?: number;
+  shadowDodged?: boolean;
+  boltsShot?: number;
+  /** 로그 뒤잡기: 첫 공격을 이미 했다 */
+  swung?: boolean;
   /** 로그 접기: 이 전투가 시작된 로그 번호(등장 줄)와 시작 HP */
   logFrom?: number;
   hpStart?: number;
@@ -394,7 +409,7 @@ export interface GameState {
   gold: number;
   /** heart: 1섹터 보스가 남기는 "거대 쥐의 마석 심장"(레벨 3→4 훈련 대가) */
   /** banner: 2섹터 "장군의 녹슨 휘장", spore: 3섹터 "균모의 포자낭". whetstone 숫돌(부식), antidote 해독초(독·마비) */
-  inventory: { food: number; potion: number; scroll: number; heart: number; banner: number; spore: number; scale: number; fang: number; salve: number; firewood: number; powder: number; rope: number; incense: number; bandage: number; herb: number; whetstone: number; antidote: number };
+  inventory: { food: number; potion: number; scroll: number; heart: number; banner: number; spore: number; scale: number; fang: number; salve: number; firewood: number; powder: number; rope: number; incense: number; bandage: number; herb: number; whetstone: number; antidote: number; bolt: number };
   /** 이미 얻은 보스 증표(섹터마다 한 번만 나온다) */
   trophies: string[];
   /** 착용 장비(슬롯 → gear.ts의 GEAR id) */

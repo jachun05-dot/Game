@@ -54,7 +54,7 @@ for (let i = 0; i < N; i++) {
   const seed = START + i;
   const s = newRun(seed * 7919);
   s.faithsKnown = Object.values(FAITH);
-  const cls = (["adventurer", "warrior", "mage"] as ClassId[])[i % 3];
+  const cls = (["adventurer", "warrior", "mage", "rogue"] as ClassId[])[i % 4];
   const faith = [null, ...Object.values(FAITH)][i % 9];
   const steps: Action[] = [{ t: "pickClass", cls }, { t: "create", name: "퍼즈", candidate: 0, faith }];
   try {

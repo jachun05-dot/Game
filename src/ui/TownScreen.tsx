@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { DUMMY_ROUNDS, DUMMY_SCENARIOS, dummyAfterTraining, dummyTest, type DummyReport, type DummyScenario } from "../game/dummy";
 import { BAL, STAT_KEYS, STAT_LABEL, TRAININGS } from "../game/data";
-import { CORRODE_NAME, GEAR, SLOTS, corrosionOf, gearEffect, hasShield, targetSlot } from "../game/gear";
+import { CORRODE_NAME, GEAR, SLOTS, corrosionOf, gearEffect, hasShield, offOf, targetSlot } from "../game/gear";
+import { OFF_NAME } from "./components";
 import { corrodedSlots, corrosionEffect, repairCost } from "../game/hazards";
 import { CLASSES } from "../game/classes";
 import { hasLevelTable } from "../game/elements";
 import { LAST_SECTOR } from "../game/endless";
 import { shortcutSectors } from "../game/dungeon";
-import { townMaxLevel, BLACK_MARKET_MULT, canTrain, innCost, outlawTrainerHere, gateOf, nextSkill, shopPrice, trainCost } from "../game/town";
+import { townMaxLevel, BLACK_MARKET_MULT, canTrain, innCost, outlawTrainerHere, gateOf, nextSkill, rogueGearOk, shopPrice, trainCost } from "../game/town";
 import type { GameState } from "../game/types";
 import { SKILLS } from "../game/skills";
 import { FRAGMENTS, fragStatText } from "../game/fragments";
@@ -31,12 +32,13 @@ const ITEM_INFO = {
   firewood: { name: "장작", desc: "야영할 때 불을 피워 냉기 0 + 동상 한 단계 (4섹터)" },
   rope: { name: "밧줄", desc: "벼랑길을 반드시 건넌다 (5섹터)" },
   incense: { name: "옛 신의 향", desc: "정화(신앙심을 깎는 흰빛)를 3번 막는다 — 외곽 밀수꾼의 물건 (6섹터)" },
+  bolt: { name: "볼트 10발", desc: "로그 손쇠뇌 탄환. 이긴 전투에서는 쏜 것의 절반을 주워 온다" },
 } as const;
 
 /** 3섹터 소모품은 2섹터를 클리어했거나 가지고 있을 때만 보여 준다 */
 function shopItems(s: GameState): (keyof typeof ITEM_INFO)[] {
   const need: Partial<Record<keyof typeof ITEM_INFO, number>> = { antidote: 2, whetstone: 2, salve: 3, firewood: 3, rope: 4, incense: 5 };
-  return (Object.keys(ITEM_INFO) as (keyof typeof ITEM_INFO)[]).filter((k) => s.rank >= (need[k] ?? 0) || s.inventory[k] > 0);
+  return (Object.keys(ITEM_INFO) as (keyof typeof ITEM_INFO)[]).filter((k) => (k === "bolt" ? rogueGearOk(s, "rgHandXbow") : s.rank >= (need[k] ?? 0) || s.inventory[k] > 0));
 }
 
 export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => void }) {
@@ -164,7 +166,7 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
             <SceneBanner id="smithy" />
             <p className="dim small">장비는 강해지는 수단이 아니라 살아남기 위한 최소한이다.</p>
             {Object.values(GEAR)
-              .filter((g) => g.price !== undefined)
+              .filter((g) => g.price !== undefined && (!g.rogueOff || rogueGearOk(s, g.id)))
               .map((g) => {
                 const owned = Object.values(s.gear).includes(g.id);
                 const slot = targetSlot(s, g.id);
@@ -332,7 +334,8 @@ function DungeonPrep({ s, busy, onShop, onEnter }: { s: GameState; busy: boolean
           {inv.firewood > 0 && <> · 장작 <b>{inv.firewood}</b></>}
           {inv.powder > 0 && <> · 화약통 <b>{inv.powder}</b></>}
           {inv.rope > 0 && <> · 밧줄 <b>{inv.rope}</b></>}
-          {inv.incense > 0 && <> · 옛 신의 향 <b>{inv.incense}</b></>} · 소지금 <b>{s.gold}G</b>
+          {inv.incense > 0 && <> · 옛 신의 향 <b>{inv.incense}</b></>}
+          {s.gear.offhand === "rgHandXbow" && <> · 볼트 <b>{inv.bolt}</b></>} · 소지금 <b>{s.gold}G</b>
         </p>
         {inv.food < 3 && <p className="small warn">말린 고기가 적다 — 일주일을 버티기 어렵다.</p>}
         {s.hero.hp < maxHp(s) && <p className="small warn">HP {s.hero.hp}/{maxHp(s)} — 다 차지 않은 채 들어간다. (여관은 1~3주에만 쓸 수 있다. 물약을 넉넉히 챙기자)</p>}
@@ -480,6 +483,7 @@ function TrainingPanel({ ctl, onClose }: { ctl: Ctl; onClose: () => void }) {
   const next = s.hero.level + 1;
   const basic = CLASSES[s.hero.cls].firstSkill;
   const needShield = sk && SKILLS[sk].shield && !hasShield(s);
+  const needOff = sk && SKILLS[sk].off && offOf(s) !== SKILLS[sk].off ? SKILLS[sk].off : null;
 
   const toggle = (k: StatKey) => {
     setFree((f) => (f.length < 2 ? [...f, k] : [f[1], k]));
@@ -534,6 +538,7 @@ function TrainingPanel({ ctl, onClose }: { ctl: Ctl; onClose: () => void }) {
           → {a}
         </p>
       ))}
+      {needOff && <p className="small warn">【{SKILLS[sk!].name}】은(는) 왼손에 {OFF_NAME[needOff]}이(가) 있어야 쓸 수 있다 — 그 갈래의 4레벨 각인이나 10레벨 낙인을 받아야 한다.</p>}
       {needShield && <p className="small warn">🛡 지금 방패가 없어 【{SKILLS[sk!].name}】을(를) 배워도 쓸 수 없다. 대장간에서 나무 방패({GEAR.shield.price}G)를 먼저 사 두자.</p>}
       <p className="eyebrow">자유 배분 2포인트 (같은 능력치에 두 번도 가능)</p>
       <div className="chips">

@@ -90,7 +90,9 @@ export function clearCorrosion(s: GameState, slot: string): void {
 // ── 독·마비 ──
 
 function poisonMult(s: GameState): number {
-  return gearHas(s, (g) => g.poisonRes).reduce((m, g) => m * g.poisonRes!, 1);
+  // 로그: 해독 지식(절반), 독의 몸(면역)
+  const rogue = s.skills.includes("rgToxBody") ? 0 : s.skills.includes("rgAntidote") ? 0.5 : 1;
+  return gearHas(s, (g) => g.poisonRes).reduce((m, g) => m * g.poisonRes!, 1) * rogue;
 }
 
 export function poisonOf(s: GameState): number {
@@ -143,7 +145,7 @@ export function useAntidote(s: GameState): void {
   if (poisonOf(s) <= 0 && paraOf(s, worst) <= 0) return;
   s.inventory.antidote -= 1;
   const out: string[] = [];
-  const n = s.skills.includes("scholar") ? 2 : 1; // 박식: 두 단계씩
+  const n = s.skills.includes("scholar") || s.skills.includes("rgAntidote") ? 2 : 1; // 박식·해독 지식: 두 단계씩
   if (poisonOf(s) > 0) {
     s.poison = Math.max(0, poisonOf(s) - n);
     out.push(s.poison ? "독이 조금 빠졌다" : "독이 빠졌다");

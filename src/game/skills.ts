@@ -1,9 +1,10 @@
-import { gearBonus, hasShield } from "./gear";
+import { gearBonus, hasShield, offOf } from "./gear";
 import { fragSkills } from "./fragments";
 import { mindResist } from "./mind";
 import { faithHungerMult, pietyCapBonus } from "./faith";
 import type { GameState } from "./types";
-import type { ElementKey } from "./elements";
+import { CLASS_TRAIT } from "./classes";
+import type { ElementKey, OffKind } from "./elements";
 
 // 기술(DESIGN 7절 "훈련은 기술을 가르쳐준다"): 전투는 자동이므로 플레이어가 누르는 기술은 없다.
 // - 액티브: 조건이 맞으면 저절로 발동(전투 시작 시, 대상 HP n% 이하, 내 HP n% 이하 등). 전투당 횟수 제한.
@@ -19,7 +20,15 @@ export type Trigger =
   | { on: "react" };
 
 export type SkillEffect =
-  | { type: "strike"; hit: number; dmg: number; dmgMult?: number; autoHit?: boolean; stun?: number; crit?: boolean }
+  | { type: "strike"; hit: number; dmg: number; dmgMult?: number; autoHit?: boolean; stun?: number; crit?: boolean; execute?: boolean }
+  /** 로그 독: 대상(가장 강한 적·약한 둘·전원)에 독을 n겹, 명중 −hitDown */
+  | { type: "tox"; n: number; to: "strongest" | "two" | "all"; rounds: number; hitDown?: number; text: string }
+  /** 로그 약화: 가장 강한 적이 주는 피해 −n (보스·정예는 bossRounds) */
+  | { type: "cripple"; n: number; rounds: number; bossRounds?: number; text: string }
+  /** 투척 단검: 가장 약한 적에게 확정 명중, 주사위 + 민첩 보정 */
+  | { type: "throw"; dice: [number, number]; text: string }
+  /** 손쇠뇌 기술 사격(볼트 1발): 가장 강한 적(two면 둘), 확정 명중, 피해 ×mult, stun·flee 부가 */
+  | { type: "bolt"; to: "strongest" | "two"; mult: number; crit?: boolean; stun?: number; bossStun?: number; flee?: number; cripple?: { n: number; rounds: number; bossRounds: number }; text: string }
   /** 손버릇: 반드시 맞는 찌르기, 그 적을 쓰러뜨리면 마석 ×1.5 */
   | { type: "steal"; dice: [number, number]; text: string }
   /** 연막: 적 전원 행동 불가 + 그 전투 도주 보너스 */
@@ -119,6 +128,8 @@ export interface SkillDef {
   el?: ElementKey;
   /** 방패를 들고 있어야만 효과가 있다 */
   shield?: boolean;
+  /** 로그: 이 왼손 무기를 들고 있어야만 효과가 있다(gear.ts offOf) */
+  off?: OffKind;
 }
 
 export const SKILLS: Record<string, SkillDef> = {
@@ -455,7 +466,7 @@ Object.assign(SKILLS, {
   gladSeal: { id: "gladSeal", name: "검투의 낙인", kind: "passive", desc: "최대 HP +6, 치명타 확률 +10%, 치명타 피해 주사위 ×3, 검투 액티브 전투당 +1회", passive: { hp: 6, crit: 10 } },
   swordDance: { id: "swordDance", name: "검무", kind: "active", desc: "전투 시작 시 적 전원을 한 번씩 벤다", trigger: { on: "start" }, effect: { type: "sweep", dmgMult: 1 }, uses: 1 },
   arenaSense: { id: "arenaSense", name: "투기장의 감", kind: "passive", desc: "명중 +2, AC +1, 함정 회피 판정 +3", passive: { hit: 2, ac: 1 } },
-  oneFlash: { id: "oneFlash", name: "일섬", kind: "active", desc: "궁극기. 전투 시작 시 가장 강한 적에게 확정 치명타, 피해 ×3", trigger: { on: "start" }, effect: { type: "strikeStrong", mult: 3, crit: true, text: "한 줄기 빛처럼 벤다" }, uses: 1 },
+  oneFlash: { id: "oneFlash", name: "일섬", kind: "active", desc: "궁극기. 전투 시작 시 가장 강한 적에게 확정 치명타, 피해 ×2", trigger: { on: "start" }, effect: { type: "strikeStrong", mult: 2, crit: true, text: "한 줄기 빛처럼 벤다" }, uses: 1 },
   flowWater: { id: "flowWater", name: "물 흐르듯", kind: "passive", desc: "적의 공격이 빗나가면 20% 확률로 반격(횟수 제한 없음)" },
   deathDance: { id: "deathDance", name: "죽음의 춤", kind: "active", desc: "내 HP 50% 이하가 되면 3라운드 동안 한 번 더 공격, AC +2", trigger: { on: "selfBelow", pct: 50 }, effect: { type: "rampage", rounds: 3, ac: 2, text: "칼끝이 춤추기 시작한다" }, uses: 1 },
   gladAvatar: { id: "gladAvatar", name: "검성", kind: "passive", desc: "매 라운드 첫 공격이 반드시 맞는다, 치명타 확률 +10%, 피해 +4", passive: { crit: 10, dmg: 4 } },
@@ -490,6 +501,60 @@ Object.assign(SKILLS, {
   vanish: { id: "vanish", name: "사라지기", kind: "active", desc: "내 HP 30% 이하가 되면 적 전원 2라운드 행동 불가", trigger: { on: "selfBelow", pct: 30 }, effect: { type: "stunAll", rounds: 2 }, uses: 1 },
 } satisfies Record<string, SkillDef>);
 
+// ── 로그(2026-10-19, docs/ROGUE.md): 암습 = 치명타 화력, 독술 = 지속 피해 + 서서히 약화, 쇠뇌 = 적당한 화력 + 즉시 제압.
+// off가 붙은 기술은 그 왼손 무기(4레벨 각인이 준다)를 들고 있어야 효과가 있다. 효과 처리는 combat.ts "로그" 절.
+Object.assign(SKILLS, {
+  rgBackstab: { id: "rgBackstab", name: "뒤잡기", kind: "passive", desc: "로그 기본기. 전투의 첫 공격은 치명타 확률 +15%" },
+  // 암습(민첩·행운): 치명타
+  rgEye: { id: "rgEye", name: "그림자 눈", kind: "passive", desc: "명중 +1, 치명타 확률 +4%", passive: { hit: 1, crit: 4 } },
+  rgThroat: { id: "rgThroat", name: "목 긋기", kind: "active", desc: "전투 시작 시 가장 약한 적에게 첫 공격이 반드시 명중, 피해 ×1.5", trigger: { on: "start" }, effect: { type: "strike", hit: 0, dmg: 0, dmgMult: 1.5, autoHit: true }, uses: 1 },
+  rgAssassinMark: { id: "rgAssassinMark", name: "암습의 각인", kind: "passive", desc: "왼손에 두 번째 단검(라운드마다 왼손 찌르기). 최대 HP +4, 치명타 확률 +8%, 치명타 피해 +2, 암습 액티브 전투당 +1회", passive: { hp: 4, crit: 8 } },
+  rgShade: { id: "rgShade", name: "그림자 숨기", kind: "active", desc: "내 HP 50% 이하가 되면 2라운드 동안 적 명중 −4", trigger: { on: "selfBelow", pct: 50 }, effect: { type: "fog", hit: 4, rounds: 2, text: "그림자 속으로 몸을 낮췄다" }, uses: 1 },
+  rgDualHands: { id: "rgDualHands", name: "양손 놀림", kind: "passive", desc: "왼손 찌르기 피해 1d3 → 1d4", off: "dagger" },
+  rgVital: { id: "rgVital", name: "급소 연타", kind: "active", desc: "치명타가 터지면 같은 적을 한 번 더 찌른다(전투당 1회)", trigger: { on: "react" }, uses: 1 },
+  rgWeakSpot: { id: "rgWeakSpot", name: "약점 간파", kind: "passive", desc: "보스·정예에게 치명타 확률 +8%" },
+  rgExecute: { id: "rgExecute", name: "처형", kind: "active", desc: "HP 20% 이하인 적을 그 자리에서 끝낸다(보스·정예는 반드시 명중, 피해 ×1.5)", trigger: { on: "targetBelow", pct: 20 }, effect: { type: "strike", hit: 0, dmg: 0, dmgMult: 1.5, autoHit: true, execute: true }, uses: 1 },
+  rgAssassinSeal: { id: "rgAssassinSeal", name: "암습의 낙인", kind: "passive", desc: "치명타 확률 +5%, 첫 라운드 피해 +5, 암습 액티브 전투당 +1회. 왼손이 다른 무기면 두 번째 단검으로 바꾼다", passive: { crit: 5 } },
+  rgBladeDance: { id: "rgBladeDance", name: "칼춤", kind: "active", desc: "전투 시작 시 1라운드 동안 한 번 더 공격", trigger: { on: "start" }, effect: { type: "rampage", rounds: 1, text: "두 자루가 번갈아 춤춘다" }, uses: 1 },
+  rgDeathSense: { id: "rgDeathSense", name: "죽음의 감각", kind: "passive", desc: "치명타 피해 +3, 치명타를 낼 때마다 HP +2" },
+  rgOneKill: { id: "rgOneKill", name: "일격필살", kind: "active", desc: "궁극기. 전투 시작 시 가장 강한 적에게 확정 치명타, 피해 ×3", trigger: { on: "start" }, effect: { type: "strikeStrong", mult: 3, crit: true, text: "숨을 멈추고, 한 번에 끝낸다" }, uses: 1 },
+  rgShadowBody: { id: "rgShadowBody", name: "그림자의 몸", kind: "passive", desc: "AC +2, 전투마다 나를 노린 첫 공격은 빗나간다", passive: { ac: 2 } },
+  rgVanish: { id: "rgVanish", name: "사라지기", kind: "active", desc: "내 HP 30% 이하가 되면 반드시 전투에서 빠져나간다(전투당 1회)", trigger: { on: "selfBelow", pct: 30 }, effect: { type: "blink", text: "그림자에 녹아 사라졌다" }, uses: 1 },
+  rgAssassinAvatar: { id: "rgAssassinAvatar", name: "그림자의 화신", kind: "passive", desc: "최대 HP +10, 치명타 확률 +10%, 왼손 찌르기가 라운드마다 두 번", passive: { hp: 10, crit: 10 } },
+  // 독술(민첩·지능): 지속 피해 + 서서히 약화
+  rgToxEdge: { id: "rgToxEdge", name: "독 바른 칼날", kind: "passive", desc: "단검이 맞힐 때마다 20% 확률로 독 1겹(3라운드, 겹마다 라운드당 1d3)" },
+  rgToxThrow: { id: "rgToxThrow", name: "독 단검 투척", kind: "active", desc: "전투 시작 시 가장 약한 적 둘에게 독 1겹(3라운드)", trigger: { on: "start" }, effect: { type: "tox", n: 1, to: "two", rounds: 3, text: "독 묻은 단검 두 자루를 던졌다" }, uses: 1 },
+  rgVenomMark: { id: "rgVenomMark", name: "독술의 각인", kind: "passive", desc: "왼손에 독병 주머니(4라운드마다 적 전원에게 독병). 최대 HP +5, 독 피해 +1, 독 지속 +1라운드, 중독된 적 명중 −1, 독술 액티브 전투당 +1회", passive: { hp: 5 } },
+  rgWither: { id: "rgWither", name: "쇠약 독", kind: "active", desc: "전투 시작 시 가장 강한 적이 주는 피해 −3(4라운드)", trigger: { on: "start" }, effect: { type: "cripple", n: 3, rounds: 4, text: "팔다리를 녹이는 독을 먹였다" }, uses: 1 },
+  rgAntidote: { id: "rgAntidote", name: "해독 지식", kind: "passive", desc: "독·마비에 걸릴 확률 절반, 해독초가 두 단계씩 듣는다" },
+  rgToxFog: { id: "rgToxFog", name: "독안개", kind: "active", desc: "전투 시작 시 독병을 깨뜨려 적 전원에게 독 1겹 + 명중 −2(3라운드)", trigger: { on: "start" }, effect: { type: "tox", n: 1, to: "all", rounds: 3, hitDown: 2, text: "독병이 깨지며 푸른 안개가 번진다" }, uses: 1, off: "flask" },
+  rgToxStack: { id: "rgToxStack", name: "맹독", kind: "passive", desc: "독이 3겹까지 쌓인다(없으면 2겹)" },
+  rgRot: { id: "rgRot", name: "부패", kind: "active", desc: "중독된 적이 셋 이상이거나 보스가 중독되면 그 적들이 2라운드 동안 받는 피해 ×1.25", trigger: { on: "react" }, uses: 1 },
+  rgVenomSeal: { id: "rgVenomSeal", name: "독술의 낙인", kind: "passive", desc: "독 피해 +2, 중독된 적 AC −1, 독술 액티브 전투당 +1회. 왼손이 다른 무기면 독병 주머니로 바꾼다" },
+  rgToxBurst: { id: "rgToxBurst", name: "독 폭발", kind: "active", desc: "독이 2겹 이상 쌓인 적의 남은 독 피해를 한 번에 터뜨린다(전투당 1회)", trigger: { on: "react" }, uses: 1 },
+  rgRotBlood: { id: "rgRotBlood", name: "썩은 피", kind: "passive", desc: "중독된 적을 쓰러뜨리면 HP +4" },
+  rgPlagueBlade: { id: "rgPlagueBlade", name: "역병의 칼", kind: "active", desc: "궁극기. 전투 시작 시 적 전원에게 독 2겹(4라운드) + 명중 −2", trigger: { on: "start" }, effect: { type: "tox", n: 2, to: "all", rounds: 4, hitDown: 2, text: "칼끝에서 역병이 번진다" }, uses: 1 },
+  rgToxBody: { id: "rgToxBody", name: "독의 몸", kind: "passive", desc: "받는 피해 −1, 독에 걸리지 않는다" },
+  rgLastToxin: { id: "rgLastToxin", name: "궁지의 독", kind: "active", desc: "내 HP 30% 이하가 되면 남은 독병을 모두 던진다 — 적 전원 독 2겹 + 명중 −3(2라운드)", trigger: { on: "selfBelow", pct: 30 }, effect: { type: "tox", n: 2, to: "all", rounds: 3, hitDown: 3, text: "허리의 독병을 모두 깨뜨렸다" }, uses: 1, off: "flask" },
+  rgVenomAvatar: { id: "rgVenomAvatar", name: "독의 화신", kind: "passive", desc: "최대 HP +10, 독 피해 ×1.5, 독병을 2라운드마다", passive: { hp: 10 } },
+  // 쇠뇌(민첩·감각): 적당한 화력 + 즉시 제압
+  rgSight: { id: "rgSight", name: "가늠쇠", kind: "passive", desc: "명중 +1, 앞방 엿보기·함정 발견 +2", passive: { hit: 1, perception: 2 } },
+  rgKnife: { id: "rgKnife", name: "투척 단검", kind: "active", desc: "전투 시작 시 가장 약한 적에게 단검을 던진다(확정 명중, 1d6 + 민첩 보정)", trigger: { on: "start" }, effect: { type: "throw", dice: [1, 6], text: "허리춤의 단검을 던졌다" }, uses: 1 },
+  rgXbowMark: { id: "rgXbowMark", name: "쇠뇌의 각인", kind: "passive", desc: "왼손에 손쇠뇌(볼트 20발과 함께). 최대 HP +4, 볼트 피해 +1, 볼트에 맞은 적은 표식(AC·명중 −1), 날아다니는 적에게 볼트 명중 +2, 쇠뇌 액티브 전투당 +1회", passive: { hp: 4 } },
+  rgAnkle: { id: "rgAnkle", name: "발목 꿰기", kind: "active", desc: "전투 시작 시 가장 강한 적의 발목을 쏜다 — 1라운드 행동 불가, 이 전투 도주 +3", trigger: { on: "start" }, effect: { type: "bolt", to: "strongest", mult: 0.5, stun: 1, bossStun: 1, flee: 3, text: "발목을 노려 볼트를 날렸다" }, uses: 1, off: "xbow" },
+  rgQuickLoad: { id: "rgQuickLoad", name: "빠른 장전", kind: "passive", desc: "손쇠뇌를 라운드마다 쏜다(장전에 라운드를 쓰지 않는다)", off: "xbow" },
+  rgWrist: { id: "rgWrist", name: "손목 꿰기", kind: "active", desc: "전투 시작 시 가장 강한 적의 손목을 쏜다 — 주는 피해 −4(3라운드, 보스·정예 2라운드)", trigger: { on: "start" }, effect: { type: "bolt", to: "strongest", mult: 0.5, cripple: { n: 4, rounds: 3, bossRounds: 2 }, text: "무기 쥔 손목을 꿰뚫었다" }, uses: 1, off: "xbow" },
+  rgTarget: { id: "rgTarget", name: "표적 지정", kind: "passive", desc: "표식이 붙은 적에게 단검 치명타 확률 +10%", off: "xbow" },
+  rgSnipe: { id: "rgSnipe", name: "저격", kind: "active", desc: "전투 시작 시 가장 강한 적에게 확정 명중 볼트, 피해 ×2.5", trigger: { on: "start" }, effect: { type: "bolt", to: "strongest", mult: 2.5, text: "숨을 참고 방아쇠를 당겼다" }, uses: 1, off: "xbow" },
+  rgXbowSeal: { id: "rgXbowSeal", name: "쇠뇌의 낙인", kind: "passive", desc: "볼트 피해 +3, 표식이 AC·명중 −2, 쇠뇌 액티브 전투당 +1회. 왼손이 다른 무기면 손쇠뇌로 바꾼다" },
+  rgPierce: { id: "rgPierce", name: "꿰뚫는 볼트", kind: "active", desc: "적이 둘 이상이면 전투 시작 시 볼트 한 발로 가장 강한 둘을 꿰뚫는다", trigger: { on: "start", minEnemies: 2 }, effect: { type: "bolt", to: "two", mult: 1, text: "볼트가 둘을 한 번에 꿰었다" }, uses: 1, off: "xbow" },
+  rgWind: { id: "rgWind", name: "바람 읽기", kind: "passive", desc: "볼트 명중 +2, 날아다니는 적에게 볼트 피해 +3" },
+  rgNail: { id: "rgNail", name: "못박기", kind: "active", desc: "궁극기. 전투 시작 시 가장 강한 적을 2라운드 묶고(보스도) 확정 치명타 볼트", trigger: { on: "start" }, effect: { type: "bolt", to: "strongest", mult: 1, crit: true, stun: 2, bossStun: 2, text: "볼트가 그것을 바닥에 박아 버렸다" }, uses: 1, off: "xbow" },
+  rgHunterStep: { id: "rgHunterStep", name: "사냥꾼의 발", kind: "passive", desc: "AC +2, 도주 +3", passive: { ac: 2, flee: 3 } },
+  rgLastBolt: { id: "rgLastBolt", name: "마지막 볼트", kind: "active", desc: "내 HP 30% 이하가 되면 가장 강한 적에게 확정 치명타 볼트(전투당 1회)", trigger: { on: "selfBelow", pct: 30 }, effect: { type: "bolt", to: "strongest", mult: 1, crit: true, text: "마지막 숨으로 쇠뇌를 겨눴다" }, uses: 1, off: "xbow" },
+  rgXbowAvatar: { id: "rgXbowAvatar", name: "사냥꾼의 화신", kind: "passive", desc: "최대 HP +10, 손쇠뇌를 라운드마다 두 발", passive: { hp: 10 } },
+} satisfies Record<string, SkillDef>);
+
 // 모험가 히든 16레벨: 신에게 배운 자(영구 — 최대 HP +10). 강화·마지막 기술은 faith.ts TEACHINGS, 효과는 combat.ts가 teachOn으로
 Object.assign(SKILLS, {
   godTaught: { id: "godTaught", name: "신에게 배운 자", kind: "passive", desc: "섬기는 신이 직접 16레벨로 이끌었다. 최대 HP +30, 명중 +3, 피해 +5, AC +2 (그 신의 가르침은 그 신을 섬기는 동안)", passive: { hp: 30, hit: 3, dmg: 5, ac: 2 } },
@@ -502,7 +567,12 @@ mindResist.push((s, k) => (k === "fear" && s.skills.includes("painless") ? 0 : 1
 mindResist.push((s, k) => (k === "fear" && fragSkills(s).includes("fragDeadNerve") ? 0 : 1));
 
 /** 배운 기술 + 흡수한 편린의 능력 */
+const PROBE_OFF_S = ((globalThis as any).process?.env?.PROBE_OFF ? (globalThis as any).process.env.PROBE_OFF.split(",") : []) as string[];
 export function allSkills(s: GameState): string[] {
+  if (PROBE_OFF_S.length) return allSkills0(s).filter((id) => !PROBE_OFF_S.includes(id));
+  return allSkills0(s);
+}
+function allSkills0(s: GameState): string[] {
   return [...s.skills, ...fragSkills(s)];
 }
 
@@ -511,12 +581,20 @@ export function hasSkill(s: GameState, id: string): boolean {
 }
 
 /** 배운 패시브 + 편린 능력 + 착용 장비 보정의 합 */
+/** 이 기술의 장비 조건(방패·로그 왼손 무기)이 맞나 */
+function gearOk(s: GameState, d: SkillDef | undefined): boolean {
+  if (!d) return false;
+  if (d.shield && !hasShield(s)) return false;
+  if (d.off && offOf(s) !== d.off) return false;
+  return true;
+}
+
 export function passive(s: GameState, key: Exclude<keyof Passive, "hunger">): number {
   let t = key === "check" ? 0 : gearBonus(s, key);
+  if (key === "flee") t += CLASS_TRAIT[s.hero.cls]?.flee ?? 0; // 로그: 도주 +3
   const earthMark = s.skills.includes("earthMark");
-  const shield = hasShield(s);
   for (const id of allSkills(s)) {
-    if (SKILLS[id]?.shield && !shield) continue; // 방패 기술은 방패가 있어야
+    if (!gearOk(s, SKILLS[id])) continue; // 방패·왼손 무기 기술은 그 장비가 있어야
     const v = SKILLS[id]?.passive?.[key] ?? 0;
     t += earthMark && SKILLS[id]?.el === "earth" && !["earthMark", "earthSeal", "earthAvatar"].includes(id) ? v * 2 : v; // 대지의 각인: 대지 패시브 2배(낙인·화신 제외)
   }
@@ -530,11 +608,10 @@ export function hungerMult(s: GameState): number {
 }
 
 export function activeSkills(s: GameState): SkillDef[] {
-  const shield = hasShield(s);
-  return allSkills(s).map((id) => SKILLS[id]).filter((d) => d && d.kind === "active" && (!d.shield || shield));
+  return allSkills(s).map((id) => SKILLS[id]).filter((d) => d && d.kind === "active" && gearOk(s, d));
 }
 
-/** 기술을 지금 쓸 수 있나(방패 기술은 방패가 있어야) */
+/** 기술을 지금 쓸 수 있나(방패 기술은 방패가, 로그 왼손 기술은 그 무기가 있어야) */
 export function skillWorks(s: GameState, id: string): boolean {
-  return s.skills.includes(id) && (!SKILLS[id]?.shield || hasShield(s));
+  return s.skills.includes(id) && gearOk(s, SKILLS[id]);
 }

@@ -20,6 +20,7 @@ import { darkSight, fallGearMult, ledgeBonus } from "./rift";
 import { ENDLESS_BOSS_EVERY, ENDLESS_NAME, ENDLESS_SECTOR, LAST_SECTOR, endlessGroup, endlessManaMult, generateEndlessFloor } from "./endless";
 import type { Rng } from "./rng";
 import type { CombatState, DungeonState, GameState, Pending, Room, RoomType } from "./types";
+import { CLASS_TRAIT } from "./classes";
 
 // DESIGN 11절(텍스트 전환판): 층 = 방 그래프. 필수 경로(방 사슬)를 먼저 만들고
 // 갈림길은 그 경로에 덧붙이기만 해서 구조적으로 막힐 수 없게 한다.
@@ -778,7 +779,7 @@ const MINE_TRAP: Record<string, { name: string; find: number; disarm: { stat: "s
 
 /** 4섹터 함정 해체 판정 보정 */
 function disarmBonus(s: GameState): number {
-  return (power(s, "trap", 1) ? 3 : 0) + (s.skills.includes("earthLevel") || s.skills.includes("trapHand") ? 3 : 0) + (s.skills.includes("trapMaster") ? 5 : 0);
+  return (CLASS_TRAIT[s.hero.cls]?.disarm ?? 0) + (power(s, "trap", 1) ? 3 : 0) + (s.skills.includes("earthLevel") || s.skills.includes("trapHand") ? 3 : 0) + (s.skills.includes("trapMaster") ? 5 : 0);
 }
 
 /** 4섹터 함정 작동. 매복 전투가 벌어졌으면 true */
@@ -1066,7 +1067,7 @@ function resolveOne(s: GameState, choice: PendingChoice): void {
       }
     } else if (choice === "disarm") {
       passTime(s, 1);
-      const c = check(s, "dex", BAL.trapDisarmDc, (power(s, "trap", 1) ? 3 : 0) + (s.skills.includes("earthLevel") || s.skills.includes("trapHand") ? 3 : 0) + (s.skills.includes("trapMaster") ? 5 : 0));
+      const c = check(s, "dex", BAL.trapDisarmDc, disarmBonus(s));
       if (c.ok) {
         note(s, "per");
         room.resolved = true;

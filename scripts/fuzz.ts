@@ -29,7 +29,7 @@ const START = Number(process.argv[4] ?? 1);
 const MAX_ACTIONS = Number(process.env.MAX_ACTIONS ?? 40000);
 const VERBOSE = !!process.env.VERBOSE;
 
-const CLASSES: ClassId[] = ["adventurer", "warrior", "mage"];
+const CLASSES: ClassId[] = ["adventurer", "warrior", "mage", "rogue"];
 const GOALS: AutoGoal[] = ["explore", "rush", "farm"];
 const GODS: (string | null)[] = [null, ...Object.values(FAITH)];
 const ITEMS = Object.keys(BAL.prices) as (keyof typeof BAL.prices)[];
@@ -121,6 +121,9 @@ function invariants(s: GameState): string[] {
   if (s.fragments.length > fragSlots(h.level)) e.push(`편린 칸 초과 ${s.fragments.length}>${fragSlots(h.level)}`);
   if (new Set(s.trophies).size !== s.trophies.length) e.push("증표 중복");
   for (const [slot, id] of Object.entries(s.gear)) if (id && !GEAR[id]) e.push(`없는 장비 ${slot}=${id}`);
+  if (s.inventory.bolt < 0) e.push(`음수 볼트 ${s.inventory.bolt}`);
+  if (s.gear.offhand && GEAR[s.gear.offhand]?.rogueOff && s.hero.cls !== "rogue") e.push(`로그가 아닌데 왼손 무기 ${s.gear.offhand}`);
+  if (s.hero.cls === "rogue" && s.hero.level >= 4 && s.phase !== "create" && ["rgAssassinMark", "rgVenomMark", "rgXbowMark"].some((m) => s.skills.includes(m)) && !s.gear.offhand) e.push("각인을 받은 로그의 왼손이 비었다");
   // 단계별 상태 조합
   switch (s.phase) {
     case "dungeon": {

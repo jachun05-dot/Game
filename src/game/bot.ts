@@ -15,7 +15,7 @@ import { shortcutSectors } from "./dungeon";
 import { clueCount, clueNeed, trueEndingOpen } from "./truth";
 import { LAST_SECTOR } from "./endless";
 import type { Action } from "./engine";
-import { BRANCH_SKILLS, ELEMENTS, ELEMENT_KEYS, type BranchKey, type ElementKey, type StyleKey } from "./elements";
+import { BRANCH_SKILLS, ELEMENTS, ELEMENT_KEYS, type BranchKey, type ElementKey, type RogueKey, type StyleKey } from "./elements";
 import type { GameState } from "./types";
 
 // "자동 결정" 옵션과 밸런스 시뮬레이션이 같이 쓰는 단순한 정책.
@@ -111,18 +111,23 @@ function townAction(s: GameState): Action {
     }
     // 전사: 방패가 없으면 먼저 산다(방패 기술은 방패가 있어야)
     if (s.hero.cls === "warrior" && !s.gear.offhand && s.gold >= GEAR.shield.price! + trainCost(s)) return { t: "buyGear", id: "shield" };
+    // 로그: 손쇠뇌가 있으면 볼트를 채운다
+    if (s.gear.offhand === "rgHandXbow" && s.inventory.bolt < 20 && s.gold >= shopPrice(s, "bolt") + trainCost(s)) return { t: "buy", item: "bolt" };
     return pickTraining(s);
   }
   if (!s.gear.body && spare >= GEAR.leather.price!) return { t: "buyGear", id: "leather" };
   // 2섹터를 클리어했으면 3섹터 장비(등급 2)를 여유가 될 때 산다
   if (s.rank >= 2) {
-    for (const id of s.rank >= 5 ? ["sunsteel", "relicstaff", "towershield", "abyssblade", "voidstaff", "shadowhide", "pilgrimboots", "lanternhelm"] : s.rank >= 4 ? ["abyssblade", "voidstaff", "shadowhide", "clawboots", "lanternhelm", "minerpick", "safetyboots"] : s.rank >= 3 ? ["minerpick", "fireleather", "safetyboots", "minerhelm", "bronzeblade"] : ["bronzeblade", "oiledleather", "waders"]) {
+    for (const id of s.rank >= 5 ? ["sunsteel", "relicstaff", "sundagger", "towershield", "abyssblade", "voidstaff", "abyssdagger", "shadowhide", "pilgrimboots", "lanternhelm"] : s.rank >= 4 ? ["abyssblade", "voidstaff", "abyssdagger", "shadowhide", "clawboots", "lanternhelm", "minerpick", "safetyboots"] : s.rank >= 3 ? ["minerpick", "fireleather", "safetyboots", "minerhelm", "bronzeblade", "bronzedagger"] : ["bronzeblade", "bronzedagger", "oiledleather", "waders"]) {
       const g = GEAR[id];
       const slot = targetSlot(s, id);
-      if (g.weapon && (g.weapon.stat === "int") !== (s.hero.cls === "mage")) continue;
+      if (g.weapon && !weaponFits(s, id)) continue;
       if (s.gear[slot] !== id && gearScore(id) >= gearScore(s.gear[slot]) && spare >= g.price! + 50) return { t: "buyGear", id };
     }
   }
+  // 로그: 1섹터를 넘기면 강철 단검
+  if (s.hero.cls === "rogue" && s.rank >= 1 && weaponScore(s.gear.main) < weaponScore("steeldagger") && spare >= GEAR.steeldagger.price! + 30) return { t: "buyGear", id: "steeldagger" };
+  if (s.hero.cls === "rogue" && s.gear.offhand === "rgHandXbow" && s.inventory.bolt < 30 && spare >= shopPrice(s, "bolt") + 10) return { t: "buy", item: "bolt" };
   if (!s.gear.offhand && spare >= GEAR.shield.price!) return { t: "buyGear", id: "shield" };
   // 돈이 넉넉하면(여윳돈 30G 이상 남길 때) 나머지 방어구도 산다
   for (const id of ["cap", "belt", "boots"]) {
@@ -144,6 +149,7 @@ function pickTraining(s: GameState): Action {
     return { t: "train", training: br, free: [main, "con"] };
   }
   if (s.hero.cls === "warrior") return { t: "train", training: (warriorPlan ?? defaultWarriorPlan)(s), free: ["str", "con"] };
+  if (s.hero.cls === "rogue") return { t: "train", training: (roguePlan ?? defaultRoguePlan)(s), free: ["dex", "con"] };
   const order = ["warfare", "arcane", "sword", "endure", "footwork", "scout", "study"].filter((id) => CLASSES[s.hero.cls].trainings.includes(id));
   const training = order.find((id) => nextSkill(s, id)) ?? order[0];
   return { t: "train", training, free: ["str", "con"] };
@@ -157,11 +163,34 @@ export function defaultMagePlan(s: GameState): ElementKey {
 let magePlan: ((s: GameState) => ElementKey) | null = null;
 let warriorPlan: ((s: GameState) => StyleKey) | null = null;
 let adventurerPlan: ((s: GameState) => BranchKey) | null = null;
+let roguePlan: ((s: GameState) => RogueKey) | null = null;
 /** 시뮬레이션용: 마법사 원소·전사 방향 선택 방식을 바꾼다(null이면 기본) */
 export function setMagePlan(fn: ((s: GameState) => string) | null): void {
   magePlan = fn as typeof magePlan;
   warriorPlan = fn as typeof warriorPlan;
   adventurerPlan = fn as typeof adventurerPlan;
+  roguePlan = fn as typeof roguePlan;
+}
+
+/** 로그가 이번 훈련에 고를 갈래. 기본: 암습에 몰아준다(시뮬로 고른 기본, docs/ROGUE.md) */
+export function defaultRoguePlan(_s: GameState): RogueKey {
+  const probe = (globalThis as any).process?.env?.ROGUE_LINE as RogueKey | undefined;
+  return probe ?? "assassin";
+}
+
+/** 이 직업이 손에 들 만한 무기인가(마법사 = 지능, 로그 = 민첩·숏소드, 나머지 = 지능이 아닌 것) */
+function weaponFits(s: GameState, id: string): boolean {
+  const w = GEAR[id].weapon;
+  if (!w) return true;
+  if (s.hero.cls === "mage") return w.stat === "int";
+  if (s.hero.cls === "rogue") return w.stat === "dex" || !!w.finesse;
+  return w.stat === "str";
+}
+
+/** 무기 세기(주사위 평균 + 치명) */
+function weaponScore(id: string | undefined): number {
+  const w = id ? GEAR[id]?.weapon : undefined;
+  return w ? (w.dice[0] * (w.dice[1] + 1)) / 2 + (GEAR[id!].bonus.crit ?? 0) / 5 : 0;
 }
 
 /** 모험가가 이번 훈련에 고를 갈래. 기본: 전사형에 몰아준다 */
@@ -255,7 +284,9 @@ function dungeonAction(s: GameState): Action | null {
       }
       case "gear": {
         const better = gearScore(dg.pending.item) > gearScore(s.gear[targetSlot(s, dg.pending.item)]);
-        const wrongWeapon = GEAR[dg.pending.item].weapon && GEAR[dg.pending.item].weapon!.stat !== (s.hero.cls === "mage" ? "int" : "str");
+        const wrongWeapon = !!GEAR[dg.pending.item].weapon && !weaponFits(s, dg.pending.item);
+        // 로그: 각인이 준 왼손 무기를 방패로 바꾸지 않는다
+        if (s.hero.cls === "rogue" && GEAR[dg.pending.item].slot === "offhand" && s.gear.offhand && GEAR[s.gear.offhand].rogueOff) return { t: "pending", choice: "leave" };
         return { t: "pending", choice: better && !wrongWeapon ? "equip" : "leave" };
       }
     }

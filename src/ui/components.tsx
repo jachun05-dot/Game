@@ -12,7 +12,12 @@ import { CLASSES } from "../game/classes";
 import { SKILLS, skillWorks } from "../game/skills";
 import { hasLevelTable, levelSkill } from "../game/elements";
 import { TRAININGS } from "../game/data";
-import { hasShield, weaponOf } from "../game/gear";
+import { hasShield, offOf, weaponOf } from "../game/gear";
+import type { OffKind } from "../game/elements";
+
+/** 로그 왼손 무기 이름(기술 조건 안내) */
+export const OFF_NAME: Record<OffKind, string> = { dagger: "두 번째 단검", flask: "독병 주머니", xbow: "손쇠뇌" };
+const OFF_MARK: Record<OffKind, string> = { dagger: "🗡", flask: "⚗", xbow: "➶" };
 import { AUTO_EAT_AT } from "../game/dungeon";
 import { BRANCH_SKILLS } from "../game/elements";
 import type { AutoGoal, GameState } from "../game/types";
@@ -311,7 +316,7 @@ export function SkillList({ s, empty }: { s: GameState; empty?: string }) {
           <li key={id} className={off ? "off" : ""}>
             <span className={`skill-kind ${sk.kind}`}>{sk.kind === "active" ? "자동 발동" : "패시브"}</span>
             <b>{sk.name}</b>
-            {off && <span className="skill-kind warn">방패 없음 — 쓸 수 없다</span>}
+            {off && <span className="skill-kind warn">{sk.off ? `${OFF_NAME[sk.off]} 없음` : "방패 없음"} — 쓸 수 없다</span>}
             <span className="dim small">{sk.desc}</span>
           </li>
         );
@@ -540,6 +545,7 @@ export function LevelTable({ s, selected, onPick }: { s: GameState; selected?: s
   if (lines.length === 0) return null;
   const next = s.hero.level + 1;
   const shield = hasShield(s);
+  const off = offOf(s);
   return (
     <div className="lvtable-wrap">
       <table className="lvtable">
@@ -586,6 +592,7 @@ export function LevelTable({ s, selected, onPick }: { s: GameState; selected?: s
                       )}
                       {learned && <span className="mark-ok"> ✓</span>}
                       {sk.shield && <span className={shield ? "dim" : "warn"}> 🛡</span>}
+                      {sk.off && <span className={off === sk.off ? "dim" : "warn"} title={`왼손에 ${OFF_NAME[sk.off]}이(가) 있어야 발동`}> {OFF_MARK[sk.off]}</span>}
                     </td>
                   );
                 })}
@@ -595,7 +602,7 @@ export function LevelTable({ s, selected, onPick }: { s: GameState; selected?: s
         </tbody>
       </table>
       <p className="dim small lv-legend">
-        <span className="lg-learned">✓ 배움</span> · <span className="lg-next">이번 훈련</span> · <span className="lg-missed">놓침</span> · 🛡 방패가 있어야 발동. 짝수 레벨은 패시브, 홀수 레벨은 액티브, 4·7·10·13·16레벨은 보스 증표가 드는 특화(각인·낙인은 그 갈래 액티브를 전투당 1회씩 더, {ULTIMATE_LEVEL}레벨 궁극기는 전투당 1회).
+        <span className="lg-learned">✓ 배움</span> · <span className="lg-next">이번 훈련</span> · <span className="lg-missed">놓침</span> · {s.hero.cls === "rogue" ? "🗡·⚗·➶ 왼손에 두 번째 단검·독병 주머니·손쇠뇌가 있어야 발동(4레벨 각인이 왼손 무기를 정하고, 10레벨 낙인을 다른 갈래로 찍으면 바꾼다)." : "🛡 방패가 있어야 발동."} 짝수 레벨은 패시브, 홀수 레벨은 액티브, 4·7·10·13·16레벨은 보스 증표가 드는 특화(각인·낙인은 그 갈래 액티브를 전투당 1회씩 더, {ULTIMATE_LEVEL}레벨 궁극기는 전투당 1회).
       </p>
     </div>
   );
