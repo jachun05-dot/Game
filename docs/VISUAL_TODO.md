@@ -41,7 +41,7 @@ UI·출시용 그림(앱 아이콘·공유 미리보기·소모품·상태·신�
 ### C. 4섹터 "불타는 광산 갱도"
 - [x] (061) 장면 `dungeon4`
 - [x] 몬스터 12 (062~073): emberbat 불씨 박쥐, salamander 불도롱뇽, orebeetle 광석 갑충, fireelem 화염 정령, burrower 굴착 벌레, frostwraith 서리 망령, icetroll 얼음 트롤 / 희귀 goldbat 금맥 박쥐, manabeetle 마석 광석 갑충, frostspirit 마석 서리 정령 / 정예 cartmimic 광차 미믹 / 보스 furnacemother 화로 어미 도롱뇽
-- [x] 장비 9 (074·075, hingeshield는 077 재생성 대기): canary 카나리아 새장, emberring 불씨 반지, frostwand 서리 광맥 지팡이, fireleather 내화 가죽 갑옷, furcoat 털 안감 외투, minerpick 광부 곡괭이, minerhelm 등불 달린 갱도모, safetyboots 징 박은 안전화, hingeshield 미믹의 경첩 방패
+- [x] 장비 9 (074·075·077): canary 카나리아 새장, emberring 불씨 반지, frostwand 서리 광맥 지팡이, fireleather 내화 가죽 갑옷, furcoat 털 안감 외투, minerpick 광부 곡괭이, minerhelm 등불 달린 갱도모, safetyboots 징 박은 안전화, hingeshield 미믹의 경첩 방패
 - [x] (076) 방 아이콘 magazine 버려진 화약고
 
 ### D. 5섹터 "바닥없는 균열"

@@ -169,7 +169,7 @@ export const GEAR_ICON: Record<string, SpriteArt> = {
   choirbell: { src: "./gear-choirbell.png", w: 16, h: 28 },
   minerpick: { src: "./gear-minerpick.png", w: 27, h: 28 },
   frostwand: { src: "./gear-frostwand.png", w: 26, h: 27 },
-  hingeshield: { src: "./gear-hingeshield.png", w: 26, h: 26 }, // 임시: 미믹 턱 이빨이 안 나와 재생성 대기
+  hingeshield: { src: "./gear-hingeshield.png", w: 34, h: 34 },
   fireleather: { src: "./gear-fireleather.png", w: 24, h: 24 },
   furcoat: { src: "./gear-furcoat.png", w: 31, h: 30 },
   minerhelm: { src: "./gear-minerhelm.png", w: 24, h: 17 },

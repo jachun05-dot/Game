@@ -620,6 +620,8 @@ Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, 
 - 마젠타 낀 어두운 보라 외곽 픽셀(화약고 18, 장비 11)을 외곽선 색으로
 - `public/gear-{minerpick,frostwand,hingeshield,fireleather,furcoat,minerhelm,safetyboots,canary,emberring}.png`, `public/room-magazine.png`
 
-## 077 (2026-10-19) — 미믹의 경첩 방패 다시 (생성 대기)
+## 077 (2026-10-19) — 미믹의 경첩 방패 다시
 
 첨부: ref_icons_weapons + ref_s4_cartmimic(072 원본). 프롬프트는 채팅 기록 그대로.
+
+결과: 채택. 판자 방패 아래에 녹슨 이빨 줄, 옆에 경첩. 100격자 34×34(코르크 방패 29와 비슷), 074 임시 그림을 대체.
