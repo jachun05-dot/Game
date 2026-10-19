@@ -546,3 +546,11 @@ Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, 
 ## 039 — 2섹터 초원 전쟁터, 밤 (기준 이미지 + 038 낮 그림 첨부)
 
 결과(2026-10-15): 1차 채택(200격자). 같은 구도를 요청했지만 석상이 상반신으로 일어선 모양 등 세부가 달라졌다 — 석상(왼쪽)·차원문(오른쪽 위)·길·군기 위치는 같아 낮밤 교체가 어색하지 않아 채택. 낮과 같은 좌표 `(10,14)~(189,114)` = `public/scene-dungeon2night.png`(`dungeon2night`). 아주 어두운 그림이라 지도 배경으로 깔 때 덧칠 어둡기를 낮보다 약하게(예: 0.62 → 0.35) 하는 게 좋다
+
+## 040~044 (2026-10-19) — 여관, 전쟁의 흔적, 2섹터 장비 10, 로그
+
+프롬프트는 채팅 기록 그대로(VISUAL_TODO A·G). 결과: 모두 1차 채택.
+- 040 여관 다락방: 1024 이미지·200격자 → 띠 179×80 `(10,52)~(189,132)` = `public/scene-inn.png`(`inn`, 주간 결과 "여관")
+- 041 전쟁의 흔적: 1024 이미지에 200격자로 그려져 기존 방 아이콘(약 30도트)의 1.6배였다 → `--grid 128`로 복원해 31×38(덫 아이콘과 같은 크기) = `public/room-relic.png`
+- 042·043 장비 시트: 1024 이미지·100격자(지시가 먹힘), 연결 성분으로 5개씩 → `public/gear-{wraithspear,warbanner,steelsword,steelshield,oakstaff,wolfhide,horseshoe,harpycharm,battlering,queencloak}.png`(11~24도트 — 기존 장비보다 조금 작다)
+- 044 로그: 100격자 54×91(후드는 등 뒤로 넘어간 망토 깃, 역수 단검), 얼굴 `(17,0)`에서 30×30 → `public/rogue.png`·`rogue-face.png`, `CLASS_ART.rogue`

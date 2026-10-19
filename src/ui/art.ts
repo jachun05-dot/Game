@@ -15,8 +15,7 @@ export const CLASS_ART: Record<ClassId, ClassArt> = {
   adventurer: { full: "./hero.png", w: 37, h: 90, face: "./hero-face.png" },
   warrior: { full: "./warrior.png", w: 35, h: 86, face: "./warrior-face.png" },
   mage: { full: "./mage.png", w: 44, h: 86, face: "./mage-face.png" },
-  // 로그: 전용 그림이 나올 때까지 모험가 그림을 빌린다(docs/VISUAL_TODO.md)
-  rogue: { full: "./hero.png", w: 37, h: 90, face: "./hero-face.png" },
+  rogue: { full: "./rogue.png", w: 54, h: 91, face: "./rogue-face.png" },
 };
 
 // 몬스터 도트 그림(public/mon-*.png). 모두 기준 이미지와 같은 도트 크기라 크기 차이가 곧 덩치 차이다.
@@ -68,6 +67,7 @@ export const SCENE_ART: Record<string, SpriteArt> = {
   training: { src: "./scene-training.png", w: 179, h: 80 },
   tavern: { src: "./scene-tavern.png", w: 179, h: 80 },
   forest: { src: "./scene-forest.png", w: 179, h: 80 },
+  inn: { src: "./scene-inn.png", w: 179, h: 80 },
   market: { src: "./scene-market.png", w: 179, h: 80 },
   smithy: { src: "./scene-smithy.png", w: 179, h: 80 },
   temple: { src: "./scene-temple.png", w: 179, h: 110 },
@@ -94,6 +94,7 @@ export const ROOM_ICON: Record<string, SpriteArt> = {
   stairs: { src: "./room-stairs.png", w: 32, h: 33 },
   boss: { src: "./room-boss.png", w: 30, h: 35 },
   portal: { src: "./room-portal.png", w: 26, h: 33 },
+  relic: { src: "./room-relic.png", w: 31, h: 38 },
 };
 
 // 장비 아이콘(원래 도트 크기, 목록 1배 · 장비 발견 카드 2배). 아이콘이 없는 장비는 글자만 나온다
@@ -119,6 +120,16 @@ export const GEAR_ICON: Record<string, SpriteArt> = {
   rustring: { src: "./gear-rustring.png", w: 24, h: 24 },
   luckring: { src: "./gear-luckring.png", w: 24, h: 26 },
   vigorring: { src: "./gear-vigorring.png", w: 24, h: 26 },
+  wraithspear: { src: "./gear-wraithspear.png", w: 22, h: 23 },
+  warbanner: { src: "./gear-warbanner.png", w: 19, h: 18 },
+  harpycharm: { src: "./gear-harpycharm.png", w: 14, h: 24 },
+  horseshoe: { src: "./gear-horseshoe.png", w: 20, h: 20 },
+  battlering: { src: "./gear-battlering.png", w: 11, h: 14 },
+  wolfhide: { src: "./gear-wolfhide.png", w: 23, h: 24 },
+  steelsword: { src: "./gear-steelsword.png", w: 21, h: 21 },
+  steelshield: { src: "./gear-steelshield.png", w: 18, h: 18 },
+  oakstaff: { src: "./gear-oakstaff.png", w: 21, h: 22 },
+  queencloak: { src: "./gear-queencloak.png", w: 23, h: 22 },
 };
 
 /**
