@@ -63,6 +63,13 @@ export const MONSTER_ART: Record<string, SpriteArt> = {
   sporecap: { src: "./mon-sporecap.png", w: 38, h: 39 },  // 희귀, 두 배로 그려 절반(무릎~허리)
   drownedchoir: { src: "./mon-drownedchoir.png", w: 84, h: 98 },  // 정예
   mycomother: { src: "./mon-mycomother.png", w: 100, h: 99 },  // 3섹터 보스, 200격자 원본 — 절반
+  emberbat: { src: "./mon-emberbat.png", w: 41, h: 23 },  // 두 배로 그려 절반(머리만 한 박쥐)
+  salamander: { src: "./mon-salamander.png", w: 95, h: 44 },
+  orebeetle: { src: "./mon-orebeetle.png", w: 98, h: 70 },
+  fireelem: { src: "./mon-fireelem.png", w: 90, h: 98 },
+  burrower: { src: "./mon-burrower.png", w: 81, h: 97 },
+  frostwraith: { src: "./mon-frostwraith.png", w: 75, h: 95 },
+  icetroll: { src: "./mon-icetroll.png", w: 94, h: 93 },
 };
 
 
@@ -89,6 +96,7 @@ export const SCENE_ART: Record<string, SpriteArt> = {
   dungeon1: { src: "./scene-dungeon1.png", w: 179, h: 100 },
   dungeon2: { src: "./scene-dungeon2.png", w: 179, h: 100 },
   dungeon3: { src: "./scene-dungeon3.png", w: 179, h: 100 },
+  dungeon4: { src: "./scene-dungeon4.png", w: 179, h: 100 },
   dungeon2night: { src: "./scene-dungeon2night.png", w: 179, h: 100 },  // 밤(화면 연결은 VISUAL_TODO "게임 세션 메모")
   title: { src: "./scene-title.png", w: 179, h: 160, focus: 0.65 },
 };
