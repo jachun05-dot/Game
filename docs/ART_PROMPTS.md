@@ -601,6 +601,12 @@ Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, 
 - 워터마크는 모두 배경 위라 자동 제거(트롤 사슬 옆, 벌레 돌무더기 옆)
 - 다음 첨부용 기준 이미지 `assets/prompt_refs/ref_s4_{emberbat,salamander,orebeetle,frostwraith,scene}.png`
 
-## 069~073 (2026-10-19) — 4섹터 희귀 3·정예·보스 (생성 대기)
+## 069~073 (2026-10-19) — 4섹터 희귀 3·정예·보스
 
 첨부: 069 ref_boy+ref_s4_emberbat, 070 ref_boy+ref_s4_orebeetle, 071 ref_boy+ref_s4_frostwraith, 072 ref_boy+ref_s4_scene, 073 ref_boy+ref_s4_salamander. 마석 청록 `#5fb3a8`은 희귀 3종에만. 보스는 몸 반쪽이 불, 반쪽이 얼음(설명 "반쪽은 얼어 있다"). 프롬프트는 채팅 기록 그대로.
+
+결과: 모두 1차 채택. 금맥 박쥐 103격자, 광석 갑충 102, 서리 정령 103, 미믹·보스 100(보스는 200격자 지시를 무시).
+- 금맥 박쥐 82×44 → 불씨 박쥐처럼 **절반 등록** 41×22
+- 마석 광석 갑충 96×68 → 또 크게 그려 **절반 등록** 48×34(무릎 높이), 청록은 마석 보정(채도 −30%·명도 −8%)
+- 마석 서리 정령 55×63 — 오른쪽 아래 외곽선 없는 흐릿한 김 덩어리(61픽셀)와 마젠타 낀 연보라 점 7개를 지움
+- 광차 미믹 87×70, 화로 어미 도롱뇽 88×95(꼬리 위 워터마크 6픽셀을 주변색으로)

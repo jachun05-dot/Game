@@ -70,6 +70,11 @@ export const MONSTER_ART: Record<string, SpriteArt> = {
   burrower: { src: "./mon-burrower.png", w: 81, h: 97 },
   frostwraith: { src: "./mon-frostwraith.png", w: 75, h: 95 },
   icetroll: { src: "./mon-icetroll.png", w: 94, h: 93 },
+  goldbat: { src: "./mon-goldbat.png", w: 41, h: 22 },  // 희귀, 두 배로 그려 절반
+  manabeetle: { src: "./mon-manabeetle.png", w: 48, h: 34 },  // 희귀, 두 배로 그려 절반(무릎 높이)
+  frostspirit: { src: "./mon-frostspirit.png", w: 55, h: 63 },  // 희귀
+  cartmimic: { src: "./mon-cartmimic.png", w: 87, h: 70 },  // 정예
+  furnacemother: { src: "./mon-furnacemother.png", w: 88, h: 95 },  // 4섹터 보스, 반쪽은 얼음
 };
 
 
