@@ -75,6 +75,8 @@ export const MONSTER_ART: Record<string, SpriteArt> = {
   frostspirit: { src: "./mon-frostspirit.png", w: 55, h: 63 },  // 희귀
   cartmimic: { src: "./mon-cartmimic.png", w: 87, h: 70 },  // 정예
   furnacemother: { src: "./mon-furnacemother.png", w: 88, h: 95 },  // 4섹터 보스, 반쪽은 얼음
+  riftbat: { src: "./mon-riftbat.png", w: 30, h: 29 },  // 박쥐 다섯 마리 떼, 두 배로 그려 절반
+  tendril: { src: "./mon-tendril.png", w: 79, h: 93 },
 };
 
 
@@ -102,6 +104,7 @@ export const SCENE_ART: Record<string, SpriteArt> = {
   dungeon2: { src: "./scene-dungeon2.png", w: 179, h: 100 },
   dungeon3: { src: "./scene-dungeon3.png", w: 179, h: 100 },
   dungeon4: { src: "./scene-dungeon4.png", w: 179, h: 100 },
+  dungeon5: { src: "./scene-dungeon5.png", w: 179, h: 100 },
   dungeon2night: { src: "./scene-dungeon2night.png", w: 179, h: 100 },  // 밤(화면 연결은 VISUAL_TODO "게임 세션 메모")
   title: { src: "./scene-title.png", w: 179, h: 160, focus: 0.65 },
 };

@@ -10,10 +10,10 @@
 | 구분 | 전체 | 있음 | 남음 |
 |---|---|---|---|
 | 직업 그림(전신+얼굴) | 4 | 4 | 0 |
-| 몬스터 스프라이트 | 83 | 44 | **39** |
+| 몬스터 스프라이트 | 83 | 46 | **37** |
 | 장비 아이콘 | 75 | 49 | **26** |
 | 방 아이콘 | 18 | 13 | **5** |
-| 미궁 장면(지도 배경) | 섹터 6 + 2섹터 밤 + 끝없는 미궁 | 5 | **3** |
+| 미궁 장면(지도 배경) | 섹터 6 + 2섹터 밤 + 끝없는 미궁 | 6 | **2** |
 | 마을 장면 | 9 | 9 | 0 |
 | 훈련 갈래 아이콘(`LINE_ICON`) | 10 | 0 | **10** |
 | 엔딩 일러스트 | 4 | 0 | **4** (숨겨진 엔딩 "섬을 떠난 자" 추가) |
@@ -45,8 +45,8 @@ UI·출시용 그림(앱 아이콘·공유 미리보기·소모품·상태·신�
 - [x] (076) 방 아이콘 magazine 버려진 화약고
 
 ### D. 5섹터 "바닥없는 균열"
-- [ ] 장면 `dungeon5`
-- [ ] 몬스터 12: riftbat 균열 박쥐 떼, tendril 그림자 촉수, hungerwraith 굶주린 망령, ledgespider 벼랑 거미, voideye 공허 눈, riftworm 균열 벌레, fallenheap 낙하 잔해 덩어리 / 희귀 scalebat 마석 비늘 박쥐, manaeye 마석 눈동자, shellworm 마석 껍질 균열 벌레 / 정예 hungermother 허기의 어미 / 보스 abyssmaw 심연의 아귀
+- [x] (078) 장면 `dungeon5`
+- [ ] 몬스터 12 (✅ riftbat·tendril 079·080 / 프롬프트 발행됨 081~085 생성 대기): riftbat 균열 박쥐 떼, tendril 그림자 촉수, hungerwraith 굶주린 망령, ledgespider 벼랑 거미, voideye 공허 눈, riftworm 균열 벌레, fallenheap 낙하 잔해 덩어리 / 희귀 scalebat 마석 비늘 박쥐, manaeye 마석 눈동자, shellworm 마석 껍질 균열 벌레 / 정예 hungermother 허기의 어미 / 보스 abyssmaw 심연의 아귀
 - [ ] 장비 약 9: batcloak 박쥐 날개 망토, voidring 공허 눈 반지, ghoulfang 아귀 이빨 단검, abyssblade 심연강 장검, voidstaff 공허 수정 지팡이, shadowhide 그림자 가죽 갑옷, lanternhelm 이끼 등불 투구, clawboots 갈고리 장화, twofacebowl 두 얼굴의 그릇
 - [ ] 방 아이콘 plenty 풍요의 제단
 
