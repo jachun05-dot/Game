@@ -142,7 +142,7 @@ export function kill(s: GameState, cause: DeathCause, detail?: string): void {
   const d = s.dungeon;
   // 진엔딩 결전(영주성)에서 쓰러졌다: 일반 사망이 아니라 "영주에게 맞선 자" 묘비
   const fallen = s.combat?.context === "final";
-  const reached = fallen ? "영주성" : d ? (d.endless ? `끝없는 미궁 ${d.floor}층` : `${d.sector}섹터 ${d.floor}층`) : s.rank > 0 ? `${s.rank}섹터 클리어` : "마을";
+  const reached = fallen ? "영주성" : s.combat?.context === "chase" ? "영지의 골목" : d ? (d.endless ? `끝없는 미궁 ${d.floor}층` : `${d.sector}섹터 ${d.floor}층`) : s.rank > 0 ? `${s.rank}섹터 클리어` : "마을";
   const months = s.month;
   const epitaph = buildEpitaph(s, cause);
 

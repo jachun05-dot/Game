@@ -18,6 +18,7 @@ import type { CombatState, DamageMeter, Enemy, GameState } from "./types";
 import { scaleEnemy } from "./endless";
 import { afterDungeonCombat, highTide, isNight, passTime } from "./dungeon";
 import { afterFieldCombat } from "./town";
+import { CHASE_DEATH, afterChaseCombat } from "./age";
 
 // 자동 전투(2026-10-13 변경): 플레이어는 공격을 고르지 않는다. 라운드마다
 // 플레이어 행동(물약·도주 방침 → 조건부 기술 → 가장 약한 적 공격) → 적 전체 행동을 자동으로 굴리고,
@@ -1001,7 +1002,7 @@ function playerPhase(s: GameState, c: CombatState, opener: Strike | null): "win"
     selfTriggers(s, c);
     // 순간 이동: HP 30% 이하면 반드시 빠져나간다
     const blink = activeSkills(s).find((sk) => sk.effect?.type === "blink" && hpPct(s) <= selfPct(s, sk) && canUse(s, c, sk));
-    if (blink && c.context !== "dummy" && c.context !== "final") {
+    if (blink && c.context !== "dummy" && c.context !== "final" && c.context !== "chase") {
       useSkill(s, c, blink, (blink.effect as { text: string }).text);
       return "fled";
     }
@@ -1249,6 +1250,10 @@ function tryFlee(s: GameState, c: CombatState): boolean {
     log(s, "물러설 곳이 없다. 이것이 마지막 싸움이다.", "miss");
     return false;
   }
+  if (c.context === "chase") {
+    log(s, "골목 양쪽이 막혔다. 도망칠 곳은 없다.", "miss");
+    return false;
+  }
   if (!canFlee(s)) {
     log(s, "다친 다리로는 도망칠 수 없다!", "miss");
     return false;
@@ -1454,6 +1459,7 @@ function enemyPhase(s: GameState, c: CombatState): void {
       const cause = new Set(attackers).size >= 2 ? "mob" : "single";
       if (attackers.some((x) => MONSTERS[x.defId].avatar)) kill(s, cause, "빛에 삼켜졌다");
       else if (c.context === "final") kill(s, cause, "영주에게 맞서다 쓰러졌다");
+      else if (c.context === "chase") kill(s, cause, CHASE_DEATH);
       else kill(s, cause, cause === "mob" ? `${describeGroup([...new Set(attackers)])}에게 둘러싸여 쓰러졌다` : `${def.name}에게 쓰러졌다`);
       return;
     }
@@ -1479,6 +1485,10 @@ function finish(s: GameState, outcome: "win" | "fled"): void {
   if (outcome === "win" && relicOn(s, "hunger")) s.hero.hp = Math.min(maxHp(s), s.hero.hp + 4);
   if (c.context === "field") afterFieldCombat(s, outcome, c);
   else if (c.context === "final") afterFinalCombat(s, outcome, c);
+  else if (c.context === "chase") {
+    // 결판이 나지 않았다(라운드 한도) — 끝내 붙잡혔다
+    if (!afterChaseCombat(s, outcome, c)) kill(s, "mob", CHASE_DEATH);
+  }
   else afterDungeonCombat(s, outcome, c);
 }
 

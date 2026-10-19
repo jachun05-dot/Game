@@ -341,6 +341,8 @@ export const MONSTERS: Record<string, MonsterDef> = {
   avatar: { id: "avatar", name: "짝을 삼킨 빛의 화신", wound: { head: 2, body: 3, main: 2, offhand: 2, feet: 2 }, hp: 265, ac: 24, atk: 16, dice: [3, 10], mana: 300, radiance: true, purge: 5, rebirth: 170, swallow: 0.3, avatar: true, attackText: "얼굴 없는 빛으로 내리눌렀다", note: "유일신이 짝신을 삼키고 얻은 빛이 결계 틈으로 뻗어 나온 몸. 얼굴 자리에 짝신의 얼굴이 비친다. 3라운드마다 성광, 쓰러지면 한 번 다시 일어서서 권능을 삼킨다." },
   judgeeye: { id: "judgeeye", name: "심판의 눈", hp: 600, ac: 31, atk: 21, dice: [4, 12], mana: 0, hard: true, fearHit: 0.3, hidden: true, flying: true, purge: 10, wound: { head: 3, body: 3, main: 2, offhand: 2, feet: 1 }, attackText: "천장에서 내려온 눈이 빛을 쏟았다", note: "흰 회랑 천장에서 내려오는 거대한 눈과 날개. 신전에 오래 머무는 자를 본다. 성소(3층)까지는 시선이 닿지 않는다." },
   grandinquisitor: { id: "grandinquisitor", name: "심문관장", wound: { head: 3, body: 2, main: 1, offhand: 1, feet: 1 }, hp: 140, ac: 22, atk: 14, dice: [3, 8], mana: 0, human: true, purge: 5, attackText: "성인의 이름을 외치며 철퇴를 내리쳤다", note: "미궁 끝 신전까지 이단을 쫓아온 심문관들의 우두머리." },
+  // 18세 추적(age.ts): 미궁이 문을 닫은 날 영주가 보내는 추적자(마을 골목 — 미궁 밖이라 사람과 싸운다). 심문관장과 같은 세기
+  pursuer: { id: "pursuer", name: "영주의 추적자", wound: { head: 3, body: 2, main: 1, offhand: 1, feet: 1 }, hp: 140, ac: 22, atk: 14, dice: [3, 8], mana: 0, human: true, purge: 5, attackText: "영주의 문장이 새겨진 철퇴를 내리쳤다", note: "열여덟이 된 모험가를 거두러 오는 영주의 사냥개들." },
   // 진엔딩 결전(마을 영주성 — 미궁 밖이라 사람과 싸운다)
   lord: { id: "lord", name: "늙지 않는 영주", wound: { head: 2, body: 3, main: 2, offhand: 2, feet: 1 }, hp: 260, ac: 24, atk: 17, dice: [3, 10], mana: 0, human: true, purge: 5, attackText: "보석 박힌 지팡이로 내리쳤다", note: "섬의 영주. 늙지 않는다. 그 눈은 사람의 것이 아니다." },
   godavatar: { id: "godavatar", name: "유일신의 아바타", wound: { head: 2, body: 3, main: 2, offhand: 2, feet: 2 }, hp: 360, ac: 26, atk: 18, dice: [4, 10], mana: 0, radiance: true, purge: 10, swallow: 0.3, avatar: true, attackText: "흰빛이 된 손으로 내리눌렀다", note: "영주의 껍질을 벗고 나온 것. 짝을 삼킨 자가 직접 내민 손이다." },
@@ -588,7 +590,8 @@ export const FAITH = {
 export const INTRO = [
   "섬의 영지에는 미궁이 있다.",
   "미궁 깊은 곳 차원문 너머에 마법 셉터가 잠들어 있다는 소문이 돈다.",
-  "셉터의 마법 때문에 미궁에는 열여섯 살 인간만 들어갈 수 있다.",
+  "셉터의 마법 때문에 미궁에는 열여섯, 열일곱 살 인간만 들어갈 수 있다.",
+  "열여덟이 되면 미궁은 문을 닫는다. 영주는 쓸모없어진 모험가를 살려 두지 않는다.",
   "영주는 조건을 걸었다. 셉터를 찾으면 바칠 것. 그리고 매달 세금을 낼 것.",
   "올해 열여섯이 된 당신은, 모험가 등록소의 문을 열었다.",
 ];

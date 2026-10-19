@@ -3,7 +3,7 @@ import type { Tomb } from "../game/types";
 export function TombCard({ t }: { t: Tomb }) {
   return (
     <article className={`tomb${t.ending ? ` tomb-ending end-${t.ending}` : ""}`}>
-      <div className="tomb-cross">{t.ending === "true" ? "✦" : t.ending === "offering" ? "⚓" : "✝"}</div>
+      <div className="tomb-cross">{t.ending === "true" ? "✦" : t.ending === "offering" ? "⚓" : t.ending === "escape" ? "☾" : "✝"}</div>
       {t.ending && <p className="eyebrow center">{ENDING_TITLE[t.ending]}</p>}
       <h3 className="tomb-name">{t.name}</h3>
       <p className="dim small">
@@ -53,6 +53,7 @@ export const ENDING_TITLE: Record<NonNullable<Tomb["ending"]>, string> = {
   offering: "ENDING — 헌납",
   true: "TRUE ENDING — 돌아온 신들",
   fallen: "ENDING — 영주에게 맞선 자",
+  escape: "HIDDEN ENDING — 섬을 떠난 자",
 };
 
 export function tombText(t: Tomb): string {

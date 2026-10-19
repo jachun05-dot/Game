@@ -1,10 +1,12 @@
 import type { Ctl } from "./App";
 import { josa } from "../game/josa";
 import { Card, GameScreen, HeroHeader, SceneBanner } from "./components";
+import { AGE, chaserName } from "../game/age";
 
 export function SettlementScreen({ ctl }: { ctl: Ctl }) {
   const { s, dispatch } = ctl;
   const st = s.settlement!;
+  const eighteen = st.month + 1 > AGE.lastMonth;
   return (
     <GameScreen
       ctl={ctl}
@@ -22,7 +24,7 @@ export function SettlementScreen({ ctl }: { ctl: Ctl }) {
           </div>
         ) : (
           <button className={`btn wide ${st.paid ? "primary" : "danger"}`} onClick={() => dispatch({ t: "closeSettlement" })}>
-            {st.paid ? `${st.month + 1}월로 →` : "관공서로 끌려간다"}
+            {eighteen ? "열여덟 번째 생일 아침으로" : st.paid ? `${st.month + 1}월로 →` : "관공서로 끌려간다"}
           </button>
         )
       }
@@ -44,7 +46,12 @@ export function SettlementScreen({ ctl }: { ctl: Ctl }) {
           </p>
         </Card>
       )}
-      {s.heretic ? (
+      {eighteen ? (
+        <Card title="열여덟 번째 생일" className="warn">
+          <p>내일이면 미궁이 문을 닫는다. 세금은 더 걷히지 않는다 — 쓸모없어진 모험가를 거두러 {chaserName(s)} 셋이 온다.</p>
+          <p className="dim small">도망칠 곳은 없다. 싸움 전에 HP는 다 차지만 부상은 그대로고, 물약은 들고 있는 것뿐이다. 지면 처형, 이기면 — 항구가 있다.</p>
+        </Card>
+      ) : s.heretic ? (
         <Card title="현상수배 중">
           <p className="small">관공서는 세금 대신 당신의 목에 현상금을 걸었다. 가진 돈 {s.gold}G.</p>
         </Card>

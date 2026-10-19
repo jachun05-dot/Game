@@ -159,6 +159,16 @@ const ENDING_TEXT: Record<EndingKind, { cause: string; lines: string[] }> = {
       "옛 신들이 돌아왔다. 열여섯 살에 미궁에 들어간 아이들의 이름이 노래로 불리기 시작했다.",
     ],
   },
+  escape: {
+    cause: "추적자를 뿌리치고 섬을 떠났다",
+    lines: [
+      "마지막 추적자가 진흙 위에 쓰러졌다. 숨을 고를 틈도 없이 항구로 달렸다.",
+      "밀수꾼의 작은 배가 밧줄을 풀었다. 등 뒤에서 관공서의 종이 미친 듯이 울렸다.",
+      "안개 속으로 섬이 멀어졌다. 성당의 첨탑도, 미궁의 입도, 영주성의 금빛 문장도.",
+      "셉터는 끝내 손에 넣지 못했다. 옛 신들의 이야기도 섬에 두고 왔다.",
+      "다만 살아남았다. 열여덟 살에 미궁에서 걸어 나온 아이는, 아무도 기억하지 못하는 바다 건너에서 늙어 갔다.",
+    ],
+  },
   fallen: {
     cause: "영주에게 맞서다 쓰러졌다",
     lines: [
@@ -185,7 +195,7 @@ export function endLife(s: GameState, kind: EndingKind): void {
     name: s.hero.name,
     level: s.hero.level,
     months: s.month,
-    reached: kind === "fallen" ? "영주성" : d ? `${d.sector}섹터 셉터의 제단` : "셉터의 제단",
+    reached: kind === "fallen" ? "영주성" : kind === "escape" ? "섬 밖의 바다" : d ? `${d.sector}섹터 셉터의 제단` : "셉터의 제단",
     cause: e.cause,
     faithsUnlocked: [],
     epitaph: epitaph(s, kind),
@@ -206,6 +216,6 @@ function epitaph(s: GameState, kind: EndingKind): string {
   const parts = [`영지의 열여섯 살 소년, ${CLASSES[s.hero.cls].name}${s.hero.cls === "adventurer" ? "가" : "로"} 미궁에 섰다.`, `${s.hero.level}레벨까지 훈련받았다.`];
   parts.push(...s.history.slice(-2));
   parts.push(`진실 조각 ${clueCount(s)}/${CLUES.length}을 알았다.`);
-  parts.push(kind === "offering" ? `${s.month}번째 달에 셉터를 바치고 섬을 떠났다.` : kind === "true" ? `${s.month}번째 달에 영주를 쓰러뜨렸다. 옛 신들이 돌아왔다.` : `${s.month}번째 달에 영주에게 맞서다 쓰러졌다.`);
+  parts.push(kind === "escape" ? `열여덟 살, ${s.month}번째 달에 영주의 추적자를 뿌리치고 섬을 떠났다.` : kind === "offering" ? `${s.month}번째 달에 셉터를 바치고 섬을 떠났다.` : kind === "true" ? `${s.month}번째 달에 영주를 쓰러뜨렸다. 옛 신들이 돌아왔다.` : `${s.month}번째 달에 영주에게 맞서다 쓰러졌다.`);
   return parts.join(" ");
 }

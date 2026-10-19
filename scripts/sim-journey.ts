@@ -50,7 +50,7 @@ for (const l of lives) if (l.dead) {
 const summary = {
   class: cls, mode, n: N,
   sectors: rows,
-  ending_pct: pct(endings.length), offering: endings.filter((l) => l.ending === "offering").length, true_ending: endings.filter((l) => l.ending === "true").length,
+  ending_pct: pct(endings.length), offering: endings.filter((l) => l.ending === "offering").length, true_ending: endings.filter((l) => l.ending === "true").length, escape: endings.filter((l) => l.ending === "escape").length, chase_death: lives.filter((l) => l.cause.startsWith("열여덟")).length,
   ending_median_month: med(endings.map((l) => l.endMonth!)),
   alive_at_end_pct: pct(lives.filter((l) => !l.dead && !l.ending).length),
   deaths_by_stage: deathsByStage,

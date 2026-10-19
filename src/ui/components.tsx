@@ -21,6 +21,7 @@ import { CharacterSheet } from "./CharacterSheet";
 import { CLASS_ART, FRAG_ICON, GEAR_ICON, LINE_ICON, MONSTER_ART, SCENE_ART } from "./art";
 import { TIPS, currentTip } from "./tips";
 import { Icon } from "./icons";
+import { AGE, ageOf, monthsLeft } from "../game/age";
 
 export function Shell({ children, wide }: { children: ReactNode; wide?: boolean }) {
   return <main className={`shell${wide ? " wide" : ""}`}>{children}</main>;
@@ -89,12 +90,25 @@ export function HeroHeader({ s, extra, onOpen }: { s: GameState; extra?: ReactNo
           <span className="stat-pill gold" title="가진 돈"><Icon name="coin" />{s.gold}G</span>
           <span className="stat-pill ac" title="방어도(AC)"><Icon name="shield" />AC {heroAc(s)}</span>
           <span className="stat-pill rank" title="등급(클리어한 섹터 수)"><Icon name="crest" />등급 {s.rank}</span>
+          <AgePill month={s.month} />
           {extra}
           {onOpen && <span className="more">장비 <Icon name="chev" /></span>}
         </div>
         <InjuryTags s={s} />
       </div>
     </header>
+  );
+}
+
+/** 나이와 미궁이 문을 닫기까지 남은 달(age.ts). 6개월 이하면 붉게 */
+export function AgePill({ month }: { month: number }) {
+  const left = monthsLeft(month);
+  const warn = left <= AGE.warnAt[0];
+  return (
+    <span className={`stat-pill age${warn ? " warn" : ""}`} title={`미궁은 열일곱 살이 끝날 때까지만 들어갈 수 있다 — 남은 ${left}개월`}>
+      <Icon name="clock" />
+      {ageOf(month)}세{warn ? ` · ${left}개월` : ""}
+    </span>
   );
 }
 

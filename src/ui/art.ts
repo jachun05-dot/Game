@@ -48,6 +48,7 @@ export const MONSTER_ART: Record<string, SpriteArt> = {
   harpyqueen: { src: "./mon-harpyqueen.png", w: 100, h: 97 },  // 정예
   general: { src: "./mon-general.png", w: 92, h: 99 },  // 2섹터 보스, 200격자 원본 — 크기는 절반
   inquisitor: { src: "./mon-inquisitor.png", w: 61, h: 93 },  // 미궁의 유일한 사람(도감 밖, 전투 로그용), 200격자 원본 — 크기는 절반
+  pursuer: { src: "./mon-inquisitor.png", w: 61, h: 93 },  // 18세 추적자(age.ts) — 전용 그림이 나올 때까지 이단심문관 그림을 빌린다
 };
 
 

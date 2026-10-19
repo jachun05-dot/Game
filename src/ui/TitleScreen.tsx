@@ -74,6 +74,7 @@ export function TitleScreen({ run, meta, onNew, onContinue, onGraveyard, onCodex
             진실 {meta.clues?.length ?? 0}/7
             {meta.endings?.includes("offering") && " · 헌납 엔딩"}
             {meta.endings?.includes("fallen") && " · 영주에게 맞선 자"}
+            {meta.endings?.includes("escape") && " · 섬을 떠난 자"}
             {meta.endings?.includes("true") && " · 진엔딩 — 이제 모든 신을 시작 신앙으로 고를 수 있다"}
           </p>
         </Card>

@@ -1,0 +1,464 @@
+[
+ {
+  "class": "adventurer",
+  "mode": "faith",
+  "n": 1000,
+  "s6_clear_pct": 0.1,
+  "ending_pct": 3,
+  "offering": 1,
+  "true": 0,
+  "escape": 29,
+  "chase_death_pct": 35.7,
+  "sectors": [
+   {
+    "sector": 1,
+    "reached_pct": 55.9,
+    "median_month": 4
+   },
+   {
+    "sector": 2,
+    "reached_pct": 38.6,
+    "median_month": 6
+   },
+   {
+    "sector": 3,
+    "reached_pct": 14.6,
+    "median_month": 9
+   },
+   {
+    "sector": 4,
+    "reached_pct": 8.1,
+    "median_month": 14
+   },
+   {
+    "sector": 5,
+    "reached_pct": 3.7,
+    "median_month": 19
+   },
+   {
+    "sector": 6,
+    "reached_pct": 0.1,
+    "median_month": 19
+   }
+  ],
+  "causes": [
+   {
+    "cause": "열여덟 살 — 영주의 추적자들에게 붙잡혀 처형당했다",
+    "pct": 35.7
+   },
+   {
+    "cause": "전투(단독)",
+    "pct": 35.3
+   },
+   {
+    "cause": "전투(무리)",
+    "pct": 11.3
+   },
+   {
+    "cause": "굶어 죽었다",
+    "pct": 9.1
+   },
+   {
+    "cause": "바닥 없는 틈으로 떨어져 죽었다",
+    "pct": 2
+   },
+   {
+    "cause": "세금을 내지 못해 처형당했다",
+    "pct": 1.1
+   },
+   {
+    "cause": "무너진 동굴에 깔려 쓰러졌다",
+    "pct": 0.8
+   },
+   {
+    "cause": "가라앉은 본당의 균모의 포자에 쓰러졌다",
+    "pct": 0.6
+   }
+  ]
+ },
+ {
+  "class": "adventurer",
+  "mode": "none",
+  "n": 1000,
+  "s6_clear_pct": 0,
+  "ending_pct": 2.1,
+  "offering": 0,
+  "true": 0,
+  "escape": 21,
+  "chase_death_pct": 36.2,
+  "sectors": [
+   {
+    "sector": 1,
+    "reached_pct": 51.3,
+    "median_month": 4
+   },
+   {
+    "sector": 2,
+    "reached_pct": 34.3,
+    "median_month": 6
+   },
+   {
+    "sector": 3,
+    "reached_pct": 11.2,
+    "median_month": 10
+   },
+   {
+    "sector": 4,
+    "reached_pct": 5.1,
+    "median_month": 15
+   },
+   {
+    "sector": 5,
+    "reached_pct": 2.4,
+    "median_month": 20
+   },
+   {
+    "sector": 6,
+    "reached_pct": 0,
+    "median_month": null
+   }
+  ],
+  "causes": [
+   {
+    "cause": "전투(단독)",
+    "pct": 36.7
+   },
+   {
+    "cause": "열여덟 살 — 영주의 추적자들에게 붙잡혀 처형당했다",
+    "pct": 36.2
+   },
+   {
+    "cause": "굶어 죽었다",
+    "pct": 11.5
+   },
+   {
+    "cause": "전투(무리)",
+    "pct": 10.4
+   },
+   {
+    "cause": "세금을 내지 못해 처형당했다",
+    "pct": 1.2
+   },
+   {
+    "cause": "바닥 없는 틈으로 떨어져 죽었다",
+    "pct": 0.9
+   },
+   {
+    "cause": "화로 어미 도롱뇽의 불꽃에 타 버렸다",
+    "pct": 0.3
+   },
+   {
+    "cause": "무너진 동굴에 깔려 쓰러졌다",
+    "pct": 0.3
+   }
+  ]
+ },
+ {
+  "class": "mage",
+  "mode": "faith",
+  "n": 1000,
+  "s6_clear_pct": 2.1,
+  "ending_pct": 3.5,
+  "offering": 21,
+  "true": 0,
+  "escape": 14,
+  "chase_death_pct": 35.4,
+  "sectors": [
+   {
+    "sector": 1,
+    "reached_pct": 56,
+    "median_month": 3
+   },
+   {
+    "sector": 2,
+    "reached_pct": 36.6,
+    "median_month": 5
+   },
+   {
+    "sector": 3,
+    "reached_pct": 14.3,
+    "median_month": 9
+   },
+   {
+    "sector": 4,
+    "reached_pct": 6.7,
+    "median_month": 13
+   },
+   {
+    "sector": 5,
+    "reached_pct": 3.8,
+    "median_month": 17
+   },
+   {
+    "sector": 6,
+    "reached_pct": 2.1,
+    "median_month": 20
+   }
+  ],
+  "causes": [
+   {
+    "cause": "전투(단독)",
+    "pct": 37.2
+   },
+   {
+    "cause": "열여덟 살 — 영주의 추적자들에게 붙잡혀 처형당했다",
+    "pct": 35.4
+   },
+   {
+    "cause": "전투(무리)",
+    "pct": 10.1
+   },
+   {
+    "cause": "굶어 죽었다",
+    "pct": 5.5
+   },
+   {
+    "cause": "바닥 없는 틈으로 떨어져 죽었다",
+    "pct": 5
+   },
+   {
+    "cause": "화로 어미 도롱뇽의 불꽃에 타 버렸다",
+    "pct": 1.5
+   },
+   {
+    "cause": "꺼진 바닥 아래로 떨어져 죽었다",
+    "pct": 0.8
+   },
+   {
+    "cause": "세금을 내지 못해 처형당했다",
+    "pct": 0.5
+   }
+  ]
+ },
+ {
+  "class": "mage",
+  "mode": "none",
+  "n": 1000,
+  "s6_clear_pct": 0.9,
+  "ending_pct": 2,
+  "offering": 9,
+  "true": 0,
+  "escape": 11,
+  "chase_death_pct": 32.2,
+  "sectors": [
+   {
+    "sector": 1,
+    "reached_pct": 48.9,
+    "median_month": 3
+   },
+   {
+    "sector": 2,
+    "reached_pct": 30.8,
+    "median_month": 6
+   },
+   {
+    "sector": 3,
+    "reached_pct": 9.6,
+    "median_month": 9
+   },
+   {
+    "sector": 4,
+    "reached_pct": 4.4,
+    "median_month": 15
+   },
+   {
+    "sector": 5,
+    "reached_pct": 2.3,
+    "median_month": 19
+   },
+   {
+    "sector": 6,
+    "reached_pct": 0.9,
+    "median_month": 21
+   }
+  ],
+  "causes": [
+   {
+    "cause": "전투(단독)",
+    "pct": 39.4
+   },
+   {
+    "cause": "열여덟 살 — 영주의 추적자들에게 붙잡혀 처형당했다",
+    "pct": 32.2
+   },
+   {
+    "cause": "전투(무리)",
+    "pct": 10.9
+   },
+   {
+    "cause": "굶어 죽었다",
+    "pct": 7.2
+   },
+   {
+    "cause": "바닥 없는 틈으로 떨어져 죽었다",
+    "pct": 4.6
+   },
+   {
+    "cause": "꺼진 바닥 아래로 떨어져 죽었다",
+    "pct": 1.2
+   },
+   {
+    "cause": "화로 어미 도롱뇽의 불꽃에 타 버렸다",
+    "pct": 0.9
+   },
+   {
+    "cause": "세금을 내지 못해 처형당했다",
+    "pct": 0.5
+   }
+  ]
+ },
+ {
+  "class": "warrior",
+  "mode": "faith",
+  "n": 1000,
+  "s6_clear_pct": 3.7,
+  "ending_pct": 9.6,
+  "offering": 37,
+  "true": 0,
+  "escape": 59,
+  "chase_death_pct": 24.7,
+  "sectors": [
+   {
+    "sector": 1,
+    "reached_pct": 53.6,
+    "median_month": 4
+   },
+   {
+    "sector": 2,
+    "reached_pct": 39.6,
+    "median_month": 6
+   },
+   {
+    "sector": 3,
+    "reached_pct": 25.3,
+    "median_month": 10
+   },
+   {
+    "sector": 4,
+    "reached_pct": 17,
+    "median_month": 14
+   },
+   {
+    "sector": 5,
+    "reached_pct": 9.4,
+    "median_month": 19
+   },
+   {
+    "sector": 6,
+    "reached_pct": 3.7,
+    "median_month": 21
+   }
+  ],
+  "causes": [
+   {
+    "cause": "전투(단독)",
+    "pct": 37.8
+   },
+   {
+    "cause": "열여덟 살 — 영주의 추적자들에게 붙잡혀 처형당했다",
+    "pct": 24.7
+   },
+   {
+    "cause": "전투(무리)",
+    "pct": 12.6
+   },
+   {
+    "cause": "굶어 죽었다",
+    "pct": 7.8
+   },
+   {
+    "cause": "바닥 없는 틈으로 떨어져 죽었다",
+    "pct": 2
+   },
+   {
+    "cause": "세금을 내지 못해 처형당했다",
+    "pct": 1.3
+   },
+   {
+    "cause": "화로 어미 도롱뇽의 불꽃에 타 버렸다",
+    "pct": 1.3
+   },
+   {
+    "cause": "빛에 삼켜졌다",
+    "pct": 0.8
+   }
+  ]
+ },
+ {
+  "class": "warrior",
+  "mode": "none",
+  "n": 1000,
+  "s6_clear_pct": 2.9,
+  "ending_pct": 7.7,
+  "offering": 29,
+  "true": 0,
+  "escape": 48,
+  "chase_death_pct": 22.3,
+  "sectors": [
+   {
+    "sector": 1,
+    "reached_pct": 46.7,
+    "median_month": 4
+   },
+   {
+    "sector": 2,
+    "reached_pct": 34,
+    "median_month": 6
+   },
+   {
+    "sector": 3,
+    "reached_pct": 20.2,
+    "median_month": 10
+   },
+   {
+    "sector": 4,
+    "reached_pct": 13.6,
+    "median_month": 15
+   },
+   {
+    "sector": 5,
+    "reached_pct": 7,
+    "median_month": 20
+   },
+   {
+    "sector": 6,
+    "reached_pct": 2.9,
+    "median_month": 22
+   }
+  ],
+  "causes": [
+   {
+    "cause": "전투(단독)",
+    "pct": 41.7
+   },
+   {
+    "cause": "열여덟 살 — 영주의 추적자들에게 붙잡혀 처형당했다",
+    "pct": 22.3
+   },
+   {
+    "cause": "전투(무리)",
+    "pct": 13.5
+   },
+   {
+    "cause": "굶어 죽었다",
+    "pct": 8.5
+   },
+   {
+    "cause": "화로 어미 도롱뇽의 불꽃에 타 버렸다",
+    "pct": 1.5
+   },
+   {
+    "cause": "바닥 없는 틈으로 떨어져 죽었다",
+    "pct": 1.3
+   },
+   {
+    "cause": "무너진 동굴에 깔려 쓰러졌다",
+    "pct": 1.2
+   },
+   {
+    "cause": "세금을 내지 못해 처형당했다",
+    "pct": 0.5
+   }
+  ]
+ }
+]

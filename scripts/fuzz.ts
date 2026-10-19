@@ -137,7 +137,9 @@ function invariants(s: GameState): string[] {
     case "dead":
       if (s.godTeaching && s.hero.cls !== "adventurer") e.push("모험가가 아닌데 신의 가르침");
       if (!s.tomb) e.push("죽었는데 묘비 없음");
-      if (s.tomb?.ending && s.tomb.ending !== "fallen" && s.rank < 6) e.push(`셉터 없이 엔딩 ${s.tomb.ending}`);
+      if (s.tomb?.ending && s.tomb.ending !== "fallen" && s.tomb.ending !== "escape" && s.rank < 6) e.push(`셉터 없이 엔딩 ${s.tomb.ending}`);
+      if (s.tomb?.ending === "escape" && s.month <= 24) e.push("18세 전에 탈출 엔딩");
+      if (s.month > 25) e.push(`18세를 넘겨 살아 있었다(${s.month}월)`);
       if (s.tomb?.ending === "true" && (!s.edict || !s.hero.faith)) e.push("진엔딩 조건 없이 진엔딩");
       if (s.tomb?.ending === "offering" && s.heretic) e.push("이단이 헌납 엔딩");
       break;

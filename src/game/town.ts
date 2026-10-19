@@ -13,6 +13,7 @@ import { WEST_FIELD, grantClue, knowsClue, rumorWithClues } from "./truth";
 import { CLASSES, type ClassId } from "./classes";
 import { GEAR, equip, gearEffect, targetSlot } from "./gear";
 import type { Activity, Candidate, CombatState, GameState, StatKey, Stats, Tactics, WeekResult } from "./types";
+import { AGE, ageMonthStart, ageSettlementLines, startChase } from "./age";
 
 // DESIGN 14.1 런 시작 / 14.2 마을(1주=1턴) / 14.4 월말 정산
 
@@ -523,8 +524,11 @@ export function beginSettlement(s: GameState, o: { mana: number; cleared: boolea
   if (!BAL.freeHeal && s.hero.hp < maxHp(s)) lines.push(`HP ${s.hero.hp}/${maxHp(s)} — 여관에서 쉬어야 회복된다.`);
   if (s.disease > 0) lines.push(`${s.diseaseKind === "mold" ? "곰팡이 폐병" : "쥐 열병"}은 저절로 낫지 않는다 — 탕약이나 여관이 필요하다.`);
   // 세금은 다음 달 1주차에 낸다. 해가 바뀌면 오른다. 현상수배 중에는 관공서가 세금 대신 목에 현상금을 건다
-  let tax = s.heretic ? 0 : taxDue(s.month + 1, s.rank) + (s.debt ?? 0);
-  if (!s.heretic && yearOf(s.month + 1) > yearOf(s.month)) lines.push(`해가 바뀐다. 영주가 세금을 올렸다 — ${taxDue(s.month, s.rank)}G → ${taxDue(s.month + 1, s.rank)}G.`);
+  // 다음 달이 18세면 세금은 없다 — 대신 추적자가 온다
+  const lastMonth = s.month + 1 > AGE.lastMonth;
+  lines.push(...ageSettlementLines(s));
+  let tax = s.heretic || lastMonth ? 0 : taxDue(s.month + 1, s.rank) + (s.debt ?? 0);
+  if (!s.heretic && !lastMonth && yearOf(s.month + 1) > yearOf(s.month)) lines.push(`해가 바뀐다. 영주가 세금을 올렸다 — ${taxDue(s.month, s.rank)}G → ${taxDue(s.month + 1, s.rank)}G.`);
   if (s.debt) lines.push(`지난달 외상 ${s.debt}G가 세금에 붙었다.`);
   let debt = false;
   if (!s.heretic && s.gold < tax && power(s, "greed", 3) && !s.debtUsed) {
@@ -615,6 +619,11 @@ export function closeSettlement(s: GameState): void {
     log(s, `상점가 물가가 ${Math.round(up * 100)}% 올랐다. (처음보다 ×${s.priceIndex.toFixed(2)})`, "system");
   }
   s.week = 1;
+  // 18세: 미궁이 문을 닫고 영주의 추적자가 온다(세금 대신, age.ts)
+  if (ageMonthStart(s)) {
+    startChase(s);
+    return;
+  }
   if (!st.paid) {
     kill(s, "tax");
     return;

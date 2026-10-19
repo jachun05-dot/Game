@@ -2183,3 +2183,59 @@ describe("저장 이전·백업(src/save)", () => {
     expect(memoryKv.get(`${KEYS.meta}.newer`)).not.toBeNull();
   });
 });
+
+describe("나이 제한·18세 추적(age.ts)", () => {
+  function at24(seed: number, strong: boolean): GameState {
+    const s = newRun(seed);
+    apply(s, { t: "create", name: "테스트", candidate: 0, faith: null });
+    s.month = 24;
+    s.week = 4;
+    if (strong) {
+      for (const st of STAT_KEYS) s.hero.stats[st] = 50;
+      s.gear = { main: "sunsteel", body: "hollowplate", offhand: "towershield", head: "confessmask", waist: "chainbelt" };
+      s.inventory.potion = 20;
+      s.hero.level = 16;
+    }
+    return s;
+  }
+  it("나이와 남은 달: 1~12월 16세, 13~24월 17세, 25월 18세", async () => {
+    const { ageOf, monthsLeft } = await import("./age");
+    expect([ageOf(1), ageOf(12), ageOf(13), ageOf(24), ageOf(25)]).toEqual([16, 16, 17, 17, 18]);
+    expect([monthsLeft(1), monthsLeft(19), monthsLeft(24), monthsLeft(25)]).toEqual([24, 6, 1, 0]);
+  });
+  it("24월 정산에는 세금이 없고, 25월이 되면 추적자 셋과 싸운다 — 약하면 처형, 강하면 섬을 떠나는 엔딩", async () => {
+    const { beginSettlement } = await import("./town");
+    const { CHASE_DEATH } = await import("./age");
+    const seen = new Set<string>();
+    for (let k = 0; k < 10; k++) {
+      const strong = k % 2 === 0;
+      const s = at24(901 + k, strong);
+      s.gold = 0; // 세금을 낼 돈이 없어도 세금 처형은 아니다
+      beginSettlement(s, { mana: 0, cleared: false, forced: true, deepest: 1 });
+      expect(s.settlement!.tax).toBe(0);
+      expect(s.settlement!.paid).toBe(true);
+      apply(s, { t: "closeSettlement" });
+      expect(s.month).toBe(25);
+      expect(s.phase).toBe("dead");
+      expect(s.combat).toBe(null);
+      if (!strong) {
+        expect(s.tomb!.cause).toBe(CHASE_DEATH);
+        expect(s.tomb!.ending).toBeUndefined();
+      }
+      seen.add(s.tomb!.ending ?? "dead");
+    }
+    expect(seen.has("escape")).toBe(true);
+    expect(seen.has("dead")).toBe(true);
+  });
+  it("23월까지는 그대로 다음 달로 넘어간다(17세 생일·남은 달 알림)", () => {
+    const s = newRun(5);
+    apply(s, { t: "create", name: "테스트", candidate: 0, faith: null });
+    s.month = 12;
+    s.gold = 9999;
+    s.settlement = { month: 12, manaSold: 0, tax: 10, goldAfter: 9989, paid: true, cleared: false, forced: false, lines: [], inquisition: false };
+    s.phase = "settlement";
+    apply(s, { t: "closeSettlement" });
+    expect(s.phase).toBe("town");
+    expect(s.log.some((l) => l.text.includes("17번째 생일"))).toBe(true);
+  });
+});

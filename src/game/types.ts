@@ -80,7 +80,7 @@ export interface DamageMeter {
 
 export interface CombatState {
   /** dummy: 훈련소 허수아비(dummy.ts) — 복사한 상태에서만 쓰고 보상·기록이 없다 */
-  context: "field" | "dungeon" | "dummy" | "final";
+  context: "field" | "dungeon" | "dummy" | "final" | "chase";
   enemies: Enemy[];
   round: number;
   /** 전투에서 얻은 마석 가치(G, 층 배율 적용 전) */
@@ -350,7 +350,7 @@ export interface Settlement {
 export type DeathCause = "mob" | "single" | "trap" | "starve" | "tax" | "plague" | "abyss" | "oblivion";
 
 /** 엔딩(6섹터 셉터의 제단): 헌납(일반) / 결전 승리(진엔딩) / 결전 패배 */
-export type EndingKind = "offering" | "true" | "fallen";
+export type EndingKind = "offering" | "true" | "fallen" | "escape";
 
 export interface Tomb {
   id: string;
