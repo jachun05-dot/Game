@@ -600,3 +600,7 @@ Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, 
 - 나머지 원래 크기: 불도롱뇽 95×44, 광석 갑충 98×70(가슴 높이 — 크지만 단단한 갑충이라 그대로), 화염 정령 90×98, 굴착 벌레 81×97, 서리 망령 75×95, 얼음 트롤 94×93(1.5배를 바랐지만 웅크린 덩치라 그대로)
 - 워터마크는 모두 배경 위라 자동 제거(트롤 사슬 옆, 벌레 돌무더기 옆)
 - 다음 첨부용 기준 이미지 `assets/prompt_refs/ref_s4_{emberbat,salamander,orebeetle,frostwraith,scene}.png`
+
+## 069~073 (2026-10-19) — 4섹터 희귀 3·정예·보스 (생성 대기)
+
+첨부: 069 ref_boy+ref_s4_emberbat, 070 ref_boy+ref_s4_orebeetle, 071 ref_boy+ref_s4_frostwraith, 072 ref_boy+ref_s4_scene, 073 ref_boy+ref_s4_salamander. 마석 청록 `#5fb3a8`은 희귀 3종에만. 보스는 몸 반쪽이 불, 반쪽이 얼음(설명 "반쪽은 얼어 있다"). 프롬프트는 채팅 기록 그대로.
