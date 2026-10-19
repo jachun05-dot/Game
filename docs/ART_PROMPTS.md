@@ -625,3 +625,8 @@ Solid flat magenta background (#FF00FF). No ground shadow, no scenery, no text, 
 첨부: ref_icons_weapons + ref_s4_cartmimic(072 원본). 프롬프트는 채팅 기록 그대로.
 
 결과: 채택. 판자 방패 아래에 녹슨 이빨 줄, 옆에 경첩. 100격자 34×34(코르크 방패 29와 비슷), 074 임시 그림을 대체.
+
+## 078~085 (2026-10-19) — 5섹터 장면 + 기본 몬스터 7 (생성 대기)
+
+5섹터 "바닥없는 균열" 규칙: 차가운 회흑 바위·끝없는 어둠, 강조색 보라 `#9a7bc0`(공허·심연). 청록은 마석 전용. 첨부: 장면 ref_scene_training + ref_s4_scene, 몬스터 ref_boy(+균열 박쥐 ref_s4_emberbat, 균열 벌레 ref_s4_burrower). 프롬프트는 채팅 기록 그대로.
+- 078 장면 `dungeon5` · 079 균열 박쥐 떼 · 080 그림자 촉수 · 081 굶주린 망령 · 082 벼랑 거미 · 083 공허 눈 · 084 균열 벌레 · 085 낙하 잔해 덩어리
