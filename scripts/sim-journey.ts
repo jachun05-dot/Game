@@ -22,6 +22,8 @@ for (let seed = START; seed < START + N; seed++) {
   apply(s, { t: "pickClass", cls });
   if (mode === "faith") s.faithsKnown = [...gods];
   apply(s, { t: "create", name: "봇", candidate: 0, faith: mode === "faith" ? gods[seed % gods.length] : null });
+  // VETERAN=1: 앞선 삶들에서 칙서를 뺀 진실 조각 6개를 다 모은 플레이어(조각은 삶을 넘어 이어진다)
+  if (process.env.VETERAN) s.clues = ["lostgod", "lock", "ageless", "oldgods", "westvillage", "name"];
   const clear: (number | null)[] = [null, null, null, null, null, null, null];
   for (let i = 0; i < 6000000 && s.phase !== "dead" && s.month <= MAX_MONTH; i++) {
     for (let k = 1; k <= 6; k++) if (clear[k] === null && s.rank >= k) clear[k] = s.month;
