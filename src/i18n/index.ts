@@ -61,6 +61,7 @@ const FONTS: Partial<Record<Lang, string>> = {
 function applyDocument(l: Lang): void {
   if (typeof document === "undefined") return;
   document.documentElement.lang = l === "zh" ? "zh-Hans" : l;
+  document.title = `DDD — ${t("열여섯 살, 미궁으로")}`;
   const f = FONTS[l];
   if (f && !document.getElementById(`font-${l}`)) {
     const link = document.createElement("link");
