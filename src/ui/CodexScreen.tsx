@@ -74,7 +74,7 @@ export function CodexScreen({ codex, onBack }: { codex: Codex; onBack: () => voi
           const known = codex.fragKnown.includes(id);
           const sk = f?.skill ? SKILLS[f.skill] : null;
           return (
-            <Card key={id} title={`${no} ${m.name}${m.rare ? " · " + t("희귀") : ""}${id === "boss" ? " · " + t("보스") : ""}`} className="codex">
+            <Card key={id} title={`${no} ${t(m.name)}${m.rare ? " · " + t("희귀") : ""}${id === "boss" ? " · " + t("보스") : ""}`} className="codex">
               <MonsterFigure id={id} seen />
               <p className="small">
                 {t("HP {hp} · AC {ac} · 공격 {dice} · 마석 {mana}G 어치", { hp: m.hp, ac: m.ac, dice: `${m.dice[0]}d${m.dice[1]}`, mana: m.mana })}
@@ -82,29 +82,30 @@ export function CodexScreen({ codex, onBack }: { codex: Codex; onBack: () => voi
               <p className="dim small">
                 {t("출현: {where} · 처치 {n}", { where: whereFound(id) || t("알 수 없음"), n: codex.kills[id] ?? 0 })}
               </p>
-              {m.note && <p className="dim small">{m.note}</p>}
+              {m.note && <p className="dim small">{t(m.note)}</p>}
               {f && (
                 <div className="codex-frag">
                   {known ? (
                     <>
                       <p className="small">
                         <FragIcon tier={f.tier} />
-                        <span className={`skill-kind tier${f.tier}`}>{TIER_LABEL[f.tier]}</span> <b>{f.name}</b> <span className="accent">{fragStatText(id)}</span>
+                        <span className={`skill-kind tier${f.tier}`}>{t(TIER_LABEL[f.tier])}</span> <b>{t(f.name)}</b> <span className="accent">{fragStatText(id)}</span>
                       </p>
                       <p className="small">
                         {sk ? (
                           <>
-                            【{sk.name}】 <span className="dim">{sk.kind === "active" ? t("자동 발동") : t("패시브")} · {sk.desc}</span>
+                            【{t(sk.name)}】 <span className="dim">{sk.kind === "active" ? t("자동 발동") : t("패시브")} · {t(sk.desc)}</span>
                           </>
                         ) : (
                           <span className="dim">{t("특별한 능력은 없다.")}</span>
                         )}
                       </p>
-                      <p className="dim small">{f.flavor}</p>
+                      <p className="dim small">{t(f.flavor)}</p>
                     </>
                   ) : codex.fragSeen.includes(id) ? (
                     <p className="small">
-                      <b>{f.name}</b> <span className="dim">— {t("본 적은 있다. 흡수해 보기 전에는 무엇을 주는지 알 수 없다.")}</span>
+                      <b>{t(f.name)}</b> <span className="dim">—
+ {t("본 적은 있다. 흡수해 보기 전에는 무엇을 주는지 알 수 없다.")}</span>
                     </p>
                   ) : (
                     <p className="dim small">{t("편린: ??? (아직 본 적 없다)")}</p>

@@ -38,7 +38,8 @@ export function TitleScreen({ run, meta, onNew, onContinue, onGraveyard, onCodex
             <span className="menu-text">
               <b>{t("이어하기")}</b>
               <small>
-                {run!.hero.name} · {t("{m}월 {w}주차", { m: run!.month, w: run!.week })} · Lv {run!.hero.level}
+                {t(run!.hero.name)} ·
+ {t("{m}월 {w}주차", { m: run!.month, w: run!.week })} · Lv {run!.hero.level}
               </small>
             </span>
             <Icon name="chev" className="chev" />

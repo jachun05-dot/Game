@@ -27,7 +27,7 @@ export function CharacterSheet({ ctl }: { ctl: Ctl }) {
 
   const slotItem = (key: keyof typeof s.gear): { id: string; name: string; effect: string } | null => {
     const id = s.gear[key];
-    return id ? { id, name: GEAR[id].name, effect: gearEffect(id) } : null;
+    return id ? { id, name: t(GEAR[id].name), effect: gearEffect(id) } : null;
   };
 
   return (
@@ -37,8 +37,8 @@ export function CharacterSheet({ ctl }: { ctl: Ctl }) {
           <img className="portrait big" src={CLASS_ART[h.cls].face} alt="" />
           <div>
             <div className="hero-name">
-              <span>{h.name}</span> <span className="lv-badge">Lv {h.level}</span> <span className="dim">{CLASSES[h.cls].name}</span>
-              {h.faith && <span className="faith-tag">{h.faith}</span>}
+              <span>{t(h.name)}</span> <span className="lv-badge">Lv {h.level}</span> <span className="dim">{t(CLASSES[h.cls].name)}</span>
+              {h.faith && <span className="faith-tag">{t(h.faith)}</span>}
             </div>
             <div className="dim small">
               HP {h.hp}/{maxHp(s)} · AC {heroAc(s)} · {s.gold}G · {t("등급 {rank}", { rank: s.rank })}
@@ -57,7 +57,7 @@ export function CharacterSheet({ ctl }: { ctl: Ctl }) {
                 return (
                   <li key={sl.key} className={it ? "" : "empty"}>
                     <GearIcon id={it?.id} />
-                    <span className="slot">{sl.name}</span>
+                    <span className="slot">{t(sl.name)}</span>
                     <span className="item">{it ? it.name : t("비어 있음")}</span>
                     <span className="effect">{it?.effect ?? ""}</span>
                   </li>
@@ -117,17 +117,17 @@ export function CharacterSheet({ ctl }: { ctl: Ctl }) {
               return (
                 <>
                   <p className="small">
-                    {t("신의 가르침")} 【{te.name}】 {te.boost}{!on && <span className="dim"> — {t("그 신을 섬기지 않아 꺼져 있다")}</span>}
+                    {t("신의 가르침")} 【{t(te.name)}】 {t(te.boost)}{!on && <span className="dim"> — {t("그 신을 섬기지 않아 꺼져 있다")}</span>}
                   </p>
                   <p className="small">
-                    {t("마지막 기술")} 【{te.final}】 {te.finalDesc}
+                    {t("마지막 기술")} 【{t(te.final)}】 {t(te.finalDesc)}
                   </p>
                 </>
               );
             })()}
             {s.relic && (
               <p className="small">
-                {t("유물")} 【{relicName(s)}】 {relicDesc(s)}
+                {t("유물")} 【{t(relicName(s))}】 {t(relicDesc(s))}
                 {godOf(s.hero.faith)?.key !== s.relic && <span className="dim"> — {t("그 신을 섬기지 않아 빛을 잃었다")}</span>}
               </p>
             )}
@@ -136,7 +136,7 @@ export function CharacterSheet({ ctl }: { ctl: Ctl }) {
           <Card title={t("진실 조각 {n}/{total}", { n: clueCount(s), total: CLUES.length })}>
             {CLUES.map((c) => (
               <p key={c.id} className="small">
-                {knowsClue(s, c.id) ? <b>{c.name}</b> : <span className="dim">??? — {c.where}</span>}
+                {knowsClue(s, c.id) ? <b>{t(c.name)}</b> : <span className="dim">??? — {t(c.where)}</span>}
                 {c.id === "edict" && knowsClue(s, c.id) && !s.edict && <span className="dim"> ({t("이번 삶에서 다시 들어야 진엔딩이 열린다")})</span>}
               </p>
             ))}
@@ -153,7 +153,8 @@ export function CharacterSheet({ ctl }: { ctl: Ctl }) {
             <p className="small">
               {t("말린 고기")} {s.inventory.food} · {t("치료 물약")} {s.inventory.potion} · {t("귀환 주문서")} {s.inventory.scroll} · {t("붕대")} {s.inventory.bandage} · {t("약초 탕약")} {s.inventory.herb}
               {s.dungeon ? " · " + t("마석 {n}G 어치", { n: s.dungeon.mana }) : ""}
-              {s.inventory.heart > 0 ? ` · ${BAL.heartName} ${s.inventory.heart}` : ""}
+              {s.inventory.heart > 0 ? ` · ${t(BAL.heartName)} ${s.inventory.heart}`
+ : ""}
               {s.inventory.banner > 0 ? ` · ${t("장군의 녹슨 휘장")} ${s.inventory.banner}` : ""}
               {s.inventory.spore > 0 ? ` · ${t("균모의 포자낭")} ${s.inventory.spore}` : ""}
               {s.inventory.antidote > 0 ? ` · ${t("해독초")} ${s.inventory.antidote}` : ""}

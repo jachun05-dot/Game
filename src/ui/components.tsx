@@ -1,5 +1,5 @@
 import { LangPicker } from "./LangPicker";
-import { t, tk } from "../i18n";
+import { getLang, t, tk } from "../i18n";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { maxHp, heroAc, smod, stat } from "../game/core";
 import { FRAGMENTS, TIER_LABEL, fragSlots, fragStat, fragStatText } from "../game/fragments";
@@ -82,8 +82,8 @@ export function HeroHeader({ s, extra, onOpen }: { s: GameState; extra?: ReactNo
       <img className="portrait" src={CLASS_ART[s.hero.cls].face} alt="" />
       <div className="hero-info">
         <div className="hero-name">
-          <span>{s.hero.name}</span> <span className="lv-badge">Lv {s.hero.level}</span> <span className="dim">{CLASSES[s.hero.cls].name}</span>
-          {s.hero.faith && <span className="faith-tag">{s.hero.faith} {"★".repeat(tier(s))}</span>}
+          <span>{t(s.hero.name)}</span> <span className="lv-badge">Lv {s.hero.level}</span> <span className="dim">{t(CLASSES[s.hero.cls].name)}</span>
+          {s.hero.faith && <span className="faith-tag">{t(s.hero.faith)} {"★".repeat(tier(s))}</span>}
           {s.heretic && <span className="faith-tag heretic">{t("현상수배")}</span>}
         </div>
         <div className="hp-line">
@@ -124,7 +124,7 @@ export function StatGrid({ s }: { s: GameState }) {
     <div className="stat-grid">
       {STAT_KEYS.map((k) => (
         <div key={k} className="stat-cell">
-          <span className="dim">{STAT_LABEL[k]}</span>
+          <span className="dim">{t(STAT_LABEL[k])}</span>
           <b className={fragStat(s, k) > 0 ? "accent" : ""} title={fragStat(s, k) > 0 ? t("편린 +{n}", { n: fragStat(s, k) }) : undefined}>
             {stat(s, k)}
           </b>
@@ -136,7 +136,7 @@ export function StatGrid({ s }: { s: GameState }) {
 }
 
 export function GearList({ s }: { s: GameState }) {
-  const items = Object.values(s.gear).map((id) => (id ? GEAR[id].name : "")).filter(Boolean);
+  const items = Object.values(s.gear).map((id) => (id ? t(GEAR[id].name) : "")).filter(Boolean);
   return <div className="dim small">{t("장비: {items}", { items: items.join(" · ") })}</div>;
 }
 
@@ -319,9 +319,9 @@ export function SkillList({ s, empty }: { s: GameState; empty?: string }) {
         return (
           <li key={id} className={off ? "off" : ""}>
             <span className={`skill-kind ${sk.kind}`}>{sk.kind === "active" ? t("자동 발동") : t("패시브")}</span>
-            <b>{sk.name}</b>
+            <b>{t(sk.name)}</b>
             {off && <span className="skill-kind warn">{t("{what} — 쓸 수 없다", { what: sk.off ? t("{name} 없음", { name: t(OFF_NAME[sk.off]) }) : t("방패 없음") })}</span>}
-            <span className="dim small">{sk.desc}</span>
+            <span className="dim small">{t(sk.desc)}</span>
           </li>
         );
       })}
@@ -351,12 +351,12 @@ export function FragList({ s }: { s: GameState }) {
           return (
             <li key={i}>
               <FragIcon tier={f.tier} />
-              <span className={`skill-kind tier${f.tier}`}>{TIER_LABEL[f.tier]}</span>
-              <b>{f.name}</b>
+              <span className={`skill-kind tier${f.tier}`}>{t(TIER_LABEL[f.tier])}</span>
+              <b>{t(f.name)}</b>
               <span className="accent small">{fragStatText(id)}</span>
               {sk && (
                 <span className="small">
-                  【{sk.name}】 <span className="dim">{sk.kind === "active" ? t("자동 발동") : t("패시브")} · {sk.desc}</span>
+                  【{t(sk.name)}】 <span className="dim">{sk.kind === "active" ? t("자동 발동") : t("패시브")} · {t(sk.desc)}</span>
                 </span>
               )}
             </li>
@@ -382,7 +382,7 @@ export function FaithCard({ s }: { s: GameState }) {
       ) : (
         <>
           <p className="small">
-            <b>{g.name}</b> <span className="dim">· {g.align}</span> <span className="accent">{"★".repeat(tr)}{"☆".repeat(Math.max(0, (s.rank >= FAITH_BAL.tier5Rank ? 5 : s.rank >= FAITH_BAL.tier4Rank ? 4 : 3) - tr))}</span>
+            <b>{t(g.name)}</b> <span className="dim">· {t(g.align)}</span> <span className="accent">{"★".repeat(tr)}{"☆".repeat(Math.max(0, (s.rank >= FAITH_BAL.tier5Rank ? 5 : s.rank >= FAITH_BAL.tier4Rank ? 4 : 3) - tr))}</span>
           </p>
           <div className="faith-line">
             <span className="small dim">{t("신앙심")}</span>
@@ -393,18 +393,18 @@ export function FaithCard({ s }: { s: GameState }) {
             {g.powers.map((p, i) => (
               <li key={i} className={tr > i ? "" : "empty"}>
                 <span className={`skill-kind${tr > i ? " active" : ""}`}>★{i + 1} · {PIETY_TIERS[i]}</span>
-                <span className={`small${tr > i ? "" : " dim"}`}>{p}{i === 3 && s.rank < FAITH_BAL.tier4Rank ? ` ${t("(3섹터를 클리어하면 열린다 — 신앙심 상한도 200으로)")}` : i === 4 && s.rank < FAITH_BAL.tier5Rank ? ` ${t("(4섹터를 클리어하면 열린다)")}` : ""}</span>
+                <span className={`small${tr > i ? "" : " dim"}`}>{t(p)}{i === 3 && s.rank < FAITH_BAL.tier4Rank ? ` ${t("(3섹터를 클리어하면 열린다 — 신앙심 상한도 200으로)")}` : i === 4 && s.rank < FAITH_BAL.tier5Rank ? ` ${t("(4섹터를 클리어하면 열린다)")}` : ""}</span>
               </li>
             ))}
           </ul>
           <p className="dim small">
-            {t("좋아함: {likes} · 싫어함: {dislikes}. 신앙심은 매달 5씩 줄고, ★이 높을수록 성당의 이단 심문에 걸리기 쉽다(★당 5%, 최대 15%).", { likes: g.likes, dislikes: g.dislikes })}
+            {t("좋아함: {likes} · 싫어함: {dislikes}. 신앙심은 매달 5씩 줄고, ★이 높을수록 성당의 이단 심문에 걸리기 쉽다(★당 5%, 최대 15%).", { likes: t(g.likes), dislikes: t(g.dislikes) })}
           </p>
         </>
       )}
       {s.curse && s.curse.months > 0 && (
         <p className="hurt small">
-          {t("{god}의 저주: {curse} (남은 {n}개월)", { god: s.curse.god, curse: godOf(s.curse.god)?.curse ?? "", n: s.curse.months })}
+          {t("{god}의 저주: {curse} (남은 {n}개월)", { god: t(s.curse.god), curse: t(godOf(s.curse.god)?.curse ?? ""), n: s.curse.months })}
         </p>
       )}
     </>
@@ -421,9 +421,9 @@ export function InjuryCard({ s }: { s: GameState }) {
           const eff = partEffect(s, p);
           return (
             <li key={p} className={raw || eff ? "hurt-row" : "empty"}>
-              <span className="slot">{PART_NAME[p]}</span>
+              <span className="slot">{t(PART_NAME[p])}</span>
               <span className="item">
-                {LEVEL_NAME[raw]}
+                {t(LEVEL_NAME[raw])}
                 {raw >= 3 && s.prosthetic[p] ? (p === "feet" ? ` · ${t("의족")}` : ` · ${t("의수")}`) : ""}
                 {raw > 0 && s.injuryCause?.[p] ? (s.injuryCause[p] === "burn" ? ` · ${t("화상")}` : ` · ${t("동상")}`) : ""}
               </span>
@@ -433,7 +433,7 @@ export function InjuryCard({ s }: { s: GameState }) {
         })}
         <li className={s.disease ? "hurt-row" : "empty"}>
           <span className="slot">{t("질병")}</span>
-          <span className="item">{s.disease ? diseaseName(s) : t("없음")}</span>
+          <span className="item">{s.disease ? t(diseaseName(s)) : t("없음")}</span>
           <span className="effect">{s.disease === 2 ? t("방을 옮길 때마다 HP −2, 판정 −2") : s.disease === 1 ? t("방을 옮길 때마다 HP −1") : ""}{s.disease && s.diseaseKind === "mold" ? t(", 야영 회복 절반") : ""}</span>
         </li>
         {(s.cold ?? 0) > 0 && (
@@ -446,21 +446,21 @@ export function InjuryCard({ s }: { s: GameState }) {
         {poisonOf(s) > 0 && (
           <li className="hurt-row">
             <span className="slot">{t("독")}</span>
-            <span className="item">{POISON_NAME[poisonOf(s)]}</span>
+            <span className="item">{t(POISON_NAME[poisonOf(s)])}</span>
             <span className="effect">{poisonOf(s) >= 2 ? t("방을 옮길 때마다 HP −2, 판정 −1") : t("방을 옮길 때마다 HP −1")} · {t("야영·미궁을 나올 때 한 단계")}</span>
           </li>
         )}
         {PARA_PARTS.filter((p) => paraOf(s, p) > 0).map((p) => (
           <li key={`para-${p}`} className="hurt-row">
             <span className="slot">{t("마비")}</span>
-            <span className="item">{PARA_PART_NAME[p]} {PARA_NAME[paraOf(s, p)]}</span>
+            <span className="item">{t(PARA_PART_NAME[p])} {t(PARA_NAME[paraOf(s, p)])}</span>
             <span className="effect">{paraEffect(p, paraOf(s, p))} · {t("미궁을 나오면 풀린다")}</span>
           </li>
         ))}
         {corrodedSlots(s).map((k) => (
           <li key={`cor-${k}`} className="hurt-row">
             <span className="slot">{t("부식")}</span>
-            <span className="item">{CORRODE_NAME[corrosionOf(s, k)]}</span>
+            <span className="item">{t(CORRODE_NAME[corrosionOf(s, k)])}</span>
             <span className="effect">{corrosionEffect(k, corrosionOf(s, k))} · {t("대장간 수리·숫돌")}</span>
           </li>
         ))}
@@ -470,8 +470,8 @@ export function InjuryCard({ s }: { s: GameState }) {
         <ul className="skills">
           {MIND_KEYS.filter((k) => known(s, k)).map((k) => (
             <li key={k}>
-              <span className="skill-kind mind">{MIND_NAME[k]}</span>
-              <span className="small dim">{MIND_EFFECT[k]}</span>
+              <span className="skill-kind mind">{t(MIND_NAME[k])}</span>
+              <span className="small dim">{t(MIND_EFFECT[k])}</span>
             </li>
           ))}
         </ul>
@@ -496,7 +496,7 @@ export function InjuryTags({ s }: { s: GameState }) {
   return (
     <div className="injury-tags">
       {list.map((t) => <span key={t} className="injury-tag">{t}</span>)}
-      {minds.map((t) => <span key={t} className="injury-tag mind">{t}</span>)}
+      {minds.map((m) => <span key={m} className="injury-tag mind">{m}</span>)}
     </div>
   );
 }
@@ -537,7 +537,18 @@ export function GearIcon({ id, scale = 1 }: { id?: string | null; scale?: number
 export { SPECIAL_LEVELS } from "../game/elements";
 import { SPECIAL_LEVELS, ULTIMATE_LEVEL } from "../game/elements";
 const LEVELS_2_16 = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+/**
+ * 훈련 갈래의 짧은 이름: 한국어 이름에서 " 수련/훈련"을 떼고 번역한다.
+ * 뗀 이름(예: "검투")이 번역돼 있으면 그것을, 아니면 전체 이름(예: "검술 훈련")의 번역을 쓴다. 한국어면 뗀 이름 그대로.
+ */
+export function lineName(name: string): string {
+  const short = name.replace(/ (수련|훈련)$/, ""); // i18n-ok: 접미사 정규식
+  const tr = t(short);
+  if (tr !== short || getLang() === "ko") return tr;
+  return t(name);
+}
 /** 특수 훈련 칸 이름 */
+
 const SPECIAL_KIND: Record<number, string> = { 4: tk("각인"), 7: tk("특화"), 10: tk("낙인"), 13: tk("궁극기"), 16: tk("화신") };
 
 /**
@@ -559,7 +570,7 @@ export function LevelTable({ s, selected, onPick }: { s: GameState; selected?: s
             {lines.map((id) => (
               <th key={id} className={selected === id ? "sel" : ""}>
                 {LINE_ICON[id] && <img className="line-icon" src={LINE_ICON[id].src} width={LINE_ICON[id].w} height={LINE_ICON[id].h} alt="" />}
-                {TRAININGS.find((x) => x.id === id)!.name.replace(/ (수련|훈련)$/, "")}{/* i18n-ok: 게임 데이터(훈련 이름) 접미사 제거 — 2단계 */}
+                {lineName(TRAININGS.find((x) => x.id === id)!.name)}
               </th>
             ))}
           </tr>
@@ -578,7 +589,7 @@ export function LevelTable({ s, selected, onPick }: { s: GameState; selected?: s
                   // 모험가 16레벨: 레벨표가 아니라 섬기는 신의 가르침(히든)
                   if (!id && lv === 16 && s.hero.cls === "adventurer") {
                     const te = s.godTeaching ? TEACHINGS[s.godTeaching as keyof typeof TEACHINGS] : null;
-                    return <td key={line} className={te ? "lt-learned" : "lt-future dim"} title={te ? `${te.boost} / ${te.final}: ${te.finalDesc}` : t("교관에게서는 배울 수 없다")}>{te ? te.name : "???"}</td>;
+                    return <td key={line} className={te ? "lt-learned" : "lt-future dim"} title={te ? `${t(te.boost)} / ${t(te.final)}: ${t(te.finalDesc)}` : t("교관에게서는 배울 수 없다")}>{te ? t(te.name) : "???"}</td>;
                   }
                   if (!id) return <td key={line} className="lt-future dim">—</td>;
                   const sk = SKILLS[id];
@@ -586,13 +597,13 @@ export function LevelTable({ s, selected, onPick }: { s: GameState; selected?: s
                   const state = learned ? "lt-learned" : lv === next ? "lt-next" : lv <= s.hero.level ? "lt-missed" : "lt-future";
                   const pick = state === "lt-next" && onPick ? () => onPick(line) : undefined;
                   return (
-                    <td key={line} className={`${state}${selected === line && lv === next ? " sel" : ""}`} title={sk.desc}>
+                    <td key={line} className={`${state}${selected === line && lv === next ? " sel" : ""}`} title={t(sk.desc)}>
                       {pick ? (
                         <button type="button" onClick={pick}>
-                          {sk.name}
+                          {t(sk.name)}
                         </button>
                       ) : (
-                        <span>{sk.name}</span>
+                        <span>{t(sk.name)}</span>
                       )}
                       {learned && <span className="mark-ok"> ✓</span>}
                       {sk.shield && <span className={shield ? "dim" : "warn"}> 🛡</span>}
@@ -623,7 +634,7 @@ export function BuildSummary({ s }: { s: GameState }) {
         const id = levelSkill(line, lv);
         return !!id && s.skills.includes(id);
       });
-      return { name: TRAININGS.find((x) => x.id === line)!.name.replace(/ (수련|훈련)$/, ""), n, marked }; // i18n-ok: 게임 데이터(훈련 이름) 접미사 제거 — 2단계
+      return { name: lineName(TRAININGS.find((x) => x.id === line)!.name), n, marked };
     })
     .filter((p) => p.n > 0);
   if (!parts.length) return <p className="dim small">{t("아직 갈래를 정하지 않았다.")}</p>;

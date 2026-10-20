@@ -38,8 +38,8 @@ export function WeekResultScreen({ ctl }: { ctl: Ctl }) {
         )}
         {r.learned && (
           <p className="learned">
-            {t("새 기술")} — <b>{SKILLS[r.learned].name}</b>
-            <span className="dim small"> ({SKILLS[r.learned].kind === "active" ? t("자동 발동") : t("패시브")}) {SKILLS[r.learned].desc}</span>
+            {t("새 기술")} — <b>{t(SKILLS[r.learned].name)}</b>
+            <span className="dim small"> ({SKILLS[r.learned].kind === "active" ? t("자동 발동") : t("패시브")}) {t(SKILLS[r.learned].desc)}</span>
           </p>
         )}
         {changed.length > 0 && (
@@ -49,7 +49,7 @@ export function WeekResultScreen({ ctl }: { ctl: Ctl }) {
               const d = r.statDelta[k]!;
               return (
                 <div key={k} className="delta-row">
-                  <span>{STAT_LABEL[k]}</span>
+                  <span>{t(STAT_LABEL[k])}</span>
                   <span className="num">{after - d}</span>
                   <span className="dim">→</span>
                   <b className="num">{revealed ? after : "?"}</b>
@@ -64,7 +64,7 @@ export function WeekResultScreen({ ctl }: { ctl: Ctl }) {
       <Card title={t("마을 소문")}>
         {r.feed.map((l, i) => (
           <p key={i} className="feed">
-            ♥ {l}
+            ♥ {t(l)}
           </p>
         ))}
       </Card>

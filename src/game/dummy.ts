@@ -1,3 +1,4 @@
+import { tk } from "../i18n/core";
 import { maxHp } from "./core";
 import { makeEnemies, startCombat } from "./combat";
 import { SKILLS } from "./skills";
@@ -34,7 +35,7 @@ export interface DummyReport {
   critRate: number;
 }
 
-const SOURCE_NAME: Record<string, string> = { attack: "기본 공격", burn: "불탐(지속)", plague: "역병", counter: "반격", boltMark: "번개의 각인(튐)" };
+const SOURCE_NAME: Record<string, string> = { attack: tk("기본 공격"), burn: tk("불탐(지속)"), plague: tk("역병"), counter: tk("반격"), boltMark: tk("번개의 각인(튐)") };
 
 export function sourceName(id: string): string {
   return SOURCE_NAME[id] ?? SKILLS[id]?.name ?? id;

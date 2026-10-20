@@ -185,14 +185,14 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
         <p className="dock-title">{t("장비를 발견했다")}</p>
         <div className="loot-card has-gear">
           <GearIcon id={id} scale={2} />
-          <b>{g.name}</b>
+          <b>{t(g.name)}</b>
           <span className="accent small">{gearEffect(id)}</span>
-          <span className="dim small">{g.flavor}</span>
-          <span className="small">{t("지금 착용: {gear}", { gear: cur ? `${GEAR[cur].name} (${gearEffect(cur) || t("효과 없음")})` : t("없음") })}</span>
+          <span className="dim small">{t(g.flavor)}</span>
+          <span className="small">{t("지금 착용: {gear}", { gear: cur ? `${t(GEAR[cur].name)} (${gearEffect(cur) || t("효과 없음")})` : t("없음") })}</span>
         </div>
         <div className="choices">
           <button className="btn primary" disabled={busy} onClick={() => go({ t: "pending", choice: "equip" })}>
-            {cur ? t("착용한다 — {name}은 두고 간다", { name: GEAR[cur].name }) : t("착용한다")}
+            {cur ? t("착용한다 — {name}은 두고 간다", { name: t(GEAR[cur].name) }) : t("착용한다")}
           </button>
           <button className="btn" disabled={busy} onClick={() => go({ t: "pending", choice: "leave" })}>
             {t("두고 간다")}
@@ -216,23 +216,23 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
           <div className="loot-card has-icon">
             <FragIcon tier={f.tier} scale={2} />
             <b>
-              {f.name} <span className="dim small">{TIER_LABEL[f.tier]}</span>
+              {t(f.name)} <span className="dim small">{t(TIER_LABEL[f.tier])}</span>
             </b>
             <span className="accent small">{fragStatText(id)}</span>
             {sk ? (
               <span className="small">
-                【{sk.name}】 {sk.kind === "active" ? t("자동 발동") : t("패시브")} · {sk.desc}
+                【{t(sk.name)}】 {sk.kind === "active" ? t("자동 발동") : t("패시브")} · {t(sk.desc)}
               </span>
             ) : (
               <span className="dim small">{t("특별한 능력은 없다.")}</span>
             )}
-            <span className="dim small">{f.flavor}</span>
+            <span className="dim small">{t(f.flavor)}</span>
           </div>
         ) : (
           <div className="loot-card has-icon">
             <FragIcon tier={f.tier} scale={2} hidden />
             <b>
-              {f.name} <span className="dim small">{t("처음 보는 편린")}</span>
+              {t(f.name)} <span className="dim small">{t("처음 보는 편린")}</span>
             </b>
             <span className="accent small">{t("능력치 ???")}</span>
             <span className="small">{t("능력 ???")}</span>
@@ -248,7 +248,7 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
           {full &&
             s.fragments.map((old, i) => (
               <button key={i} className="btn" disabled={busy} onClick={() => go({ t: "pending", choice: `swap${i}` })}>
-                {t("{name|을} 깨뜨리고 흡수", { name: FRAGMENTS[old].name })} <span className="dim small">· {fragStatText(old)}</span>
+                {t("{name|을} 깨뜨리고 흡수", { name: t(FRAGMENTS[old].name) })} <span className="dim small">· {fragStatText(old)}</span>
               </button>
             ))}
           <button className="btn ghost" disabled={busy} onClick={() => go({ t: "pending", choice: "leave" })}>
@@ -289,11 +289,11 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
     const optKey = seal ? "seal" : dg.pending.kind === "confession" ? (s.hero.faith ? "confessionFaith" : "confessionNone") : dg.pending.kind === "trap" && room.trapKind === "ledge" ? "ledge" : dg.pending.kind;
     return (
       <>
-        <p className="dock-title">{t("{name} — 어떻게 할까?", { name: seal ? seal.name : ROOM_LABEL[room.type] })}</p>
-        {seal && <p className="dim small">{seal.flavor} {t("실패하거나 강행하면 봉인의 수호자(HP 150)와 싸워야 지난다. 지면 죽지 않고 HP 1로 문 밖에 쓰러진다.")}{s.heretic && s.hero.faith ? t(" 이단의 고집: 판정 +3.") : ""}</p>}
+        <p className="dock-title">{t("{name} — 어떻게 할까?", { name: t(seal ? seal.name : ROOM_LABEL[room.type]) })}</p>
+        {seal && <p className="dim small">{t(seal.flavor)} {t("실패하거나 강행하면 봉인의 수호자(HP 150)와 싸워야 지난다. 지면 죽지 않고 HP 1로 문 밖에 쓰러진다.")}{s.heretic && s.hero.faith ? t(" 이단의 고집: 판정 +3.") : ""}</p>}
         {dg.pending.kind === "altars" && (
           <p className="dim small">
-            {s.hero.faith ? t("섬기는 신({god})의 제단: 신앙심 +10{extra}. ", { god: s.hero.faith, extra: s.hero.cls === "adventurer" ? (s.godTeaching ? "" : t(" — 무언가 더 기다리는 기척이 있다")) : s.relic ? "" : t(", 그 신의 유물 하나(삶마다 하나)") }) : ""}
+            {s.hero.faith ? t("섬기는 신({god})의 제단: 신앙심 +10{extra}. ", { god: t(s.hero.faith), extra: s.hero.cls === "adventurer" ? (s.godTeaching ? "" : t(" — 무언가 더 기다리는 기척이 있다")) : s.relic ? "" : t(", 그 신의 유물 하나(삶마다 하나)") }) : ""}
             {t("다른 해금된 신의 제단마다 응답 하나 — 화신과 싸울 때 한 번씩 돕는다(2d6). HP +10.")} {s.faithsKnown.some((f) => f !== s.hero.faith) && t("여기서 개종할 수도 있다.")}
           </p>
         )}
@@ -306,7 +306,7 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
           <p className="dim small">{t("{n}섹터 클리어. 들어가면 끝없는 미궁 — 함정 없이 몬스터만, 층마다 더 강해지고 계단은 끝없이 이어진다. 돌아오는 길은 귀환 주문서뿐(아니면 시간이 다 될 때까지). 남은 시간은 그대로다.", { n: dg.sector })}</p>
         )}
         {dg.pending.kind === "portal" && dg.sector < LAST_SECTOR && (
-          <p className="dim small">{t("들어가면 {next}섹터 — {name}. 남은 시간이 두 배가 된다({a} → {b}). 돌아가도 {n}섹터 클리어는 인정된다.", { next: dg.sector + 1, name: SECTOR_NAME[dg.sector + 1], a: fmtTime(dg.turnsLeft), b: fmtTime(dg.turnsLeft * 2), n: dg.sector })}</p>
+          <p className="dim small">{t("들어가면 {next}섹터 — {name}. 남은 시간이 두 배가 된다({a} → {b}). 돌아가도 {n}섹터 클리어는 인정된다.", { next: dg.sector + 1, name: t(SECTOR_NAME[dg.sector + 1]), a: fmtTime(dg.turnsLeft), b: fmtTime(dg.turnsLeft * 2), n: dg.sector })}</p>
         )}
         {dg.pending.kind === "record" && dg.sector === 3 && <p className="dim small">{t("물에 불은 경전이다. 말리면서 읽어야 해서 4시간이 걸린다.")}</p>}
         {dg.pending.kind === "trap" && MINE_TRAP_NOTE[room.trapKind ?? ""] && <p className="dim small">{t(MINE_TRAP_NOTE[room.trapKind!])}</p>}
@@ -324,7 +324,7 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
         )}
         {dg.pending.kind === "shrine" && (
           <p className="dim small">
-            {s.hero.faith ? t("섬기는 신: {god} (신앙심 {n}) — 기도하면 신앙심 +5.", { god: s.hero.faith, n: Math.floor(s.piety) }) : t("섬기는 신이 없다.")}
+            {s.hero.faith ? t("섬기는 신: {god} (신앙심 {n}) — 기도하면 신앙심 +5.", { god: t(s.hero.faith), n: Math.floor(s.piety) }) : t("섬기는 신이 없다.")}
             {s.faithsKnown.some((f) => f !== s.hero.faith) && (s.hero.faith ? t(" 다른 옛 신으로 개종할 수 있다 — 버린 신은 1개월 동안 저주를 건다.") : t(" 다른 옛 신으로 개종할 수 있다."))}
           </p>
         )}
@@ -344,7 +344,7 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
             .filter((o) => dg.pending!.kind !== "trap" || o.choice !== "disarm" || room.trapKind !== "ice")
             .map((o) => (
               <button key={o.choice} className={`btn${o.primary ? " primary" : ""}`} disabled={busy} onClick={() => go({ t: "pending", choice: o.choice })}>
-                {seal && o.choice === "disarm" ? `${seal.verb} (${seal.stat === "int" ? t("지능") : seal.stat === "str" ? t("힘") : t("감각")} DC ${BAL.sealDc})` : dg.pending!.kind === "record" && o.choice === "read" && dg.sector === 3 ? t("말리며 읽는다 (4시간)") : dg.pending!.kind === "trap" && o.choice === "disarm" && MINE_DISARM[room.trapKind ?? ""] ? t(MINE_DISARM[room.trapKind!]) : o.label && t(o.label, o.dc === undefined ? undefined : { dc: o.dc })}
+                {seal && o.choice === "disarm" ? `${t(seal.verb)} (${seal.stat === "int" ? t("지능") : seal.stat === "str" ? t("힘") : t("감각")} DC ${BAL.sealDc})` : dg.pending!.kind === "record" && o.choice === "read" && dg.sector === 3 ? t("말리며 읽는다 (4시간)") : dg.pending!.kind === "trap" && o.choice === "disarm" && MINE_DISARM[room.trapKind ?? ""] ? t(MINE_DISARM[room.trapKind!]) : o.label && t(o.label, o.dc === undefined ? undefined : { dc: o.dc })}
               </button>
             ))}
           {dg.pending.kind === "trap" && (room.trapKind === "pit" || room.trapKind === "ledge") && power(s, "abyss", 1) && (dg.floor < 3 || power(s, "abyss", 5)) && (
@@ -356,7 +356,7 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
             s.faithsKnown.map((f, i) =>
               f === s.hero.faith || !godOf(f) ? null : (
                 <button key={f} className="btn" disabled={busy} onClick={() => go({ t: "pending", choice: `convert${i}` })}>
-                  {t("{god|을} 섬긴다", { god: f })} <span className="dim small">· {t("개종 (1시간)")}</span>
+                  {t("{god|을} 섬긴다", { god: t(f) })} <span className="dim small">· {t("개종 (1시간)")}</span>
                 </button>
               ),
             )}
@@ -412,11 +412,11 @@ function RoomDock({ ctl }: { ctl: Ctl }) {
           </button>
         )}
       </div>
-      <p className="dock-title">{t("{room} — 어디로 갈까?", { room: ROOM_LABEL[room.type] })} <span className="dim small">{t("(한 방 2시간)")}</span></p>
+      <p className="dock-title">{t("{room} — 어디로 갈까?", { room: t(ROOM_LABEL[room.type]) })} <span className="dim small">{t("(한 방 2시간)")}</span></p>
       <div className="choices">
         {room.edges.map((id) => {
           const nb = dg.rooms[id];
-          const label = nb.visited || nb.known ? (nb.respawned && !nb.resolved ? t("새로운 기척") : ROOM_LABEL[nb.type]) + (nb.ambushKnown && nb.ambush ? ` · ${t("고블린 매복")}` : "") : "???";
+          const label = nb.visited || nb.known ? (nb.respawned && !nb.resolved ? t("새로운 기척") : t(ROOM_LABEL[nb.type])) + (nb.ambushKnown && nb.ambush ? ` · ${t("고블린 매복")}` : "") : "???";
           const seen = nb.visited || nb.known;
           const water = seen && nb.radiant ? t("성광 방(신앙심 −3)") : seen && nb.flooded ? (nb.deep ? t("깊은 물") : highTide(s) ? t("물에 잠김(느림)") : t("물에 잠김")) : seen && nb.ice ? t("얼음 구역(냉기)") : seen && nb.hot ? (stagnant(s) ? t("뜨거운 방(화상 위험)") : t("뜨거운 방")) : seen && nb.pool ? t("지하수") : seen && nb.cliff ? t("벼랑 위") : "";
           const note = [id === dg.prev ? t("왔던 길") : nb.visited ? t("가 본 곳") : "", water].filter(Boolean).join(" · ");
@@ -500,7 +500,8 @@ function FloorMap({ dg, night }: { dg: DungeonState; night: boolean }) {
               {r.id === dg.current && <circle cx={p.x} cy={p.y} r={7} className="map-here-ring" />}
               <circle cx={p.x} cy={p.y} r={r.id === dg.current ? 7 : 5} className={`map-node ${cls} t-${r.type}`} />
               {dg.sweeperRoom === r.id && !dg.sweeperDown && <circle cx={p.x} cy={p.y} r={10} className="map-sweeper" />}
-              {(r.known || r.visited) && <text x={p.x} y={p.y - 9} className="map-label">{ROOM_SHORT[r.type]}</text>}
+              {(r.known || r.visited) && <text x={p.x} y={p.y - 9} className="map-label">{t(ROOM_SHORT[r.type])}</text>
+}
             </g>
           );
         })}

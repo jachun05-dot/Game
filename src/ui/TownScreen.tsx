@@ -91,7 +91,7 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
             disabled={busy}
             onClick={() => dispatch({ t: "activity", a: "field" })}
           />
-          <ActivityButton title={tk("성당에 자수한다")} sub={t("{faith|을} 부정하고 마을로 돌아간다 (신앙을 잃는다, 시간은 들지 않는다)", { faith: s.hero.faith ?? t("옛 신") })} disabled={busy} onClick={() => dispatch({ t: "surrender" })} />
+          <ActivityButton title={tk("성당에 자수한다")} sub={t("{faith|을} 부정하고 마을로 돌아간다 (신앙을 잃는다, 시간은 들지 않는다)", { faith: s.hero.faith ? t(s.hero.faith) : t("옛 신") })} disabled={busy} onClick={() => dispatch({ t: "surrender" })} />
         </div>
       )}
 
@@ -176,9 +176,9 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
                   <div key={g.id} className="shop-row">
                     <GearIcon id={g.id} />
                     <div className="grow">
-                      <b>{g.name}</b> <span className="dim small">{SLOTS.find((x) => x.key === slot)!.name}</span>
+                      <b>{t(g.name)}</b> <span className="dim small">{t(SLOTS.find((x) => x.key === slot)!.name)}</span>
                       <div className="accent small">{gearEffect(g.id)}</div>
-                      {!owned && cur && <div className="dim small">{t("지금: {name} (교체하면 넘긴다)", { name: GEAR[cur].name })}</div>}
+                      {!owned && cur && <div className="dim small">{t("지금: {name} (교체하면 넘긴다)", { name: t(GEAR[cur].name) })}</div>}
                     </div>
                     <button className="btn small" disabled={owned || s.gold < g.price! || (g.rank ?? 0) > s.rank} onClick={() => dispatch({ t: "buyGear", id: g.id })}>
                       {owned ? t("착용 중") : (g.rank ?? 0) > s.rank ? t("등급 {n} 필요", { n: g.rank ?? 0 }) : `${g.price}G`}
@@ -190,8 +190,8 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
             {corrodedSlots(s).map((k) => (
               <div key={k} className="shop-row">
                 <div>
-                  <b>{t("수리 — {name}", { name: GEAR[s.gear[k]!].name })}</b>
-                  <div className="dim small">{CORRODE_NAME[corrosionOf(s, k)]} · {corrosionEffect(k, corrosionOf(s, k))} → {t("새것처럼")}</div>
+                  <b>{t("수리 — {name}", { name: t(GEAR[s.gear[k]!].name) })}</b>
+                  <div className="dim small">{t(CORRODE_NAME[corrosionOf(s, k)])} · {corrosionEffect(k, corrosionOf(s, k))} → {t("새것처럼")}</div>
                 </div>
                 <button className="btn small" disabled={busy || s.gold < repairCost(s, k)} onClick={() => dispatch({ t: "repair", slot: k })}>
                   {repairCost(s, k)}G
@@ -201,8 +201,8 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
             {LIMBS.filter((p) => s.injuries[p] >= 3 && !s.prosthetic[p]).map((p) => (
               <div key={p} className="shop-row">
                 <div>
-                  <b>{p === "feet" ? t("의족") : t("의수 ({part})", { part: PART_NAME[p] })}</b>
-                  <div className="dim small">{t("잃은 {part|을} 대신한다 — 중상 정도로는 쓸 수 있다", { part: PART_NAME[p] })}</div>
+                  <b>{p === "feet" ? t("의족") : t("의수 ({part})", { part: t(PART_NAME[p]) })}</b>
+                  <div className="dim small">{t("잃은 {part|을} 대신한다 — 중상 정도로는 쓸 수 있다", { part: t(PART_NAME[p]) })}</div>
                 </div>
                 <button className="btn small" disabled={busy || s.gold < INJ.prostheticCost} onClick={() => dispatch({ t: "prosthetic", part: p })}>
                   {INJ.prostheticCost}G
@@ -215,8 +215,8 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
             {LIMBS.filter((p) => s.injuries[p] >= 3).map((p) => (
               <div key={p} className="shop-row">
                 <div>
-                  <b>{t("재생 의식 — {part}", { part: PART_NAME[p] })}</b>
-                  <div className="dim small">{t("잃은 {part|을} 완전히 되살린다", { part: PART_NAME[p] })}</div>
+                  <b>{t("재생 의식 — {part}", { part: t(PART_NAME[p]) })}</b>
+                  <div className="dim small">{t("잃은 {part|을} 완전히 되살린다", { part: t(PART_NAME[p]) })}</div>
                 </div>
                 <button className="btn small" disabled={busy || s.gold < INJ.regenCost} onClick={() => dispatch({ t: "regen", part: p })}>
                   {INJ.regenCost}G
@@ -228,7 +228,7 @@ export function TownScreen({ ctl, onGraveyard }: { ctl: Ctl; onGraveyard: () => 
             {s.fragments.map((id, i) => (
               <div key={i} className="shop-row">
                 <div>
-                  <b>{FRAGMENTS[id].name}</b>
+                  <b>{t(FRAGMENTS[id].name)}</b>
                   <div className="accent small">{fragStatText(id)}</div>
                 </div>
                 {/* 미리보기 등에서 confirm 창이 막힐 수 있어 버튼을 두 번 누르게 한다 */}
@@ -298,9 +298,9 @@ function trainSub(s: GameState): string {
   const base = t("직업교관 · {cost}G · 레벨 {lv} → {next}", { cost: trainCost(s), lv: s.hero.level, next: s.hero.level + 1 });
   const gate = gateOf(s);
   if (gate) {
-    if (s.inventory[gate.item] <= 0) return gate.sector > LAST_SECTOR ? t("{item|이} 필요하다 — {sector}섹터 보스가 지니고 있다(아직 열리지 않은 섹터 — 지금은 레벨 {lv}이 끝이다)", { item: gate.name, sector: gate.sector, lv: s.hero.level }) : t("{item|이} 필요하다 — {sector}섹터 3층 보스가 지니고 있다(처음 쓰러뜨릴 때 한 번만 나온다)", { item: gate.name, sector: gate.sector });
-    if (s.gold < trainCost(s)) return t("돈이 모자라다 ({cost}G + {item})", { cost: trainCost(s), item: gate.name });
-    return `${base} + ${gate.name}`;
+    if (s.inventory[gate.item] <= 0) return gate.sector > LAST_SECTOR ? t("{item|이} 필요하다 — {sector}섹터 보스가 지니고 있다(아직 열리지 않은 섹터 — 지금은 레벨 {lv}이 끝이다)", { item: t(gate.name), sector: gate.sector, lv: s.hero.level }) : t("{item|이} 필요하다 — {sector}섹터 3층 보스가 지니고 있다(처음 쓰러뜨릴 때 한 번만 나온다)", { item: t(gate.name), sector: gate.sector });
+    if (s.gold < trainCost(s)) return t("돈이 모자라다 ({cost}G + {item})", { cost: trainCost(s), item: t(gate.name) });
+    return `${base} + ${t(gate.name)}`;
   }
   return canTrain(s) ? base : t("돈이 모자라다 ({cost}G)", { cost: trainCost(s) });
 }
@@ -393,11 +393,11 @@ function DummyPanel({ s, onClose }: { s: GameState; onClose: () => void }) {
       <div className="chips">
         {(Object.keys(DUMMY_SCENARIOS) as DummyScenario[]).map((k) => (
           <button key={k} className={`chip${scen === k ? " on" : ""}`} onClick={() => setScen(k)}>
-            {DUMMY_SCENARIOS[k].name}
+            {t(DUMMY_SCENARIOS[k].name)}
           </button>
         ))}
       </div>
-      <p className="dim small">{DUMMY_SCENARIOS[scen].desc}</p>
+      <p className="dim small">{t(DUMMY_SCENARIOS[scen].desc)}</p>
       <DummyResult r={r} />
       <p className="dim small">{t("허수아비는 반격하지 않는다 — 맞아야 발동하는 기술(맞받아치기·방패 반격 등)과 HP가 깎여야 강해지는 기술은 여기서 잡히지 않는다.")}</p>
       <button className="btn ghost small" onClick={onClose}>
@@ -440,7 +440,7 @@ function DummyResult({ r }: { r: DummyReport }) {
       <div className="dummy-rounds">
         {r.bySource.map((x) => (
           <div key={x.id} className="dummy-src">
-            <span>{x.name}</span>
+            <span>{t(x.name)}</span>
             <span className="dummy-bar">
               <span style={{ width: `${(x.dmg / Math.max(1, r.total)) * 100}%` }} />
             </span>
@@ -504,7 +504,7 @@ function TrainingPanel({ ctl, onClose }: { ctl: Ctl; onClose: () => void }) {
         <div className="special-note">
           <b>{t("특수 훈련 — 레벨 {n}", { n: next })}</b>
           <span className="small">
-            {gate ? `${t("재료: {item}.", { item: gate.name })} ` : ""}
+            {gate ? `${t("재료: {item}.", { item: t(gate.name) })} ` : ""}
             {specParts[0]}
             <b>{t("특화")}</b>
             {specParts[1]}
@@ -512,7 +512,7 @@ function TrainingPanel({ ctl, onClose }: { ctl: Ctl; onClose: () => void }) {
         </div>
       )}
       {basic && !s.skills.includes(basic) && (
-        <p className="small accent">{t("첫 훈련: 어느 훈련을 받든 기본기 【{skill}】을(를) 함께 배운다 — {desc}", { skill: SKILLS[basic].name, desc: SKILLS[basic].desc })}</p>
+        <p className="small accent">{t("첫 훈련: 어느 훈련을 받든 기본기 【{skill}】을(를) 함께 배운다 — {desc}", { skill: t(SKILLS[basic].name), desc: t(SKILLS[basic].desc) })}</p>
       )}
       <button className="fold-toggle" aria-expanded={showTable} onClick={() => setShowTable((v) => !v)}>
         {showTable ? "▾" : "▸"} {showTable ? t("훈련 레벨표 접기") : t("훈련 레벨표 펼치기")}
@@ -523,15 +523,15 @@ function TrainingPanel({ ctl, onClose }: { ctl: Ctl; onClose: () => void }) {
           const xs = nextSkill(s, x.id);
           return (
             <button key={x.id} className={`option${tid === x.id ? " on" : ""}`} onClick={() => setTid(x.id)}>
-              <b>{x.name}</b> <span className="dim small">{x.desc}</span>
+              <b>{t(x.name)}</b> <span className="dim small">{t(x.desc)}</span>
               <span className="small accent">
                 {" "}
-                {x.stats[0] === x.stats[1] ? `${STAT_LABEL[x.stats[0]]} +2` : `${x.stats.map((k) => STAT_LABEL[k]).join(" · ")} +1`}
+                {x.stats[0] === x.stats[1] ? `${t(STAT_LABEL[x.stats[0]])} +2` : `${x.stats.map((k) => t(STAT_LABEL[k])).join(" · ")} +1`}
               </span>
               <span className="option-skill small">
                 {xs ? (
                   <>
-                    {t("레벨 {n} 기술:", { n: next })} <b>{SKILLS[xs].name}</b> <span className="dim">({SPECIAL_LEVELS.includes(next) ? t("특화") : SKILLS[xs].kind === "active" ? t("자동 발동") : t("패시브")}) {SKILLS[xs].desc}</span>
+                    {t("레벨 {n} 기술:", { n: next })} <b>{t(SKILLS[xs].name)}</b> <span className="dim">({SPECIAL_LEVELS.includes(next) ? t("특화") : SKILLS[xs].kind === "active" ? t("자동 발동") : t("패시브")}) {t(SKILLS[xs].desc)}</span>
                   </>
                 ) : (
                   <span className="dim">{hasLevelTable(x.id) ? (next >= 10 ? t("10레벨 이후 기술은 3섹터와 함께 열린다") : t("이 레벨에는 이 훈련으로 배울 기술이 없다")) : t("이 훈련의 기술은 모두 배웠다")}</span>
@@ -550,15 +550,15 @@ function TrainingPanel({ ctl, onClose }: { ctl: Ctl; onClose: () => void }) {
           → {a}
         </p>
       ))}
-      {needOff && <p className="small warn">{t("【{skill}】은(는) 왼손에 {off}이(가) 있어야 쓸 수 있다 — 그 갈래의 4레벨 각인이나 10레벨 낙인을 받아야 한다.", { skill: SKILLS[sk!].name, off: t(OFF_NAME[needOff]) })}</p>}
-      {needShield && <p className="small warn">{t("🛡 지금 방패가 없어 【{skill}】을(를) 배워도 쓸 수 없다. 대장간에서 나무 방패({price}G)를 먼저 사 두자.", { skill: SKILLS[sk!].name, price: GEAR.shield.price ?? 0 })}</p>}
+      {needOff && <p className="small warn">{t("【{skill}】은(는) 왼손에 {off}이(가) 있어야 쓸 수 있다 — 그 갈래의 4레벨 각인이나 10레벨 낙인을 받아야 한다.", { skill: t(SKILLS[sk!].name), off: t(OFF_NAME[needOff]) })}</p>}
+      {needShield && <p className="small warn">{t("🛡 지금 방패가 없어 【{skill}】을(를) 배워도 쓸 수 없다. 대장간에서 나무 방패({price}G)를 먼저 사 두자.", { skill: t(SKILLS[sk!].name), price: GEAR.shield.price ?? 0 })}</p>}
       <p className="eyebrow">{t("자유 배분 2포인트 (같은 능력치에 두 번도 가능)")}</p>
       <div className="chips">
         {STAT_KEYS.map((k) => {
           const n = free.filter((f) => f === k).length;
           return (
             <button key={k} className={`chip${n ? " on" : ""}`} onClick={() => toggle(k)}>
-              {STAT_LABEL[k]} {s.hero.stats[k]}
+              {t(STAT_LABEL[k])} {s.hero.stats[k]}
               {n ? ` +${n}` : ""}
             </button>
           );
@@ -581,7 +581,8 @@ function TrainingPanel({ ctl, onClose }: { ctl: Ctl; onClose: () => void }) {
             onClose();
           }}
         >
-          {t("{name} 받기", { name: tr.name })}
+          {t("{name} 받기", { name: t(tr.name) })}
+
         </button>
       </div>
     </Card>

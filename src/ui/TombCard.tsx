@@ -6,13 +6,13 @@ export function TombCard({ t: tb }: { t: Tomb }) {
     <article className={`tomb${tb.ending ? ` tomb-ending end-${tb.ending}` : ""}`}>
       <div className="tomb-cross">{tb.ending === "true" ? "✦" : tb.ending === "offering" ? "⚓" : tb.ending === "escape" ? "☾" : "✝"}</div>
       {tb.ending && <p className="eyebrow center">{t(ENDING_TITLE[tb.ending])}</p>}
-      <h3 className="tomb-name">{tb.name}</h3>
+      <h3 className="tomb-name">{t(tb.name)}</h3>
       <p className="dim small">
-        {tb.className ?? t("모험가")} Lv.{tb.level} · {t("{n}개월", { n: tb.months })} · {tb.reached}
+        {tb.className ? t(tb.className) : t("모험가")} Lv.{tb.level} · {t("{n}개월", { n: tb.months })} · {tb.reached}
       </p>
       <p className="tomb-cause">{tb.cause}</p>
       <p className="tomb-epitaph">{tb.epitaph}</p>
-      {tb.faith && <p className="small">{t("섬긴 신: {faith}", { faith: tb.faith })}</p>}
+      {tb.faith && <p className="small">{t("섬긴 신: {faith}", { faith: t(tb.faith) })}</p>}
       {tb.epilogue && (
         <div className="tomb-epilogue">
           {tb.epilogue.map((l, i) => (
@@ -41,7 +41,7 @@ export function TombCard({ t: tb }: { t: Tomb }) {
         <div className="chips center">
           {tb.faithsUnlocked.map((f) => (
             <span key={f} className="faith-tag">
-              {t("{faith} 해금", { faith: f })}
+              {t("{faith} 해금", { faith: t(f) })}
             </span>
           ))}
         </div>
@@ -59,10 +59,11 @@ export const ENDING_TITLE: Record<NonNullable<Tomb["ending"]>, string> = {
 
 export function tombText(tb: Tomb): string {
   return [
-    `${tb.ending ? t(ENDING_TITLE[tb.ending]) + " · " : "✝ "}${tb.name} (Lv.${tb.level}, ${t("{n}개월", { n: tb.months })}, ${tb.reached})`,
+    `${tb.ending ? t(ENDING_TITLE[tb.ending]) + " · " : "✝ "}${t(tb.name)} (Lv.${tb.level}, ${t("{n}개월", { n: tb.months })}, ${tb.reached})`,
     tb.cause,
     tb.epitaph,
-    tb.faithsUnlocked.length ? t("해금: {list}", { list: tb.faithsUnlocked.join(", ") }) : "",
+    tb.faithsUnlocked.length ? t("해금: {list}", { list: tb.faithsUnlocked.map((f) => t(f)).join(", ") }
+) : "",
     "— DDD: " + t("열여섯 살, 미궁으로"),
   ]
     .filter(Boolean)

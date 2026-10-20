@@ -18,7 +18,7 @@ function topStats(stats: Record<string, number>): string {
   return [...STAT_KEYS]
     .sort((a, b) => stats[b] - stats[a])
     .slice(0, 2)
-    .map((k) => `${STAT_LABEL[k]} ${stats[k]}`)
+    .map((k) => `${t(STAT_LABEL[k])} ${stats[k]}`)
     .join(" · ");
 }
 
@@ -44,7 +44,7 @@ export function CreateScreen({ ctl }: { ctl: Ctl }) {
         <div className="intro" onClick={() => setIntro((i) => i + 1)}>
           {INTRO.slice(0, intro + 1).map((l, i) => (
             <p key={i} className="intro-line">
-              {l}
+              {t(l)}
             </p>
           ))}
           <p className="dim small blink">{t("화면을 누르세요")}</p>
@@ -85,8 +85,8 @@ export function CreateScreen({ ctl }: { ctl: Ctl }) {
                 onClick={() => dispatch({ t: "pickClass", cls: id })}
               >
                 <img className="class-face" src={CLASS_ART[id].face} width={60} height={60} alt="" />
-                <b>{c.name}</b>
-                <span className="dim small">{c.motive}</span>
+                <b>{t(c.name)}</b>
+                <span className="dim small">{t(c.motive)}</span>
               </button>
             );
           })}
@@ -96,13 +96,13 @@ export function CreateScreen({ ctl }: { ctl: Ctl }) {
           return (
             <div className="class-detail">
               <img className="class-figure" src={CLASS_ART[c.id].full} width={CLASS_ART[c.id].w * 2} height={CLASS_ART[c.id].h * 2} alt="" />
-              <p className="small">{c.desc}</p>
+              <p className="small">{t(c.desc)}</p>
               <p className="small">
-                <span className="dim">{t("시작 장비")}</span> {Object.values(c.start).map((g) => GEAR[g!].name).join(", ")} · <span className="dim">{t("소모품")}</span> {kitItems(c.items).join(", ")} ·{" "}
+                <span className="dim">{t("시작 장비")}</span> {Object.values(c.start).map((g) => t(GEAR[g!].name)).join(", ")} · <span className="dim">{t("소모품")}</span> {kitItems(c.items).join(", ")} ·{" "}
                 <span className="dim">HP</span> {c.hp >= 0 ? `+${c.hp}` : c.hp}
               </p>
               <p className="small">
-                <span className="dim">{t("받을 수 있는 훈련")}</span> {c.trainings.map((tr) => TRAININGS.find((x) => x.id === tr)!.name).join(", ")} <span className="dim">{t("(첫 달에는 훈련 불가 · 소지금은 모두 0G)")}</span>
+                <span className="dim">{t("받을 수 있는 훈련")}</span> {c.trainings.map((tr) => t(TRAININGS.find((x) => x.id === tr)!.name)).join(", ")} <span className="dim">{t("(첫 달에는 훈련 불가 · 소지금은 모두 0G)")}</span>
               </p>
             </div>
           );
@@ -124,7 +124,7 @@ export function CreateScreen({ ctl }: { ctl: Ctl }) {
           {s.candidates.map((c, i) => (
             <button key={i} className={`cand${open[i] ? " open" : ""}${pick === i ? " picked" : ""}`} onClick={() => flip(i)}>
               <span className="cand-num">0{i + 1}</span>
-              <span className="cand-face">{open[i] ? c.archetype : <Icon name="eye" />}</span>
+              <span className="cand-face">{open[i] ? t(c.archetype) : <Icon name="eye" />}</span>
               {open[i] && <span className="cand-top">{topStats(c.stats)}</span>}
             </button>
           ))}
@@ -139,12 +139,12 @@ export function CreateScreen({ ctl }: { ctl: Ctl }) {
         </div>
         {pick !== null && (
           <div className="scout">
-            <p className="eyebrow">SCOUT REPORT · {s.candidates[pick].archetype}</p>
+            <p className="eyebrow">SCOUT REPORT · {t(s.candidates[pick].archetype)}</p>
             {STAT_KEYS.map((k) => {
               const v = s.candidates[pick].stats[k];
               return (
                 <div key={k} className="scout-row">
-                  <span>{STAT_LABEL[k]}</span>
+                  <span>{t(STAT_LABEL[k])}</span>
                   <Bar value={v} max={12} tone="food" />
                   <b className="num">{v}</b>
                   <span className="mod">{fmtMod(mod(v))}</span>
@@ -167,11 +167,11 @@ export function CreateScreen({ ctl }: { ctl: Ctl }) {
             {faithList.map((f) =>
               godOf(f) ? (
                 <button key={f} className={`chip${faith === f ? " on" : ""}`} onClick={() => setFaith(f)}>
-                  {f}
+                  {t(f)}
                 </button>
               ) : (
                 <button key={f} className="chip" disabled title={t("해금되었지만 권능은 아직 준비 중")}>
-                  {t("{faith} (준비 중)", { faith: f })}
+                  {t("{faith} (준비 중)", { faith: t(f) })}
                 </button>
               ),
             )}
@@ -180,14 +180,14 @@ export function CreateScreen({ ctl }: { ctl: Ctl }) {
         {faith && godOf(faith) && (
           <div className="class-detail">
             <p className="small">
-              <b>{faith}</b> <span className="dim">· {godOf(faith)!.align}</span>
+              <b>{t(faith)}</b> <span className="dim">· {t(godOf(faith)!.align)}</span>
             </p>
             <p className="small">
-              <span className="dim">{t("좋아함")}</span> {godOf(faith)!.likes} · <span className="dim">{t("싫어함")}</span> {godOf(faith)!.dislikes}
+              <span className="dim">{t("좋아함")}</span> {t(godOf(faith)!.likes)} · <span className="dim">{t("싫어함")}</span> {t(godOf(faith)!.dislikes)}
             </p>
             {godOf(faith)!.powers.map((p, i) => (
               <p key={i} className="small">
-                <span className="accent">★{i + 1}</span> {p}
+                <span className="accent">★{i + 1}</span> {t(p)}
               </p>
             ))}
             <p className="dim small">{t("신앙심 30(★1)에서 시작해 60·90에서 다음 권능이 열린다. ★4(130)는 3섹터, ★5(180)는 4섹터를 클리어한 뒤에 열린다. 성당은 옛 신을 섬기는 자를 감시한다 — 신앙이 깊을수록 이단 심문에 걸리기 쉽다.")}</p>
@@ -196,7 +196,8 @@ export function CreateScreen({ ctl }: { ctl: Ctl }) {
       </Card>
 
       <button className="btn primary wide" disabled={pick === null} onClick={() => pick !== null && dispatch({ t: "create", name: name || NAMES[Math.floor(Math.random() * NAMES.length)], candidate: pick, faith })}>
-        {pick === null ? t("후보 카드를 골라 주세요") : t("{cls}로 등록하기", { cls: CLASSES[s.hero.cls].name })}
+        {pick === null ? t("후보 카드를 골라 주세요") : t("{cls}로 등록하기", { cls: t(CLASSES[s.hero.cls].name) })}
+
       </button>
     </Shell>
   );

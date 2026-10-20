@@ -16,7 +16,7 @@ export function SettlementScreen({ ctl }: { ctl: Ctl }) {
         st.inquisition ? (
           <div className="choices">
             <button className="btn primary" onClick={() => dispatch({ t: "inquisition", renounce: true })}>
-              {t("{faith|을} 부정한다 — 신앙을 포기한다", { faith: s.hero.faith ?? t("옛 신") })}
+              {t("{faith|을} 부정한다 — 신앙을 포기한다", { faith: s.hero.faith ? t(s.hero.faith) : t("옛 신") })}
             </button>
             <button className="btn danger" onClick={() => dispatch({ t: "inquisition", renounce: false })}>
               {t("거부한다 — 현상수배가 된다")}
@@ -48,7 +48,8 @@ export function SettlementScreen({ ctl }: { ctl: Ctl }) {
       )}
       {eighteen ? (
         <Card title={t("열여덟 번째 생일")} className="warn">
-          <p>{t("내일이면 미궁이 문을 닫는다. 세금은 더 걷히지 않는다 — 쓸모없어진 모험가를 거두러 {chaser} 셋이 온다.", { chaser: chaserName(s) })}</p>
+          <p>{t("내일이면 미궁이 문을 닫는다. 세금은 더 걷히지 않는다 — 쓸모없어진 모험가를 거두러 {chaser} 셋이 온다.", { chaser: t(chaserName(s)) }
+)}</p>
           <p className="dim small">{t("도망칠 곳은 없다. 싸움 전에 HP는 다 차지만 부상은 그대로고, 물약은 들고 있는 것뿐이다. 지면 처형, 이기면 — 항구가 있다.")}</p>
         </Card>
       ) : s.heretic ? (
