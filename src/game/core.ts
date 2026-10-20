@@ -1,4 +1,3 @@
-import { josa } from "./josa";
 import { BAL, FAITH, STAT_KEYS } from "./data";
 import { CLASSES } from "./classes";
 import { Rng } from "./rng";
@@ -11,6 +10,7 @@ import { fallenEpilogue } from "./truth";
 import { GEAR, gearStat } from "./gear";
 import { injuryAc, injuryMaxHp, injuryRollPenalty, offhandAcPenalty } from "./injury";
 import type { DeathCause, GameState, LogKind, StatKey, Stats } from "./types";
+import { t, tk } from "../i18n/core";
 
 export function rngOf(s: GameState): Rng {
   return new Rng(s.rng);
@@ -112,14 +112,14 @@ export function taxDue(month: number, rank = 0): number {
 }
 
 const CAUSE_TEXT: Record<DeathCause, string> = {
-  mob: "여러 적에게 둘러싸여 쓰러졌다",
-  single: "싸우다 쓰러졌다",
-  trap: "함정에 목숨을 잃었다",
-  starve: "굶어 죽었다",
-  tax: "세금을 내지 못해 처형당했다",
-  plague: "병에 걸려 쓰러졌다",
-  abyss: "깊은 곳으로 떨어져 죽었다",
-  oblivion: "머리를 잃었다",
+  mob: tk("여러 적에게 둘러싸여 쓰러졌다"),
+  single: tk("싸우다 쓰러졌다"),
+  trap: tk("함정에 목숨을 잃었다"),
+  starve: tk("굶어 죽었다"),
+  tax: tk("세금을 내지 못해 처형당했다"),
+  plague: tk("병에 걸려 쓰러졌다"),
+  abyss: tk("깊은 곳으로 떨어져 죽었다"),
+  oblivion: tk("머리를 잃었다"),
 };
 
 const CAUSE_FAITH: Partial<Record<DeathCause, string>> = {
@@ -133,7 +133,7 @@ const CAUSE_FAITH: Partial<Record<DeathCause, string>> = {
 };
 
 export function kill(s: GameState, cause: DeathCause, detail?: string): void {
-  if (cause !== "tax" && lifeSave(s, detail ?? CAUSE_TEXT[cause])) return;
+  if (cause !== "tax" && lifeSave(s, detail ?? t(CAUSE_TEXT[cause]))) return;
   const faiths: string[] = [];
   const f = CAUSE_FAITH[cause];
   if (f) faiths.push(f);
@@ -142,7 +142,7 @@ export function kill(s: GameState, cause: DeathCause, detail?: string): void {
   const d = s.dungeon;
   // 진엔딩 결전(영주성)에서 쓰러졌다: 일반 사망이 아니라 "영주에게 맞선 자" 묘비
   const fallen = s.combat?.context === "final";
-  const reached = fallen ? "영주성" : s.combat?.context === "chase" ? "영지의 골목" : d ? (d.endless ? `끝없는 미궁 ${d.floor}층` : `${d.sector}섹터 ${d.floor}층`) : s.rank > 0 ? `${s.rank}섹터 클리어` : "마을";
+  const reached = fallen ? t("영주성") : s.combat?.context === "chase" ? t("영지의 골목") : d ? (d.endless ? t("끝없는 미궁 {floor}층", { floor: d.floor }) : t("{sector}섹터 {floor}층", { sector: d.sector, floor: d.floor })) : s.rank > 0 ? t("{n}섹터 클리어", { n: s.rank }) : t("마을");
   const months = s.month;
   const epitaph = buildEpitaph(s, cause);
 
@@ -152,7 +152,7 @@ export function kill(s: GameState, cause: DeathCause, detail?: string): void {
     level: s.hero.level,
     months,
     reached,
-    cause: detail ?? CAUSE_TEXT[cause],
+    cause: detail ?? t(CAUSE_TEXT[cause]),
     faithsUnlocked: faiths,
     epitaph,
     faith: s.hero.faith,
@@ -164,8 +164,8 @@ export function kill(s: GameState, cause: DeathCause, detail?: string): void {
   };
   s.combat = null;
   s.phase = "dead";
-  log(s, `${josa(s.hero.name, "은")} ${detail ?? CAUSE_TEXT[cause]}.`, "hurt");
-  for (const fa of faiths) log(s, `— ${fa}의 신앙이 해금되었다.`, "story");
+  log(s, t("{name|은} {cause}.", { name: t(s.hero.name), cause: detail ?? t(CAUSE_TEXT[cause]) }), "hurt");
+  for (const fa of faiths) log(s, t("— {faith}의 신앙이 해금되었다.", { faith: t(fa) }), "story");
 }
 
 /** 테스터 부적: 미궁에 들어갈 때마다 정해진 횟수만큼 죽음을 막는다(세금 처형은 막지 못한다) */
@@ -184,16 +184,17 @@ function lifeSave(s: GameState, what: string): boolean {
     s.hero.satiety = 30;
     if (s.dungeon) s.dungeon.starvingTurns = 0;
   }
-  log(s, `【${GEAR[id].name}】 ${what} — 그 순간 부적이 깨질 듯 빛나며 죽음을 비껴갔다. (HP ${s.hero.hp}, 남은 횟수 ${max - used - 1})`, "skill");
+  log(s, t("【{gear}】 {what} — 그 순간 부적이 깨질 듯 빛나며 죽음을 비껴갔다. (HP {hp}, 남은 횟수 {n})", { gear: t(GEAR[id].name), what, hp: s.hero.hp, n: max - used - 1 }), "skill");
   return true;
 }
 
 function buildEpitaph(s: GameState, cause: DeathCause): string {
-  const parts: string[] = [`영지의 열여섯 살 소년, ${CLASSES[s.hero.cls].name}${s.hero.cls === "adventurer" ? "가" : "로"} 미궁에 섰다.`];
-  if (s.hero.level > 1) parts.push(`${s.hero.level}레벨까지 훈련받았다.`);
+  const cls = t(CLASSES[s.hero.cls].name);
+  const parts: string[] = [s.hero.cls === "adventurer" ? t("영지의 열여섯 살 소년, {cls}가 미궁에 섰다.", { cls }) : t("영지의 열여섯 살 소년, {cls}로 미궁에 섰다.", { cls })];
+  if (s.hero.level > 1) parts.push(t("{n}레벨까지 훈련받았다.", { n: s.hero.level }));
   parts.push(...s.history.slice(-3));
-  if (s.rank > 0) parts.push(`차원문에 ${s.rank}번 닿았다.`);
-  if (s.recordsRead > 0) parts.push(`미궁의 기록물 ${s.recordsRead}개를 읽었다.`);
-  parts.push(`${s.month}번째 달에 ${CAUSE_TEXT[cause]}.`);
+  if (s.rank > 0) parts.push(t("차원문에 {n}번 닿았다.", { n: s.rank }));
+  if (s.recordsRead > 0) parts.push(t("미궁의 기록물 {n}개를 읽었다.", { n: s.recordsRead }));
+  parts.push(t("{n}번째 달에 {cause}.", { n: s.month, cause: t(CAUSE_TEXT[cause]) }));
   return parts.join(" ");
 }

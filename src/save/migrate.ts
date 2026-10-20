@@ -28,7 +28,7 @@ const OLD_ADV_AVATARS = ["fighterAvatar", "casterAvatar", "rogueAvatar"];
 const MIGRATIONS: Migration[] = [
   {
     rev: 1,
-    note: "2026-10-17 저장 형식 판 도입. 옛 모험가 16레벨 화신 기술은 '신에게 배운 자'(영구 보너스)로",
+    note: "2026-10-17 저장 형식 판 도입. 옛 모험가 16레벨 화신 기술은 '신에게 배운 자'(영구 보너스)로", // i18n-ok 개발 메모(화면에 안 나온다)
     run(s) {
       if (s.skills.some((id) => OLD_ADV_AVATARS.includes(id)) && !s.skills.includes("godTaught")) s.skills.push("godTaught");
     },

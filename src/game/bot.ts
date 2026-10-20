@@ -17,13 +17,14 @@ import { LAST_SECTOR } from "./endless";
 import type { Action } from "./engine";
 import { BRANCH_SKILLS, ELEMENTS, ELEMENT_KEYS, type BranchKey, type ElementKey, type RogueKey, type StyleKey } from "./elements";
 import type { GameState } from "./types";
+import { tk } from "../i18n/core";
 
 // "자동 결정" 옵션과 밸런스 시뮬레이션이 같이 쓰는 단순한 정책.
 
 export function botAction(s: GameState): Action | null {
   switch (s.phase) {
     case "create":
-      return { t: "create", name: "봇", candidate: 0, faith: null };
+      return { t: "create", name: tk("봇"), candidate: 0, faith: null }; // 이름은 저장되는 값 그대로(화면은 t(hero.name))
     case "week-result":
       return { t: "closeWeek" };
     case "settlement":

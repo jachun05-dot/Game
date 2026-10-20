@@ -1,10 +1,10 @@
-import { josa } from "./josa";
 import { BAL } from "./data";
 import { check, log, rngOf } from "./core";
 import { gearHas } from "./gear";
 import { allSkills } from "./skills";
 import { LEVEL_NAME, PART_NAME, partEffect, type Part } from "./injury";
 import type { GameState } from "./types";
+import { t } from "../i18n/core";
 
 // 4섹터 "불타는 광산 갱도"의 화상·동상·냉기·환기(2026-10-14, SECTOR4_DRAFT 2절).
 // 화상·동상은 부상 칸(injuries)을 그대로 올리는 새 원인이다 — 페널티·결손·치료(붕대·여관·의수·재생)는 부상 그대로.
@@ -69,8 +69,8 @@ function hurtBy(s: GameState, p: Part, cause: "burn" | "frost", why: string, hea
   s.injuries[p] = v;
   (s.injuryCause ??= {})[p] = cause;
   if (cause === "burn" && v >= 2) (s.burnFights ??= {})[p] = 0;
-  const name = cause === "burn" ? "화상" : "동상";
-  log(s, `【${name}】 ${why} — ${josa(PART_NAME[p], "이")} ${LEVEL_NAME[v]}! (${partEffect(s, p)})`, "hurt");
+  const vars = { why, part: t(PART_NAME[p]), level: t(LEVEL_NAME[v]), effect: partEffect(s, p) };
+  log(s, cause === "burn" ? t("【화상】 {why} — {part|이} {level}! ({effect})", vars) : t("【동상】 {why} — {part|이} {level}! ({effect})", vars), "hurt");
   return false;
 }
 
@@ -86,11 +86,11 @@ export function burnAfterFight(s: GameState): void {
     if (s.burnFights[p]! <= 3) continue;
     const c = check(s, "con", 13);
     if (c.ok) {
-      log(s, `${PART_NAME[p]}의 화상이 곪아 간다. 이를 악물고 버텼다. (체력 ${c.total} vs 13 — 연고나 지하수가 필요하다)`, "hurt");
+      log(s, t("{part}의 화상이 곪아 간다. 이를 악물고 버텼다. (체력 {total} vs 13 — 연고나 지하수가 필요하다)", { part: t(PART_NAME[p]), total: c.total }), "hurt");
       continue;
     }
     delete s.burnFights[p];
-    if (hurtBy(s, p, "burn", "치료하지 못한 화상이 깊이 번졌다")) return;
+    if (hurtBy(s, p, "burn", t("치료하지 못한 화상이 깊이 번졌다"))) return;
   }
 }
 
@@ -101,7 +101,7 @@ export function easeBurn(s: GameState, why: string): boolean {
   s.injuries[p] -= 1;
   if (s.burnFights) delete s.burnFights[p];
   if (s.injuries[p] <= 0) delete s.injuryCause![p];
-  log(s, `${why} ${PART_NAME[p]}: ${LEVEL_NAME[s.injuries[p]]}`, "good");
+  log(s, `${why} ${t(PART_NAME[p])}: ${t(LEVEL_NAME[s.injuries[p]])}`, "good");
   return true;
 }
 
@@ -116,7 +116,7 @@ export function useSalve(s: GameState): void {
   if (s.combat || s.inventory.salve <= 0 || (s.phase !== "town" && s.phase !== "dungeon")) return;
   if (!burnParts(s).length) return;
   s.inventory.salve -= 1;
-  easeBurn(s, "화상 연고를 두껍게 발랐다.");
+  easeBurn(s, t("화상 연고를 두껍게 발랐다."));
 }
 
 // ── 동상·냉기 ──
@@ -133,10 +133,10 @@ export function chill(s: GameState, n: number, why: string): boolean {
   if (n <= 0) return false;
   const before = s.cold ?? 0;
   s.cold = Math.min(4, before + n * coldMult(s));
-  if (Math.floor(s.cold) > Math.floor(before) && s.cold < 4) log(s, `${why} — 몸이 식는다. (냉기 ${Math.floor(s.cold)}/4)`, "hurt");
+  if (Math.floor(s.cold) > Math.floor(before) && s.cold < 4) log(s, t("{why} — 몸이 식는다. (냉기 {n}/4)", { why, n: Math.floor(s.cold) }), "hurt");
   if (s.cold < 4) return false;
   s.cold = 0;
-  return hurtBy(s, rngOf(s).pick(FROST_PARTS), "frost", `${why} — 손발 끝이 감각을 잃었다`);
+  return hurtBy(s, rngOf(s).pick(FROST_PARTS), "frost", t("{why} — 손발 끝이 감각을 잃었다", { why }));
 }
 
 export function warm(s: GameState, n: number): void {
@@ -156,11 +156,11 @@ export function campWarmth(s: GameState): void {
   if (s.inventory.firewood > 0 && ((s.cold ?? 0) > 0 || frozen)) {
     s.inventory.firewood -= 1;
     s.cold = 0;
-    let line = "장작으로 불을 피웠다. 언 몸이 녹는다.";
+    let line = t("장작으로 불을 피웠다. 언 몸이 녹는다.");
     if (frozen) {
       s.injuries[frozen] -= 1;
       if (s.injuries[frozen] <= 0) delete s.injuryCause![frozen];
-      line += ` ${PART_NAME[frozen]}: ${LEVEL_NAME[s.injuries[frozen]]}`;
+      line += ` ${t(PART_NAME[frozen])}: ${t(LEVEL_NAME[s.injuries[frozen]])}`;
     }
     log(s, line, "good");
   } else if ((s.cold ?? 0) > 0) warm(s, 2);
