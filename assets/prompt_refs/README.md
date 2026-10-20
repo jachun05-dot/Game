@@ -7,3 +7,5 @@
 - `ref_mon_rat.png` — 1섹터 쥐 Gemini 원본(004). 쥐 계열 변형의 기준
 - `ref_s3_{leech,snail,mold,shroudmold,scene}.png` — 3섹터 기본형·장면 Gemini 원본(045~051). 희귀·정예·보스 변형의 기준
 - `ref_icons_rooms.png` — 방 아이콘 시트 원본(022), `ref_icons_weapons.png` — 무기 아이콘 시트 원본(023). 아이콘 크기·화풍 기준
+- `ref_s4_{emberbat,salamander,orebeetle,frostwraith,burrower,cartmimic,scene}.png` — 4섹터 Gemini 원본(061~072). 희귀·정예·보스 변형, 5섹터 박쥐·벌레의 기준
+- `ref_s5_{riftbat,tendril,voideye,riftworm,hungerwraith}.png` — 5섹터 Gemini 원본(079~084). 086~090 변형의 기준
