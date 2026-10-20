@@ -1,5 +1,6 @@
 import { BAL } from "./data";
 import { log } from "./core";
+import { t } from "../i18n/core";
 import { ENDLESS_SECTOR, LAST_SECTOR } from "./endless";
 import type { DungeonState, GameState } from "./types";
 
@@ -50,25 +51,25 @@ export function sweeperTick(s: GameState, turns: number): void {
   if (!sweeperEligible(s)) return;
   const [warn1, warn2, appear] = BAL.sweeperTurns;
   const stage = dg.sweeperStage ?? 0;
-  const t = dg.floorTurns;
-  if (stage < 1 && t >= warn1) {
+  const ft = dg.floorTurns;
+  if (stage < 1 && ft >= warn1) {
     dg.sweeperStage = 1;
-    log(s, "멀리서 무언가 바닥을 긁는 소리가 난다. 이 층에 너무 오래 있었다 — 계단을 찾자.", "hurt");
+    log(s, t("멀리서 무언가 바닥을 긁는 소리가 난다. 이 층에 너무 오래 있었다 — 계단을 찾자."), "hurt");
   }
-  if ((dg.sweeperStage ?? 0) < 2 && t >= warn2) {
+  if ((dg.sweeperStage ?? 0) < 2 && ft >= warn2) {
     dg.sweeperStage = 2;
-    log(s, "벽 너머로 거대한 숨소리가 지나간다. 무언가 이 층을 치우러 오고 있다.", "hurt");
+    log(s, t("벽 너머로 거대한 숨소리가 지나간다. 무언가 이 층을 치우러 오고 있다."), "hurt");
     // 도망칠 길은 알려 준다: 계단·차원문 쪽으로 바람이 빠져나간다
     const exits = dg.rooms.filter((r) => r.type === "stairs" || r.type === "portal");
     if (exits.some((r) => !r.known && !r.visited)) {
       for (const r of exits) r.known = true;
-      log(s, "바람이 한쪽으로 빨려 나간다 — 출구가 어디인지 알 것 같다. (지도에 표시)", "system");
+      log(s, t("바람이 한쪽으로 빨려 나간다 — 출구가 어디인지 알 것 같다. (지도에 표시)"), "system");
     }
   }
-  if ((dg.sweeperStage ?? 0) < 3 && t >= appear) {
+  if ((dg.sweeperStage ?? 0) < 3 && ft >= appear) {
     dg.sweeperStage = 3;
     dg.sweeperRoom = spawnRoom(dg);
-    log(s, dg.sector === 6 && !dg.endless ? "【심판의 눈】 천장이 열리고 거대한 눈이 내려왔다. 방을 하나씩 훑으며 이쪽으로 온다. (계단으로 내려가거나 미궁을 나가면 피할 수 있다)" : `【미궁의 청소부】 그것이 나타났다. 멀리서 방을 하나씩 비우며 이쪽으로 온다. (계단으로 내려가거나 미궁을 나가면 피할 수 있다)`, "crit");
+    log(s, dg.sector === 6 && !dg.endless ? t("【심판의 눈】 천장이 열리고 거대한 눈이 내려왔다. 방을 하나씩 훑으며 이쪽으로 온다. (계단으로 내려가거나 미궁을 나가면 피할 수 있다)") : t("【미궁의 청소부】 그것이 나타났다. 멀리서 방을 하나씩 비우며 이쪽으로 온다. (계단으로 내려가거나 미궁을 나가면 피할 수 있다)"), "crit");
   }
 }
 
@@ -83,7 +84,7 @@ export function sweeperStep(s: GameState, steps: number): boolean {
   }
   if (dg.sweeperRoom === dg.current) return true;
   const dist = sweeperDistance(s);
-  if (dist !== null && dist <= 2) log(s, dist === 1 ? "바로 옆 방에서 무언가 벽을 긁는다. 청소부가 코앞이다!" : "청소부의 발소리가 가까워진다. (두 방 거리)", "hurt");
+  if (dist !== null && dist <= 2) log(s, dist === 1 ? t("바로 옆 방에서 무언가 벽을 긁는다. 청소부가 코앞이다!") : t("청소부의 발소리가 가까워진다. (두 방 거리)"), "hurt");
   return false;
 }
 
