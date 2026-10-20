@@ -77,6 +77,11 @@ export const MONSTER_ART: Record<string, SpriteArt> = {
   furnacemother: { src: "./mon-furnacemother.png", w: 88, h: 95 },  // 4섹터 보스, 반쪽은 얼음
   riftbat: { src: "./mon-riftbat.png", w: 30, h: 29 },  // 박쥐 다섯 마리 떼, 두 배로 그려 절반
   tendril: { src: "./mon-tendril.png", w: 79, h: 93 },
+  hungerwraith: { src: "./mon-hungerwraith.png", w: 75, h: 94 },
+  ledgespider: { src: "./mon-ledgespider.png", w: 100, h: 59 },
+  voideye: { src: "./mon-voideye.png", w: 43, h: 57 },
+  riftworm: { src: "./mon-riftworm.png", w: 73, h: 95 },
+  fallenheap: { src: "./mon-fallenheap.png", w: 88, h: 83 },  // 200격자 원본 — 절반
 };
 
 
