@@ -3,7 +3,7 @@ import { STAT_KEYS, STAT_LABEL } from "../game/data";
 import { SKILLS } from "../game/skills";
 import type { Ctl } from "./App";
 import { Card, GameScreen, HeroHeader, SceneBanner } from "./components";
-import { WEEK_SCENE } from "./art";
+import { weekScene } from "./art";
 import { t } from "../i18n";
 
 export function WeekResultScreen({ ctl }: { ctl: Ctl }) {
@@ -26,9 +26,9 @@ export function WeekResultScreen({ ctl }: { ctl: Ctl }) {
       dockClass="dock-cta"
     >
       <Card title={r.title} className="result">
-        {WEEK_SCENE[r.title] && <SceneBanner id={WEEK_SCENE[r.title]} />}
+        {weekScene(r.title) && <SceneBanner id={weekScene(r.title)!} />}
         {r.lines.map((l, i) => (
-          <p key={i}>{l}</p>
+          <p key={i}>{t(l)}</p>
         ))}
         {r.goldDelta !== 0 && <p className={r.goldDelta > 0 ? "good" : "hurt"}>{r.goldDelta > 0 ? `+${r.goldDelta}` : r.goldDelta}G</p>}
         {r.levelUp && (
