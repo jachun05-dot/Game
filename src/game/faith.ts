@@ -1,5 +1,6 @@
 import { FAITH } from "./data";
 import type { GameState } from "./types";
+import { t } from "../i18n/core";
 
 // 신앙(DESIGN 5절, 2026-10-13 확정): 죽음으로 해금한 옛 신을 섬기면 신앙심(0~100)이 쌓이고
 // ★1(30)·★2(60)·★3(90)마다 권능이 열린다. 매달 정산 때 −5. 미궁 성소에서 기도·개종, 개종하면 버린 신의 저주 1개월.
@@ -191,7 +192,7 @@ export function addPiety(s: GameState, n: number): void {
   const after = tier(s);
   if (after > before) {
     const g = godOf(s.hero.faith)!;
-    s.log.push({ text: `【${g.name}】 신앙이 깊어졌다 — ★${after}: ${g.powers[after - 1]}`, kind: "story" });
+    s.log.push({ text: t("【{god}】 신앙이 깊어졌다 — ★{n}: {power}", { god: t(g.name), n: after, power: t(g.powers[after - 1]) }), kind: "story" });
     s.logCount += 1;
   }
 }

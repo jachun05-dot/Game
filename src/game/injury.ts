@@ -1,4 +1,3 @@
-import { josa } from "./josa";
 import { MIND, afflict } from "./mind";
 import { plagueImmune, power } from "./faith";
 import type { GameState } from "./types";
@@ -174,9 +173,9 @@ export function wound(s: GameState, p: Part, why: string): "oblivion" | "body" |
   if (before >= 3) return null;
   const v = before + 1;
   s.injuries[p] = v;
-  s.log.push({ text: `【부상】 ${why} — ${josa(PART_NAME[p], "이")} ${LEVEL_NAME[v]}! (${partEffect(s, p)})`, kind: "hurt" });
+  s.log.push({ text: t("【부상】 {why} — {part|이} {level}! ({effect})", { why, part: t(PART_NAME[p]), level: t(LEVEL_NAME[v]), effect: partEffect(s, p) }), kind: "hurt" });
   s.logCount += 1;
-  if (p === "head" && v < 3) afflict(s, "confusion", MIND.confusionHead, "머리를 맞은 뒤로 생각이 자꾸 흩어진다.");
+  if (p === "head" && v < 3) afflict(s, "confusion", MIND.confusionHead, t("머리를 맞은 뒤로 생각이 자꾸 흩어진다."));
   if (v >= 3 && p === "head") return "oblivion";
   if (v >= 3 && p === "body") return "body";
   return null;
@@ -187,8 +186,8 @@ export function infect(s: GameState, kind: "rat" | "mold" = "rat"): void {
   if (s.disease >= 2) return;
   if (s.disease === 0) s.diseaseKind = kind;
   s.disease += 1;
-  const how = s.diseaseKind === "mold" ? "포자를 들이마셨다. 가슴이 답답하다" : "상처가 화끈거린다";
-  s.log.push({ text: `【질병】 ${how} — ${diseaseName(s)}. 방을 옮길 때마다 HP가 깎인다.${s.diseaseKind === "mold" ? " (야영 회복 절반)" : ""}`, kind: "hurt" });
+  const name = t(diseaseName(s));
+  s.log.push({ text: s.diseaseKind === "mold" ? t("【질병】 포자를 들이마셨다. 가슴이 답답하다 — {name}. 방을 옮길 때마다 HP가 깎인다. (야영 회복 절반)", { name }) : t("【질병】 상처가 화끈거린다 — {name}. 방을 옮길 때마다 HP가 깎인다.", { name }), kind: "hurt" });
   s.logCount += 1;
 }
 

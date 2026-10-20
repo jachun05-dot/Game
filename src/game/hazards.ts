@@ -1,4 +1,3 @@
-import { josa } from "./josa";
 import { BAL } from "./data";
 import { log, rngOf } from "./core";
 import { CORRODE_NAME, CORRODE_SLOTS, GEAR, SLOTS, corrosionOf, gearHas, type CorrodeSlot } from "./gear";
@@ -46,7 +45,7 @@ export function corrode(s: GameState, p: number, why: string, heavy = false): vo
   const before = corrosionOf(s, slot);
   const after = Math.min(3, heavy ? Math.max(2, before + 1) : before + 1);
   (s.corrosion ??= {})[slot] = after;
-  log(s, `【부식】 ${why} — ${josa(GEAR[s.gear[slot]!].name, "이")} ${CORRODE_NAME[after]}! (${corrosionEffect(slot, after)})`, "hurt");
+  log(s, t("【부식】 {why} — {gear|이} {stage}! ({effect})", { why, gear: t(GEAR[s.gear[slot]!].name), stage: t(CORRODE_NAME[after]), effect: corrosionEffect(slot, after) }), "hurt");
 }
 
 export function corrosionEffect(slot: string, stage: number): string {
@@ -66,7 +65,7 @@ export function useWhetstone(s: GameState): void {
   if (!slot) return;
   s.inventory.whetstone -= 1;
   s.corrosion![slot] = corrosionOf(s, slot) - 1;
-  log(s, `숫돌로 ${josa(GEAR[s.gear[slot]!].name, "을")} 갈았다. (${SLOT_NAME[slot]}: ${CORRODE_NAME[corrosionOf(s, slot)] || "멀쩡함"})`, "good");
+  log(s, t("숫돌로 {gear|을} 갈았다. ({slot}: {stage})", { gear: t(GEAR[s.gear[slot]!].name), slot: t(SLOT_NAME[slot]), stage: t(CORRODE_NAME[corrosionOf(s, slot)] || "멀쩡함") }), "good");
 }
 
 /** 대장간 수리비(그 슬롯을 새것처럼) */
@@ -80,7 +79,7 @@ export function repair(s: GameState, slot: CorrodeSlot): void {
   s.gold -= cost;
   s.corrosion![slot] = 0;
   pray(s, "greed", -Math.ceil(cost / 20));
-  log(s, `대장간에서 ${josa(GEAR[s.gear[slot]!].name, "을")} 손봤다. (${cost}G) 녹이 말끔히 벗겨졌다.`, "system");
+  log(s, t("대장간에서 {gear|을} 손봤다. ({cost}G) 녹이 말끔히 벗겨졌다.", { gear: t(GEAR[s.gear[slot]!].name), cost }), "system");
 }
 
 /** 장비를 바꾸면 그 슬롯의 부식은 사라진다(새 장비) */
@@ -89,6 +88,11 @@ export function clearCorrosion(s: GameState, slot: string): void {
 }
 
 // ── 독·마비 ──
+
+/** 회복 문장 둘을 잇는다(한국어는 "a, b") */
+function joinPair(out: string[]): string {
+  return out.length >= 2 ? t("{a}, {b}", { a: out[0], b: out[1] }) : out[0];
+}
 
 function poisonMult(s: GameState): number {
   // 로그: 해독 지식(절반), 독의 몸(면역)
@@ -105,7 +109,7 @@ export function poisonAfflict(s: GameState, p: number, why: string): void {
   const m = poisonMult(s) * (fragSkills(s).includes("fragToadSkin") ? 0.5 : 1);
   if (!rngOf(s).chance(p * m)) return;
   s.poison = poisonOf(s) + 1;
-  log(s, `【독】 ${why} — ${POISON_NAME[s.poison]}. ${s.poison >= 2 ? "방을 옮길 때마다 HP −2, 판정 −1" : "방을 옮길 때마다 HP −1"}`, "hurt");
+  log(s, s.poison >= 2 ? t("【독】 {why} — {stage}. 방을 옮길 때마다 HP −2, 판정 −1", { why, stage: t(POISON_NAME[s.poison]) }) : t("【독】 {why} — {stage}. 방을 옮길 때마다 HP −1", { why, stage: t(POISON_NAME[s.poison]) }), "hurt");
 }
 
 export function paraOf(s: GameState, p: ParaPart): number {
@@ -123,7 +127,7 @@ export function paralyze(s: GameState, chance: number, why: string, part?: ParaP
   const before = paraOf(s, p);
   if (before >= 2) return;
   (s.paralysis ??= {})[p] = before + 1;
-  log(s, `【마비】 ${why} — ${josa(PARA_PART_NAME[p], "이")} ${PARA_NAME[before + 1]}! (${paraEffect(p, before + 1)})`, "hurt");
+  log(s, t("【마비】 {why} — {part|이} {stage}! ({effect})", { why, part: t(PARA_PART_NAME[p]), stage: t(PARA_NAME[before + 1]), effect: paraEffect(p, before + 1) }), "hurt");
 }
 
 export function paraEffect(p: ParaPart, v: number): string {
@@ -153,13 +157,13 @@ export function useAntidote(s: GameState): void {
   const n = s.skills.includes("scholar") || s.skills.includes("rgAntidote") ? 2 : 1; // 박식·해독 지식: 두 단계씩
   if (poisonOf(s) > 0) {
     s.poison = Math.max(0, poisonOf(s) - n);
-    out.push(s.poison ? "독이 조금 빠졌다" : "독이 빠졌다");
+    out.push(s.poison ? t("독이 조금 빠졌다") : t("독이 빠졌다"));
   }
   if (paraOf(s, worst) > 0) {
     s.paralysis![worst] = Math.max(0, paraOf(s, worst) - n);
-    out.push(`${PARA_PART_NAME[worst]}에 감각이 돌아온다`);
+    out.push(t("{part}에 감각이 돌아온다", { part: t(PARA_PART_NAME[worst]) }));
   }
-  log(s, `해독초를 씹었다. ${out.join(", ")}.`, "good");
+  log(s, t("해독초를 씹었다. {effects}.", { effects: joinPair(out) }), "good");
 }
 
 /** 야영 한 번: 독·마비가 한 단계씩 */
@@ -167,27 +171,27 @@ export function restHazards(s: GameState): void {
   const out: string[] = [];
   if (poisonOf(s) > 0) {
     s.poison = poisonOf(s) - 1;
-    out.push(s.poison ? "독이 조금 빠졌다" : "독이 빠졌다");
+    out.push(s.poison ? t("독이 조금 빠졌다") : t("독이 빠졌다"));
   }
   if (anyParalysis(s)) {
     for (const p of PARA_PARTS) if (paraOf(s, p) > 0) s.paralysis![p] = paraOf(s, p) - 1;
-    out.push("저린 몸이 조금 풀렸다");
+    out.push(t("저린 몸이 조금 풀렸다"));
   }
-  if (out.length) log(s, `${out.join(", ")}.`, "good");
+  if (out.length) log(s, t("{effects}.", { effects: joinPair(out) }), "good");
 }
 
 /** 미궁을 나올 때: 마비는 사라지고 독은 한 단계 */
 export function leaveHazards(s: GameState, lines: string[]): void {
   if (anyParalysis(s)) {
     s.paralysis = {};
-    lines.push("미궁을 나오자 저렸던 몸이 풀렸다. (마비 해제)");
+    lines.push(t("미궁을 나오자 저렸던 몸이 풀렸다. (마비 해제)"));
   }
   if (poisonOf(s) > 0) {
     s.poison = poisonOf(s) - 1;
-    lines.push(s.poison ? "독이 조금 빠졌다. (중독 경상 — 해독초·여관)" : "바깥 공기를 마시자 독이 빠졌다.");
+    lines.push(s.poison ? t("독이 조금 빠졌다. (중독 경상 — 해독초·여관)") : t("바깥 공기를 마시자 독이 빠졌다."));
   }
   const cs = corrodedSlots(s);
-  if (cs.length) lines.push(`삭은 장비: ${cs.map((k) => `${GEAR[s.gear[k]!].name}(${CORRODE_NAME[corrosionOf(s, k)]})`).join(", ")} — 대장간에서 고칠 수 있다.`);
+  if (cs.length) lines.push(t("삭은 장비: {list} — 대장간에서 고칠 수 있다.", { list: cs.map((k) => `${t(GEAR[s.gear[k]!].name)}(${t(CORRODE_NAME[corrosionOf(s, k)])})`).join(", ") }));
 }
 
 /** 방을 옮길 때 독으로 깎이는 HP */

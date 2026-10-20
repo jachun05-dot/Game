@@ -1,10 +1,9 @@
-import { josa } from "./josa";
 import { RECORDS, RIFT_RECORDS, RUMORS, WAR_RECORDS } from "./data";
 import { log, rngOf } from "./core";
 import { CLASSES } from "./classes";
 import { god, power } from "./faith";
 import type { EndingKind, GameState } from "./types";
-import { t } from "../i18n/core";
+import { t, tk } from "../i18n/core";
 
 // 진실 조각(진엔딩 단서, 2026-10-15 SECTOR6_DRAFT "엔딩"): 7개. 삶을 넘어 쌓인다(Meta.clues) — "노래로 전해진 기억".
 // 대부분 이미 있는 기록물·소문 문장을 그대로 쓴다. 영주의 칙서(6섹터 고해실)만은 그 삶에서 직접 들어야 진엔딩이 열린다.
@@ -67,7 +66,7 @@ export function grantClue(s: GameState, id: string, lines?: string[]): void {
   if (id === "edict") s.edict = true;
   if (knowsClue(s, id)) return;
   (s.clues ??= []).push(id);
-  const text = `【진실 조각】 ${CLUE_NAME[id]} — 진실 ${clueCount(s)}/${CLUES.length}`;
+  const text = t("【진실 조각】 {clue} — 진실 {n}/{total}", { clue: t(CLUE_NAME[id]), n: clueCount(s), total: CLUES.length });
   if (lines) lines.push(text);
   else log(s, text, "crit");
 }
@@ -80,7 +79,7 @@ export function clueFromText(s: GameState, text: string, lines?: string[]): void
     const bits = (s.clueBits ??= []);
     if (!bits.includes(half)) bits.push(half);
     if (bits.includes("ageless-rumor") && bits.includes("ageless-record")) grantClue(s, "ageless", lines);
-    else (lines ? lines.push.bind(lines) : (x: string) => log(s, x, "system"))("(어딘가에서 들은 이야기와 맞물린다. 반쪽이 더 있을 것 같다.)");
+    else (lines ? lines.push.bind(lines) : (x: string) => log(s, x, "system"))(t("(어딘가에서 들은 이야기와 맞물린다. 반쪽이 더 있을 것 같다.)"));
   }
 }
 
@@ -103,7 +102,7 @@ export function rumorWithClues(s: GameState, lines: string[]): void {
   // 헌납 엔딩을 본 다음 삶: 첫 탐문에서 짝신의 이름 꿈
   if ((s.clueBits ?? []).includes("dream") && !knowsClue(s, "name")) {
     s.clueBits = s.clueBits!.filter((x) => x !== "dream");
-    lines.push(NAME_DREAM);
+    lines.push(t(NAME_DREAM));
     grantClue(s, "name", lines);
     return;
   }
@@ -112,9 +111,9 @@ export function rumorWithClues(s: GameState, lines: string[]): void {
   if (s.rank >= 2 && !knowsClue(s, "oldgods")) pool.push(RUMORS[0]);
   if (s.rank >= 3 && !knowsClue(s, "westvillage")) pool.push(WEST_RUMOR);
   const line = pool.length && r.chance(0.35) ? r.pick(pool) : r.pick(RUMORS);
-  lines.push(line);
+  lines.push(t(line));
   if (line === RUMORS[0] && s.rank >= 2 && !knowsClue(s, "oldgods")) {
-    lines.push(OLDGODS_FOLLOW);
+    lines.push(t(OLDGODS_FOLLOW));
     grantClue(s, "oldgods", lines);
   }
   if (line === WEST_RUMOR) grantClue(s, "westvillage", lines);
@@ -139,65 +138,65 @@ export function trueEndingLock(s: GameState): string[] {
 
 const ENDING_TEXT: Record<EndingKind, { cause: string; lines: string[] }> = {
   offering: {
-    cause: "셉터를 바치고 섬을 떠났다",
+    cause: tk("셉터를 바치고 섬을 떠났다"),
     lines: [
-      "셉터를 들어 올리자 미궁이 무너지듯 몸을 밀어냈다. 눈을 뜨니 미궁 입구였다.",
-      "영주성의 문이 처음으로 열렸다. 영주는 셉터를 받아 들고 오래 바라보았다. 그 눈은 늙지 않았다.",
-      "남은 세금은 모두 면제되었고, 평생 써도 남을 돈이 주어졌다.",
-      "다음 날 새벽, 섬을 떠나는 배에 올랐다. 등 뒤에서 성당의 종이 길게 울렸다.",
-      "며칠 뒤 항구에서 소식을 들었다. 섬이 바다에 가라앉았고, 살아남은 사람은 없다고.",
-      "그날 밤 꿈에서, 누군가 낯선 이름을 불렀다.",
+      tk("셉터를 들어 올리자 미궁이 무너지듯 몸을 밀어냈다. 눈을 뜨니 미궁 입구였다."),
+      tk("영주성의 문이 처음으로 열렸다. 영주는 셉터를 받아 들고 오래 바라보았다. 그 눈은 늙지 않았다."),
+      tk("남은 세금은 모두 면제되었고, 평생 써도 남을 돈이 주어졌다."),
+      tk("다음 날 새벽, 섬을 떠나는 배에 올랐다. 등 뒤에서 성당의 종이 길게 울렸다."),
+      tk("며칠 뒤 항구에서 소식을 들었다. 섬이 바다에 가라앉았고, 살아남은 사람은 없다고."),
+      tk("그날 밤 꿈에서, 누군가 낯선 이름을 불렀다."),
     ],
   },
   true: {
-    cause: "영주를 쓰러뜨리고 옛 신들을 돌려보냈다",
+    cause: tk("영주를 쓰러뜨리고 옛 신들을 돌려보냈다"),
     lines: [
-      "셉터를 결계에 박힌 그대로 두고 돌아섰다. 성소의 빛이 등을 떠밀어 마을로 돌려보냈다.",
-      "영주성에서 영주가 기다리고 있었다. 늙지 않는 눈이 처음으로 떨렸다.",
-      "영주의 껍질이 벗겨지고 흰빛이 드러났다. 짝을 삼킨 자의 손이었다.",
-      "옛 신들의 이름을 하나씩 불렀다. 대답이 돌아왔다.",
-      "흰빛이 꺼지자 성당의 종이 멈췄다. 결계 너머에서 문이 열리는 소리가 섬 전체에 울렸다.",
-      "옛 신들이 돌아왔다. 열여섯 살에 미궁에 들어간 아이들의 이름이 노래로 불리기 시작했다.",
+      tk("셉터를 결계에 박힌 그대로 두고 돌아섰다. 성소의 빛이 등을 떠밀어 마을로 돌려보냈다."),
+      tk("영주성에서 영주가 기다리고 있었다. 늙지 않는 눈이 처음으로 떨렸다."),
+      tk("영주의 껍질이 벗겨지고 흰빛이 드러났다. 짝을 삼킨 자의 손이었다."),
+      tk("옛 신들의 이름을 하나씩 불렀다. 대답이 돌아왔다."),
+      tk("흰빛이 꺼지자 성당의 종이 멈췄다. 결계 너머에서 문이 열리는 소리가 섬 전체에 울렸다."),
+      tk("옛 신들이 돌아왔다. 열여섯 살에 미궁에 들어간 아이들의 이름이 노래로 불리기 시작했다."),
     ],
   },
   escape: {
-    cause: "추적자를 뿌리치고 섬을 떠났다",
+    cause: tk("추적자를 뿌리치고 섬을 떠났다"),
     lines: [
-      "마지막 추적자가 진흙 위에 쓰러졌다. 숨을 고를 틈도 없이 항구로 달렸다.",
-      "밀수꾼의 작은 배가 밧줄을 풀었다. 등 뒤에서 관공서의 종이 미친 듯이 울렸다.",
-      "안개 속으로 섬이 멀어졌다. 성당의 첨탑도, 미궁의 입도, 영주성의 금빛 문장도.",
-      "셉터는 끝내 손에 넣지 못했다. 옛 신들의 이야기도 섬에 두고 왔다.",
-      "다만 살아남았다. 열여덟 살에 미궁에서 걸어 나온 아이는, 아무도 기억하지 못하는 바다 건너에서 늙어 갔다.",
+      tk("마지막 추적자가 진흙 위에 쓰러졌다. 숨을 고를 틈도 없이 항구로 달렸다."),
+      tk("밀수꾼의 작은 배가 밧줄을 풀었다. 등 뒤에서 관공서의 종이 미친 듯이 울렸다."),
+      tk("안개 속으로 섬이 멀어졌다. 성당의 첨탑도, 미궁의 입도, 영주성의 금빛 문장도."),
+      tk("셉터는 끝내 손에 넣지 못했다. 옛 신들의 이야기도 섬에 두고 왔다."),
+      tk("다만 살아남았다. 열여덟 살에 미궁에서 걸어 나온 아이는, 아무도 기억하지 못하는 바다 건너에서 늙어 갔다."),
     ],
   },
   fallen: {
-    cause: "영주에게 맞서다 쓰러졌다",
+    cause: tk("영주에게 맞서다 쓰러졌다"),
     lines: [
-      "셉터를 두고 돌아와 영주성에 들어섰다.",
-      "끝내 흰빛을 넘지 못했다.",
-      "성당은 그를 반역자로 기록했다. 묘지기만이 그 묘비에 꽃을 두었다.",
+      tk("셉터를 두고 돌아와 영주성에 들어섰다."),
+      tk("끝내 흰빛을 넘지 못했다."),
+      tk("성당은 그를 반역자로 기록했다. 묘지기만이 그 묘비에 꽃을 두었다."),
     ],
   },
 };
 
 /** 결전에서 쓰러졌을 때 묘비에 붙는 엔딩 글(core.kill이 붙인다) */
 export function fallenEpilogue(): string[] {
-  return [...ENDING_TEXT.fallen.lines];
+  return ENDING_TEXT.fallen.lines.map((l) => t(l));
 }
 
 /** 삶을 엔딩으로 끝낸다(묘비 + 엔딩 글) */
 export function endLife(s: GameState, kind: EndingKind): void {
   const e = ENDING_TEXT[kind];
-  const lines = [...e.lines];
-  if (kind === "true") for (const f of s.faithsKnown) lines.push(`— ${josa(f, "이")} 돌아와 인사한다.`);
+  const lines = e.lines.map((l) => t(l));
+  if (kind === "true") for (const f of s.faithsKnown) lines.push(t("— {god|이} 돌아와 인사한다.", { god: t(f) }));
   const d = s.dungeon;
   s.tomb = {
     id: `${s.seed}-${s.month}-${s.week}-${s.log.length}-${kind}`,
     name: s.hero.name,
     level: s.hero.level,
     months: s.month,
-    reached: kind === "fallen" ? "영주성" : kind === "escape" ? "섬 밖의 바다" : d ? `${d.sector}섹터 셉터의 제단` : "셉터의 제단",
-    cause: e.cause,
+    reached: kind === "fallen" ? t("영주성") : kind === "escape" ? t("섬 밖의 바다") : d ? t("{n}섹터 셉터의 제단", { n: d.sector }) : t("셉터의 제단"),
+    cause: t(e.cause),
     faithsUnlocked: [],
     epitaph: epitaph(s, kind),
     faith: s.hero.faith,
@@ -214,9 +213,11 @@ export function endLife(s: GameState, kind: EndingKind): void {
 }
 
 function epitaph(s: GameState, kind: EndingKind): string {
-  const parts = [`영지의 열여섯 살 소년, ${CLASSES[s.hero.cls].name}${s.hero.cls === "adventurer" ? "가" : "로"} 미궁에 섰다.`, `${s.hero.level}레벨까지 훈련받았다.`];
+  const cls = t(CLASSES[s.hero.cls].name);
+  const parts = [s.hero.cls === "adventurer" ? t("영지의 열여섯 살 소년, {cls}가 미궁에 섰다.", { cls }) : t("영지의 열여섯 살 소년, {cls}로 미궁에 섰다.", { cls }), t("{n}레벨까지 훈련받았다.", { n: s.hero.level })];
   parts.push(...s.history.slice(-2));
-  parts.push(`진실 조각 ${clueCount(s)}/${CLUES.length}을 알았다.`);
-  parts.push(kind === "escape" ? `열여덟 살, ${s.month}번째 달에 영주의 추적자를 뿌리치고 섬을 떠났다.` : kind === "offering" ? `${s.month}번째 달에 셉터를 바치고 섬을 떠났다.` : kind === "true" ? `${s.month}번째 달에 영주를 쓰러뜨렸다. 옛 신들이 돌아왔다.` : `${s.month}번째 달에 영주에게 맞서다 쓰러졌다.`);
+  parts.push(t("진실 조각 {n}/{total}을 알았다.", { n: clueCount(s), total: CLUES.length }));
+  const n = s.month;
+  parts.push(kind === "escape" ? t("열여덟 살, {n}번째 달에 영주의 추적자를 뿌리치고 섬을 떠났다.", { n }) : kind === "offering" ? t("{n}번째 달에 셉터를 바치고 섬을 떠났다.", { n }) : kind === "true" ? t("{n}번째 달에 영주를 쓰러뜨렸다. 옛 신들이 돌아왔다.", { n }) : t("{n}번째 달에 영주에게 맞서다 쓰러졌다.", { n }));
   return parts.join(" ");
 }

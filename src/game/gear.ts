@@ -322,7 +322,7 @@ export function gearHas(s: GameState, pick: (g: GearDef) => number | boolean | u
   return Object.entries(s.gear).filter(([slot, id]) => id && slotWorks(s, slot) && pick(GEAR[id])).map(([, id]) => GEAR[id!]);
 }
 
-const FISTS: Weapon = { dice: [1, 2], stat: "str", verb: "주먹을 휘둘러" };
+const FISTS: Weapon = { dice: [1, 2], stat: "str", verb: tk("주먹을 휘둘러") };
 
 export function weaponOf(s: GameState): Weapon {
   const id = s.gear.main;

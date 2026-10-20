@@ -1,5 +1,4 @@
 import { Rng } from "./rng";
-import { josa } from "./josa";
 import { faithMindMult, power } from "./faith";
 import type { GameState } from "./types";
 import { t } from "../i18n/core";
@@ -71,7 +70,7 @@ export function afflict(s: GameState, k: MindKey, p: number, hint: string): bool
   if (has(s, k) || res <= 0 || !rng(s).chance(p * faithMindMult(s) * res)) return false;
   s.mind[k] = { known: false };
   say(s, hint, "story"); // 무엇이 걸렸는지는 말하지 않는 분위기 문장
-  if (power(s, "oblivion", 4)) reveal(s, k, "이름 없는 자는 자기 마음을 숨기지 않는다"); // 망각의 신 ★4
+  if (power(s, "oblivion", 4)) reveal(s, k, t("이름 없는 자는 자기 마음을 숨기지 않는다")); // 망각의 신 ★4
   return true;
 }
 
@@ -79,7 +78,7 @@ export function reveal(s: GameState, k: MindKey, why?: string): void {
   const m = s.mind[k];
   if (!m || m.known) return;
   m.known = true;
-  say(s, `【${MIND_NAME[k]}】 ${why ?? "자신이 무언가에 사로잡혀 있다는 걸 깨달았다"} — ${MIND_EFFECT[k]}`, "skill");
+  say(s, t("【{mind}】 {why} — {effect}", { mind: t(MIND_NAME[k]), why: why ?? t("자신이 무언가에 사로잡혀 있다는 걸 깨달았다"), effect: t(MIND_EFFECT[k]) }), "skill");
 }
 
 export function cure(s: GameState, k: MindKey): void {
@@ -99,7 +98,7 @@ export function noticeCheck(s: GameState, bonus: number): void {
 /** 증상 한 번(확률). 걸려 있어도 모르면 흐릿한 문장으로 */
 export function symptom(s: GameState, k: MindKey, p: number, knownText: string, vagueText: string): boolean {
   if (!has(s, k) || !rng(s).chance(p)) return false;
-  say(s, known(s, k) ? `【${MIND_NAME[k]}】 ${knownText}` : vagueText, "miss");
+  say(s, known(s, k) ? `【${t(MIND_NAME[k])}】 ${knownText}` : vagueText, "miss");
   return true;
 }
 
@@ -108,7 +107,7 @@ export function comboNow(s: GameState): (typeof COMBOS)[number] | null {
   const c = COMBOS.find((x) => has(s, x.a) && has(s, x.b));
   if (!c || !rng(s).chance(MIND.combo)) return null;
   for (const k of [c.a, c.b]) if (s.mind[k]) s.mind[k]!.known = true;
-  say(s, `【${c.name}】 ${josa(MIND_NAME[c.a], "과")} ${josa(MIND_NAME[c.b], "이")} 한꺼번에 덮쳐 온다 — ${c.desc}`, "hurt");
+  say(s, t("【{combo}】 {a|과} {b|이} 한꺼번에 덮쳐 온다 — {desc}", { combo: t(c.name), a: t(MIND_NAME[c.a]), b: t(MIND_NAME[c.b]), desc: t(c.desc) }), "hurt");
   return c;
 }
 
@@ -127,11 +126,11 @@ export function rageAc(s: GameState): number {
 /** 물약 방침을 놓친다(분노·절망) */
 export function missPotion(s: GameState): boolean {
   if (has(s, "despair") && rng(s).chance(MIND.despairPotion)) {
-    say(s, known(s, "despair") ? "【절망】 물약을 꺼낼 기운조차 나지 않는다." : "물약에 손이 가지 않는다. 왜인지 모르겠다.", "miss");
+    say(s, known(s, "despair") ? t("【절망】 물약을 꺼낼 기운조차 나지 않는다.") : t("물약에 손이 가지 않는다. 왜인지 모르겠다."), "miss");
     return true;
   }
   if (has(s, "rage") && rng(s).chance(MIND.ragePotion)) {
-    say(s, known(s, "rage") ? "【분노】 물약 따위 생각할 겨를이 없다!" : "피가 끓어 물약 생각이 나지 않았다.", "miss");
+    say(s, known(s, "rage") ? t("【분노】 물약 따위 생각할 겨를이 없다!") : t("피가 끓어 물약 생각이 나지 않았다."), "miss");
     return true;
   }
   return false;
@@ -149,6 +148,6 @@ export function fadeAfterDungeon(s: GameState, lines: string[]): void {
     if (!has(s, k) || (!forget && !r.chance(MIND.fade))) continue;
     const was = known(s, k);
     cure(s, k);
-    lines.push(was ? `햇빛 아래로 나오자 ${josa(MIND_NAME[k], "이")} 가라앉았다.` : "미궁을 나서자 가슴 한구석이 이상하게 가벼워졌다.");
+    lines.push(was ? t("햇빛 아래로 나오자 {mind|이} 가라앉았다.", { mind: t(MIND_NAME[k]) }) : t("미궁을 나서자 가슴 한구석이 이상하게 가벼워졌다."));
   }
 }
