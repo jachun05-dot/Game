@@ -31,6 +31,17 @@ const VERBOSE = !!process.env.VERBOSE;
 // GOLDEN=파일: 모든 로그·주간 결과·정산·선택지·묘비 글을 파일로 남긴다(다국어 작업 전후 한국어가 그대로인지 비교)
 const GOLDEN = process.env.GOLDEN ?? "";
 const gold: string[] = [];
+const causes = new Set<string>();
+// I18N=en|ja|zh: 그 언어 사전으로 돌리고, 로그에 한국어가 남으면 버그로 센다(다국어 점검)
+const I18N = process.env.I18N ?? "";
+if (I18N) {
+  const { readdirSync, readFileSync } = await import("node:fs");
+  const { _setDict } = await import("../src/i18n/core");
+  const dir = new URL(`../src/i18n/locales/${I18N}/`, import.meta.url).pathname;
+  const d: Record<string, string> = {};
+  for (const f of readdirSync(dir)) Object.assign(d, JSON.parse(readFileSync(dir + f, "utf8")));
+  _setDict(I18N as "en", d);
+}
 
 const CLASSES: ClassId[] = ["adventurer", "warrior", "mage", "rogue"];
 const GOALS: AutoGoal[] = ["explore", "rush", "farm"];
@@ -292,7 +303,7 @@ for (let i = 0; i < N; i++) {
   try {
     apply(s, { t: "pickClass", cls });
     apply(s, { t: "autoGoal", goal });
-    apply(s, { t: "create", name: "퍼즈", candidate: 0, faith });
+    apply(s, { t: "create", name: I18N ? "Fuzz" : "퍼즈", candidate: 0, faith });
     const scen = SCEN === "mix" ? pick(["", "s2", "s3", "s4", "s5", "s6", "late", "heretic", "hurt", "strong"]) : SCEN;
     setup(s, scen);
     let prevLevel = s.hero.level, prevRank = s.rank;
@@ -318,7 +329,9 @@ for (let i = 0; i < N; i++) {
       if (s.combat === null && s.log.slice(-6).some((l) => l.mons?.includes("inquisitor"))) hit("이단심문관 조우");
       const extra: string[] = [];
       const fresh = [...s.log.slice(Math.max(0, s.log.length - (s.logCount - logBefore))).map((l) => l.text), ...(s.weekResult?.lines ?? []), ...(s.settlement?.lines ?? []), ...(s.weekResult?.feed ?? [])];
+      if (s.tomb) causes.add(s.tomb.cause);
       if (GOLDEN) gold.push(...fresh, ...(s.weekResult ? [s.weekResult.title] : []), s.dungeon?.pending ? JSON.stringify(s.dungeon.pending) : "", s.tomb ? JSON.stringify({ ...s.tomb, diedAt: 0 }) : "");
+      if (I18N) for (const line of fresh) if (/[가-힣]/.test(line)) extra.push(`번역 안 된 문장: ${line.slice(0, 80)}`);
       for (const line of fresh) if (/undefined|NaN|\[object|null|이\(가\)|을\(를\)|은\(는\)|%s|\$\{/.test(line)) extra.push(`이상한 문장: ${line.slice(0, 80)}`);
       if (s.hero.level < prevLevel) extra.push(`레벨 역행 ${prevLevel}→${s.hero.level}`);
       if (s.rank < prevRank) extra.push(`등급 역행`);
@@ -363,6 +376,7 @@ for (let i = 0; i < N; i++) {
   if (VERBOSE && i % 100 === 0) console.error(`${i}/${N} ${((Date.now() - t0) / 1000).toFixed(0)}s`);
 }
 
+if (process.env.CAUSES) (await import("node:fs")).writeFileSync(process.env.CAUSES, [...causes].join("\n"));
 if (GOLDEN) (await import("node:fs")).writeFileSync(GOLDEN, gold.filter(Boolean).join("\n"));
 console.log(`판 ${total} · 행동 ${steps} · 사망 ${deaths} · 클리어 ${cleared} · 예외 ${exceptions} · 멈춤 ${stalls} · 봇 null ${botNull} · ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 console.log(`버그 종류 ${seenKinds.size}`);

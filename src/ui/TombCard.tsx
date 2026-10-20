@@ -10,7 +10,7 @@ export function TombCard({ t: tb }: { t: Tomb }) {
       <p className="dim small">
         {tb.className ? t(tb.className) : t("모험가")} Lv.{tb.level} · {t("{n}개월", { n: tb.months })} · {tb.reached}
       </p>
-      <p className="tomb-cause">{tb.cause}</p>
+      <p className="tomb-cause">{cap(tb.cause)}</p>
       <p className="tomb-epitaph">{tb.epitaph}</p>
       {tb.faith && <p className="small">{t("섬긴 신: {faith}", { faith: t(tb.faith) })}</p>}
       {tb.epilogue && (
@@ -57,10 +57,15 @@ export const ENDING_TITLE: Record<NonNullable<Tomb["ending"]>, string> = {
   escape: tk("HIDDEN ENDING — 섬을 떠난 자"),
 };
 
+/** 사망 원인은 영어에서 문장 중간에도 쓰이게 소문자로 시작한다 — 혼자 보일 때만 첫 글자를 대문자로 */
+function cap(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 export function tombText(tb: Tomb): string {
   return [
     `${tb.ending ? t(ENDING_TITLE[tb.ending]) + " · " : "✝ "}${t(tb.name)} (Lv.${tb.level}, ${t("{n}개월", { n: tb.months })}, ${tb.reached})`,
-    tb.cause,
+    cap(tb.cause),
     tb.epitaph,
     tb.faithsUnlocked.length ? t("해금: {list}", { list: tb.faithsUnlocked.map((f) => t(f)).join(", ") }
 ) : "",

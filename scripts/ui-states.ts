@@ -7,6 +7,15 @@ import { botAction } from "../src/game/bot";
 import type { GameState } from "../src/game/types";
 
 const out = process.argv[2] ?? "ui-states";
+// I18N=en|ja|zh: 그 언어로 진행한 상태를 만든다(로그는 쓰인 순간의 언어로 남는다)
+if (process.env.I18N) {
+  const { readdirSync, readFileSync } = await import("node:fs");
+  const { _setDict } = await import("../src/i18n/core");
+  const dir = new URL(`../src/i18n/locales/${process.env.I18N}/`, import.meta.url).pathname;
+  const d: Record<string, string> = {};
+  for (const f of readdirSync(dir)) Object.assign(d, JSON.parse(readFileSync(dir + f, "utf8")));
+  _setDict(process.env.I18N as "en", d);
+}
 mkdirSync(out, { recursive: true });
 const want = new Map<string, (s: GameState) => boolean>([
   ["create", (s) => s.phase === "create"],
