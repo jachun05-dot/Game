@@ -28,6 +28,9 @@ const RAND = Number(process.argv[3] ?? 0.3);
 const START = Number(process.argv[4] ?? 1);
 const MAX_ACTIONS = Number(process.env.MAX_ACTIONS ?? 40000);
 const VERBOSE = !!process.env.VERBOSE;
+// GOLDEN=파일: 모든 로그·주간 결과·정산·선택지·묘비 글을 파일로 남긴다(다국어 작업 전후 한국어가 그대로인지 비교)
+const GOLDEN = process.env.GOLDEN ?? "";
+const gold: string[] = [];
 
 const CLASSES: ClassId[] = ["adventurer", "warrior", "mage", "rogue"];
 const GOALS: AutoGoal[] = ["explore", "rush", "farm"];
@@ -315,6 +318,7 @@ for (let i = 0; i < N; i++) {
       if (s.combat === null && s.log.slice(-6).some((l) => l.mons?.includes("inquisitor"))) hit("이단심문관 조우");
       const extra: string[] = [];
       const fresh = [...s.log.slice(Math.max(0, s.log.length - (s.logCount - logBefore))).map((l) => l.text), ...(s.weekResult?.lines ?? []), ...(s.settlement?.lines ?? []), ...(s.weekResult?.feed ?? [])];
+      if (GOLDEN) gold.push(...fresh, ...(s.weekResult ? [s.weekResult.title] : []), s.dungeon?.pending ? JSON.stringify(s.dungeon.pending) : "", s.tomb ? JSON.stringify({ ...s.tomb, diedAt: 0 }) : "");
       for (const line of fresh) if (/undefined|NaN|\[object|null|이\(가\)|을\(를\)|은\(는\)|%s|\$\{/.test(line)) extra.push(`이상한 문장: ${line.slice(0, 80)}`);
       if (s.hero.level < prevLevel) extra.push(`레벨 역행 ${prevLevel}→${s.hero.level}`);
       if (s.rank < prevRank) extra.push(`등급 역행`);
@@ -359,6 +363,7 @@ for (let i = 0; i < N; i++) {
   if (VERBOSE && i % 100 === 0) console.error(`${i}/${N} ${((Date.now() - t0) / 1000).toFixed(0)}s`);
 }
 
+if (GOLDEN) (await import("node:fs")).writeFileSync(GOLDEN, gold.filter(Boolean).join("\n"));
 console.log(`판 ${total} · 행동 ${steps} · 사망 ${deaths} · 클리어 ${cleared} · 예외 ${exceptions} · 멈춤 ${stalls} · 봇 null ${botNull} · ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 console.log(`버그 종류 ${seenKinds.size}`);
 for (const [k, n] of [...seenKinds].sort((a, b) => b[1] - a[1])) console.log(`  ${n}× ${k}`);

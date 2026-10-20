@@ -24,6 +24,19 @@ function walk(d, out = []) {
 }
 
 const CALL = /\b(?:t|tk)\(\s*"((?:[^"\\\n]|\\.)*)"/g;
+// 게임 데이터 표의 원문(bun scripts/i18n-keys.ts가 만든다) — 이미 번역 대상이므로 "감싸지 않은 한국어"로 세지 않는다
+let gameKeys = {};
+try {
+  gameKeys = JSON.parse(readFileSync(join(SRC, "i18n", "keys", "game.json"), "utf8"));
+} catch {}
+const LIT = /"((?:[^"\\\n]|\\.)*)"/g;
+const known = (l) => l.replace(LIT, (m, s) => {
+  try {
+    return JSON.parse(`"${s}"`) in gameKeys ? '""' : m;
+  } catch {
+    return m;
+  }
+});
 const keys = new Map(); // key -> first file
 const unwrapped = [];
 for (const f of walk(SRC)) {
@@ -53,7 +66,7 @@ for (const f of walk(SRC)) {
       l = l.slice(0, b);
     }
     l = l.replace(/(^|[^:"'`])\/\/.*$/, "$1").replace(/\{\s*\/\*.*?\*\/\s*\}/g, "");
-    l = l.replace(CALL, "");
+    l = known(l.replace(CALL, ""));
     if (HANGUL.test(l)) {
       n++;
       if (strict.some((s) => rel.startsWith(s)) && unwrapped.length < 400) unwrapped.push(`${rel}:${i + 1}: ${line.trim().slice(0, 110)}`);
@@ -62,10 +75,7 @@ for (const f of walk(SRC)) {
   if (n) unwrapped.push({ rel, n });
 }
 
-// 게임 데이터 표의 원문(bun scripts/i18n-keys.ts가 만든다)
-try {
-  for (const [k, origin] of Object.entries(JSON.parse(readFileSync(join(SRC, "i18n", "keys", "game.json"), "utf8")))) if (!keys.has(k)) keys.set(k, `src/game/${origin}`);
-} catch {}
+for (const [k, origin] of Object.entries(gameKeys)) if (!keys.has(k)) keys.set(k, `src/game/${origin}`);
 
 const slots = (s) => [...s.matchAll(/\{(\w+)(?:\|[^}]*)?\}/g)].map((m) => m[1]).sort().join(",");
 
