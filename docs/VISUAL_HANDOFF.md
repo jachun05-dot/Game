@@ -20,7 +20,7 @@
 
 | 비주얼 세션 | 게임플레이 세션 |
 |---|---|
-| `src/ui/styles.css`, 이미지 파일(`public/`, `assets/`), `docs/ART_PROMPTS.md`, `tools/sprite.py` | `src/game/**`(규칙·수치·봇), `scripts/`(밸런스 시뮬) |
+| `src/ui/styles.css`, 이미지 파일(`public/`, `assets/`), `docs/ART_PROMPTS.md`, `tools/{sprite,gridfit,defringe,touchup,split_sheet}.py` | `src/game/**`(규칙·수치·봇), `scripts/`(밸런스 시뮬) |
 | 화면 컴포넌트의 마크업·클래스 이름 변경(`src/ui/*.tsx`) | 화면에 새 정보·버튼 추가(`src/ui/*.tsx`) |
 
 - `src/ui/*.tsx`는 양쪽이 다 건드린다. **작업 전 `git pull origin master`, 작은 단위로 자주 커밋·푸시**한다. 같은 파일을 크게 갈아엎는 리팩터링은 상대 세션과 겹치지 않을 때만
@@ -43,6 +43,9 @@
 2. 사용자가 Gemini(구독, API 키 없음)에서 생성 → **채팅에 이미지 첨부**. API 키·토큰을 채팅에 붙여 달라고 요청하지 않는다
 3. 후처리: `python3 tools/sprite.py 입력.png 출력.png` — 마젠타 배경·Gemini 워터마크 제거, 100×100 도트 격자 복원, 캐릭터 둘레로 자르기. `--grid`로 격자 수 조정, 캐릭터가 오른쪽 아래 모서리에 걸치면 `--keep-watermark`
    - 검증됨: 기준 이미지를 512 캔버스에 키웠다가 다시 돌리면 픽셀 단위로 똑같이 복원된다
+   - 순서(2026-10-20 정리): ① `tools/gridfit.py 원본.png` — 격자 수 찾기(1024 이미지는 장마다 100~206으로 다름, 장면은 거의 200) → ② `sprite.py --grid N` → ③ `tools/defringe.py` — 마젠타 번짐 정리 → ④ 필요할 때만 `tools/touchup.py` (`unpink` 반투명 분홍 → 회색, `specks` 떨어진 점, `wm` 몸 위 워터마크, `mana` 청록 보정, `even` 짝수 패딩) → 시트는 `tools/split_sheet.py`로 나눈다
+   - **크기**: Gemini가 두 배로 그리면 그림은 그대로 두고 `art.ts`에 절반 w/h로 등록(`even`으로 짝수 맞춤). 흐리게 와서 격자가 애매하면 원하는 월드 크기가 나오는 굵은 격자로 복원한다
+   - 복원본은 `public/`과 `assets/{monsters,icons,scenes}/`에 같은 파일로 둔다. 다음 프롬프트에 첨부할 Gemini 원본은 `assets/prompt_refs/`
 4. 원본 도트 크기 PNG를 `assets/reference/`(원본 보관)와 `public/`(게임이 쓰는 파일)에 둔다. 화면에서는 CSS `image-rendering: pixelated`로 정수배 확대
 5. 얼굴 초상은 전신에서 머리~어깨를 정사각형으로 잘라 만든다(모험가: 30×30)
 
