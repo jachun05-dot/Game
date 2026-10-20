@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import { execSync } from "node:child_process";
@@ -41,6 +42,8 @@ function versionFile(): Plugin {
 export default defineConfig({
   plugins: [react(), versionFile()],
   base: "./",
+  // 에이전트 작업 폴더(.claude/worktrees)의 사본 테스트는 돌리지 않는다
+  test: { exclude: ["**/node_modules/**", "**/dist/**", ".claude/**"] },
   define: {
     __APP_VERSION__: JSON.stringify(info.version),
     __APP_COMMIT__: JSON.stringify(info.commit),
