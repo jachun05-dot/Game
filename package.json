@@ -16,7 +16,8 @@
     "build:app": "tsc -b && VITE_TARGET=app vite build",
     "release:pages": "npm run build && scripts/release/pages.sh",
     "release:artifact": "npm run build && node scripts/release/stage-artifact.mjs",
-    "check": "tsc -b && vitest run"
+    "check": "tsc -b && vitest run",
+    "i18n:check": "node scripts/i18n-check.mjs --strict src/ui"
   },
   "dependencies": {
     "react": "^18.3.1",

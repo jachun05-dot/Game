@@ -1,3 +1,4 @@
+import { LangPicker } from "./LangPicker";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { maxHp, heroAc, smod, stat } from "../game/core";
 import { FRAGMENTS, TIER_LABEL, fragSlots, fragStat, fragStatText } from "../game/fragments";
@@ -243,6 +244,8 @@ export function TopBar({ ctl, title }: { ctl: Ctl; title: ReactNode }) {
               용어 사전
             </button>
           </div>
+          <p className="eyebrow">언어 · Language</p> {/* i18n-ok: 어느 언어로든 찾을 수 있게 */}
+          <LangPicker />
           <p className="dim small">시드 #{(ctl.s.seed >>> 0).toString(36)}</p>
           <button className="btn small ghost" onClick={() => setOpen(false)}>
             닫기

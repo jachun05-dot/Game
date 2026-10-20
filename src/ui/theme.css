@@ -34,6 +34,21 @@
   --panel-grad: linear-gradient(180deg, rgba(255, 236, 196, 0.035), rgba(0, 0, 0, 0.12)), var(--panel);
 }
 
+/* 언어별 글꼴: src/i18n이 <html lang>을 바꾸고 일·중 글꼴을 내려받는다(한국어 글꼴로 한자를 그리면 모양이 다르다) */
+:root:lang(ja) {
+  --serif: "Noto Serif JP", "Hiragino Mincho ProN", "Yu Mincho", serif;
+  --sans: "Noto Sans JP", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+  --display: "Cinzel", "Noto Serif JP", serif;
+}
+:root:lang(zh-Hans) {
+  --serif: "Noto Serif SC", "Songti SC", "SimSun", serif;
+  --sans: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --display: "Cinzel", "Noto Serif SC", serif;
+}
+:root:lang(en) {
+  --serif: "Gowun Batang", Georgia, "Times New Roman", serif;
+}
+
 html,
 body {
   font-family: var(--sans);
@@ -692,3 +707,4 @@ body {
 /* 직업 4개(2026-10-19 로그 추가): 2×2 */
 .class-row { grid-template-columns: repeat(2, 1fr); }
 @media (min-width: 520px) { .class-row { grid-template-columns: repeat(4, 1fr); } }
+.lang-picker { justify-content: center; flex-wrap: wrap; margin: 4px 0 8px; }

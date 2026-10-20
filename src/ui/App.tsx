@@ -18,6 +18,7 @@ import { CodexScreen } from "./CodexScreen";
 import { mergeCodex } from "../game/fragments";
 import { FAITH } from "../game/data";
 import { GameScreen, HeroHeader, LogView } from "./components";
+import { useLang } from "../i18n";
 import { ALL_ENDINGS, ALL_FAITHS, META_CLUES, fullCodex, isUnlockTester } from "../game/tester";
 
 export type Speed = 1 | 2 | 4 | 8 | 0; // 0 = 즉시
@@ -49,6 +50,7 @@ const LINE_MS = 520;
 
 export function App() {
   const newer = useUpdateNotice();
+  useLang(); // 언어를 바꾸면 화면 전체를 다시 그린다
   return (
     <>
       {newer && <UpdateBanner />}
