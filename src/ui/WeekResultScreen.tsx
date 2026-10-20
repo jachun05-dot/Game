@@ -4,6 +4,7 @@ import { SKILLS } from "../game/skills";
 import type { Ctl } from "./App";
 import { Card, GameScreen, HeroHeader, SceneBanner } from "./components";
 import { WEEK_SCENE } from "./art";
+import { t } from "../i18n";
 
 export function WeekResultScreen({ ctl }: { ctl: Ctl }) {
   const { s, dispatch } = ctl;
@@ -15,11 +16,11 @@ export function WeekResultScreen({ ctl }: { ctl: Ctl }) {
   return (
     <GameScreen
       ctl={ctl}
-      title={`${r.month}월 ${r.week}주차 결과`}
+      title={t("{m}월 {w}주차 결과", { m: r.month, w: r.week })}
       header={<HeroHeader s={s} onOpen={() => ctl.setSheet(true)} />}
       dock={
         <button className="btn primary wide" onClick={() => dispatch({ t: "closeWeek" })}>
-          {toDungeon ? "4주차 — 미궁 준비로 →" : "다음 주 →"}
+          {toDungeon ? t("4주차 — 미궁 준비로 →") : t("다음 주 →")}
         </button>
       }
       dockClass="dock-cta"
@@ -37,8 +38,8 @@ export function WeekResultScreen({ ctl }: { ctl: Ctl }) {
         )}
         {r.learned && (
           <p className="learned">
-            새 기술 — <b>{SKILLS[r.learned].name}</b>
-            <span className="dim small"> ({SKILLS[r.learned].kind === "active" ? "자동 발동" : "패시브"}) {SKILLS[r.learned].desc}</span>
+            {t("새 기술")} — <b>{SKILLS[r.learned].name}</b>
+            <span className="dim small"> ({SKILLS[r.learned].kind === "active" ? t("자동 발동") : t("패시브")}) {SKILLS[r.learned].desc}</span>
           </p>
         )}
         {changed.length > 0 && (
@@ -56,11 +57,11 @@ export function WeekResultScreen({ ctl }: { ctl: Ctl }) {
                 </div>
               );
             })}
-            {!revealed && <p className="dim small center blink">눌러서 성장 확인</p>}
+            {!revealed && <p className="dim small center blink">{t("눌러서 성장 확인")}</p>}
           </div>
         )}
       </Card>
-      <Card title="마을 소문">
+      <Card title={t("마을 소문")}>
         {r.feed.map((l, i) => (
           <p key={i} className="feed">
             ♥ {l}

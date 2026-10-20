@@ -6,6 +6,7 @@ import type { Codex } from "../game/types";
 import { Card, FragIcon, Shell } from "./components";
 import { MONSTER_ART } from "./art";
 import { Icon } from "./icons";
+import { t } from "../i18n";
 
 // 몬스터 도감: 마주친 몬스터만 정보가 열리고, 편린 능력치는 흡수해 본 것만 보인다.
 // 도감은 삶을 넘어 이어진다(Meta에 저장).
@@ -28,13 +29,13 @@ const ORDER = ["rat", "goblin", "skeleton", "boss", "goldrat", "jewelgoblin", "c
 
 function whereFound(id: string): string {
   const places: string[] = [];
-  if (FIELD_ENCOUNTERS.some((e) => e.item.includes(id))) places.push("영지 밖 숲");
+  if (FIELD_ENCOUNTERS.some((e) => e.item.includes(id))) places.push(t("영지 밖 숲"));
   for (const sector of [1, 2, 3, 4, 5, 6]) {
     const boss = bossGroup(sector, { int: (a) => a })[0];
     const elite = SECTOR_ELITES[sector];
     const floors = [1, 2, 3].filter((f) => SECTOR_ENCOUNTERS[sector][f].some((e) => e.item.includes(id)) || SECTOR_RARES[sector][f] === id || (id === boss && f === 3) || (elite && (elite.id === id || elite.escort.includes(id)) && elite.floors.includes(f)));
     if (sector === 6 && id === "guardian") floors.push(3);
-    if (floors.length) places.push(`${sector}섹터 ${floors.join("·")}층`);
+    if (floors.length) places.push(t("{sector}섹터 {floors}층", { sector, floors: floors.join("·") }));
   }
   return places.join(", ");
 }
@@ -46,16 +47,16 @@ export function CodexScreen({ codex, onBack }: { codex: Codex; onBack: () => voi
   return (
     <Shell>
       <div className="topbar sticky">
-        <button className="link" onClick={onBack} aria-label="돌아가기">
+        <button className="link" onClick={onBack} aria-label={t("돌아가기")}>
           <Icon name="back" />
         </button>
-        <span className="topbar-title">몬스터 도감</span>
+        <span className="topbar-title">{t("몬스터 도감")}</span>
         <span className="link-spacer" />
       </div>
-      <p className="eyebrow">BESTIARY · 몬스터 도감</p>
-      <h1 className="h1">몬스터 도감</h1>
+      <p className="eyebrow">{t("BESTIARY · 몬스터 도감")}</p>
+      <h1 className="h1">{t("몬스터 도감")}</h1>
       <p className="dim small">
-        발견 {seen}/{ids.length} · 편린 흡수 {codex.fragKnown.length}/{Object.keys(FRAGMENTS).length}. 도감은 죽어도 다음 삶으로 이어진다. 편린의 힘은 직접 흡수해 봐야 알 수 있다.
+        {t("발견 {seen}/{total} · 편린 흡수 {frag}/{fragTotal}. 도감은 죽어도 다음 삶으로 이어진다. 편린의 힘은 직접 흡수해 봐야 알 수 있다.", { seen, total: ids.length, frag: codex.fragKnown.length, fragTotal: Object.keys(FRAGMENTS).length })}
       </p>
       <div className="stack">
         {ids.map((id, i) => {
@@ -65,7 +66,7 @@ export function CodexScreen({ codex, onBack }: { codex: Codex; onBack: () => voi
             return (
               <Card key={id} title={`${no} ???`} className="codex unseen">
                 <MonsterFigure id={id} seen={false} />
-                <p className="dim small">아직 마주친 적 없는 몬스터.</p>
+                <p className="dim small">{t("아직 마주친 적 없는 몬스터.")}</p>
               </Card>
             );
           }
@@ -73,13 +74,13 @@ export function CodexScreen({ codex, onBack }: { codex: Codex; onBack: () => voi
           const known = codex.fragKnown.includes(id);
           const sk = f?.skill ? SKILLS[f.skill] : null;
           return (
-            <Card key={id} title={`${no} ${m.name}${m.rare ? " · 희귀" : ""}${id === "boss" ? " · 보스" : ""}`} className="codex">
+            <Card key={id} title={`${no} ${m.name}${m.rare ? " · " + t("희귀") : ""}${id === "boss" ? " · " + t("보스") : ""}`} className="codex">
               <MonsterFigure id={id} seen />
               <p className="small">
-                HP {m.hp} · AC {m.ac} · 공격 {m.dice[0]}d{m.dice[1]} · 마석 {m.mana}G 어치
+                {t("HP {hp} · AC {ac} · 공격 {dice} · 마석 {mana}G 어치", { hp: m.hp, ac: m.ac, dice: `${m.dice[0]}d${m.dice[1]}`, mana: m.mana })}
               </p>
               <p className="dim small">
-                출현: {whereFound(id) || "알 수 없음"} · 처치 {codex.kills[id] ?? 0}
+                {t("출현: {where} · 처치 {n}", { where: whereFound(id) || t("알 수 없음"), n: codex.kills[id] ?? 0 })}
               </p>
               {m.note && <p className="dim small">{m.note}</p>}
               {f && (
@@ -93,20 +94,20 @@ export function CodexScreen({ codex, onBack }: { codex: Codex; onBack: () => voi
                       <p className="small">
                         {sk ? (
                           <>
-                            【{sk.name}】 <span className="dim">{sk.kind === "active" ? "자동 발동 · " : "패시브 · "}{sk.desc}</span>
+                            【{sk.name}】 <span className="dim">{sk.kind === "active" ? t("자동 발동") : t("패시브")} · {sk.desc}</span>
                           </>
                         ) : (
-                          <span className="dim">특별한 능력은 없다.</span>
+                          <span className="dim">{t("특별한 능력은 없다.")}</span>
                         )}
                       </p>
                       <p className="dim small">{f.flavor}</p>
                     </>
                   ) : codex.fragSeen.includes(id) ? (
                     <p className="small">
-                      <b>{f.name}</b> <span className="dim">— 본 적은 있다. 흡수해 보기 전에는 무엇을 주는지 알 수 없다.</span>
+                      <b>{f.name}</b> <span className="dim">— {t("본 적은 있다. 흡수해 보기 전에는 무엇을 주는지 알 수 없다.")}</span>
                     </p>
                   ) : (
-                    <p className="dim small">편린: ??? (아직 본 적 없다)</p>
+                    <p className="dim small">{t("편린: ??? (아직 본 적 없다)")}</p>
                   )}
                 </div>
               )}
@@ -115,7 +116,7 @@ export function CodexScreen({ codex, onBack }: { codex: Codex; onBack: () => voi
         })}
       </div>
       <button className="btn" onClick={onBack}>
-        돌아가기
+        {t("돌아가기")}
       </button>
     </Shell>
   );

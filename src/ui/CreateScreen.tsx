@@ -11,6 +11,7 @@ import { Bar, Card, Shell, fmtMod } from "./components";
 import { CLASS_ART } from "./art";
 import { Icon } from "./icons";
 import { ALL_FAITHS, isUnlockTester } from "../game/tester";
+import { t } from "../i18n";
 
 /** 뒤집은 후보 카드에 가장 높은 능력치 둘 */
 function topStats(stats: Record<string, number>): string {
@@ -46,10 +47,10 @@ export function CreateScreen({ ctl }: { ctl: Ctl }) {
               {l}
             </p>
           ))}
-          <p className="dim small blink">화면을 누르세요</p>
+          <p className="dim small blink">{t("화면을 누르세요")}</p>
         </div>
         <button className="btn ghost" onClick={() => setIntro(INTRO.length)}>
-          건너뛰기
+          {t("건너뛰기")}
         </button>
       </Shell>
     );
@@ -70,10 +71,10 @@ export function CreateScreen({ ctl }: { ctl: Ctl }) {
 
   return (
     <Shell>
-      <p className="eyebrow">CHAPTER I · 모험가 등록</p>
-      <h1 className="h1">어떤 소년으로 살아볼까요?</h1>
+      <p className="eyebrow">{t("CHAPTER I · 모험가 등록")}</p>
+      <h1 className="h1">{t("어떤 소년으로 살아볼까요?")}</h1>
 
-      <Card title="직업">
+      <Card title={t("직업")}>
         <div className="class-row">
           {CLASS_IDS.map((id) => {
             const c = CLASSES[id];
@@ -97,28 +98,28 @@ export function CreateScreen({ ctl }: { ctl: Ctl }) {
               <img className="class-figure" src={CLASS_ART[c.id].full} width={CLASS_ART[c.id].w * 2} height={CLASS_ART[c.id].h * 2} alt="" />
               <p className="small">{c.desc}</p>
               <p className="small">
-                <span className="dim">시작 장비</span> {Object.values(c.start).map((g) => GEAR[g!].name).join(", ")} · <span className="dim">소모품</span> {kitItems(c.items).join(", ")} ·{" "}
+                <span className="dim">{t("시작 장비")}</span> {Object.values(c.start).map((g) => GEAR[g!].name).join(", ")} · <span className="dim">{t("소모품")}</span> {kitItems(c.items).join(", ")} ·{" "}
                 <span className="dim">HP</span> {c.hp >= 0 ? `+${c.hp}` : c.hp}
               </p>
               <p className="small">
-                <span className="dim">받을 수 있는 훈련</span> {c.trainings.map((t) => TRAININGS.find((x) => x.id === t)!.name).join(", ")} <span className="dim">(첫 달에는 훈련 불가 · 소지금은 모두 0G)</span>
+                <span className="dim">{t("받을 수 있는 훈련")}</span> {c.trainings.map((tr) => TRAININGS.find((x) => x.id === tr)!.name).join(", ")} <span className="dim">{t("(첫 달에는 훈련 불가 · 소지금은 모두 0G)")}</span>
               </p>
             </div>
           );
         })()}
       </Card>
 
-      <Card title="이름">
+      <Card title={t("이름")}>
         <div className="row">
-          <input className="input" value={name} maxLength={12} placeholder="이름을 입력하세요" onChange={(e) => setName(e.target.value)} />
+          <input className="input" value={name} maxLength={12} placeholder={t("이름을 입력하세요")} onChange={(e) => setName(e.target.value)} />
           <button className="btn small" onClick={randomName}>
-            랜덤
+            {t("랜덤")}
           </button>
         </div>
       </Card>
 
-      <Card title={`타고난 몸 — 후보 3명`}>
-        <p className="dim small">세 후보 모두 능력치 합은 {BAL.startStatSum}이고, 분포만 다릅니다. 카드를 뒤집어 고르세요.</p>
+      <Card title={t("타고난 몸 — 후보 3명")}>
+        <p className="dim small">{t("세 후보 모두 능력치 합은 {sum}이고, 분포만 다릅니다. 카드를 뒤집어 고르세요.", { sum: BAL.startStatSum })}</p>
         <div className="cand-row">
           {s.candidates.map((c, i) => (
             <button key={i} className={`cand${open[i] ? " open" : ""}${pick === i ? " picked" : ""}`} onClick={() => flip(i)}>
@@ -130,10 +131,10 @@ export function CreateScreen({ ctl }: { ctl: Ctl }) {
         </div>
         <div className="row">
           <button className="btn small" onClick={() => setOpen([true, true, true])}>
-            모두 오픈
+            {t("모두 오픈")}
           </button>
           <button className="btn small" disabled={s.rerollsLeft <= 0} onClick={reroll}>
-            다른 후보 보기 ({s.rerollsLeft})
+            {t("다른 후보 보기 ({n})", { n: s.rerollsLeft })}
           </button>
         </div>
         {pick !== null && (
@@ -150,18 +151,18 @@ export function CreateScreen({ ctl }: { ctl: Ctl }) {
                 </div>
               );
             })}
-            <p className="dim small">보정치 = 능력치 ÷ 5 (내림). 판정은 d20 + 보정치.</p>
+            <p className="dim small">{t("보정치 = 능력치 ÷ 5 (내림). 판정은 d20 + 보정치.")}</p>
           </div>
         )}
       </Card>
 
-      <Card title="섬길 옛 신">
+      <Card title={t("섬길 옛 신")}>
         {faithList.length === 0 ? (
-          <p className="dim small">아직 해금된 신이 없습니다. 죽는 방식에 따라 다음 삶에서 섬길 수 있는 옛 신이 해금됩니다.</p>
+          <p className="dim small">{t("아직 해금된 신이 없습니다. 죽는 방식에 따라 다음 삶에서 섬길 수 있는 옛 신이 해금됩니다.")}</p>
         ) : (
           <div className="chips">
             <button className={`chip${faith === null ? " on" : ""}`} onClick={() => setFaith(null)}>
-              섬기지 않음
+              {t("섬기지 않음")}
             </button>
             {faithList.map((f) =>
               godOf(f) ? (
@@ -169,8 +170,8 @@ export function CreateScreen({ ctl }: { ctl: Ctl }) {
                   {f}
                 </button>
               ) : (
-                <button key={f} className="chip" disabled title="해금되었지만 권능은 아직 준비 중">
-                  {f} (준비 중)
+                <button key={f} className="chip" disabled title={t("해금되었지만 권능은 아직 준비 중")}>
+                  {t("{faith} (준비 중)", { faith: f })}
                 </button>
               ),
             )}
@@ -182,20 +183,20 @@ export function CreateScreen({ ctl }: { ctl: Ctl }) {
               <b>{faith}</b> <span className="dim">· {godOf(faith)!.align}</span>
             </p>
             <p className="small">
-              <span className="dim">좋아함</span> {godOf(faith)!.likes} · <span className="dim">싫어함</span> {godOf(faith)!.dislikes}
+              <span className="dim">{t("좋아함")}</span> {godOf(faith)!.likes} · <span className="dim">{t("싫어함")}</span> {godOf(faith)!.dislikes}
             </p>
             {godOf(faith)!.powers.map((p, i) => (
               <p key={i} className="small">
                 <span className="accent">★{i + 1}</span> {p}
               </p>
             ))}
-            <p className="dim small">신앙심 30(★1)에서 시작해 60·90에서 다음 권능이 열린다. ★4(130)는 3섹터, ★5(180)는 4섹터를 클리어한 뒤에 열린다. 성당은 옛 신을 섬기는 자를 감시한다 — 신앙이 깊을수록 이단 심문에 걸리기 쉽다.</p>
+            <p className="dim small">{t("신앙심 30(★1)에서 시작해 60·90에서 다음 권능이 열린다. ★4(130)는 3섹터, ★5(180)는 4섹터를 클리어한 뒤에 열린다. 성당은 옛 신을 섬기는 자를 감시한다 — 신앙이 깊을수록 이단 심문에 걸리기 쉽다.")}</p>
           </div>
         )}
       </Card>
 
       <button className="btn primary wide" disabled={pick === null} onClick={() => pick !== null && dispatch({ t: "create", name: name || NAMES[Math.floor(Math.random() * NAMES.length)], candidate: pick, faith })}>
-        {pick === null ? "후보 카드를 골라 주세요" : `${CLASSES[s.hero.cls].name}로 등록하기`}
+        {pick === null ? t("후보 카드를 골라 주세요") : t("{cls}로 등록하기", { cls: CLASSES[s.hero.cls].name })}
       </button>
     </Shell>
   );

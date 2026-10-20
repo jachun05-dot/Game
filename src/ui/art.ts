@@ -110,7 +110,7 @@ export const SCENE_ART: Record<string, SpriteArt> = {
 };
 
 /** 주간 결과 카드 제목 → 장소 그림 */
-export const WEEK_SCENE: Record<string, string> = { 훈련: "training", 탐문: "tavern", "외부 탐험": "forest", 여관: "inn" };
+export const WEEK_SCENE: Record<string, string> = { 훈련: "training", 탐문: "tavern", "외부 탐험": "forest", 여관: "inn" }; // i18n-ok: 게임이 정한 결과 제목으로 찾는 키(화면에 안 나온다)
 
 // 미궁 방 종류 아이콘(원래 도트 크기, 갈림길 버튼에 1배). 위험한 방은 붉은색, 계단·차원문은 보라, 보물은 금색 — 지도 테두리 색 규칙과 같다
 export const ROOM_ICON: Record<string, SpriteArt> = {

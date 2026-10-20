@@ -18,7 +18,7 @@ import { CodexScreen } from "./CodexScreen";
 import { mergeCodex } from "../game/fragments";
 import { FAITH } from "../game/data";
 import { GameScreen, HeroHeader, LogView } from "./components";
-import { useLang } from "../i18n";
+import { t, useLang } from "../i18n";
 import { ALL_ENDINGS, ALL_FAITHS, META_CLUES, fullCodex, isUnlockTester } from "../game/tester";
 
 export type Speed = 1 | 2 | 4 | 8 | 0; // 0 = 즉시
@@ -63,9 +63,9 @@ export function App() {
 function UpdateBanner() {
   return (
     <div className="update-banner" role="status">
-      새 버전이 나왔어요
+      {t("새 버전이 나왔어요")}
       <button className="btn small" onClick={() => window.location.reload()}>
-        새로고침
+        {t("새로고침")}
       </button>
     </div>
   );
@@ -270,7 +270,7 @@ function CatchUpScreen({ ctl }: { ctl: Ctl }) {
       header={<HeroHeader s={ctl.s} />}
       dock={
         <button className="btn wide" onClick={ctl.revealAll}>
-          넘기기
+          {t("넘기기")}
         </button>
       }
       dockClass="dock-cta"

@@ -1,4 +1,5 @@
 import { LangPicker } from "./LangPicker";
+import { t, tk } from "../i18n";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { maxHp, heroAc, smod, stat } from "../game/core";
 import { FRAGMENTS, TIER_LABEL, fragSlots, fragStat, fragStatText } from "../game/fragments";
@@ -17,7 +18,7 @@ import { hasShield, offOf, weaponOf } from "../game/gear";
 import type { OffKind } from "../game/elements";
 
 /** 로그 왼손 무기 이름(기술 조건 안내) */
-export const OFF_NAME: Record<OffKind, string> = { dagger: "두 번째 단검", flask: "독병 주머니", xbow: "손쇠뇌" };
+export const OFF_NAME: Record<OffKind, string> = { dagger: tk("두 번째 단검"), flask: tk("독병 주머니"), xbow: tk("손쇠뇌") };
 const OFF_MARK: Record<OffKind, string> = { dagger: "🗡", flask: "⚗", xbow: "➶" };
 import { AUTO_EAT_AT } from "../game/dungeon";
 import { BRANCH_SKILLS } from "../game/elements";
@@ -77,13 +78,13 @@ export function GameScreen({ ctl, title, header, children, dock, dockClass }: { 
 export function HeroHeader({ s, extra, onOpen }: { s: GameState; extra?: ReactNode; onOpen?: () => void }) {
   const hp = maxHp(s);
   return (
-    <header className={`hero-head${onOpen ? " clickable" : ""}`} onClick={onOpen} role={onOpen ? "button" : undefined} aria-label={onOpen ? "캐릭터와 장비 보기" : undefined}>
+    <header className={`hero-head${onOpen ? " clickable" : ""}`} onClick={onOpen} role={onOpen ? "button" : undefined} aria-label={onOpen ? t("캐릭터와 장비 보기") : undefined}>
       <img className="portrait" src={CLASS_ART[s.hero.cls].face} alt="" />
       <div className="hero-info">
         <div className="hero-name">
           <span>{s.hero.name}</span> <span className="lv-badge">Lv {s.hero.level}</span> <span className="dim">{CLASSES[s.hero.cls].name}</span>
           {s.hero.faith && <span className="faith-tag">{s.hero.faith} {"★".repeat(tier(s))}</span>}
-          {s.heretic && <span className="faith-tag heretic">현상수배</span>}
+          {s.heretic && <span className="faith-tag heretic">{t("현상수배")}</span>}
         </div>
         <div className="hp-line">
           <span aria-label="HP"><Icon name="heart" /></span>
@@ -93,12 +94,12 @@ export function HeroHeader({ s, extra, onOpen }: { s: GameState; extra?: ReactNo
           </span>
         </div>
         <div className="hero-meta">
-          <span className="stat-pill gold" title="가진 돈"><Icon name="coin" />{s.gold}G</span>
-          <span className="stat-pill ac" title="방어도(AC)"><Icon name="shield" />AC {heroAc(s)}</span>
-          <span className="stat-pill rank" title="등급(클리어한 섹터 수)"><Icon name="crest" />등급 {s.rank}</span>
+          <span className="stat-pill gold" title={t("가진 돈")}><Icon name="coin" />{s.gold}G</span>
+          <span className="stat-pill ac" title={t("방어도(AC)")}><Icon name="shield" />AC {heroAc(s)}</span>
+          <span className="stat-pill rank" title={t("등급(클리어한 섹터 수)")}><Icon name="crest" />{t("등급 {n}", { n: s.rank })}</span>
           <AgePill month={s.month} />
           {extra}
-          {onOpen && <span className="more">장비 <Icon name="chev" /></span>}
+          {onOpen && <span className="more">{t("장비")} <Icon name="chev" /></span>}
         </div>
         <InjuryTags s={s} />
       </div>
@@ -111,9 +112,9 @@ export function AgePill({ month }: { month: number }) {
   const left = monthsLeft(month);
   const warn = left <= AGE.warnAt[0];
   return (
-    <span className={`stat-pill age${warn ? " warn" : ""}`} title={`미궁은 열일곱 살이 끝날 때까지만 들어갈 수 있다 — 남은 ${left}개월`}>
+    <span className={`stat-pill age${warn ? " warn" : ""}`} title={t("미궁은 열일곱 살이 끝날 때까지만 들어갈 수 있다 — 남은 {n}개월", { n: left })}>
       <Icon name="clock" />
-      {ageOf(month)}세{warn ? ` · ${left}개월` : ""}
+      {t("{n}세", { n: ageOf(month) })}{warn ? ` · ${t("{n}개월", { n: left })}` : ""}
     </span>
   );
 }
@@ -124,7 +125,7 @@ export function StatGrid({ s }: { s: GameState }) {
       {STAT_KEYS.map((k) => (
         <div key={k} className="stat-cell">
           <span className="dim">{STAT_LABEL[k]}</span>
-          <b className={fragStat(s, k) > 0 ? "accent" : ""} title={fragStat(s, k) > 0 ? `편린 +${fragStat(s, k)}` : undefined}>
+          <b className={fragStat(s, k) > 0 ? "accent" : ""} title={fragStat(s, k) > 0 ? t("편린 +{n}", { n: fragStat(s, k) }) : undefined}>
             {stat(s, k)}
           </b>
           <span className="mod">{fmtMod(smod(s, k))}</span>
@@ -136,7 +137,7 @@ export function StatGrid({ s }: { s: GameState }) {
 
 export function GearList({ s }: { s: GameState }) {
   const items = Object.values(s.gear).map((id) => (id ? GEAR[id].name : "")).filter(Boolean);
-  return <div className="dim small">장비: {items.join(" · ")}</div>;
+  return <div className="dim small">{t("장비: {items}", { items: items.join(" · ") })}</div>;
 }
 
 /** 로그 패널: shown 개수까지만 보여주고, 누르면 남은 줄을 한 번에 보여준다 */
@@ -164,7 +165,7 @@ export function LogView({ ctl, max = 80, tall, fill }: { ctl: Ctl; max?: number;
                 setOpen((o) => (o.includes(l.foldOf!) ? o.filter((x) => x !== l.foldOf) : [...o, l.foldOf!]));
               }}
             >
-              {l.text} <span className="dim">({open.includes(l.foldOf) ? "접기 ▾" : `${l.foldN}줄 펼치기 ▸`})</span>
+              {l.text} <span className="dim">({open.includes(l.foldOf) ? t("접기 ▾") : t("{n}줄 펼치기 ▸", { n: l.foldN ?? 0 })})</span>
             </button>
           </p>
         ) : (
@@ -199,11 +200,11 @@ export function SpeedBar({ ctl }: { ctl: Ctl }) {
     <div className="speed-bar">
       {SPEEDS.map((v) => (
         <button key={v} className={`chip${ctl.speed === v ? " on" : ""}`} onClick={() => ctl.setSpeed(v)}>
-          {v === 0 ? "즉시" : `${v}×`}
+          {v === 0 ? t("즉시") : `${v}×`}
         </button>
       ))}
-      <button className={`chip${ctl.auto ? " on" : ""}`} onClick={() => ctl.setAuto(!ctl.auto)} title="중요한 결정도 자동으로 고릅니다. 미궁에서 나오면 저절로 꺼진다">
-        자동 결정 {ctl.auto ? "ON" : "OFF"}
+      <button className={`chip${ctl.auto ? " on" : ""}`} onClick={() => ctl.setAuto(!ctl.auto)} title={t("중요한 결정도 자동으로 고릅니다. 미궁에서 나오면 저절로 꺼진다")}>
+        {t("자동 결정")} {ctl.auto ? "ON" : "OFF"}
       </button>
     </div>
   );
@@ -214,41 +215,41 @@ export function TopBar({ ctl, title }: { ctl: Ctl; title: ReactNode }) {
   const [glossary, setGlossary] = useState(false);
   return (
     <div className="topbar">
-      <button className="link" onClick={ctl.goTitle} aria-label="타이틀로">
+      <button className="link" onClick={ctl.goTitle} aria-label={t("타이틀로")}>
         <Icon name="menu" />
       </button>
       <span className="topbar-title">{title}</span>
-      <button className="gear-btn" onClick={() => ctl.setSheet(true)} aria-label="캐릭터와 장비">
+      <button className="gear-btn" onClick={() => ctl.setSheet(true)} aria-label={t("캐릭터와 장비")}>
         <Icon name="bag" />
-        장비
+        {t("장비")}
       </button>
-      <button className={`gear-btn${open ? " on" : ""}`} onClick={() => setOpen(!open)} aria-expanded={open} aria-label="설정">
-        <Icon name="gear" /> <span className="small">{ctl.speed === 0 ? "즉시" : `${ctl.speed}×`}{ctl.auto ? ` · 자동(${GOAL_SHORT[ctl.s.autoGoal] ?? "탐험"})` : ""}</span>
+      <button className={`gear-btn${open ? " on" : ""}`} onClick={() => setOpen(!open)} aria-expanded={open} aria-label={t("설정")}>
+        <Icon name="gear" /> <span className="small">{ctl.speed === 0 ? t("즉시") : `${ctl.speed}×`}{ctl.auto ? ` · ${t("자동({goal})", { goal: t(GOAL_SHORT[ctl.s.autoGoal] ?? GOAL_SHORT.explore) })}` : ""}</span>
       </button>
       {glossary && <Glossary onClose={() => setGlossary(false)} />}
       {open && <div className="settings-backdrop" onClick={() => setOpen(false)} />}
       {open && (
-        <div className="settings-sheet" role="dialog" aria-label="설정">
-          <p className="eyebrow">진행 속도</p>
+        <div className="settings-sheet" role="dialog" aria-label={t("설정")}>
+          <p className="eyebrow">{t("진행 속도")}</p>
           <SpeedBar ctl={ctl} />
-          <p className="eyebrow">자동 결정 목표</p>
+          <p className="eyebrow">{t("자동 결정 목표")}</p>
           <GoalBar ctl={ctl} />
-          <p className="eyebrow">전투 방침</p>
+          <p className="eyebrow">{t("전투 방침")}</p>
           <TacticsBar ctl={ctl} />
-          <p className="eyebrow">처음 안내</p>
+          <p className="eyebrow">{t("처음 안내")}</p>
           <div className="tactics">
             <button className={`chip${ctl.meta.tipsOff ? "" : " on"}`} onClick={() => ctl.setTipsOff(!ctl.meta.tipsOff)}>
-              {ctl.meta.tipsOff ? "꺼짐" : "켜짐"}
+              {ctl.meta.tipsOff ? t("꺼짐") : t("켜짐")}
             </button>
             <button className="chip" onClick={() => { setGlossary(true); setOpen(false); }}>
-              용어 사전
+              {t("용어 사전")}
             </button>
           </div>
           <p className="eyebrow">언어 · Language</p> {/* i18n-ok: 어느 언어로든 찾을 수 있게 */}
           <LangPicker />
-          <p className="dim small">시드 #{(ctl.s.seed >>> 0).toString(36)}</p>
+          <p className="dim small">{t("시드 #{seed}", { seed: (ctl.s.seed >>> 0).toString(36) })}</p>
           <button className="btn small ghost" onClick={() => setOpen(false)}>
-            닫기
+            {t("닫기")}
           </button>
         </div>
       )}
@@ -256,12 +257,12 @@ export function TopBar({ ctl, title }: { ctl: Ctl; title: ReactNode }) {
   );
 }
 
-const GOAL_SHORT: Record<string, string> = { explore: "탐험", rush: "돌파", farm: "파밍" };
+const GOAL_SHORT: Record<string, string> = { explore: tk("탐험"), rush: tk("돌파"), farm: tk("파밍") };
 
 const GOALS: { id: AutoGoal; name: string; desc: string }[] = [
-  { id: "explore", name: "구석구석 탐험", desc: "층의 모든 방을 돌고 기록물도 읽은 뒤 내려간다." },
-  { id: "rush", name: "빠르게 다음 층", desc: "계단이 보이면 곧장 내려간다. 기록물은 건너뛰고, HP 절반만 있어도 내려간다. 그래도 준비 안 된 층까지는 가지 않는다." },
-  { id: "farm", name: "파밍", desc: "전투방과 보물상자 위주로 털고, 싸우기 전에 HP를 채운다. 무리해서 내려가지 않는다." },
+  { id: "explore", name: tk("구석구석 탐험"), desc: tk("층의 모든 방을 돌고 기록물도 읽은 뒤 내려간다.") },
+  { id: "rush", name: tk("빠르게 다음 층"), desc: tk("계단이 보이면 곧장 내려간다. 기록물은 건너뛰고, HP 절반만 있어도 내려간다. 그래도 준비 안 된 층까지는 가지 않는다.") },
+  { id: "farm", name: tk("파밍"), desc: tk("전투방과 보물상자 위주로 털고, 싸우기 전에 HP를 채운다. 무리해서 내려가지 않는다.") },
 ];
 
 /** 자동 결정이 미궁에서 노리는 목표(자동 결정 OFF일 때는 영향 없음) */
@@ -273,13 +274,13 @@ export function GoalBar({ ctl }: { ctl: Ctl }) {
       <div className="tactics">
         {GOALS.map((g) => (
           <button key={g.id} className={`chip${s.autoGoal === g.id ? " on" : ""}`} onClick={() => dispatch({ t: "autoGoal", goal: g.id })}>
-            {g.name}
+            {t(g.name)}
           </button>
         ))}
       </div>
       <p className="dim small">
-        {cur.desc}
-        {!ctl.auto && " (자동 결정을 켜야 적용된다)"}
+        {t(cur.desc)}
+        {!ctl.auto && ` ${t("(자동 결정을 켜야 적용된다)")}`}
       </p>
     </>
   );
@@ -296,20 +297,20 @@ export function TacticsBar({ ctl }: { ctl: Ctl }) {
   return (
     <div className="tactics">
       <button className="chip" onClick={() => dispatch({ t: "tactics", tactics: { potionAt: next(POTION_STEPS, potionAt) } })}>
-        물약: {potionAt ? `HP ${potionAt}% 이하` : "안 마심"}
+        {t("물약: {v}", { v: potionAt ? t("HP {n}% 이하", { n: potionAt }) : t("안 마심") })}
       </button>
       <button className="chip" onClick={() => dispatch({ t: "tactics", tactics: { fleeAt: next(FLEE_STEPS, fleeAt) } })}>
-        도주: {fleeAt ? `HP ${fleeAt}% 이하` : "끝까지 싸움"}
+        {t("도주: {v}", { v: fleeAt ? t("HP {n}% 이하", { n: fleeAt }) : t("끝까지 싸움") })}
       </button>
-      <button className={`chip${s.tactics.autoEat !== false ? " on" : ""}`} onClick={() => dispatch({ t: "tactics", tactics: { autoEat: s.tactics.autoEat === false } })} title={`미궁에서 포만감이 ${AUTO_EAT_AT} 이하가 되면 말린 고기를 알아서 먹는다`}>
-        식사: {s.tactics.autoEat !== false ? "배고프면 알아서" : "직접"}
+      <button className={`chip${s.tactics.autoEat !== false ? " on" : ""}`} onClick={() => dispatch({ t: "tactics", tactics: { autoEat: s.tactics.autoEat === false } })} title={t("미궁에서 포만감이 {n} 이하가 되면 말린 고기를 알아서 먹는다", { n: AUTO_EAT_AT })}>
+        {t("식사: {v}", { v: s.tactics.autoEat !== false ? t("배고프면 알아서") : t("직접") })}
       </button>
     </div>
   );
 }
 
 export function SkillList({ s, empty }: { s: GameState; empty?: string }) {
-  if (s.skills.length === 0) return <p className="dim small">{empty ?? "아직 배운 기술이 없다. 직업교관에게 훈련을 받으면 배운다."}</p>;
+  if (s.skills.length === 0) return <p className="dim small">{empty ?? t("아직 배운 기술이 없다. 직업교관에게 훈련을 받으면 배운다.")}</p>;
   return (
     <ul className="skills">
       {s.skills.map((id) => {
@@ -317,9 +318,9 @@ export function SkillList({ s, empty }: { s: GameState; empty?: string }) {
         const off = !skillWorks(s, id);
         return (
           <li key={id} className={off ? "off" : ""}>
-            <span className={`skill-kind ${sk.kind}`}>{sk.kind === "active" ? "자동 발동" : "패시브"}</span>
+            <span className={`skill-kind ${sk.kind}`}>{sk.kind === "active" ? t("자동 발동") : t("패시브")}</span>
             <b>{sk.name}</b>
-            {off && <span className="skill-kind warn">{sk.off ? `${OFF_NAME[sk.off]} 없음` : "방패 없음"} — 쓸 수 없다</span>}
+            {off && <span className="skill-kind warn">{t("{what} — 쓸 수 없다", { what: sk.off ? t("{name} 없음", { name: t(OFF_NAME[sk.off]) }) : t("방패 없음") })}</span>}
             <span className="dim small">{sk.desc}</span>
           </li>
         );
@@ -340,8 +341,8 @@ export function FragList({ s }: { s: GameState }) {
           if (!id) {
             return (
               <li key={i} className="empty">
-                <span className="skill-kind">빈 칸</span>
-                <span className="dim small">미궁의 몬스터를 쓰러뜨리면 아주 드물게 편린이 남는다.</span>
+                <span className="skill-kind">{t("빈 칸")}</span>
+                <span className="dim small">{t("미궁의 몬스터를 쓰러뜨리면 아주 드물게 편린이 남는다.")}</span>
               </li>
             );
           }
@@ -355,7 +356,7 @@ export function FragList({ s }: { s: GameState }) {
               <span className="accent small">{fragStatText(id)}</span>
               {sk && (
                 <span className="small">
-                  【{sk.name}】 <span className="dim">{sk.kind === "active" ? "자동 발동 · " : "패시브 · "}{sk.desc}</span>
+                  【{sk.name}】 <span className="dim">{sk.kind === "active" ? t("자동 발동") : t("패시브")} · {sk.desc}</span>
                 </span>
               )}
             </li>
@@ -363,7 +364,7 @@ export function FragList({ s }: { s: GameState }) {
         })}
       </ul>
       <p className="dim small">
-        편린 칸 {s.fragments.length}/{slots} · 레벨 {nextAt}에 한 칸 더 생긴다. 편린으로 오른 능력치는 노란색으로 표시된다.
+        {t("편린 칸 {n}/{max} · 레벨 {lv}에 한 칸 더 생긴다. 편린으로 오른 능력치는 노란색으로 표시된다.", { n: s.fragments.length, max: slots, lv: nextAt })}
       </p>
     </>
   );
@@ -372,38 +373,38 @@ export function FragList({ s }: { s: GameState }) {
 /** 섬기는 신·신앙심·권능·저주·현상수배 */
 export function FaithCard({ s }: { s: GameState }) {
   const g = godOf(s.hero.faith);
-  const t = tier(s);
+  const tr = tier(s);
   return (
     <>
-      {s.heretic && <p className="hurt small">현상수배 중 — 마을에 들어갈 수 없다. 미궁에서는 이단심문관이 뒤를 쫓는다. 마을의 성당에 자수하면 신앙을 버리고 돌아갈 수 있다.</p>}
+      {s.heretic && <p className="hurt small">{t("현상수배 중 — 마을에 들어갈 수 없다. 미궁에서는 이단심문관이 뒤를 쫓는다. 마을의 성당에 자수하면 신앙을 버리고 돌아갈 수 있다.")}</p>}
       {!g ? (
-        <p className="dim small">섬기는 신이 없다. 해금된 옛 신은 새 삶을 시작할 때나 미궁의 성소에서 섬길 수 있다.</p>
+        <p className="dim small">{t("섬기는 신이 없다. 해금된 옛 신은 새 삶을 시작할 때나 미궁의 성소에서 섬길 수 있다.")}</p>
       ) : (
         <>
           <p className="small">
-            <b>{g.name}</b> <span className="dim">· {g.align}</span> <span className="accent">{"★".repeat(t)}{"☆".repeat(Math.max(0, (s.rank >= FAITH_BAL.tier5Rank ? 5 : s.rank >= FAITH_BAL.tier4Rank ? 4 : 3) - t))}</span>
+            <b>{g.name}</b> <span className="dim">· {g.align}</span> <span className="accent">{"★".repeat(tr)}{"☆".repeat(Math.max(0, (s.rank >= FAITH_BAL.tier5Rank ? 5 : s.rank >= FAITH_BAL.tier4Rank ? 4 : 3) - tr))}</span>
           </p>
           <div className="faith-line">
-            <span className="small dim">신앙심</span>
+            <span className="small dim">{t("신앙심")}</span>
             <Bar value={s.piety} max={pietyCap(s)} tone="food" />
             <span className="num small">{Math.floor(s.piety)}</span>
           </div>
           <ul className="skills">
             {g.powers.map((p, i) => (
-              <li key={i} className={t > i ? "" : "empty"}>
-                <span className={`skill-kind${t > i ? " active" : ""}`}>★{i + 1} · {PIETY_TIERS[i]}</span>
-                <span className={`small${t > i ? "" : " dim"}`}>{p}{i === 3 && s.rank < FAITH_BAL.tier4Rank ? " (3섹터를 클리어하면 열린다 — 신앙심 상한도 200으로)" : i === 4 && s.rank < FAITH_BAL.tier5Rank ? " (4섹터를 클리어하면 열린다)" : ""}</span>
+              <li key={i} className={tr > i ? "" : "empty"}>
+                <span className={`skill-kind${tr > i ? " active" : ""}`}>★{i + 1} · {PIETY_TIERS[i]}</span>
+                <span className={`small${tr > i ? "" : " dim"}`}>{p}{i === 3 && s.rank < FAITH_BAL.tier4Rank ? ` ${t("(3섹터를 클리어하면 열린다 — 신앙심 상한도 200으로)")}` : i === 4 && s.rank < FAITH_BAL.tier5Rank ? ` ${t("(4섹터를 클리어하면 열린다)")}` : ""}</span>
               </li>
             ))}
           </ul>
           <p className="dim small">
-            좋아함: {g.likes} · 싫어함: {g.dislikes}. 신앙심은 매달 5씩 줄고, ★이 높을수록 성당의 이단 심문에 걸리기 쉽다(★당 5%, 최대 15%).
+            {t("좋아함: {likes} · 싫어함: {dislikes}. 신앙심은 매달 5씩 줄고, ★이 높을수록 성당의 이단 심문에 걸리기 쉽다(★당 5%, 최대 15%).", { likes: g.likes, dislikes: g.dislikes })}
           </p>
         </>
       )}
       {s.curse && s.curse.months > 0 && (
         <p className="hurt small">
-          {s.curse.god}의 저주: {godOf(s.curse.god)?.curse} (남은 {s.curse.months}개월)
+          {t("{god}의 저주: {curse} (남은 {n}개월)", { god: s.curse.god, curse: godOf(s.curse.god)?.curse ?? "", n: s.curse.months })}
         </p>
       )}
     </>
@@ -423,48 +424,48 @@ export function InjuryCard({ s }: { s: GameState }) {
               <span className="slot">{PART_NAME[p]}</span>
               <span className="item">
                 {LEVEL_NAME[raw]}
-                {raw >= 3 && s.prosthetic[p] ? (p === "feet" ? " · 의족" : " · 의수") : ""}
-                {raw > 0 && s.injuryCause?.[p] ? (s.injuryCause[p] === "burn" ? " · 화상" : " · 동상") : ""}
+                {raw >= 3 && s.prosthetic[p] ? (p === "feet" ? ` · ${t("의족")}` : ` · ${t("의수")}`) : ""}
+                {raw > 0 && s.injuryCause?.[p] ? (s.injuryCause[p] === "burn" ? ` · ${t("화상")}` : ` · ${t("동상")}`) : ""}
               </span>
               <span className="effect">{eff}</span>
             </li>
           );
         })}
         <li className={s.disease ? "hurt-row" : "empty"}>
-          <span className="slot">질병</span>
-          <span className="item">{s.disease ? diseaseName(s) : "없음"}</span>
-          <span className="effect">{s.disease === 2 ? "방을 옮길 때마다 HP −2, 판정 −2" : s.disease === 1 ? "방을 옮길 때마다 HP −1" : ""}{s.disease && s.diseaseKind === "mold" ? ", 야영 회복 절반" : ""}</span>
+          <span className="slot">{t("질병")}</span>
+          <span className="item">{s.disease ? diseaseName(s) : t("없음")}</span>
+          <span className="effect">{s.disease === 2 ? t("방을 옮길 때마다 HP −2, 판정 −2") : s.disease === 1 ? t("방을 옮길 때마다 HP −1") : ""}{s.disease && s.diseaseKind === "mold" ? t(", 야영 회복 절반") : ""}</span>
         </li>
         {(s.cold ?? 0) > 0 && (
           <li className="hurt-row">
-            <span className="slot">냉기</span>
+            <span className="slot">{t("냉기")}</span>
             <span className="item">{Math.floor(s.cold ?? 0)}/4</span>
-            <span className="effect">4가 되면 손·발 하나에 동상 · 장작을 때고 야영, 얼음 구역 밖에선 방마다 −1</span>
+            <span className="effect">{t("4가 되면 손·발 하나에 동상 · 장작을 때고 야영, 얼음 구역 밖에선 방마다 −1")}</span>
           </li>
         )}
         {poisonOf(s) > 0 && (
           <li className="hurt-row">
-            <span className="slot">독</span>
+            <span className="slot">{t("독")}</span>
             <span className="item">{POISON_NAME[poisonOf(s)]}</span>
-            <span className="effect">{poisonOf(s) >= 2 ? "방을 옮길 때마다 HP −2, 판정 −1" : "방을 옮길 때마다 HP −1"} · 야영·미궁을 나올 때 한 단계</span>
+            <span className="effect">{poisonOf(s) >= 2 ? t("방을 옮길 때마다 HP −2, 판정 −1") : t("방을 옮길 때마다 HP −1")} · {t("야영·미궁을 나올 때 한 단계")}</span>
           </li>
         )}
         {PARA_PARTS.filter((p) => paraOf(s, p) > 0).map((p) => (
           <li key={`para-${p}`} className="hurt-row">
-            <span className="slot">마비</span>
+            <span className="slot">{t("마비")}</span>
             <span className="item">{PARA_PART_NAME[p]} {PARA_NAME[paraOf(s, p)]}</span>
-            <span className="effect">{paraEffect(p, paraOf(s, p))} · 미궁을 나오면 풀린다</span>
+            <span className="effect">{paraEffect(p, paraOf(s, p))} · {t("미궁을 나오면 풀린다")}</span>
           </li>
         ))}
         {corrodedSlots(s).map((k) => (
           <li key={`cor-${k}`} className="hurt-row">
-            <span className="slot">부식</span>
+            <span className="slot">{t("부식")}</span>
             <span className="item">{CORRODE_NAME[corrosionOf(s, k)]}</span>
-            <span className="effect">{corrosionEffect(k, corrosionOf(s, k))} · 대장간 수리·숫돌</span>
+            <span className="effect">{corrosionEffect(k, corrosionOf(s, k))} · {t("대장간 수리·숫돌")}</span>
           </li>
         ))}
       </ul>
-      <p className="eyebrow">정신</p>
+      <p className="eyebrow">{t("정신")}</p>
       {MIND_KEYS.some((k) => known(s, k)) ? (
         <ul className="skills">
           {MIND_KEYS.filter((k) => known(s, k)).map((k) => (
@@ -475,13 +476,13 @@ export function InjuryCard({ s }: { s: GameState }) {
           ))}
         </ul>
       ) : (
-        <p className="dim small">알아챈 이상은 없다.</p>
+        <p className="dim small">{t("알아챈 이상은 없다.")}</p>
       )}
       <p className="dim small">
-        정신 상태이상은 걸려도 바로 알 수 없다 — 방을 옮길 때마다 감각·지능으로 눈치채야 보인다. 둘이 겹치면 발작·패닉·무너짐이 터진다. 여관에서 쉬거나 성소에서 기도하면 가라앉고, 미궁을 나오면 저절로 가라앉기도 한다.
+        {t("정신 상태이상은 걸려도 바로 알 수 없다 — 방을 옮길 때마다 감각·지능으로 눈치채야 보인다. 둘이 겹치면 발작·패닉·무너짐이 터진다. 여관에서 쉬거나 성소에서 기도하면 가라앉고, 미궁을 나오면 저절로 가라앉기도 한다.")}
       </p>
       <p className="dim small">
-        부상·질병과 HP는 저절로 낫지 않는다 — 여관(매달 값이 오른다)에서 쉬거나 붕대·탕약·물약을 써야 한다. 손·발 결손은 신전 재생 의식({INJ.regenCost}G)이나 대장간 의수·의족({INJ.prostheticCost}G). 머리·몸통 결손은 즉사.
+        {t("부상·질병과 HP는 저절로 낫지 않는다 — 여관(매달 값이 오른다)에서 쉬거나 붕대·탕약·물약을 써야 한다. 손·발 결손은 신전 재생 의식({regen}G)이나 대장간 의수·의족({prosthetic}G). 머리·몸통 결손은 즉사.", { regen: INJ.regenCost, prosthetic: INJ.prostheticCost })}
       </p>
     </>
   );
@@ -537,7 +538,7 @@ export { SPECIAL_LEVELS } from "../game/elements";
 import { SPECIAL_LEVELS, ULTIMATE_LEVEL } from "../game/elements";
 const LEVELS_2_16 = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
 /** 특수 훈련 칸 이름 */
-const SPECIAL_KIND: Record<number, string> = { 4: "각인", 7: "특화", 10: "낙인", 13: "궁극기", 16: "화신" };
+const SPECIAL_KIND: Record<number, string> = { 4: tk("각인"), 7: tk("특화"), 10: tk("낙인"), 13: tk("궁극기"), 16: tk("화신") };
 
 /**
  * 직업 훈련 레벨표: 줄은 레벨, 칸은 훈련. 배운 칸 · 이번에 고를 수 있는 칸 · 놓친 칸 · 앞으로의 칸을 구분한다.
@@ -558,7 +559,7 @@ export function LevelTable({ s, selected, onPick }: { s: GameState; selected?: s
             {lines.map((id) => (
               <th key={id} className={selected === id ? "sel" : ""}>
                 {LINE_ICON[id] && <img className="line-icon" src={LINE_ICON[id].src} width={LINE_ICON[id].w} height={LINE_ICON[id].h} alt="" />}
-                {TRAININGS.find((x) => x.id === id)!.name.replace(/ (수련|훈련)$/, "")}
+                {TRAININGS.find((x) => x.id === id)!.name.replace(/ (수련|훈련)$/, "")}{/* i18n-ok: 게임 데이터(훈련 이름) 접미사 제거 — 2단계 */}
               </th>
             ))}
           </tr>
@@ -570,14 +571,14 @@ export function LevelTable({ s, selected, onPick }: { s: GameState; selected?: s
               <tr key={lv} className={`${special ? "special" : ""}${lv === next ? " now" : ""}`}>
                 <th>
                   {lv}
-                  <span className="lv-kind">{special ? SPECIAL_KIND[lv] : lv % 2 === 0 ? "패시브" : "액티브"}</span>
+                  <span className="lv-kind">{special ? t(SPECIAL_KIND[lv]) : lv % 2 === 0 ? t("패시브") : t("액티브")}</span>
                 </th>
                 {lines.map((line) => {
                   const id = levelSkill(line, lv);
                   // 모험가 16레벨: 레벨표가 아니라 섬기는 신의 가르침(히든)
                   if (!id && lv === 16 && s.hero.cls === "adventurer") {
                     const te = s.godTeaching ? TEACHINGS[s.godTeaching as keyof typeof TEACHINGS] : null;
-                    return <td key={line} className={te ? "lt-learned" : "lt-future dim"} title={te ? `${te.boost} / ${te.final}: ${te.finalDesc}` : "교관에게서는 배울 수 없다"}>{te ? te.name : "???"}</td>;
+                    return <td key={line} className={te ? "lt-learned" : "lt-future dim"} title={te ? `${te.boost} / ${te.final}: ${te.finalDesc}` : t("교관에게서는 배울 수 없다")}>{te ? te.name : "???"}</td>;
                   }
                   if (!id) return <td key={line} className="lt-future dim">—</td>;
                   const sk = SKILLS[id];
@@ -595,7 +596,7 @@ export function LevelTable({ s, selected, onPick }: { s: GameState; selected?: s
                       )}
                       {learned && <span className="mark-ok"> ✓</span>}
                       {sk.shield && <span className={shield ? "dim" : "warn"}> 🛡</span>}
-                      {sk.off && <span className={off === sk.off ? "dim" : "warn"} title={`왼손에 ${OFF_NAME[sk.off]}이(가) 있어야 발동`}> {OFF_MARK[sk.off]}</span>}
+                      {sk.off && <span className={off === sk.off ? "dim" : "warn"} title={t("왼손에 {name|이} 있어야 발동", { name: t(OFF_NAME[sk.off]) })}> {OFF_MARK[sk.off]}</span>}
                     </td>
                   );
                 })}
@@ -605,7 +606,7 @@ export function LevelTable({ s, selected, onPick }: { s: GameState; selected?: s
         </tbody>
       </table>
       <p className="dim small lv-legend">
-        <span className="lg-learned">✓ 배움</span> · <span className="lg-next">이번 훈련</span> · <span className="lg-missed">놓침</span> · {s.hero.cls === "rogue" ? "🗡·⚗·➶ 왼손에 두 번째 단검·독병 주머니·손쇠뇌가 있어야 발동(4레벨 각인이 왼손 무기를 정하고, 10레벨 낙인을 다른 갈래로 찍으면 바꾼다)." : "🛡 방패가 있어야 발동."} 짝수 레벨은 패시브, 홀수 레벨은 액티브, 4·7·10·13·16레벨은 보스 증표가 드는 특화(각인·낙인은 그 갈래 액티브를 전투당 1회씩 더, {ULTIMATE_LEVEL}레벨 궁극기는 전투당 1회).
+        <span className="lg-learned">✓ {t("배움")}</span> · <span className="lg-next">{t("이번 훈련")}</span> · <span className="lg-missed">{t("놓침")}</span> · {s.hero.cls === "rogue" ? t("🗡·⚗·➶ 왼손에 두 번째 단검·독병 주머니·손쇠뇌가 있어야 발동(4레벨 각인이 왼손 무기를 정하고, 10레벨 낙인을 다른 갈래로 찍으면 바꾼다).") : t("🛡 방패가 있어야 발동.")} {t("짝수 레벨은 패시브, 홀수 레벨은 액티브, 4·7·10·13·16레벨은 보스 증표가 드는 특화(각인·낙인은 그 갈래 액티브를 전투당 1회씩 더, {lv}레벨 궁극기는 전투당 1회).", { lv: ULTIMATE_LEVEL })}
       </p>
     </div>
   );
@@ -622,10 +623,10 @@ export function BuildSummary({ s }: { s: GameState }) {
         const id = levelSkill(line, lv);
         return !!id && s.skills.includes(id);
       });
-      return { name: TRAININGS.find((x) => x.id === line)!.name.replace(/ (수련|훈련)$/, ""), n, marked };
+      return { name: TRAININGS.find((x) => x.id === line)!.name.replace(/ (수련|훈련)$/, ""), n, marked }; // i18n-ok: 게임 데이터(훈련 이름) 접미사 제거 — 2단계
     })
     .filter((p) => p.n > 0);
-  if (!parts.length) return <p className="dim small">아직 갈래를 정하지 않았다.</p>;
+  if (!parts.length) return <p className="dim small">{t("아직 갈래를 정하지 않았다.")}</p>;
   const advice = buildAdvice(s);
   return (
     <>
@@ -633,7 +634,7 @@ export function BuildSummary({ s }: { s: GameState }) {
         {parts.map((p, i) => (
           <span key={p.name}>
             {i ? " · " : ""}
-            <b>{p.name}</b> {p.n}개{p.marked ? " (특화)" : ""}
+            <b>{p.name}</b> {t("{n}개", { n: p.n })}{p.marked ? ` (${t("특화")})` : ""}
           </span>
         ))}
       </p>
@@ -656,10 +657,10 @@ export function buildAdvice(s: GameState): string[] {
   const int = stat(s, "int");
   const melee = Math.max(stat(s, "str"), stat(s, "dex"));
   const w = weaponOf(s);
-  if (w.magic && melee > int + 1) out.push(`지팡이는 지능(${int})으로 싸운다. 힘·민첩(${melee})이 더 높으니 숏소드처럼 힘·민첩을 따르는 무기가 낫다.`);
-  else if (!w.magic && caster >= 2 && int > melee + 1) out.push(`지능(${int})이 힘·민첩(${melee})보다 높다. 대장간의 지팡이(${GEAR.staff.price}G)를 들면 기본 공격도 지능을 따른다.`);
+  if (w.magic && melee > int + 1) out.push(t("지팡이는 지능({int})으로 싸운다. 힘·민첩({melee})이 더 높으니 숏소드처럼 힘·민첩을 따르는 무기가 낫다.", { int, melee }));
+  else if (!w.magic && caster >= 2 && int > melee + 1) out.push(t("지능({int})이 힘·민첩({melee})보다 높다. 대장간의 지팡이({price}G)를 들면 기본 공격도 지능을 따른다.", { int, melee, price: GEAR.staff.price ?? 0 }));
   if (fighter >= 1 && caster >= 1)
-    out.push("전사형 기술은 무기 공격(힘·민첩)을, 마법사형 주문은 지능을 따른다. 두 갈래를 섞으면 능력치가 나뉘니, 특수 훈련 전에 주력 하나를 정해 두자.");
+    out.push(t("전사형 기술은 무기 공격(힘·민첩)을, 마법사형 주문은 지능을 따른다. 두 갈래를 섞으면 능력치가 나뉘니, 특수 훈련 전에 주력 하나를 정해 두자."));
   return out;
 }
 
@@ -669,14 +670,14 @@ export function TipCard({ ctl }: { ctl: Ctl }) {
   if (!tip) return null;
   return (
     <div className="tip-card" role="note">
-      <p className="eyebrow">처음 안내 · {tip.title}</p>
+      <p className="eyebrow">{t("처음 안내")} · {tip.title}</p>
       <p className="small">{tip.text}</p>
       <div className="row">
         <button className="btn small primary" onClick={() => ctl.dismissTip(tip.id)}>
-          알겠다
+          {t("알겠다")}
         </button>
         <button className="btn small ghost" onClick={() => ctl.setTipsOff(true)}>
-          안내 끄기
+          {t("안내 끄기")}
         </button>
       </div>
     </div>
@@ -687,11 +688,11 @@ export function TipCard({ ctl }: { ctl: Ctl }) {
 export function Glossary({ onClose }: { onClose: () => void }) {
   return (
     <div className="sheet-backdrop" onClick={onClose}>
-      <div className="sheet" role="dialog" aria-label="용어 사전" onClick={(e) => e.stopPropagation()}>
+      <div className="sheet" role="dialog" aria-label={t("용어 사전")} onClick={(e) => e.stopPropagation()}>
         <div className="sheet-head">
-          <b className="hero-name">용어 사전</b>
+          <b className="hero-name">{t("용어 사전")}</b>
           <button className="btn small ghost close" onClick={onClose}>
-            닫기
+            {t("닫기")}
           </button>
         </div>
         <div className="sheet-body">
