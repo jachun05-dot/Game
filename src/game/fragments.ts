@@ -1,4 +1,5 @@
 import type { Codex, GameState, StatKey, Stats } from "./types";
+import { t, tk } from "../i18n/core";
 
 // 편린(2026-10-13): 몬스터를 쓰러뜨리면 아주 드물게(최대 3%) 그 몬스터 힘의 조각이 남는다.
 // 흡수하면 능력치가 오르고, 몬스터에 따라 패시브/액티브 능력이 붙는다(능력 없는 편린도 있다).
@@ -128,10 +129,10 @@ export function fragSkills(s: GameState): string[] {
   return activeFragments(s).map((id) => FRAGMENTS[id]?.skill).filter((x): x is string => !!x);
 }
 
-const STAT_NAME: Record<StatKey, string> = { str: "힘", dex: "민첩", con: "체력", int: "지능", per: "감각", luk: "행운" };
+const STAT_NAME: Record<StatKey, string> = { str: tk("힘"), dex: tk("민첩"), con: tk("체력"), int: tk("지능"), per: tk("감각"), luk: tk("행운") };
 
 export function fragStatText(id: string): string {
-  return (Object.entries(FRAGMENTS[id].stats) as [StatKey, number][]).map(([k, v]) => `${STAT_NAME[k]} +${v}`).join(" · ");
+  return (Object.entries(FRAGMENTS[id].stats) as [StatKey, number][]).map(([k, v]) => `${t(STAT_NAME[k])} +${v}`).join(" · ");
 }
 
 export function emptyCodex(): Codex {

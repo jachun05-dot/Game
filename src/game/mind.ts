@@ -2,6 +2,7 @@ import { Rng } from "./rng";
 import { josa } from "./josa";
 import { faithMindMult, power } from "./faith";
 import type { GameState } from "./types";
+import { t } from "../i18n/core";
 
 // 정신적 상태이상(DESIGN 11절, 2026-10-13 2차 구현). 부위·단계 없이 개별로 켜지고 꺼진다.
 // 핵심 원칙 "1단계는 눈치채지 못하게": 걸려도 화면에 표시되지 않고, 증상도 가끔만 나온다.
@@ -137,7 +138,7 @@ export function missPotion(s: GameState): boolean {
 }
 
 export function mindSummary(s: GameState): string[] {
-  return MIND_KEYS.filter((k) => known(s, k)).map((k) => MIND_NAME[k]);
+  return MIND_KEYS.filter((k) => known(s, k)).map((k) => t(MIND_NAME[k]));
 }
 
 /** 미궁에서 나오면 일부는 저절로 가라앉는다 */

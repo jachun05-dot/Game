@@ -3,6 +3,7 @@ import { mainLost, slotWorks } from "./injury";
 import { MIND_NAME, mindResist, type MindKey } from "./mind";
 import { pietyCapBonus } from "./faith";
 import type { OffKind } from "./elements";
+import { t, tk } from "../i18n/core";
 
 // 장비(DESIGN 10절): 슬롯 9개. 장비는 파워 스케일링이 아니라 생존 최소 기준선이고,
 // 미궁에서 주운 장비는 착용해야만 가지고 나올 수 있다(DESIGN 6절).
@@ -217,9 +218,9 @@ export const GEAR: Record<string, GearDef> = {
 };
 
 const BONUS_LABEL: Record<keyof GearBonus, string> = {
-  ac: "AC", hit: "명중", dmg: "피해", crit: "치명타%", hp: "최대 HP", flee: "도주", perception: "감각 판정", potion: "물약 회복",
+  ac: tk("AC"), hit: tk("명중"), dmg: tk("피해"), crit: tk("치명타%"), hp: tk("최대 HP"), flee: tk("도주"), perception: tk("감각 판정"), potion: tk("물약 회복"),
 };
-const STAT_NAME: Record<StatKey, string> = { str: "힘", dex: "민첩", con: "체력", int: "지능", per: "감각", luk: "행운" };
+const STAT_NAME: Record<StatKey, string> = { str: tk("힘"), dex: tk("민첩"), con: tk("체력"), int: tk("지능"), per: tk("감각"), luk: tk("행운") };
 
 // 짝 잃은 반지: 신앙심 상한 +(faith.ts에 등록)
 pietyCapBonus.push((s) => gearHas(s, (g) => g.pietyCap).reduce((a, g) => a + g.pietyCap!, 0));
@@ -234,43 +235,43 @@ mindResist.push((s, k) => {
 export function gearEffect(id: string): string {
   const g = GEAR[id];
   const parts: string[] = [];
-  for (const [k, v] of Object.entries(g.mindRes ?? {}) as [MindKey, number][]) parts.push(v === 0 ? `${MIND_NAME[k]} 면역` : `${MIND_NAME[k]} 저항`);
-  if (g.weapon) parts.push(`피해 ${g.weapon.dice[0]}d${g.weapon.dice[1]} · ${STAT_NAME[g.weapon.stat]} 기반`);
+  for (const [k, v] of Object.entries(g.mindRes ?? {}) as [MindKey, number][]) parts.push(v === 0 ? t("{mind} 면역", { mind: t(MIND_NAME[k]) }) : t("{mind} 저항", { mind: t(MIND_NAME[k]) }));
+  if (g.weapon) parts.push(t("피해 {a}d{b} · {stat} 기반", { a: g.weapon.dice[0], b: g.weapon.dice[1], stat: t(STAT_NAME[g.weapon.stat]) }));
   for (const [k, v] of Object.entries(g.bonus) as [keyof GearBonus, number][]) {
-    if (v) parts.push(`${BONUS_LABEL[k]} ${v > 0 ? "+" : ""}${v}`);
+    if (v) parts.push(`${t(BONUS_LABEL[k])} ${v > 0 ? "+" : ""}${v}`);
   }
   const st = Object.entries(g.stats ?? {}) as [StatKey, number][];
-  if (st.length === 6 && st.every(([, v]) => v === st[0][1])) parts.push(`모든 능력치 +${st[0][1]}`);
-  else for (const [k, v] of st) parts.push(`${STAT_NAME[k]} +${v}`);
-  if (g.rogueOff === "dagger") parts.push("두 라운드에 한 번 왼손 찌르기 1d3(로그)");
-  if (g.rogueOff === "flask") parts.push("4라운드마다 독병 — 적 전원 독·명중 −1(로그)");
-  if (g.rogueOff === "xbow") parts.push("볼트 1d6 · AC 2 관통 · 쏘고 나면 장전(로그)");
-  if (g.lifeSaves) parts.push(`사망 방지 ${g.lifeSaves}회/미궁`);
-  if (g.corrodeRes !== undefined) parts.push(g.corrodeRes === 0 ? "부식되지 않음" : "부식 확률 절반");
-  if (g.poisonRes) parts.push("독·마비 확률 절반");
-  if (g.moldRes) parts.push("곰팡이 폐병 확률 절반");
-  if (g.wade) parts.push("침수 방 이동 느려지지 않음");
-  if (g.swim) parts.push(`헤엄 판정 +${g.swim}`);
-  if (g.critHeal) parts.push(`치명타 시 HP +${g.critHeal}`);
-  if (g.tideHit) parts.push(`물이 높을 때 명중 +${g.tideHit}`);
-  if (g.burnRes) parts.push("화상 확률 절반");
-  if (g.coldRes) parts.push("냉기 절반");
-  if (g.noHardSelf) parts.push("단단한 적에 손 안 다침");
-  if (g.trapFind) parts.push(`함정 발견 +${g.trapFind}`);
-  if (g.trapDodge) parts.push(`광차·얼음 회피 +${g.trapDodge}`);
-  if (g.gasSense) parts.push("가스 주머니를 미리 앎");
-  if (g.stagnantHit) parts.push(`고임 때 명중 +${g.stagnantHit}`);
-  if (g.chillHit) parts.push("맞힌 적 명중 −1");
-  if (g.blastRes) parts.push("낙반·폭발·광차 피해 절반");
-  if (g.grabRes) parts.push("붙잡힐 확률 절반");
-  if (g.darkSight) parts.push("어둠(들숨) 페널티 없음");
-  if (g.ledge) parts.push(`벼랑길 판정 +${g.ledge}`);
-  if (g.fallRes) parts.push("추락 피해 절반");
-  if (g.twoFace) parts.push("배부르면 방마다 HP +1, 굶주리면 피해 +2");
-  if (g.radianceRes) parts.push("성광 피해 절반");
-  if (g.purgeImmune) parts.push("정화 무효");
-  if (g.noRadiant) parts.push("성광 방에서 신앙심 감소 없음");
-  if (g.pietyCap) parts.push(`신앙심 상한 +${g.pietyCap}`);
+  if (st.length === 6 && st.every(([, v]) => v === st[0][1])) parts.push(t("모든 능력치 +{n}", { n: st[0][1] }));
+  else for (const [k, v] of st) parts.push(`${t(STAT_NAME[k])} +${v}`);
+  if (g.rogueOff === "dagger") parts.push(t("두 라운드에 한 번 왼손 찌르기 1d3(로그)"));
+  if (g.rogueOff === "flask") parts.push(t("4라운드마다 독병 — 적 전원 독·명중 −1(로그)"));
+  if (g.rogueOff === "xbow") parts.push(t("볼트 1d6 · AC 2 관통 · 쏘고 나면 장전(로그)"));
+  if (g.lifeSaves) parts.push(t("사망 방지 {n}회/미궁", { n: g.lifeSaves }));
+  if (g.corrodeRes !== undefined) parts.push(g.corrodeRes === 0 ? t("부식되지 않음") : t("부식 확률 절반"));
+  if (g.poisonRes) parts.push(t("독·마비 확률 절반"));
+  if (g.moldRes) parts.push(t("곰팡이 폐병 확률 절반"));
+  if (g.wade) parts.push(t("침수 방 이동 느려지지 않음"));
+  if (g.swim) parts.push(t("헤엄 판정 +{n}", { n: g.swim }));
+  if (g.critHeal) parts.push(t("치명타 시 HP +{n}", { n: g.critHeal }));
+  if (g.tideHit) parts.push(t("물이 높을 때 명중 +{n}", { n: g.tideHit }));
+  if (g.burnRes) parts.push(t("화상 확률 절반"));
+  if (g.coldRes) parts.push(t("냉기 절반"));
+  if (g.noHardSelf) parts.push(t("단단한 적에 손 안 다침"));
+  if (g.trapFind) parts.push(t("함정 발견 +{n}", { n: g.trapFind }));
+  if (g.trapDodge) parts.push(t("광차·얼음 회피 +{n}", { n: g.trapDodge }));
+  if (g.gasSense) parts.push(t("가스 주머니를 미리 앎"));
+  if (g.stagnantHit) parts.push(t("고임 때 명중 +{n}", { n: g.stagnantHit }));
+  if (g.chillHit) parts.push(t("맞힌 적 명중 −1"));
+  if (g.blastRes) parts.push(t("낙반·폭발·광차 피해 절반"));
+  if (g.grabRes) parts.push(t("붙잡힐 확률 절반"));
+  if (g.darkSight) parts.push(t("어둠(들숨) 페널티 없음"));
+  if (g.ledge) parts.push(t("벼랑길 판정 +{n}", { n: g.ledge }));
+  if (g.fallRes) parts.push(t("추락 피해 절반"));
+  if (g.twoFace) parts.push(t("배부르면 방마다 HP +1, 굶주리면 피해 +2"));
+  if (g.radianceRes) parts.push(t("성광 피해 절반"));
+  if (g.purgeImmune) parts.push(t("정화 무효"));
+  if (g.noRadiant) parts.push(t("성광 방에서 신앙심 감소 없음"));
+  if (g.pietyCap) parts.push(t("신앙심 상한 +{n}", { n: g.pietyCap }));
   return parts.join(" · ");
 }
 

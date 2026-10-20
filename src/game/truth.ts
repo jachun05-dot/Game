@@ -4,6 +4,7 @@ import { log, rngOf } from "./core";
 import { CLASSES } from "./classes";
 import { god, power } from "./faith";
 import type { EndingKind, GameState } from "./types";
+import { t } from "../i18n/core";
 
 // 진실 조각(진엔딩 단서, 2026-10-15 SECTOR6_DRAFT "엔딩"): 7개. 삶을 넘어 쌓인다(Meta.clues) — "노래로 전해진 기억".
 // 대부분 이미 있는 기록물·소문 문장을 그대로 쓴다. 영주의 칙서(6섹터 고해실)만은 그 삶에서 직접 들어야 진엔딩이 열린다.
@@ -128,9 +129,9 @@ export function trueEndingOpen(s: GameState): boolean {
 /** 진엔딩 잠김 이유(화면 안내) */
 export function trueEndingLock(s: GameState): string[] {
   const out: string[] = [];
-  if (clueCount(s) < clueNeed(s)) out.push(`진실 조각 ${clueCount(s)}/${clueNeed(s)}`);
-  if (!s.edict) out.push("이번 삶에서 영주의 칙서를 듣지 못했다");
-  if (!god(s)) out.push("섬기는 옛 신이 없다");
+  if (clueCount(s) < clueNeed(s)) out.push(t("진실 조각 {n}/{need}", { n: clueCount(s), need: clueNeed(s) }));
+  if (!s.edict) out.push(t("이번 삶에서 영주의 칙서를 듣지 못했다"));
+  if (!god(s)) out.push(t("섬기는 옛 신이 없다"));
   return out;
 }
 

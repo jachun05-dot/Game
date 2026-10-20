@@ -2,6 +2,7 @@ import { josa } from "./josa";
 import { MIND, afflict } from "./mind";
 import { plagueImmune, power } from "./faith";
 import type { GameState } from "./types";
+import { t, tk } from "../i18n/core";
 
 // 물리적 상태이상(DESIGN 11절 "상태이상 시스템", 2026-10-13 1차 구현).
 // 부위 부상: 머리·몸통·오른손·왼손·발 × 경상(1)·중상(2)·결손(3). 같은 부위를 다시 다치면 한 단계 악화.
@@ -13,7 +14,7 @@ export const PARTS: Part[] = ["head", "body", "main", "offhand", "feet"];
 export const PART_NAME: Record<Part, string> = { head: "머리", body: "몸통", main: "오른손", offhand: "왼손", feet: "발" };
 export const LEVEL_NAME = ["멀쩡함", "경상", "중상", "결손"];
 export const DISEASE_NAME = ["", "쥐 열병(경상)", "쥐 열병(중상)"];
-const MOLD_NAME = ["", "곰팡이 폐병(경상)", "곰팡이 폐병(중상)"];
+const MOLD_NAME = ["", tk("곰팡이 폐병(경상)"), tk("곰팡이 폐병(중상)")];
 
 /** 지금 앓는 질병 이름(종류별) */
 export function diseaseName(s: GameState, stage = s.disease): string {
@@ -22,7 +23,7 @@ export function diseaseName(s: GameState, stage = s.disease): string {
 
 /** 질병 종류만(단계 없이) */
 export function diseaseKindName(s: GameState): string {
-  return s.diseaseKind === "mold" ? "곰팡이 폐병" : "쥐 열병";
+  return s.diseaseKind === "mold" ? t("곰팡이 폐병") : t("쥐 열병");
 }
 
 /** 의수·의족을 달 수 있는 부위 */
@@ -141,11 +142,11 @@ export function injurySummary(s: GameState): string[] {
   const out: string[] = [];
   for (const p of PARTS) {
     const v = s.injuries[p] ?? 0;
-    if (v > 0) out.push(`${PART_NAME[p]} ${LEVEL_NAME[v]}${v >= 3 && s.prosthetic?.[p] ? (p === "feet" ? "(의족)" : "(의수)") : ""}`);
+    if (v > 0) out.push(`${t(PART_NAME[p])} ${t(LEVEL_NAME[v])}${v >= 3 && s.prosthetic?.[p] ? (p === "feet" ? t("(의족)") : t("(의수)")) : ""}`);
   }
-  if (s.disease > 0) out.push(diseaseName(s));
-  if ((s.poison ?? 0) > 0) out.push(["", "중독(경상)", "중독(중상)"][s.poison!]);
-  for (const [p, v] of Object.entries(s.paralysis ?? {})) if (v) out.push(`${PART_NAME[p as Part]} ${v >= 2 ? "마비" : "저림"}`);
+  if (s.disease > 0) out.push(t(diseaseName(s)));
+  if ((s.poison ?? 0) > 0) out.push(t(["", tk("중독(경상)"), tk("중독(중상)")][s.poison!]));
+  for (const [p, v] of Object.entries(s.paralysis ?? {})) if (v) out.push(`${t(PART_NAME[p as Part])} ${v >= 2 ? t("마비") : t("저림")}`);
   return out;
 }
 
@@ -155,15 +156,15 @@ export function partEffect(s: GameState, p: Part): string {
   const v = lvl(s, p);
   if (raw === 0 && v === 0) return "";
   const pros = raw >= 3 && s.prosthetic?.[p];
-  const by = raw === 0 && v > 0 ? " (몸통 중상의 여파)" : pros ? " (의수·의족으로 중상 성능)" : "";
+  const by = raw === 0 && v > 0 ? ` ${t("(몸통 중상의 여파)")}` : pros ? ` ${t("(의수·의족으로 중상 성능)")}` : "";
   const E: Record<Part, string[]> = {
-    head: ["", "모든 판정 −2", "모든 판정 −4, 라운드마다 10% 기절, 앞방 엿보기 불가", "즉사"],
-    body: ["", "최대 HP −3, 방을 옮길 때마다 출혈 1", "최대 HP −6, 출혈 2, 다른 부위 경상 페널티", "즉사"],
-    main: ["", "명중 −2", "명중 −5, 치명타 불가", "무기 사용 불가(맨손)"],
-    offhand: ["", "왼손 장비 AC −1", "왼손 장비 효과 없음", "왼손 장비 효과 없음"],
-    feet: ["", "AC −1, 이동 시간 2배", "AC −2, 도주 불가, 이동 3배", "기어서 이동(4배), 도주 불가, 발 장비 효과 없음"],
+    head: ["", tk("모든 판정 −2"), tk("모든 판정 −4, 라운드마다 10% 기절, 앞방 엿보기 불가"), tk("즉사")],
+    body: ["", tk("최대 HP −3, 방을 옮길 때마다 출혈 1"), tk("최대 HP −6, 출혈 2, 다른 부위 경상 페널티"), tk("즉사")],
+    main: ["", tk("명중 −2"), tk("명중 −5, 치명타 불가"), tk("무기 사용 불가(맨손)")],
+    offhand: ["", tk("왼손 장비 AC −1"), tk("왼손 장비 효과 없음"), tk("왼손 장비 효과 없음")],
+    feet: ["", tk("AC −1, 이동 시간 2배"), tk("AC −2, 도주 불가, 이동 3배"), tk("기어서 이동(4배), 도주 불가, 발 장비 효과 없음")],
   };
-  return E[p][pros ? 2 : Math.max(v, raw)] + by;
+  return t(E[p][pros ? 2 : Math.max(v, raw)]) + by;
 }
 
 /** 부위를 다치게 한다. 머리·몸통이 결손이 되면 죽음 원인을 돌려준다 */

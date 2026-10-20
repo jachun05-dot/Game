@@ -6,6 +6,7 @@ import { plagueImmune, pray } from "./faith";
 import { fragSkills } from "./fragments";
 import { infect } from "./injury";
 import type { GameState } from "./types";
+import { t, tk } from "../i18n/core";
 
 // 3섹터 "물에 잠긴 사원"의 새 상태이상(2026-10-14, SECTOR3_DRAFT 2절).
 // - 부식(장비 슬롯 0~3): 장비는 부서지지 않고 단계별 패널티만(gear.ts corroded·weaponCorrosion). 대장간 수리·숫돌로 푼다.
@@ -49,8 +50,8 @@ export function corrode(s: GameState, p: number, why: string, heavy = false): vo
 }
 
 export function corrosionEffect(slot: string, stage: number): string {
-  if (slot === "main") return ["", "피해 −1", "피해 −1, 명중 −2", "피해 주사위 1d4, 명중 −3"][stage];
-  return ["", "보너스 −1", "보너스 절반", "보너스 없음"][stage];
+  if (slot === "main") return t(["", tk("피해 −1"), tk("피해 −1, 명중 −2"), tk("피해 주사위 1d4, 명중 −3")][stage]);
+  return t(["", tk("보너스 −1"), tk("보너스 절반"), tk("보너스 없음")][stage]);
 }
 
 /** 부식된 슬롯 목록(심한 순) */
@@ -126,8 +127,12 @@ export function paralyze(s: GameState, chance: number, why: string, part?: ParaP
 }
 
 export function paraEffect(p: ParaPart, v: number): string {
-  const what = { main: "공격하지 못할", offhand: "방패를 들지 못할", feet: "도망치지 못할" }[p];
-  return v >= 2 ? `행동할 때 50% 확률로 ${what} 수 있다, 다른 부위도 10%` : `행동할 때 20% 확률로 ${what} 수 있다`;
+  const fx: Record<ParaPart, [string, string]> = {
+    main: [tk("행동할 때 20% 확률로 공격하지 못할 수 있다"), tk("행동할 때 50% 확률로 공격하지 못할 수 있다, 다른 부위도 10%")],
+    offhand: [tk("행동할 때 20% 확률로 방패를 들지 못할 수 있다"), tk("행동할 때 50% 확률로 방패를 들지 못할 수 있다, 다른 부위도 10%")],
+    feet: [tk("행동할 때 20% 확률로 도망치지 못할 수 있다"), tk("행동할 때 50% 확률로 도망치지 못할 수 있다, 다른 부위도 10%")],
+  };
+  return t(fx[p][v >= 2 ? 1 : 0]);
 }
 
 /** 이번 행동에서 이 부위가 말을 듣지 않는가 */
