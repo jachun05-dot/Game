@@ -1,4 +1,4 @@
-import { josa } from "./josa";
+import { t, tk } from "../i18n/core";
 import { BAL, MONSTERS } from "./data";
 import { actionsPerRound, check, heroAc, isDead, kill, log, maxHp, note, rngOf, rollPenalty, sagaBonus, smod } from "./core";
 import { FRAGMENTS, fragSkills } from "./fragments";
@@ -14,6 +14,10 @@ import { abyssFinisher, afterFinalCombat, answerTick, avatarOpening, inRadiant, 
 import { MARK_FOR_SKILL, SKILL_LEVEL, type ElementKey } from "./elements";
 
 const GEAR_IS_WEAPON = (id: string) => !!GEAR[id]?.weapon;
+/** 로그에 쓰는 적 이름(번역) */
+const nm = (e: Enemy) => t(MONSTERS[e.defId].name);
+/** 목록 잇기("a, b, c" — 언어마다 쉼표가 다르다) */
+const listOf = (xs: string[]) => (xs.length ? xs.reduce((a, b) => t("{a}, {b}", { a, b })) : "");
 import type { CombatState, DamageMeter, Enemy, GameState } from "./types";
 import { scaleEnemy } from "./endless";
 import { afterDungeonCombat, highTide, isNight, passTime } from "./dungeon";
@@ -37,19 +41,18 @@ export function makeEnemies(s: GameState, ids: string[]): Enemy[] {
 export function describeGroup(enemies: Enemy[]): string {
   const counts = new Map<string, number>();
   for (const e of enemies) counts.set(e.defId, (counts.get(e.defId) ?? 0) + 1);
-  return [...counts.entries()]
-    .map(([id, n]) => (n > 1 ? `${MONSTERS[id].name} ${n}마리` : MONSTERS[id].name))
-    .join(", ");
+  return listOf([...counts.entries()]
+    .map(([id, n]) => (n > 1 ? t("{name} {n}마리", { name: t(MONSTERS[id].name), n }) : t(MONSTERS[id].name))));
 }
 
 /** 적에게 피해를 준다(허수아비 측정 중이면 출처별·라운드별로 기록) */
-function dealt(s: GameState, c: CombatState, t: Enemy, dmg: number, src: string): void {
+function dealt(s: GameState, c: CombatState, tg: Enemy, dmg: number, src: string): void {
   // 모험가 가르침: 재앙(전투 시작 기술 ×1.5), 탐욕(빚 독촉 — 받는 피해 2배)
   if (c.round === 1 && teachOn(s, "trap") && SKILLS[src]?.trigger?.on === "start") dmg = Math.round(dmg * 1.5);
-  if ((t.debt ?? 0) > 0) dmg *= 2;
-  if ((t.rot ?? 0) > 0) dmg = Math.round(dmg * 1.2); // 로그 부패
-  t.hp -= dmg;
-  if (t.hp <= 0 && MONSTERS[t.defId].rebirth) rebirth(s, c, t); // 화신: 한 번 다시 일어선다
+  if ((tg.debt ?? 0) > 0) dmg *= 2;
+  if ((tg.rot ?? 0) > 0) dmg = Math.round(dmg * 1.2); // 로그 부패
+  tg.hp -= dmg;
+  if (tg.hp <= 0 && MONSTERS[tg.defId].rebirth) rebirth(s, c, tg); // 화신: 한 번 다시 일어선다
   const m = c.meter;
   if (!m) return;
   m.by[src] = (m.by[src] ?? 0) + dmg;
@@ -86,30 +89,30 @@ export function startCombat(s: GameState, context: CombatState["context"], enemi
   s.combat = c;
   c.logFrom = s.logCount;
   c.hpStart = s.hero.hp;
-  log(s, `${josa(describeGroup(enemies), "이")} 나타났다!`, "hurt");
+  log(s, t("{group|이} 나타났다!", { group: describeGroup(enemies) }), "hurt");
   s.log[s.log.length - 1].mons = enemies.map((e) => e.defId);
   for (const e of enemies) if (!s.codex.seen.includes(e.defId)) s.codex.seen.push(e.defId);
   // 공포: 보스·이단심문관과 마주치면
-  if (enemies.some((e) => e.defId === "boss" || e.defId === "inquisitor" || MONSTERS[e.defId].hidden)) afflict(s, "fear", MIND.fearBoss, "그것을 본 순간, 등줄기가 서늘하게 식었다.");
+  if (enemies.some((e) => e.defId === "boss" || e.defId === "inquisitor" || MONSTERS[e.defId].hidden)) afflict(s, "fear", MIND.fearBoss, t("그것을 본 순간, 등줄기가 서늘하게 식었다."));
   for (const e of enemies) {
     const def = MONSTERS[e.defId];
-    if (def.rare) log(s, `【희귀 개체】 ${def.name} — ${def.note} 놓치기 전에 잡아야 한다! (마석 ${def.mana}G 어치)`, "crit");
+    if (def.rare) log(s, t("【희귀 개체】 {name} — {note} 놓치기 전에 잡아야 한다! (마석 {mana}G 어치)", { name: t(def.name), note: t(String(def.note)), mana: def.mana }), "crit");
   }
   // 잠긴 석상(석상인 척)·불도롱뇽(지하수 곁에 숨음): 감각 판정에 실패하면 기습
   const dgNow = s.dungeon;
   const nearPool = !!dgNow && (dgNow.rooms[dgNow.current]?.pool || dgNow.rooms[dgNow.current]?.edges.some((x) => dgNow.rooms[x].pool));
   if (!opts.surprise && context === "dungeon" && enemies.some((e) => MONSTERS[e.defId].statue || (MONSTERS[e.defId].lurk && nearPool))) {
     const c2 = check(s, "per", 14);
-    if (c2.ok) log(s, `석상의 눈이 움직이는 것을 먼저 알아챘다. (감각 ${c2.total} vs 14)`, "system");
+    if (c2.ok) log(s, t("석상의 눈이 움직이는 것을 먼저 알아챘다. (감각 {total} vs 14)", { total: c2.total }), "system");
     else {
-      log(s, `그냥 석상인 줄 알았다 — 돌 주먹이 먼저 날아온다! (감각 ${c2.total} vs 14)`, "hurt");
+      log(s, t("그냥 석상인 줄 알았다 — 돌 주먹이 먼저 날아온다! (감각 {total} vs 14)", { total: c2.total }), "hurt");
       opts = { ...opts, surprise: true };
     }
   }
   // 기습: 적이 먼저 한 번 행동한다(함정을 밟은 상대를 노리는 고블린 등)
-  if (opts.surprise && (power(s, "trap", 3) || teachOn(s, "trap"))) log(s, `【${GODS.trap.name}】 먼저 온 경고 — 기습을 미리 알아챘다.`, "skill");
+  if (opts.surprise && (power(s, "trap", 3) || teachOn(s, "trap"))) log(s, t("【{god}】 먼저 온 경고 — 기습을 미리 알아챘다.", { god: t(GODS.trap.name) }), "skill");
   else if (opts.surprise) {
-    log(s, "기습! 자세를 잡기도 전에 공격이 들어온다.", "hurt");
+    log(s, t("기습! 자세를 잡기도 전에 공격이 들어온다."), "hurt");
     enemyPhase(s, c);
     if (isDead(s)) return;
     if (alive(c).length === 0) return finish(s, "win"); // 기습을 받아치다 다 쓰러뜨렸다
@@ -122,23 +125,23 @@ export function startCombat(s: GameState, context: CombatState["context"], enemi
   // 재앙의 신 ★5 "재앙의 주인": 가방에 넣은 함정 하나를 터뜨린다
   if (context === "dungeon" && (s.dungeon?.trapStock ?? 0) > 0 && alive(c).length) {
     s.dungeon!.trapStock! -= 1;
-    const t = strongest(c);
+    const tg = strongest(c);
     const dmg = rngOf(s).dice(2, 6);
-    dealt(s, c, t, dmg, "trap5");
-    log(s, `【${GODS.trap.name}】 재앙의 주인 — 가방에서 꺼낸 함정이 ${MONSTERS[t.defId].name}의 발밑에서 터졌다. ${dmg} 피해 (남은 함정 ${s.dungeon!.trapStock})`, "skill");
-    if (t.hp <= 0) killed(s, c, t);
+    dealt(s, c, tg, dmg, "trap5");
+    log(s, t("【{god}】 재앙의 주인 — 가방에서 꺼낸 함정이 {name}의 발밑에서 터졌다. {dmg} 피해 (남은 함정 {left})", { god: t(GODS.trap.name), name: nm(tg), dmg, left: s.dungeon!.trapStock! }), "skill");
+    if (tg.hp <= 0) killed(s, c, tg);
     if (alive(c).length === 0) return finish(s, "win");
   }
   // 재앙의 신 ★4 "함정 다루기": 챙겨 둔 함정을 적 하나에게 터뜨린다
   if (context === "dungeon" && s.dungeon?.trapCharge && alive(c).length) {
     s.dungeon.trapCharge = false;
-    const t = strongest(c);
+    const tg = strongest(c);
     const dmg = rngOf(s).dice(2, 6);
-    dealt(s, c, t, dmg, "trap4");
-    log(s, `【${GODS.trap.name}】 함정 다루기 — 챙겨 둔 함정이 ${MONSTERS[t.defId].name}의 발밑에서 터졌다. ${dmg} 피해`, "skill");
-    if (t.hp <= 0) {
-      gainLoot(s, c, t.defId, t.stolen);
-      log(s, `${josa(MONSTERS[t.defId].name, "을")} 쓰러뜨렸다.`, "good");
+    dealt(s, c, tg, dmg, "trap4");
+    log(s, t("【{god}】 함정 다루기 — 챙겨 둔 함정이 {name}의 발밑에서 터졌다. {dmg} 피해", { god: t(GODS.trap.name), name: nm(tg), dmg }), "skill");
+    if (tg.hp <= 0) {
+      gainLoot(s, c, tg.defId, tg.stolen);
+      log(s, t("{name|을} 쓰러뜨렸다.", { name: nm(tg) }), "good");
     }
     if (alive(c).length === 0) return finish(s, "win");
   }
@@ -146,11 +149,11 @@ export function startCombat(s: GameState, context: CombatState["context"], enemi
   avatarOpening(s, c);
   // 첫 함정의 쇠이빨(재앙의 신 유물): 가장 강한 적의 발밑에서 터진다
   if (relicOn(s, "trap") && context !== "dummy" && alive(c).length) {
-    const t = strongest(c);
+    const tg = strongest(c);
     const dmg = rngOf(s).dice(2, 6);
-    dealt(s, c, t, dmg, "relic");
-    log(s, `【첫 함정의 쇠이빨】 ${MONSTERS[t.defId].name}의 발밑에서 쇠이빨이 물었다. ${dmg} 피해`, "skill");
-    if (t.hp <= 0) killed(s, c, t);
+    dealt(s, c, tg, dmg, "relic");
+    log(s, t("【{relic}】 {name}의 발밑에서 쇠이빨이 물었다. {dmg} 피해", { relic: t("첫 함정의 쇠이빨"), name: nm(tg), dmg }), "skill");
+    if (tg.hp <= 0) killed(s, c, tg);
     if (alive(c).length === 0) return finish(s, "win");
   }
   // 모험가 신의 가르침: 마지막 기술(전투 시작)
@@ -159,22 +162,22 @@ export function startCombat(s: GameState, context: CombatState["context"], enemi
   // 망각의 신 ★5 "완전한 망각": 2라운드(보스·정예 1라운드) / ★3 "망각의 장막": 1라운드
   if (power(s, "oblivion", 5)) {
     for (const foe of alive(c)) foe.stun = (foe.stun ?? 0) + (bossy(foe) ? 1 : 2);
-    log(s, `【${GODS.oblivion.name}】 완전한 망각 — 적들이 당신이 거기 있다는 것을 잊었다.`, "skill");
+    log(s, t("【{god}】 완전한 망각 — 적들이 당신이 거기 있다는 것을 잊었다.", { god: t(GODS.oblivion.name) }), "skill");
   } else if (power(s, "oblivion", 3)) {
     for (const foe of alive(c)) foe.stun = (foe.stun ?? 0) + 1;
-    log(s, `【${GODS.oblivion.name}】 망각의 장막 — 적들이 잠시 당신이 거기 있다는 것을 잊었다.`, "skill");
+    log(s, t("【{god}】 망각의 장막 — 적들이 잠시 당신이 거기 있다는 것을 잊었다.", { god: t(GODS.oblivion.name) }), "skill");
   }
   // 전쟁의 신 ★3 "피의 함성"
   if (power(s, "war", 3) && alive(c).length >= 3) {
     c.cow = 2;
-    log(s, `【${GODS.war.name}】 피의 함성 — 적들이 움찔한다 (2라운드 동안 적 명중 −2)`, "skill");
+    log(s, t("【{god}】 피의 함성 — 적들이 움찔한다 (2라운드 동안 적 명중 −2)", { god: t(GODS.war.name) }), "skill");
   }
 
   // 빈틈 읽기(전사 검투 8레벨): 가장 단단한 적의 AC −2
   if (has(s, "readGap") && alive(c).length) {
     const target = [...alive(c)].sort((a, b) => MONSTERS[b.defId].ac - MONSTERS[a.defId].ac || b.hp - a.hp)[0];
     target.acDown = (target.acDown ?? 0) + 2;
-    log(s, `【빈틈 읽기】 ${MONSTERS[target.defId].name}의 빈틈이 보인다 (AC -2)`, "skill");
+    log(s, t("【{skill}】 {name}의 빈틈이 보인다 (AC -2)", { skill: t("빈틈 읽기"), name: nm(target) }), "skill");
   }
   let opener: Strike | null = null;
   // 전투 시작 기술은 높은 레벨에 배운 것부터(뒤에 배운 강한 주문이 앞 주문에 묻히지 않게).
@@ -185,10 +188,10 @@ export function startCombat(s: GameState, context: CombatState["context"], enemi
     .filter((sk) => sk.trigger!.on === "start" || (sk.trigger!.on === "enemiesAtLeast" && (sk.effect?.type === "espell" || sk.effect?.type === "spell") && startFoes >= needFoes(s, sk.trigger!.n)))
     .sort((a, b) => level(b.id) - level(a.id));
   for (const sk of opening) {
-    const t = sk.trigger!;
+    const tg = sk.trigger!;
     if (alive(c).length === 0) return finish(s, "win");
     if (!canUse(s, c, sk)) continue;
-    if (t.on === "start" && t.minEnemies && alive(c).length < t.minEnemies) continue;
+    if (tg.on === "start" && tg.minEnemies && alive(c).length < tg.minEnemies) continue;
     const e = sk.effect!;
     if (e.type === "strike") {
       // 기선 제압·돌격 등이 겹치면 합친다
@@ -199,89 +202,89 @@ export function startCombat(s: GameState, context: CombatState["context"], enemi
     } else if (e.type === "weaken") {
       const target = [...alive(c)].sort((a, b) => MONSTERS[b.defId].ac - MONSTERS[a.defId].ac || b.hp - a.hp)[0];
       target.acDown = (target.acDown ?? 0) + e.ac;
-      useSkill(s, c, sk, `${MONSTERS[target.defId].name}의 빈틈을 읽었다 (AC -${e.ac})`);
+      useSkill(s, c, sk, t("{name}의 빈틈을 읽었다 (AC -{ac})", { name: nm(target), ac: e.ac }));
     } else if (e.type === "stunAll") {
       for (const foe of alive(c)) foe.stun = (foe.stun ?? 0) + e.rounds;
-      useSkill(s, c, sk, "눈부신 가루에 적들이 눈을 감싸 쥔다");
+      useSkill(s, c, sk, t("눈부신 가루에 적들이 눈을 감싸 쥔다"));
     } else if (e.type === "stunOne") {
       const target = strongest(c);
       target.stun = (target.stun ?? 0) + e.rounds;
       if (e.dice) {
         const dmg = rngOf(s).dice(e.dice[0], e.dice[1]) + Math.max(0, smod(s, "str"));
         dealt(s, c, target, dmg, sk.id);
-        log(s, `${MONSTERS[target.defId].name}에게 ${dmg} 피해`, "hit");
+        log(s, t("{name}에게 {dmg} 피해", { name: nm(target), dmg }), "hit");
         if (target.hp <= 0) killed(s, c, target);
       }
-      useSkill(s, c, sk, e.text ? `${e.text} ${josa(MONSTERS[target.defId].name, "이")} 멈칫한다` : `${josa(MONSTERS[target.defId].name, "을")} 방패로 밀쳐 넘어뜨렸다`);
+      useSkill(s, c, sk, e.text ? t("{text} {name|이} 멈칫한다", { text: t(e.text), name: nm(target) }) : t("{name|을} 방패로 밀쳐 넘어뜨렸다", { name: nm(target) }));
     } else if (e.type === "guard") {
       c.guard = { ac: e.ac, rounds: e.rounds };
-      useSkill(s, c, sk, `함성을 지르며 자세를 낮춘다 (AC +${e.ac}, ${e.rounds}라운드)`);
+      useSkill(s, c, sk, t("함성을 지르며 자세를 낮춘다 (AC +{ac}, {rounds}라운드)", { ac: e.ac, rounds: e.rounds }));
     } else if (e.type === "spell") {
-      useSkill(s, c, sk, e.text);
+      useSkill(s, c, sk, t(e.text));
       castSpell(s, c, e.dice, e.all, sk.id);
       if (alive(c).length === 0) return finish(s, "win");
     } else if (e.type === "espell") {
       // 각인으로 늘어난 횟수만큼 전투 시작 때 거듭 쏜다
       while (canUse(s, c, sk) && alive(c).length) {
-        useSkill(s, c, sk, e.text);
+        useSkill(s, c, sk, t(e.text));
         castElement(s, c, sk.id);
       }
       if (alive(c).length === 0) return finish(s, "win");
     } else if (e.type === "fog") {
       for (const foe of alive(c)) foe.hitDown = { n: e.hit, rounds: e.rounds };
-      useSkill(s, c, sk, `${e.text} (적 명중 −${e.hit}, ${e.rounds}라운드)`);
+      useSkill(s, c, sk, t("{text} (적 명중 −{hit}, {rounds}라운드)", { text: t(e.text), hit: e.hit, rounds: e.rounds }));
     } else if (e.type === "bind") {
       const target = strongest(c);
       target.stun = Math.max(target.stun ?? 0, e.rounds);
       if (e.half) c.halfDmg = true;
-      useSkill(s, c, sk, `${e.text} — ${josa(MONSTERS[target.defId].name, "이")} 움직이지 못한다`);
+      useSkill(s, c, sk, t("{text} — {name|이} 움직이지 못한다", { text: t(e.text), name: nm(target) }));
     } else if (e.type === "rampage") {
       c.rampage = Math.max(c.rampage ?? 0, e.rounds);
       if (e.ac) c.guard = { ac: e.ac, rounds: e.rounds };
-      useSkill(s, c, sk, e.text);
+      useSkill(s, c, sk, t(e.text));
     } else if (e.type === "smoke") {
       for (const foe of alive(c)) foe.stun = Math.max(foe.stun ?? 0, e.rounds + (teachOn(s, "oblivion") ? 1 : 0)); // 망각의 가르침 +1라운드
       c.smoke = e.flee;
-      useSkill(s, c, sk, e.text);
+      useSkill(s, c, sk, t(e.text));
     } else if (e.type === "steal") {
-      useSkill(s, c, sk, e.text);
-      const t = [...alive(c)].sort((a, b) => a.hp - b.hp)[0];
-      const def = MONSTERS[t.defId];
+      useSkill(s, c, sk, t(e.text));
+      const tg = [...alive(c)].sort((a, b) => a.hp - b.hp)[0];
+      const def = MONSTERS[tg.defId];
       const dmg = Math.max(1, rngOf(s).dice(e.dice[0], e.dice[1]) + Math.max(smod(s, "str"), smod(s, "dex")));
-      dealt(s, c, t, dmg, sk.id);
-      t.stolen = true;
-      log(s, `${def.name}에게 ${dmg} 피해`, "hit");
-      if (t.hp <= 0) {
-        gainLoot(s, c, def.id, t.stolen);
-        log(s, `${josa(def.name, "을")} 쓰러뜨렸다.`, "good");
+      dealt(s, c, tg, dmg, sk.id);
+      tg.stolen = true;
+      log(s, t("{name}에게 {dmg} 피해", { name: t(def.name), dmg }), "hit");
+      if (tg.hp <= 0) {
+        gainLoot(s, c, def.id, tg.stolen);
+        log(s, t("{name|을} 쓰러뜨렸다.", { name: t(def.name) }), "good");
       }
       if (alive(c).length === 0) return finish(s, "win");
     } else if (e.type === "burnAll") {
       for (const foe of alive(c)) burn(s, foe, e.rounds);
-      useSkill(s, c, sk, e.text);
+      useSkill(s, c, sk, t(e.text));
     } else if (e.type === "sweep") {
       // 검무: 시작하자마자 적 전원을 한 번씩
-      useSkill(s, c, sk, "칼끝이 적들 사이를 돈다");
+      useSkill(s, c, sk, t("칼끝이 적들 사이를 돈다"));
       for (const foe of alive(c)) attack(s, c, foe, { ...PLAIN, mult: e.dmgMult, src: sk.id });
     } else if (e.type === "strikeStrong") {
-      useSkill(s, c, sk, e.text);
+      useSkill(s, c, sk, t(e.text));
       attack(s, c, strongest(c), { hit: 0, dmg: 0, mult: e.mult, autoHit: true, crit: e.crit, src: sk.id });
     } else if (e.type === "zero") {
       for (const foe of alive(c)) foe.stun = Math.max(foe.stun ?? 0, bossy(foe) ? e.bossRounds : e.rounds);
       if (e.half) c.halfDmg = true;
-      useSkill(s, c, sk, `${e.text} — 적들이 얼어붙었다`);
+      useSkill(s, c, sk, t("{text} — 적들이 얼어붙었다", { text: t(e.text) }));
     } else if (e.type === "rampart") {
       c.halfRounds = Math.max(c.halfRounds ?? 0, e.rounds);
-      useSkill(s, c, sk, `${e.text} (${e.rounds}라운드 동안 받는 피해 절반)`);
+      useSkill(s, c, sk, t("{text} ({rounds}라운드 동안 받는 피해 절반)", { text: t(e.text), rounds: e.rounds }));
     } else if (e.type === "fury") {
       c.fury = { rounds: e.rounds, extra: e.extra, taken: e.taken };
-      useSkill(s, c, sk, `${e.text} (${e.rounds}라운드 동안 매 라운드 ${e.extra}번 더 공격, 받는 피해 +${e.taken})`);
+      useSkill(s, c, sk, t("{text} ({rounds}라운드 동안 매 라운드 {extra}번 더 공격, 받는 피해 +{taken})", { text: t(e.text), rounds: e.rounds, extra: e.extra, taken: e.taken }));
     } else if (e.type === "tox" || e.type === "cripple" || e.type === "throw" || e.type === "bolt") {
       rogueEffect(s, c, sk);
     } else if (e.type === "venom") {
-      const t = strongest(c);
-      t.venom = teachOn(s, "plague") ? { rounds: e.rounds * 2, dice: [e.dice[0], Math.max(8, e.dice[1])] } : { rounds: e.rounds, dice: e.dice }; // 역병의 가르침
-      useSkill(s, c, sk, `${e.text} — ${josa(MONSTERS[t.defId].name, "이")} 중독됐다`);
+      const tg = strongest(c);
+      tg.venom = teachOn(s, "plague") ? { rounds: e.rounds * 2, dice: [e.dice[0], Math.max(8, e.dice[1])] } : { rounds: e.rounds, dice: e.dice }; // 역병의 가르침
+      useSkill(s, c, sk, t("{text} — {name|이} 중독됐다", { text: t(e.text), name: nm(tg) }));
     }
     if (alive(c).length === 0) return finish(s, "win");
   }
@@ -324,14 +327,14 @@ export function startCombat(s: GameState, context: CombatState["context"], enemi
     const commander = alive(c).find((x) => MONSTERS[x.defId].rally);
     if (commander && c.round % 3 === 0 && (c.rally ?? 0) < 2) {
       c.rally = (c.rally ?? 0) + 2;
-      log(s, `${josa(MONSTERS[commander.defId].name, "이")} 진군 명령을 내린다! (아군 명중 +${c.rally})`, "hurt");
+      log(s, t("{name|이} 진군 명령을 내린다! (아군 명중 +{n})", { name: nm(commander), n: c.rally }), "hurt");
     }
     if (context === "dungeon") {
       passTime(s, 1);
       if (isDead(s)) return;
     }
   }
-  log(s, "지쳐 서로 물러났다.", "system");
+  log(s, t("지쳐 서로 물러났다."), "system");
   finish(s, "fled");
 }
 
@@ -343,15 +346,15 @@ function strongest(c: CombatState): Enemy {
 function castSpell(s: GameState, c: CombatState, dice: [number, number], all: boolean, src: string): void {
   const r = rngOf(s);
   const targets = all ? alive(c) : [[...alive(c)].sort((a, b) => a.hp - b.hp)[0]];
-  for (const t of targets) {
-    const def = MONSTERS[t.defId];
+  for (const tg of targets) {
+    const def = MONSTERS[tg.defId];
     const dmg = Math.max(1, r.dice(dice[0], dice[1]) + smod(s, "int") + spellBonus(s));
-    dealt(s, c, t, dmg, src);
+    dealt(s, c, tg, dmg, src);
     note(s, "int");
-    log(s, `${def.name}에게 ${dmg} 피해`, "hit");
-    if (t.hp <= 0) {
-      gainLoot(s, c, def.id, t.stolen);
-      log(s, `${josa(def.name, "을")} 쓰러뜨렸다.`, "good");
+    log(s, t("{name}에게 {dmg} 피해", { name: t(def.name), dmg }), "hit");
+    if (tg.hp <= 0) {
+      gainLoot(s, c, def.id, tg.stolen);
+      log(s, t("{name|을} 쓰러뜨렸다.", { name: t(def.name) }), "good");
     }
   }
 }
@@ -368,37 +371,37 @@ function mineOpening(s: GameState, c: CombatState): boolean {
   const dg = s.dungeon!;
   if (alive(c).some((e) => MONSTERS[e.defId].burrow)) {
     const ck = check(s, "dex", 13);
-    if (ck.ok) log(s, `벽을 뚫고 나오는 소리에 먼저 몸을 뺐다. (민첩 ${ck.total} vs 13)`, "system");
+    if (ck.ok) log(s, t("벽을 뚫고 나오는 소리에 먼저 몸을 뺐다. (민첩 {total} vs 13)", { total: ck.total }), "system");
     else {
       const dmg = blastDamage(s, r.dice(1, 6));
       s.hero.hp -= dmg;
-      log(s, `벽이 터지며 돌무더기가 쏟아졌다! ${dmg} 피해 (민첩 ${ck.total} vs 13)`, "hurt");
+      log(s, t("벽이 터지며 돌무더기가 쏟아졌다! {dmg} 피해 (민첩 {total} vs 13)", { dmg, total: ck.total }), "hurt");
       if (s.hero.hp <= 0) {
         s.hero.hp = 0;
-        kill(s, "trap", "무너진 벽에 깔려 쓰러졌다");
+        kill(s, "trap", t("무너진 벽에 깔려 쓰러졌다"));
         if (isDead(s)) return true;
       }
     }
   }
   if (dg.cartCharge && alive(c).length) {
-    const t = alive(c)[0];
+    const tg = alive(c)[0];
     const dmg = r.dice(dg.cartCharge, 6);
     dg.cartCharge = undefined;
-    dealt(s, c, t, dmg, "cart");
-    log(s, `레일을 타고 내려온 광차가 ${MONSTERS[t.defId].name}을 들이받았다! ${dmg} 피해`, "skill");
-    if (t.hp <= 0) killed(s, c, t);
+    dealt(s, c, tg, dmg, "cart");
+    log(s, t("레일을 타고 내려온 광차가 {name}을 들이받았다! {dmg} 피해", { name: nm(tg), dmg }), "skill");
+    if (tg.hp <= 0) killed(s, c, tg);
   }
   // 화약통: 적이 셋 이상이거나 강한 적이 있으면 알아서 던진다
   if (s.inventory.powder > 0 && alive(c).length && (alive(c).length >= 3 || alive(c).some(bossy))) {
     s.inventory.powder -= 1;
-    log(s, `화약통에 불을 붙여 던졌다! (남은 화약통 ${s.inventory.powder})`, "skill");
+    log(s, t("화약통에 불을 붙여 던졌다! (남은 화약통 {n})", { n: s.inventory.powder }), "skill");
     for (const e of alive(c)) {
       const dmg = r.dice(2, 6);
       dealt(s, c, e, dmg, "powder");
-      log(s, `${MONSTERS[e.defId].name}에게 ${dmg} 피해`, "hit");
+      log(s, t("{name}에게 {dmg} 피해", { name: nm(e), dmg }), "hit");
       if (e.hp <= 0) killed(s, c, e);
     }
-    if (burnWound(s, 0.1, "튄 불똥에 데었다")) return true;
+    if (burnWound(s, 0.1, t("튄 불똥에 데었다"))) return true;
   }
   return false;
 }
@@ -410,17 +413,17 @@ function bossy(e: Enemy): boolean {
 }
 
 /** 적을 쓰러뜨린 뒤처리(마석·편린·겨울의 화신) */
-function killed(s: GameState, c: CombatState, t: Enemy): void {
-  const def = MONSTERS[t.defId];
-  if (t.tox && has(s, "rgRotBlood") && c.context !== "dummy") s.hero.hp = Math.min(maxHp(s), s.hero.hp + 4); // 썩은 피
-  gainLoot(s, c, def.id, t.stolen);
-  log(s, `${josa(def.name, "을")} 쓰러뜨렸다.`, "good");
+function killed(s: GameState, c: CombatState, tg: Enemy): void {
+  const def = MONSTERS[tg.defId];
+  if (tg.tox && has(s, "rgRotBlood") && c.context !== "dummy") s.hero.hp = Math.min(maxHp(s), s.hero.hp + 4); // 썩은 피
+  gainLoot(s, c, def.id, tg.stolen);
+  log(s, t("{name|을} 쓰러뜨렸다.", { name: t(def.name) }), "good");
   // 겨울의 화신: 얼어 있던 적을 쓰러뜨리면 다른 적 하나가 언다
-  if (has(s, "frostAvatar") && (t.stun ?? 0) > 0) {
+  if (has(s, "frostAvatar") && (tg.stun ?? 0) > 0) {
     const o = alive(c)[0];
     if (o) {
       freeze(o);
-      log(s, `【겨울의 화신】 부서진 얼음이 ${josa(MONSTERS[o.defId].name, "을")} 얼렸다.`, "skill");
+      log(s, t("【{skill}】 부서진 얼음이 {name|을} 얼렸다.", { skill: t("겨울의 화신"), name: nm(o) }), "skill");
     }
   }
 }
@@ -429,18 +432,18 @@ function killed(s: GameState, c: CombatState, t: Enemy): void {
 function roundStart(s: GameState, c: CombatState): void {
   const r = rngOf(s);
   if (has(s, "boltAvatar") && alive(c).length) {
-    const t = r.pick(alive(c));
+    const tg = r.pick(alive(c));
     const dmg = Math.max(1, r.dice(1, 8) + smod(s, "int"));
-    dealt(s, c, t, dmg, "boltAvatar");
-    log(s, `【뇌신】 ${MONSTERS[t.defId].name}에게 번개가 떨어진다. ${dmg} 피해`, "skill");
-    if (t.hp <= 0) killed(s, c, t);
+    dealt(s, c, tg, dmg, "boltAvatar");
+    log(s, t("【{skill}】 {name}에게 번개가 떨어진다. {dmg} 피해", { skill: t("뇌신"), name: nm(tg), dmg }), "skill");
+    if (tg.hp <= 0) killed(s, c, tg);
   }
   for (const e of alive(c)) {
     if (!e.venom || e.venom.rounds <= 0) continue;
     const dmg = r.dice(e.venom.dice[0], e.venom.dice[1]);
     dealt(s, c, e, dmg, "poisonBlade");
     e.venom.rounds -= 1;
-    log(s, `${josa(MONSTERS[e.defId].name, "이")} 독에 몸을 떤다. ${dmg} 피해`, "hit");
+    log(s, t("{name|이} 독에 몸을 떤다. {dmg} 피해", { name: nm(e), dmg }), "hit");
     if (e.hp <= 0) killed(s, c, e);
   }
   rogueToxTick(s, c);
@@ -451,14 +454,14 @@ function roundStart(s: GameState, c: CombatState): void {
     for (const e of alive(c)) {
       const dmg = r.dice(1, 10);
       dealt(s, c, e, dmg, "legion");
-      log(s, `【최후의 군세】 망령 군세가 ${josa(MONSTERS[e.defId].name, "을")} 짓밟는다. ${dmg} 피해`, "skill");
+      log(s, t("【{skill}】 망령 군세가 {name|을} 짓밟는다. {dmg} 피해", { skill: t("최후의 군세"), name: nm(e), dmg }), "skill");
       if (e.hp <= 0) killed(s, c, e);
     }
   }
   // 6섹터: 옛 신들의 응답(라운드마다 하나)
-  answerTick(s, c, (t, dmg, src) => {
-    dealt(s, c, t, dmg, src);
-    if (t.hp <= 0) killed(s, c, t);
+  answerTick(s, c, (tg, dmg, src) => {
+    dealt(s, c, tg, dmg, src);
+    if (tg.hp <= 0) killed(s, c, tg);
   });
 }
 
@@ -497,71 +500,72 @@ function critMult(s: GameState): number {
 }
 
 /** 원소별 추가 피해(열기·불의 각인·타오르는 의지·대지의 각인) */
-function elementBonus(s: GameState, el: ElementKey, t: Enemy): number {
+function elementBonus(s: GameState, el: ElementKey, tg: Enemy): number {
   let b = 0;
   if (has(s, "fireHeat")) b += 1 + Math.floor(Math.max(0, smod(s, "str")) / 2);
   if (el === "fire" && has(s, "fireMark")) b += 3;
   if (el === "frost" && has(s, "frostMark")) b += 3;
   if (el === "bolt" && has(s, "boltMark")) b += 2;
-  if (has(s, "frostMark") && (t.stun ?? 0) > 0) b += 3; // 깨뜨리기
+  if (has(s, "frostMark") && (tg.stun ?? 0) > 0) b += 3; // 깨뜨리기
   if (el === "fire" && has(s, "fireWill") && hpPct(s) <= 30) b += 3;
-  if (el === "earth" && has(s, "earthMark") && MONSTERS[t.defId].hard) b += 3;
+  if (el === "earth" && has(s, "earthMark") && MONSTERS[tg.defId].hard) b += 3;
   if (el === "fire" && has(s, "fireSeal")) b += 3;
   if (el === "bolt" && has(s, "boltSeal")) b += 2;
-  if (has(s, "frostSeal") && (t.stun ?? 0) > 0) b += 3; // 깨뜨리기(낙인)
+  if (has(s, "frostSeal") && (tg.stun ?? 0) > 0) b += 3; // 깨뜨리기(낙인)
   return b;
 }
 
 /** 원소 주문 한 발: 반드시 명중. 쓰러뜨렸으면 true */
-function elementHit(s: GameState, c: CombatState, t: Enemy, sk: SkillDef, half = false): void {
+function elementHit(s: GameState, c: CombatState, tg: Enemy, sk: SkillDef, half = false): void {
   const e = sk.effect as Extract<SkillDef["effect"], { type: "espell" }>;
   const r = rngOf(s);
-  const def = MONSTERS[t.defId];
+  const def = MONSTERS[tg.defId];
   const sides = e.vary ? r.pick([4, 6, 8, 10]) : e.dice[1];
-  let dmg = rollDice(s, e.dice[0], sides) + smod(s, "int") + spellBonus(s) + elementBonus(s, e.el, t) + (e.hardBonus && def.hard ? e.hardBonus : 0);
+  let dmg = rollDice(s, e.dice[0], sides) + smod(s, "int") + spellBonus(s) + elementBonus(s, e.el, tg) + (e.hardBonus && def.hard ? e.hardBonus : 0);
   dmg = Math.max(1, half ? Math.floor(dmg / 2) : dmg);
-  dealt(s, c, t, dmg, sk.id);
+  dealt(s, c, tg, dmg, sk.id);
   note(s, "int");
   const extra: string[] = [];
-  if (t.hp > 0) {
+  if (tg.hp > 0) {
     if (e.el === "fire" && has(s, "fireMark")) {
-      burn(s, t, 3);
-      extra.push("불탄다");
+      burn(s, tg, 3);
+      extra.push(tk("불탄다"));
     }
     if (e.freeze && r.chance(freezeChance(s, e.freeze))) {
-      freeze(t, e.freezeRounds ?? 1);
-      extra.push("얼었다");
+      freeze(tg, e.freezeRounds ?? 1);
+      extra.push(tk("얼었다"));
     }
     if (e.burnRounds) {
-      burn(s, t, e.burnRounds);
-      if (!extra.includes("불탄다")) extra.push("불탄다");
+      burn(s, tg, e.burnRounds);
+      if (!extra.includes(tk("불탄다"))) extra.push(tk("불탄다"));
     }
     if ((e.shockChance && r.chance(e.shockChance)) || (e.el === "bolt" && has(s, "boltSeal") && r.chance(0.2))) {
-      t.shock = Math.max(t.shock ?? 0, 1);
-      if (!extra.includes("감전")) extra.push("감전");
+      tg.shock = Math.max(tg.shock ?? 0, 1);
+      if (!extra.includes(tk("감전"))) extra.push(tk("감전"));
     }
     if (e.rider) {
       const k = r.int(0, 2);
-      if (k === 0) burn(s, t, 2);
-      else if (k === 1) freeze(t);
-      else t.shock = Math.max(t.shock ?? 0, 1);
-      extra.push(["불탄다", "얼었다", "감전"][k]);
+      if (k === 0) burn(s, tg, 2);
+      else if (k === 1) freeze(tg);
+      else tg.shock = Math.max(tg.shock ?? 0, 1);
+      extra.push([tk("불탄다"), tk("얼었다"), tk("감전")][k]);
     }
-    if (has(s, "frostAvatar") && !extra.includes("얼었다") && r.chance(0.25)) {
-      freeze(t);
-      extra.push("얼었다");
+    if (has(s, "frostAvatar") && !extra.includes(tk("얼었다")) && r.chance(0.25)) {
+      freeze(tg);
+      extra.push(tk("얼었다"));
     }
     if (e.knock && r.chance(e.knock)) {
-      freeze(t);
-      extra.push("넘어졌다");
+      freeze(tg);
+      extra.push(tk("넘어졌다"));
     }
     if (e.shock) {
-      t.shock = Math.max(t.shock ?? 0, e.shock);
-      extra.push("감전");
+      tg.shock = Math.max(tg.shock ?? 0, e.shock);
+      extra.push(tk("감전"));
     }
   }
-  log(s, `${def.name}에게 ${dmg} 피해${half ? " (튐)" : ""}${extra.length ? ` — ${extra.join(", ")}` : ""}`, "hit");
-  if (t.hp <= 0) killed(s, c, t);
+  const hv = { name: t(def.name), dmg, fx: listOf(extra.map((x) => t(x))) };
+  log(s, extra.length ? (half ? t("{name}에게 {dmg} 피해 (튐) — {fx}", hv) : t("{name}에게 {dmg} 피해 — {fx}", hv)) : half ? t("{name}에게 {dmg} 피해 (튐)", hv) : t("{name}에게 {dmg} 피해", hv), "hit");
+  if (tg.hp <= 0) killed(s, c, tg);
 }
 
 /** 원소 주문(액티브)을 쏜다. target이 있으면 그 적에게 */
@@ -575,17 +579,17 @@ function castElement(s: GameState, c: CombatState, skillId: string, target?: Ene
       continue;
     }
     const foes = alive(c);
-    const t = target && target.hp > 0 ? target
+    const tg = target && target.hp > 0 ? target
       : e.pick === "strongest" ? strongest(c)
       : e.pick === "hard" ? [...foes].sort((a, b) => Number(!!MONSTERS[b.defId].hard) - Number(!!MONSTERS[a.defId].hard) || a.hp - b.hp)[0]
       : [...foes].sort((a, b) => a.hp - b.hp)[0];
-    elementHit(s, c, t, sk);
-    if (e.splashAll) for (const o of alive(c).filter((x) => x !== t)) elementHit(s, c, o, sk, true);
+    elementHit(s, c, tg, sk);
+    if (e.splashAll) for (const o of alive(c).filter((x) => x !== tg)) elementHit(s, c, o, sk, true);
     if (e.bounce) {
       // 번개의 각인: 한 번 더, 행운 보정 ×10%로 또 한 번. 번개의 낙인이면 한 번 더
       const jumps = 1 + (has(s, "boltMark") ? 1 + (r.chance(Math.max(0, smod(s, "dex")) * 0.1) ? 1 : 0) : 0) + (has(s, "boltSeal") ? 1 : 0);
       for (let j = 0; j < jumps; j++) {
-        const others = alive(c).filter((x) => x !== t);
+        const others = alive(c).filter((x) => x !== tg);
         if (!others.length) break;
         elementHit(s, c, r.pick(others), sk, true);
       }
@@ -602,10 +606,10 @@ function burnTick(s: GameState, c: CombatState): void {
     const dmg = (r.dice(1, has(s, "fireSeal") ? 6 : 3) + e.burn.bonus) * (has(s, "fireAvatar") ? 2 : 1);
     dealt(s, c, e, dmg, "burn");
     e.burn.rounds -= 1;
-    log(s, `${josa(def.name, "이")} 불길 속에서 몸부림친다. ${dmg} 피해`, "hit");
+    log(s, t("{name|이} 불길 속에서 몸부림친다. {dmg} 피해", { name: t(def.name), dmg }), "hit");
     if (e.hp <= 0) {
       gainLoot(s, c, def.id, e.stolen);
-      log(s, `${josa(def.name, "이")} 타 버렸다.`, "good");
+      log(s, t("{name|이} 타 버렸다.", { name: t(def.name) }), "good");
     }
   }
 }
@@ -637,10 +641,10 @@ function plagueTick(s: GameState, c: CombatState): void {
     const def = MONSTERS[e.defId];
     const dmg = r.dice(1, 3);
     dealt(s, c, e, dmg, "plague");
-    log(s, `${josa(def.name, "이")} 병으로 몸부림친다. ${dmg} 피해`, "hit");
+    log(s, t("{name|이} 병으로 몸부림친다. {dmg} 피해", { name: t(def.name), dmg }), "hit");
     if (e.hp <= 0) {
       gainLoot(s, c, def.id, e.stolen);
-      log(s, `${josa(def.name, "이")} 병으로 쓰러졌다.`, "good");
+      log(s, t("{name|이} 병으로 쓰러졌다.", { name: t(def.name) }), "good");
     }
   }
 }
@@ -659,10 +663,10 @@ function roundEnd(s: GameState, c: CombatState): void {
   // 역병의 신 ★4 "역병의 숙주": 병이 깊으면 모든 적이 라운드마다 1 피해
   if (s.disease >= 2 && power(s, "plague", 4) && foes.length) {
     for (const e of foes) dealt(s, c, e, 1, "plague4");
-    log(s, `【${GODS.plague.name}】 역병의 숙주 — 몸에서 번진 병이 적들을 갉아먹는다. (모두 1 피해)`, "skill");
+    log(s, t("【{god}】 역병의 숙주 — 몸에서 번진 병이 적들을 갉아먹는다. (모두 1 피해)", { god: t(GODS.plague.name) }), "skill");
     for (const e of foes) if (e.hp <= 0) {
       gainLoot(s, c, e.defId, e.stolen);
-      log(s, `${josa(MONSTERS[e.defId].name, "이")} 병으로 쓰러졌다.`, "good");
+      log(s, t("{name|이} 병으로 쓰러졌다.", { name: nm(e) }), "good");
     }
   }
   for (const e of alive(c)) {
@@ -673,41 +677,41 @@ function roundEnd(s: GameState, c: CombatState): void {
       const kin = alive(c).filter((x) => MONSTERS[x.defId].fungus && x.hp < max(x));
       if (kin.length) {
         for (const x of kin) x.hp = Math.min(max(x), x.hp + 3);
-        log(s, `${josa(def.name, "이")} 옛 기도를 웅얼거린다. 곰팡이들이 되살아난다. (HP +3)`, "hurt");
+        log(s, t("{name|이} 옛 기도를 웅얼거린다. 곰팡이들이 되살아난다. (HP +3)", { name: t(def.name) }), "hurt");
       }
     }
     // 뿌리 재생: 곰팡이 동족이 곁에 있으면
     if (def.rootRegen && e.hp < max(e) && alive(c).some((x) => x !== e && MONSTERS[x.defId].fungus)) {
       e.hp = Math.min(max(e), e.hp + def.rootRegen);
-      log(s, `${josa(def.name, "이")} 곰팡이들에게서 뿌리로 양분을 빨아올린다. (HP +${def.rootRegen})`, "hurt");
+      log(s, t("{name|이} 곰팡이들에게서 뿌리로 양분을 빨아올린다. (HP +{n})", { name: t(def.name), n: def.rootRegen }), "hurt");
     }
     // 포자 폭발: 3라운드마다
     if (def.spores && c.round % 3 === 0) {
       const dmg = r.dice(1, 4);
       s.hero.hp -= dmg;
-      log(s, `${josa(def.name, "이")} 포자를 터뜨렸다! 숨이 막힌다. ${dmg} 피해`, "hurt");
+      log(s, t("{name|이} 포자를 터뜨렸다! 숨이 막힌다. {dmg} 피해", { name: t(def.name), dmg }), "hurt");
       const ck = check(s, "con", 13);
       if (!ck.ok) moldAfflict(s, 1);
       if (s.hero.hp <= 0) {
         s.hero.hp = 0;
-        kill(s, "plague", `${def.name}의 포자에 쓰러졌다`);
+        kill(s, "plague", t("{name}의 포자에 쓰러졌다", { name: t(def.name) }));
         if (isDead(s)) return;
       }
     }
     // 종소리: 공포 또는 혼란
     if (def.bell && r.chance(def.bell)) {
       const k = r.chance(0.5) ? "fear" : "confusion";
-      log(s, `${def.name}의 종소리가 물 위로 번진다.`, "hurt");
-      afflict(s, k, 1, k === "fear" ? "종소리가 뼛속까지 울린다. 등이 서늘하다." : "종소리가 머릿속에서 맴돈다. 생각이 흩어진다.");
+      log(s, t("{name}의 종소리가 물 위로 번진다.", { name: t(def.name) }), "hurt");
+      afflict(s, k, 1, k === "fear" ? t("종소리가 뼛속까지 울린다. 등이 서늘하다.") : t("종소리가 머릿속에서 맴돈다. 생각이 흩어진다."));
     }
   }
   // 독: 라운드마다 10% 확률로 1 피해
   if (poisonOf(s) > 0 && r.chance(0.1)) {
     s.hero.hp -= 1;
-    log(s, "독이 핏줄을 타고 돈다. 1 피해", "hurt");
+    log(s, t("독이 핏줄을 타고 돈다. 1 피해"), "hurt");
     if (s.hero.hp <= 0) {
       s.hero.hp = 0;
-      kill(s, "plague", "독이 온몸에 퍼져 쓰러졌다");
+      kill(s, "plague", t("독이 온몸에 퍼져 쓰러졌다"));
       if (isDead(s)) return;
     }
   }
@@ -716,44 +720,44 @@ function roundEnd(s: GameState, c: CombatState): void {
     const def = MONSTERS[e.defId];
     const max = e.hpMax ?? def.hp;
     if (def.regen && e.hp < max) {
-      if ((e.burn?.rounds ?? 0) > 0) log(s, `${josa(def.name, "이")} 불에 덴 자리가 아물지 않는다.`, "system");
+      if ((e.burn?.rounds ?? 0) > 0) log(s, t("{name|이} 불에 덴 자리가 아물지 않는다.", { name: t(def.name) }), "system");
       else e.hp = Math.min(max, e.hp + def.regen);
     }
     if (def.furnace && c.round % 3 === 0) {
       const dmg = r.dice(2, 6);
       s.hero.hp -= dmg;
-      log(s, `${josa(def.name, "이")} 불꽃을 뿜었다! ${dmg} 피해`, "hurt");
+      log(s, t("{name|이} 불꽃을 뿜었다! {dmg} 피해", { name: t(def.name), dmg }), "hurt");
       if (s.hero.hp <= 0) {
         s.hero.hp = 0;
-        kill(s, "single", `${def.name}의 불꽃에 타 버렸다`);
+        kill(s, "single", t("{name}의 불꽃에 타 버렸다", { name: t(def.name) }));
         if (isDead(s)) return;
       }
       const ck = check(s, "con", 14);
-      if (!ck.ok && burnWound(s, 1, "불꽃이 살갗을 휘감았다")) return;
+      if (!ck.ok && burnWound(s, 1, t("불꽃이 살갗을 휘감았다"))) return;
     }
     if (def.furnace && !c.caveIn && e.hp <= max / 2) {
       c.caveIn = true;
-      log(s, `${josa(def.name, "이")} 꼬리로 천장을 내리쳤다 — 동굴이 무너진다!`, "hurt");
-      if (power(s, "trap", 2)) log(s, `【${GODS.trap.name}】 무너질 자리를 미리 알고 비켜섰다.`, "skill");
+      log(s, t("{name|이} 꼬리로 천장을 내리쳤다 — 동굴이 무너진다!", { name: t(def.name) }), "hurt");
+      if (power(s, "trap", 2)) log(s, t("【{god}】 무너질 자리를 미리 알고 비켜섰다.", { god: t(GODS.trap.name) }), "skill");
       else {
         const ck = check(s, "dex", 14);
-        if (ck.ok) log(s, `떨어지는 바위 사이로 몸을 굴렸다. (민첩 ${ck.total} vs 14)`, "system");
+        if (ck.ok) log(s, t("떨어지는 바위 사이로 몸을 굴렸다. (민첩 {total} vs 14)", { total: ck.total }), "system");
         else {
           const dmg = blastDamage(s, r.dice(2, 6));
           s.hero.hp -= dmg;
-          log(s, `바위에 깔렸다! ${dmg} 피해 (민첩 ${ck.total} vs 14)`, "hurt");
+          log(s, t("바위에 깔렸다! {dmg} 피해 (민첩 {total} vs 14)", { dmg, total: ck.total }), "hurt");
           if (s.hero.hp <= 0) {
             s.hero.hp = 0;
-            kill(s, "trap", "무너진 동굴에 깔려 쓰러졌다");
+            kill(s, "trap", t("무너진 동굴에 깔려 쓰러졌다"));
             if (isDead(s)) return;
           }
-          if (r.chance(0.25) && wound(s, r.pick(["head", "body"] as const), "떨어진 바위에 맞았다")) {
-            kill(s, "trap", "무너진 동굴에 깔려 쓰러졌다");
+          if (r.chance(0.25) && wound(s, r.pick(["head", "body"] as const), t("떨어진 바위에 맞았다"))) {
+            kill(s, "trap", t("무너진 동굴에 깔려 쓰러졌다"));
             if (isDead(s)) return;
           }
         }
       }
-      log(s, `${def.name}의 불타던 반쪽이 식어 간다. 이제 얼음 반쪽으로 덤빈다.`, "system");
+      log(s, t("{name}의 불타던 반쪽이 식어 간다. 이제 얼음 반쪽으로 덤빈다.", { name: t(def.name) }), "system");
     }
   }
   if (has2(s, "fragRegen") && s.hero.hp < maxHp(s)) s.hero.hp = Math.min(maxHp(s), s.hero.hp + 1);
@@ -790,16 +794,16 @@ function riftHit(s: GameState, c: CombatState, e: Enemy): void {
   const dg = s.dungeon;
   if (def.hungerHit) {
     s.hero.satiety = Math.max(0, s.hero.satiety - def.hungerHit);
-    log(s, `허기가 옮아온다. 배 속이 텅 빈다. (포만감 −${def.hungerHit})`, "hurt");
+    log(s, t("허기가 옮아온다. 배 속이 텅 빈다. (포만감 −{n})", { n: def.hungerHit }), "hurt");
   }
   const onCliff = !!dg && c.context === "dungeon" && (dg.rooms[dg.current]?.cliff || (dg.sector === 5 && dg.rooms[dg.current]?.type === "boss"));
   if (def.grab && r.chance(def.grab * grabMult(s, !!def.maw))) {
     c.grabbed = true;
-    log(s, `${josa(def.name, "이")} 몸을 휘감았다! (다음 라운드 행동 불가)`, "hurt");
+    log(s, t("{name|이} 몸을 휘감았다! (다음 라운드 행동 불가)", { name: t(def.name) }), "hurt");
     if (onCliff) {
       const ck = check(s, "dex", 12);
       if (!ck.ok) {
-        log(s, `휘감긴 채 벼랑 끝으로 끌려간다 — 발이 허공을 디뎠다! (민첩 ${ck.total} vs 12)`, "hurt");
+        log(s, t("휘감긴 채 벼랑 끝으로 끌려간다 — 발이 허공을 디뎠다! (민첩 {total} vs 12)", { total: ck.total }), "hurt");
         c.dragged = true;
         return;
       }
@@ -808,9 +812,9 @@ function riftHit(s: GameState, c: CombatState, e: Enemy): void {
   if (def.pushOff && onCliff && r.chance(def.pushOff) && !power(s, "abyss", 5)) {
     const ck = check(s, "dex", 12);
     if (!ck.ok) {
-      log(s, `${josa(def.name, "이")} 발 디딘 바위를 흔들었다 — 벼랑 아래로 떨어진다! (민첩 ${ck.total} vs 12)`, "hurt");
+      log(s, t("{name|이} 발 디딘 바위를 흔들었다 — 벼랑 아래로 떨어진다! (민첩 {total} vs 12)", { name: t(def.name), total: ck.total }), "hurt");
       c.dragged = true;
-    } else log(s, `벼랑 끝에서 간신히 버텼다. (민첩 ${ck.total} vs 12)`, "system");
+    } else log(s, t("벼랑 끝에서 간신히 버텼다. (민첩 {total} vs 12)", { total: ck.total }), "system");
   }
 }
 
@@ -819,17 +823,17 @@ function riftRoundEnd(s: GameState, c: CombatState): boolean {
   const r = rngOf(s);
   for (const e of alive(c)) {
     const def = MONSTERS[e.defId];
-    if (def.gaze && (e.stun ?? 0) <= 0 && r.chance(def.gaze)) afflict(s, "despair", 1, `${def.name}과 눈이 마주쳤다. 바닥이 보이지 않는다.`);
+    if (def.gaze && (e.stun ?? 0) <= 0 && r.chance(def.gaze)) afflict(s, "despair", 1, t("{name}과 눈이 마주쳤다. 바닥이 보이지 않는다.", { name: t(def.name) }));
     if (def.devour && r.chance(def.devour)) {
       s.hero.satiety = Math.max(0, s.hero.satiety - 15);
-      log(s, `${josa(def.name, "이")} 주위의 모든 것을 삼킨다. 배가 꺼진다. (포만감 −15)`, "hurt");
+      log(s, t("{name|이} 주위의 모든 것을 삼킨다. 배가 꺼진다. (포만감 −15)", { name: t(def.name) }), "hurt");
     }
     if (def.maw) {
       const max = e.hpMax ?? def.hp;
       // 광란에 들어서면 AC −2(한 번)
       if (e.hp <= max / 2 && !(e.acDown && e.acDown >= 2)) {
         e.acDown = (e.acDown ?? 0) + 2;
-        log(s, `${josa(def.name, "이")} 굶주린 광란에 빠졌다! 미친 듯이 삼키지만 빈틈이 생긴다. (공격 2번, AC −2)`, "hurt");
+        log(s, t("{name|이} 굶주린 광란에 빠졌다! 미친 듯이 삼키지만 빈틈이 생긴다. (공격 2번, AC −2)", { name: t(def.name) }), "hurt");
       }
       // 붙잡힌 상대를 3라운드마다 깨문다
       if (c.round % 3 === 0 && c.grabbed) {
@@ -837,10 +841,10 @@ function riftRoundEnd(s: GameState, c: CombatState): boolean {
         s.hero.hp -= dmg;
         const keep = power(s, "hunger", 2);
         if (!keep) s.hero.satiety = Math.max(0, s.hero.satiety - 20);
-        log(s, `${josa(def.name, "이")} 붙잡힌 몸을 통째로 깨물었다! ${dmg} 피해${keep ? "" : " (포만감 −20)"}`, "hurt");
+        log(s, keep ? t("{name|이} 붙잡힌 몸을 통째로 깨물었다! {dmg} 피해", { name: t(def.name), dmg }) : t("{name|이} 붙잡힌 몸을 통째로 깨물었다! {dmg} 피해 (포만감 −20)", { name: t(def.name), dmg }), "hurt");
         if (s.hero.hp <= 0) {
           s.hero.hp = 0;
-          kill(s, "single", `${def.name}에게 삼켜졌다`);
+          kill(s, "single", t("{name}에게 삼켜졌다", { name: t(def.name) }));
           if (isDead(s)) return true;
         }
       }
@@ -850,14 +854,14 @@ function riftRoundEnd(s: GameState, c: CombatState): boolean {
   if (c.regrow?.at.includes(c.round) && c.enemies.some((x) => MONSTERS[x.defId].maw && x.hp > 0)) {
     c.regrow.at = c.regrow.at.filter((x) => x !== c.round);
     c.regrow.count += 1;
-    const t: Enemy = { uid: s.nextUid++, defId: "tendril", hp: MONSTERS.tendril.hp };
-    c.enemies.push(t);
-    log(s, "끊어진 자리에서 그림자 촉수가 다시 자라난다!", "hurt");
+    const tg: Enemy = { uid: s.nextUid++, defId: "tendril", hp: MONSTERS.tendril.hp };
+    c.enemies.push(tg);
+    log(s, t("끊어진 자리에서 그림자 촉수가 다시 자라난다!"), "hurt");
   }
   // 전쟁의 신 ★5 "끝나지 않는 전쟁": 적이 셋 이상이면 라운드마다 피해 +2(최대 +6)
   if (power(s, "war", 5) && alive(c).length >= 3 && (c.warStack ?? 0) < 6) {
     c.warStack = (c.warStack ?? 0) + 2;
-    log(s, `【${GODS.war.name}】 끝나지 않는 전쟁 — 피가 끓는다. (피해 +${c.warStack})`, "skill");
+    log(s, t("【{god}】 끝나지 않는 전쟁 — 피가 끓는다. (피해 +{n})", { god: t(GODS.war.name), n: c.warStack }), "skill");
   }
   return false;
 }
@@ -869,7 +873,7 @@ function escapeRares(s: GameState, c: CombatState): void {
     if (def.escapeAfter && c.round >= def.escapeAfter) {
       e.hp = 0;
       e.fled = true;
-      log(s, `${josa(def.name, "이")} 벽 틈으로 쏙 빠져 달아났다! 마석이 멀어진다…`, "miss");
+      log(s, t("{name|이} 벽 틈으로 쏙 빠져 달아났다! 마석이 멀어진다…", { name: t(def.name) }), "miss");
     }
   }
 }
@@ -888,24 +892,24 @@ function gainLoot(s: GameState, c: CombatState, defId: string, stolen = false): 
   // 초원의 짐승은 고기를 남긴다(늑대·군마)
   if (["wolf", "alphawolf", "warhorse"].includes(defId) && rngOf(s).chance(0.25)) {
     s.inventory.food += 1;
-    log(s, `${josa(def.name, "을")} 손질해 말린 고기 1개를 만들었다. (말린 고기 ${s.inventory.food})`, "good");
+    log(s, t("{name|을} 손질해 말린 고기 1개를 만들었다. (말린 고기 {n})", { name: t(def.name), n: s.inventory.food }), "good");
   }
   if (["rat", "goldrat", "boss", "plaguerat"].includes(defId)) pray(s, "plague", 1);
   // 기아/풍요의 신 ★4 "굶주린 자의 식탁"
   if (s.hero.satiety <= 0 && power(s, "hunger", 4)) {
     s.hero.satiety = 20;
-    log(s, `【${GODS.hunger.name}】 굶주린 자의 식탁 — 쓰러진 것의 기운으로 허기를 달랬다. (포만감 +20)`, "skill");
+    log(s, t("【{god}】 굶주린 자의 식탁 — 쓰러진 것의 기운으로 허기를 달랬다. (포만감 +20)", { god: t(GODS.hunger.name) }), "skill");
   }
   // 굶주린 망령: 삼킨 것을 토해 낸다(말린 고기)
   if (def.meat && rngOf(s).chance(def.meat)) {
     s.inventory.food += 1;
-    log(s, `${josa(def.name, "이")} 삼켰던 것을 토해 냈다. 아직 먹을 만한 말린 고기 1개. (말린 고기 ${s.inventory.food})`, "good");
+    log(s, t("{name|이} 삼켰던 것을 토해 냈다. 아직 먹을 만한 말린 고기 1개. (말린 고기 {n})", { name: t(def.name), n: s.inventory.food }), "good");
   }
   if (has2(s, "fragDevour")) s.hero.satiety = Math.min(100, s.hero.satiety + 5); // 삼키는 입
   // 삼켜진 것: 쓰러뜨리면 그 이름 하나가 돌아온다(섬기는 신의 신앙심 +)
   if (def.nameBack && s.hero.faith) {
     addPiety(s, def.nameBack);
-    log(s, `삼켜졌던 이름 하나가 돌아온다. ${josa(s.hero.faith, "이")} 그 이름을 받아 든다. (신앙심 +${def.nameBack})`, "story");
+    log(s, t("삼켜졌던 이름 하나가 돌아온다. {god|이} 그 이름을 받아 든다. (신앙심 +{n})", { god: t(s.hero.faith), n: def.nameBack }), "story");
   }
   // 심연의 아귀가 있으면 쓰러진 촉수가 2라운드 뒤 다시 자란다(전투당 2번)
   if (defId === "tendril" && c.enemies.some((x) => MONSTERS[x.defId].maw && x.hp > 0)) {
@@ -915,19 +919,19 @@ function gainLoot(s: GameState, c: CombatState, defId: string, stolen = false): 
   // 광차 미믹: 쓰러지면 배 속 화약이 터진다
   if (def.deathBlast) {
     const ck = check(s, "dex", 14);
-    if (ck.ok) log(s, `${josa(def.name, "이")} 쓰러지며 배 속 화약이 터졌다 — 몸을 던져 피했다. (민첩 ${ck.total} vs 14)`, "system");
+    if (ck.ok) log(s, t("{name|이} 쓰러지며 배 속 화약이 터졌다 — 몸을 던져 피했다. (민첩 {total} vs 14)", { name: t(def.name), total: ck.total }), "system");
     else {
       const dmg = blastDamage(s, rngOf(s).dice(2, 6));
       s.hero.hp = Math.max(1, s.hero.hp - dmg); // 이긴 전투의 폭발로는 죽지 않는다(1에서 멈춤)
-      log(s, `${josa(def.name, "이")} 쓰러지며 배 속 화약이 터졌다! ${dmg} 피해`, "hurt");
-      burnWound(s, 1, "폭발의 불길");
+      log(s, t("{name|이} 쓰러지며 배 속 화약이 터졌다! {dmg} 피해", { name: t(def.name), dmg }), "hurt");
+      burnWound(s, 1, t("폭발의 불길"));
     }
   }
   // 독두꺼비: 죽을 때 점액이 튄다
   if (def.deathSplash && rngOf(s).chance(def.deathSplash)) {
     const ck = check(s, "dex", 12);
-    if (ck.ok) log(s, `${def.name}이 터지며 점액이 튀었지만 몸을 피했다. (민첩 ${ck.total} vs 12)`, "system");
-    else paralyze(s, 1, `${def.name}의 점액이 살갗에 튀었다`);
+    if (ck.ok) log(s, t("{name}이 터지며 점액이 튀었지만 몸을 피했다. (민첩 {total} vs 12)", { name: t(def.name), total: ck.total }), "system");
+    else paralyze(s, 1, t("{name}의 점액이 살갗에 튀었다", { name: t(def.name) }));
   }
   if (c.context === "dungeon" && (s.dungeon?.floor ?? 1) >= 2) pray(s, "abyss", s.dungeon!.floor - 1);
   // 편린은 미궁 안에서만 맺힌다
@@ -935,7 +939,7 @@ function gainLoot(s: GameState, c: CombatState, defId: string, stolen = false): 
   if (c.context === "dungeon" && f && rngOf(s).chance(f.chance)) {
     c.frags.push(defId);
     if (!s.codex.fragSeen.includes(defId)) s.codex.fragSeen.push(defId);
-    log(s, `쓰러진 ${def.name}의 몸에서 희미한 빛 조각이 떠오른다 — 편린이다!`, "crit");
+    log(s, t("쓰러진 {name}의 몸에서 희미한 빛 조각이 떠오른다 — 편린이다!", { name: t(def.name) }), "crit");
   }
 }
 
@@ -947,7 +951,7 @@ function canUse(s: GameState, c: CombatState, sk: SkillDef): boolean {
 
 function useSkill(s: GameState, c: CombatState, sk: SkillDef, text?: string): void {
   c.used[sk.id] = (c.used[sk.id] ?? 0) + 1;
-  log(s, `【${sk.name}】${text ? " " + text : ""}`, "skill");
+  log(s, `【${t(sk.name)}】${text ? " " + text : ""}`, "skill");
 }
 
 function hpPct(s: GameState): number {
@@ -957,36 +961,36 @@ function hpPct(s: GameState): number {
 /** 내 HP 조건 기술(행동을 쓰지 않는 반사 행동) */
 function selfTriggers(s: GameState, c: CombatState): void {
   for (const sk of activeSkills(s)) {
-    const t = sk.trigger!;
-    if (t.on !== "selfBelow" || hpPct(s) > selfPct(s, sk) || !canUse(s, c, sk)) continue;
+    const tg = sk.trigger!;
+    if (tg.on !== "selfBelow" || hpPct(s) > selfPct(s, sk) || !canUse(s, c, sk)) continue;
     const e = sk.effect!;
     if (e.type === "guard") {
       c.guard = { ac: e.ac, rounds: e.rounds };
-      useSkill(s, c, sk, `몸을 지킨다 (AC +${e.ac}, ${e.rounds}라운드)`);
+      useSkill(s, c, sk, t("몸을 지킨다 (AC +{ac}, {rounds}라운드)", { ac: e.ac, rounds: e.rounds }));
     } else if (e.type === "rampage") {
       c.rampage = e.rounds;
       if (e.ac) c.guard = { ac: e.ac, rounds: e.rounds };
-      useSkill(s, c, sk, `${e.text} (${e.rounds}라운드 동안 한 번 더 공격${e.ac ? `, AC +${e.ac}` : ""})`);
+      useSkill(s, c, sk, e.ac ? t("{text} ({rounds}라운드 동안 한 번 더 공격, AC +{ac})", { text: t(e.text), rounds: e.rounds, ac: e.ac }) : t("{text} ({rounds}라운드 동안 한 번 더 공격)", { text: t(e.text), rounds: e.rounds }));
     } else if (e.type === "eguard") {
       c.guard = { ac: e.ac, rounds: e.rounds, freeze: e.freeze, reduce: e.reduce, counter: e.counter };
       if (e.stunAll) for (const foe of alive(c)) foe.stun = Math.max(foe.stun ?? 0, e.stunAll);
-      useSkill(s, c, sk, `${e.text} (AC +${e.ac}, ${e.rounds}라운드${e.stunAll ? `, 적 전원 ${e.stunAll}라운드 행동 불가` : ""})`);
+      useSkill(s, c, sk, e.stunAll ? t("{text} (AC +{ac}, {rounds}라운드, 적 전원 {stun}라운드 행동 불가)", { text: t(e.text), ac: e.ac, rounds: e.rounds, stun: e.stunAll }) : t("{text} (AC +{ac}, {rounds}라운드)", { text: t(e.text), ac: e.ac, rounds: e.rounds }));
     } else if (e.type === "stunAll") {
       const rounds = e.rounds + (teachOn(s, "oblivion") ? 1 : 0); // 망각의 가르침 +1라운드
       for (const foe of alive(c)) foe.stun = Math.max(foe.stun ?? 0, rounds);
-      useSkill(s, c, sk, `그림자 속으로 사라졌다 — 적들이 나를 놓쳤다 (${rounds}라운드)`);
+      useSkill(s, c, sk, t("그림자 속으로 사라졌다 — 적들이 나를 놓쳤다 ({rounds}라운드)", { rounds }));
     } else if (e.type === "stone") {
       c.halfDmg = true;
-      useSkill(s, c, sk, `${e.text} (이번 라운드 받는 피해 절반)`);
+      useSkill(s, c, sk, t("{text} (이번 라운드 받는 피해 절반)", { text: t(e.text) }));
     } else if (e.type === "fog") {
       for (const foe of alive(c)) foe.hitDown = { n: e.hit, rounds: e.rounds };
-      useSkill(s, c, sk, `${e.text} (적 명중 −${e.hit}, ${e.rounds}라운드)`);
+      useSkill(s, c, sk, t("{text} (적 명중 −{hit}, {rounds}라운드)", { text: t(e.text), hit: e.hit, rounds: e.rounds }));
     } else if (e.type === "tox" || e.type === "bolt") {
       rogueEffect(s, c, sk);
     } else if (e.type === "heal") {
       const heal = (rngOf(s).dice(e.dice[0], e.dice[1]) + (e.plusInt ? Math.max(0, smod(s, "int")) : 0)) * (teachOn(s, "hunger") ? 2 : 1); // 기아/풍요의 가르침
       s.hero.hp = Math.min(maxHp(s), s.hero.hp + heal);
-      useSkill(s, c, sk, `상처에 약초를 짓눌렀다 (HP +${heal})`);
+      useSkill(s, c, sk, t("상처에 약초를 짓눌렀다 (HP +{heal})", { heal }));
     }
   }
 }
@@ -995,12 +999,12 @@ function playerPhase(s: GameState, c: CombatState, opener: Strike | null): "win"
   // 붙잡혔다: 이번 라운드 행동 불가
   if (c.grabbed) {
     c.grabbed = false;
-    log(s, "휘감긴 몸을 빼내느라 아무것도 하지 못했다.", "miss");
+    log(s, t("휘감긴 몸을 빼내느라 아무것도 하지 못했다."), "miss");
     return null;
   }
   // 머리 중상: 라운드마다 기절
   if (lvl(s, "head") >= 2 && rngOf(s).chance(HEAD_STUN)) {
-    log(s, "머리가 울려 눈앞이 하얘졌다 — 몸이 움직이지 않는다.", "miss");
+    log(s, t("머리가 울려 눈앞이 하얘졌다 — 몸이 움직이지 않는다."), "miss");
     return null;
   }
   // 정신 상태이상 조합
@@ -1011,8 +1015,8 @@ function playerPhase(s: GameState, c: CombatState, opener: Strike | null): "win"
   if (combo?.name === "발작") {
     c.frenzy = true;
     for (let k = 0; k < 2 && alive(c).length; k++) {
-      const t = alive(c)[rngOf(s).int(0, alive(c).length - 1)];
-      attack(s, c, t, { ...PLAIN, dmg: 2 });
+      const tg = alive(c)[rngOf(s).int(0, alive(c).length - 1)];
+      attack(s, c, tg, { ...PLAIN, dmg: 2 });
     }
     return alive(c).length === 0 ? "win" : null;
   }
@@ -1020,7 +1024,7 @@ function playerPhase(s: GameState, c: CombatState, opener: Strike | null): "win"
   if (!c.lastStand && c.context !== "dummy" && hpPct(s) <= 25 && power(s, "war", 4) && !s.tripUsed.includes("war4")) {
     c.lastStand = true;
     s.tripUsed.push("war4");
-    log(s, `【${GODS.war.name}】 최후의 돌격 — 피 냄새가 머리를 맑게 한다. (이 전투 동안 명중 +2, 피해 +3)`, "skill");
+    log(s, t("【{god}】 최후의 돌격 — 피 냄새가 머리를 맑게 한다. (이 전투 동안 명중 +2, 피해 +3)", { god: t(GODS.war.name) }), "skill");
   }
   if (teachFinalMidFight(s, c)) return alive(c).length === 0 ? "win" : null;
   const actions = actionsPerRound(s) + (c.rampage ? 1 : 0) + (c.fury?.extra ?? 0) + (has(s, "berserkAvatar") ? 1 : 0);
@@ -1029,19 +1033,19 @@ function playerPhase(s: GameState, c: CombatState, opener: Strike | null): "win"
     // 순간 이동: HP 30% 이하면 반드시 빠져나간다
     const blink = activeSkills(s).find((sk) => sk.effect?.type === "blink" && hpPct(s) <= selfPct(s, sk) && canUse(s, c, sk));
     if (blink && c.context !== "dummy" && c.context !== "final" && c.context !== "chase") {
-      useSkill(s, c, blink, (blink.effect as { text: string }).text);
+      useSkill(s, c, blink, t((blink.effect as { text: string }).text));
       return "fled";
     }
     const pct = hpPct(s);
     const { potionAt, fleeAt } = s.tactics;
     if (potionAt > 0 && pct <= potionAt && s.inventory.potion > 0 && !missPotion(s)) {
-      drink(s, "전투 중에");
+      drink(s, t("전투 중에"));
       continue;
     }
-    if (symptom(s, "fear", MIND.symptom, "몸이 얼어붙어 움직이지 않는다!", "손이 떨려 무기를 제대로 쥐지 못했다.")) continue;
-    if (symptom(s, "confusion", MIND.symptom, "엉뚱한 곳을 내리쳤다!", "어디를 노렸는지 순간 헷갈렸다.")) continue;
+    if (symptom(s, "fear", MIND.symptom, t("몸이 얼어붙어 움직이지 않는다!"), t("손이 떨려 무기를 제대로 쥐지 못했다."))) continue;
+    if (symptom(s, "confusion", MIND.symptom, t("엉뚱한 곳을 내리쳤다!"), t("어디를 노렸는지 순간 헷갈렸다."))) continue;
     if (paraFires(s, "main")) {
-      log(s, "오른손이 저려 무기를 제대로 쥐지 못했다.", "miss");
+      log(s, t("오른손이 저려 무기를 제대로 쥐지 못했다."), "miss");
       continue;
     }
     if (fleeAt > 0 && pct <= fleeAt) {
@@ -1050,14 +1054,14 @@ function playerPhase(s: GameState, c: CombatState, opener: Strike | null): "win"
     const foes = alive(c);
     const sweep = activeSkills(s).find((sk) => sk.trigger!.on === "enemiesAtLeast" && foes.length >= needFoes(s, (sk.trigger as { n: number }).n) && canUse(s, c, sk));
     if (sweep && sweep.effect!.type === "sweep") {
-      useSkill(s, c, sweep, "칼을 크게 휘둘러 모두를 벤다");
+      useSkill(s, c, sweep, t("칼을 크게 휘둘러 모두를 벤다"));
       const mult = teachOn(s, "war") ? Math.max(1, sweep.effect!.dmgMult) : sweep.effect!.dmgMult; // 전쟁의 가르침: 회전 베기 ×1
       for (const foe of foes) attack(s, c, foe, { ...PLAIN, mult, src: sweep.id });
     } else if (sweep && sweep.effect!.type === "spell") {
-      useSkill(s, c, sweep, sweep.effect!.text);
+      useSkill(s, c, sweep, t(sweep.effect!.text));
       castSpell(s, c, sweep.effect!.dice, sweep.effect!.all, sweep.id);
     } else if (sweep && sweep.effect!.type === "espell") {
-      useSkill(s, c, sweep, sweep.effect!.text);
+      useSkill(s, c, sweep, t(sweep.effect!.text));
       castElement(s, c, sweep.id);
     } else {
       const target = [...foes].sort((x, y) => x.hp - y.hp)[0];
@@ -1066,14 +1070,14 @@ function playerPhase(s: GameState, c: CombatState, opener: Strike | null): "win"
       const def = MONSTERS[target.defId];
       const fin = activeSkills(s).find((sk) => sk.trigger!.on === "targetBelow" && (target.hp / (target.hpMax ?? def.hp)) * 100 <= (sk.trigger as { pct: number }).pct && canUse(s, c, sk));
       if (fin && fin.effect!.type === "espell") {
-        useSkill(s, c, fin, fin.effect!.text);
+        useSkill(s, c, fin, t(fin.effect!.text));
         castElement(s, c, fin.id, target);
         if (alive(c).length === 0) return "win";
         continue;
       }
       if (fin && fin.effect!.type === "strike") {
         const e = fin.effect!;
-        useSkill(s, c, fin, `${josa(def.name, "을")} 노린다`);
+        useSkill(s, c, fin, t("{name|을} 노린다", { name: t(def.name) }));
         strike = { hit: e.hit, dmg: e.dmg, mult: e.dmgMult ?? 1, autoHit: !!e.autoHit, stun: e.stun, crit: e.crit, src: fin.id };
       }
       attack(s, c, target, strike);
@@ -1090,7 +1094,7 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
   const r = rngOf(s);
   const ac = def.ac + (target.acUp ?? 0) - (target.acDown ?? 0) - (target.marked ? markN(s) : 0) - (target.tox && has(s, "rgVenomSeal") ? 1 : 0);
   const main = weaponOf(s);
-  const w = st.off ? { ...main, dice: [1, has(s, "rgDualHands") ? 4 : 3] as [number, number], stat: "dex" as const, verb: "왼손 단검을 찔러 넣어", magic: false } : main;
+  const w = st.off ? { ...main, dice: [1, has(s, "rgDualHands") ? 4 : 3] as [number, number], stat: "dex" as const, verb: tk("왼손 단검을 찔러 넣어"), magic: false } : main;
   const statMod = st.off ? 0 : smod(s, w.stat);
   const roll = r.die(20);
   const held = (target.stun ?? 0) > 0;
@@ -1102,11 +1106,11 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
   const radiant = inRadiant(s) ? 0.5 : 1; // 6섹터 성광 방: 신앙 명중·피해 보정 절반
   const bonus = statMod + BAL.proficiency + passive(s, "hit") + st.hit + rollPenalty(s) + Math.trunc(faithHit(s, alive(c).length) * radiant) + injuryHit(s) + (c.heroSong ? 3 : 0) + (def.flying && !w.magic ? -2 : 0) + magicHit + wc.hit + sagaBonus(s) + tide + (c.lastStand ? 2 : 0);
   if (!st.autoHit && roll === 1) {
-    log(s, `손이 미끄러졌다! (주사위 1)`, "miss");
+    log(s, t("손이 미끄러졌다! (주사위 1)"), "miss");
     return;
   }
   if (!st.autoHit && roll !== 20 && roll + bonus < ac) {
-    log(s, `${josa(def.name, "을")} ${st.off ? "왼손 단검으로 " : ""}노렸지만 빗나갔다. (${roll}+${bonus} vs AC ${ac})`, "miss");
+    log(s, st.off ? t("{name|을} 왼손 단검으로 노렸지만 빗나갔다. ({roll}+{bonus} vs AC {ac})", { name: t(def.name), roll, bonus, ac }) : t("{name|을} 노렸지만 빗나갔다. ({roll}+{bonus} vs AC {ac})", { name: t(def.name), roll, bonus, ac }), "miss");
     return;
   }
   const greedCrit = teachOn(s, "greed") ? Math.min(10, Math.floor((s.dungeon?.mana ?? 0) / 500) * 2) : 0; // 탐욕의 가르침
@@ -1131,12 +1135,13 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
   if (st.execute && !bossy(target)) dmg = Math.round(dmg * 4 / 3); // 로그 처형: 보스·정예가 아니면 ×2(1.5 × 4/3)
   dealt(s, c, target, dmg, st.src ?? "attack");
   if (crit) note(s, "luk");
-  log(s, `${def.name}에게 ${w.verb} 명중! ${dmg} 피해${crit ? " (치명타!)" : ""}`, crit ? "crit" : "hit");
+  const hv = { name: t(def.name), verb: t(w.verb), dmg };
+  log(s, crit ? t("{name}에게 {verb} 명중! {dmg} 피해 (치명타!)", hv) : t("{name}에게 {verb} 명중! {dmg} 피해", hv), crit ? "crit" : "hit");
   // 로그: 독 바른 칼날(25% 독 1겹), 죽음의 감각(치명타 HP +2), 급소 연타(치명타 → 같은 적 한 번 더)
   if (target.hp > 0 && has(s, "rgToxEdge") && !w.magic && r.chance(0.15)) addTox(s, target, 1, 3);
   if (crit && has(s, "rgDeathSense") && c.context !== "dummy") s.hero.hp = Math.min(maxHp(s), s.hero.hp + 1);
   if (crit && target.hp > 0 && st.src !== "rgVital" && has(s, "rgVital") && canUse(s, c, SKILLS.rgVital)) {
-    useSkill(s, c, SKILLS.rgVital, "벌어진 급소를 한 번 더 찌른다");
+    useSkill(s, c, SKILLS.rgVital, t("벌어진 급소를 한 번 더 찌른다"));
     attack(s, c, target, { ...PLAIN, src: "rgVital" });
     if (target.hp <= 0) return;
   }
@@ -1145,13 +1150,13 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
     const heal = gearHas(s, (g) => g.critHeal).reduce((a, g) => a + (g.critHeal ?? 0), 0) + (has2(s, "fragLeech") ? 2 : 0);
     if (heal > 0 && s.hero.hp < maxHp(s)) {
       s.hero.hp = Math.min(maxHp(s), s.hero.hp + heal);
-      log(s, `베어 낸 상처에서 기운을 빨아들였다. HP +${heal}`, "good");
+      log(s, t("베어 낸 상처에서 기운을 빨아들였다. HP +{n}", { n: heal }), "good");
     }
   }
   // 역병의 신 ★2 "전염"
   if (target.hp > 0 && !target.sick && ((s.disease > 0 && power(s, "plague", 2) && (r.chance(0.25) || (s.disease >= 2 && power(s, "plague", 5)))) || (teachOn(s, "plague") && r.chance(0.25)))) {
     target.sick = true;
-    log(s, `【${GODS.plague.name}】 ${josa(def.name, "이")} 병에 옮았다.`, "skill");
+    log(s, t("【{god}】 {name|이} 병에 옮았다.", { god: t(GODS.plague.name), name: t(def.name) }), "skill");
   }
   if (st.stun && target.hp > 0) target.stun = Math.max(target.stun ?? 0, st.stun);
   // 서리 광맥 지팡이(맞힌 적 명중 −1), 불씨 편린(10% 불탐)
@@ -1159,17 +1164,17 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
   if (target.hp > 0 && has2(s, "fragEmber") && r.chance(0.1)) burn(s, target, 2);
   if (has(s, "frostAvatar") && target.hp > 0 && r.chance(0.25)) {
     freeze(target);
-    log(s, `【겨울의 화신】 ${josa(def.name, "이")} 얼어붙었다.`, "skill");
+    log(s, t("【{skill}】 {name|이} 얼어붙었다.", { skill: t("겨울의 화신"), name: t(def.name) }), "skill");
   }
   // 마력탄의 원소: 불씨·불의 각인(불탐), 서리 손끝·서리의 각인(얼림), 번개의 각인(튐)
   if (w.magic && target.hp > 0) {
     if ((has(s, "fireEmber") && r.chance(0.2)) || (has(s, "fireMark") && r.chance(0.3))) {
       burn(s, target, 2);
-      log(s, `【불씨】 ${def.name}에게 불이 옮겨붙었다.`, "skill");
+      log(s, t("【{skill}】 {name}에게 불이 옮겨붙었다.", { skill: t("불씨"), name: t(def.name) }), "skill");
     }
     if ((has(s, "frostTouch") && r.chance(freezeChance(s, 0.25))) || (has(s, "frostMark") && r.chance(0.25))) {
       freeze(target);
-      log(s, `【서리】 ${josa(def.name, "이")} 얼어붙었다.`, "skill");
+      log(s, t("【{skill}】 {name|이} 얼어붙었다.", { skill: t("서리"), name: t(def.name) }), "skill");
     }
   }
   if (w.magic && has(s, "boltMark")) {
@@ -1178,10 +1183,10 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
       const o = r.pick(others);
       const half = Math.max(1, Math.floor(dmg / 2));
       dealt(s, c, o, half, "boltMark");
-      log(s, `【번개의 각인】 마력탄이 ${MONSTERS[o.defId].name}에게 튀었다. ${half} 피해`, "hit");
+      log(s, t("【{skill}】 마력탄이 {name}에게 튀었다. {dmg} 피해", { skill: t("번개의 각인"), name: nm(o), dmg: half }), "hit");
       if (o.hp <= 0) {
         gainLoot(s, c, o.defId, o.stolen);
-        log(s, `${josa(MONSTERS[o.defId].name, "을")} 쓰러뜨렸다.`, "good");
+        log(s, t("{name|을} 쓰러뜨렸다.", { name: nm(o) }), "good");
       }
     }
   }
@@ -1191,12 +1196,12 @@ function attack(s: GameState, c: CombatState, target: Enemy, st: Strike): void {
     if (power(s, "war", 2)) s.hero.hp = Math.min(maxHp(s), s.hero.hp + 2); // 전쟁의 신 ★2
     if (has(s, "bloodThirst")) {
       s.hero.hp = Math.min(maxHp(s), s.hero.hp + 3);
-      log(s, "【피의 갈증】 HP +3", "skill");
+      log(s, `【${t("피의 갈증")}】 HP +3`, "skill");
     }
     // 연속 베기: 같은 라운드에 다른 적을 한 번 더
     const chain = SKILLS.chainSlash;
     if (has(s, "chainSlash") && canUse(s, c, chain) && alive(c).length) {
-      useSkill(s, c, chain, "멈추지 않고 다음 적을 벤다");
+      useSkill(s, c, chain, t("멈추지 않고 다음 적을 벤다"));
       attack(s, c, [...alive(c)].sort((a, b) => a.hp - b.hp)[0], { ...PLAIN, src: "chainSlash" });
     }
   }
@@ -1213,8 +1218,8 @@ function foldEasyFight(s: GameState, c: CombatState): void {
   if (n < 4 || n > s.log.length) return; // 세부가 3줄 이상일 때만 접는다
   const lines = s.log.slice(s.log.length - n + 1);
   for (const l of lines) l.fold = c.logFrom;
-  const used = Object.keys(c.used).map((id) => SKILLS[id]?.name).filter(Boolean);
-  log(s, `→ 다치지 않고 정리했다${used.length ? ` — ${used.join(" · ")}` : ""}`, "good");
+  const used = Object.keys(c.used).map((id) => SKILLS[id]?.name).filter(Boolean).map((x) => t(x));
+  log(s, used.length ? t("→ 다치지 않고 정리했다 — {skills}", { skills: used.join(" · ") }) : t("→ 다치지 않고 정리했다"), "good");
   const sum = s.log[s.log.length - 1];
   sum.foldOf = c.logFrom;
   sum.foldN = lines.length;
@@ -1232,9 +1237,9 @@ function counter(s: GameState, c: CombatState, e: Enemy, skillId: string | null,
 function selfInjury(s: GameState, defId: string, magic?: boolean): void {
   if (magic || isDead(s)) return;
   const r = rngOf(s);
-  const fists = weaponOf(s).verb === "주먹을 휘둘러";
-  if (fists && r.chance(INJ.fistSelf)) wound(s, "main", "맨주먹으로 내리치다 손을 다쳤다");
-  else if (MONSTERS[defId]?.hard && !gearHas(s, (g) => g.noHardSelf).length && !has2(s, "fragRockTooth") && r.chance(INJ.hardSelf)) wound(s, "main", `${MONSTERS[defId].name}의 단단한 몸을 치다 손목이 꺾였다`);
+  const fists = weaponOf(s).verb === "주먹을 휘둘러"; // i18n-ok 원문끼리 비교(표시하지 않음)
+  if (fists && r.chance(INJ.fistSelf)) wound(s, "main", t("맨주먹으로 내리치다 손을 다쳤다"));
+  else if (MONSTERS[defId]?.hard && !gearHas(s, (g) => g.noHardSelf).length && !has2(s, "fragRockTooth") && r.chance(INJ.hardSelf)) wound(s, "main", t("{name}의 단단한 몸을 치다 손목이 꺾였다", { name: t(MONSTERS[defId].name) }));
 }
 
 /** 맞았을 때 부상 확률 배율: 수호의 각인·흔들리지 않는 자·산의 뼈·백전노장 절반, 노련함 −25% */
@@ -1254,26 +1259,26 @@ function hitInjury(s: GameState, defId: string, dmg: number, crit: boolean, e?: 
     if (shield) w.offhand = (w.offhand ?? 1) / (skillWorks(s, "shieldCraft") ? 4 : 2); // 방패술이면 더
     if (has2(s, "fragHollow")) w.body = (w.body ?? 1) / 2; // 빈 껍데기
     const part = r.weighted((Object.entries(w) as [Part, number][]).map(([item, wt]) => ({ item, w: wt })));
-    const dead = wound(s, part, `${def.name}의 공격`);
+    const dead = wound(s, part, t("{name}의 공격", { name: t(def.name) }));
     s.hero.hp = Math.min(s.hero.hp, maxHp(s)); // 몸통 부상은 최대 HP를 깎는다
-    if (dead === "oblivion") kill(s, "oblivion", `${def.name}의 일격에 머리를 잃었다`);
-    else if (dead === "body") kill(s, "single", `${def.name}에게 몸통을 꿰뚫려 쓰러졌다`);
+    if (dead === "oblivion") kill(s, "oblivion", t("{name}의 일격에 머리를 잃었다", { name: t(def.name) }));
+    else if (dead === "body") kill(s, "single", t("{name}에게 몸통을 꿰뚫려 쓰러졌다", { name: t(def.name) }));
     if (isDead(s)) return;
   }
   const dz = def.fever ?? (defId === "boss" ? INJ.diseaseBoss : ["rat", "goldrat"].includes(defId) ? INJ.diseaseRat : 0);
   if (dz && r.chance(dz * faithInfectMult(s))) infect(s, "rat");
   // 3섹터: 부식·독·마비·곰팡이 폐병·절망
-  if (def.corrode) corrode(s, def.corrode, `${def.name}의 산성 점액`, crit);
-  if (def.poison) poisonAfflict(s, def.poison, `${def.name}의 독`);
-  if (def.paralyze) paralyze(s, def.paralyze, `${def.name}의 침`);
+  if (def.corrode) corrode(s, def.corrode, t("{name}의 산성 점액", { name: t(def.name) }), crit);
+  if (def.poison) poisonAfflict(s, def.poison, t("{name}의 독", { name: t(def.name) }));
+  if (def.paralyze) paralyze(s, def.paralyze, t("{name}의 침", { name: t(def.name) }));
   if (def.mold) moldAfflict(s, def.mold * faithInfectMult(s));
-  if (def.despairHit) afflict(s, "despair", def.despairHit, `${def.name}의 기도 소리가 귓가에 남는다. 다 부질없다는 생각이 든다.`);
+  if (def.despairHit) afflict(s, "despair", def.despairHit, t("{name}의 기도 소리가 귓가에 남는다. 다 부질없다는 생각이 든다.", { name: t(def.name) }));
   // 4섹터: 화상(치명타면 중상부터)·냉기. 화로 어미는 HP 절반 아래부터 얼음 반쪽(냉기 +2)
   const iceHalf = def.furnace && e && e.hp <= (e.hpMax ?? def.hp) / 2;
   if (iceHalf) {
-    chill(s, 2, `${def.name}의 얼음 반쪽`);
-  } else if (def.burn && burnWound(s, def.burn, `${def.name}의 불길`, { heavy: crit })) return;
-  if (def.chill && !isDead(s)) chill(s, def.chill, `${def.name}의 냉기`);
+    chill(s, 2, t("{name}의 얼음 반쪽", { name: t(def.name) }));
+  } else if (def.burn && burnWound(s, def.burn, t("{name}의 불길", { name: t(def.name) }), { heavy: crit })) return;
+  if (def.chill && !isDead(s)) chill(s, def.chill, t("{name}의 냉기", { name: t(def.name) }));
 }
 
 export function potionHeal(s: GameState): number {
@@ -1284,24 +1289,24 @@ function drink(s: GameState, when: string): void {
   s.inventory.potion -= 1;
   const heal = potionHeal(s);
   s.hero.hp = Math.min(maxHp(s), s.hero.hp + heal);
-  log(s, `${when} 치료 물약을 마셨다. HP +${heal} (남은 물약 ${s.inventory.potion})`, "good");
+  log(s, t("{when} 치료 물약을 마셨다. HP +{heal} (남은 물약 {n})", { when, heal, n: s.inventory.potion }), "good");
 }
 
 function tryFlee(s: GameState, c: CombatState): boolean {
   if (c.context === "final") {
-    log(s, "물러설 곳이 없다. 이것이 마지막 싸움이다.", "miss");
+    log(s, t("물러설 곳이 없다. 이것이 마지막 싸움이다."), "miss");
     return false;
   }
   if (c.context === "chase") {
-    log(s, "골목 양쪽이 막혔다. 도망칠 곳은 없다.", "miss");
+    log(s, t("골목 양쪽이 막혔다. 도망칠 곳은 없다."), "miss");
     return false;
   }
   if (!canFlee(s)) {
-    log(s, "다친 다리로는 도망칠 수 없다!", "miss");
+    log(s, t("다친 다리로는 도망칠 수 없다!"), "miss");
     return false;
   }
   if (paraFires(s, "feet")) {
-    log(s, "다리가 저려 한 발짝도 떼지 못했다!", "miss");
+    log(s, t("다리가 저려 한 발짝도 떼지 못했다!"), "miss");
     return false;
   }
   // 물에 잠긴 방에서는 헤엄치는 짐승을 따돌리기 어렵다
@@ -1311,14 +1316,14 @@ function tryFlee(s: GameState, c: CombatState): boolean {
   const bonus = smod(s, "dex") + passive(s, "flee") + rollPenalty(s) + (c.smoke ?? 0);
   if (roll === 20 || (roll !== 1 && roll + bonus >= dc)) {
     note(s, "dex");
-    log(s, `등을 돌려 달아났다! (${roll}+${bonus} vs ${dc})`, "system");
+    log(s, t("등을 돌려 달아났다! ({roll}+{bonus} vs {dc})", { roll, bonus, dc }), "system");
     return true;
   }
-  log(s, `도망치려 했지만 막혔다! (${roll}+${bonus} vs ${dc})`, "miss");
+  log(s, t("도망치려 했지만 막혔다! ({roll}+{bonus} vs {dc})", { roll, bonus, dc }), "miss");
   // 5섹터 보스방(틈 위의 전장): 도주에 실패하면 30% 바닥 없는 틈으로
   const dg = s.dungeon;
   if (dg && dg.sector === 5 && !dg.endless && dg.rooms[dg.current]?.type === "boss" && rngOf(s).chance(0.3)) {
-    log(s, "물러서다 바위 끝을 디뎠다 — 몸이 틈 아래로 미끄러진다!", "hurt");
+    log(s, t("물러서다 바위 끝을 디뎠다 — 몸이 틈 아래로 미끄러진다!"), "hurt");
     c.dragged = true;
     return true;
   }
@@ -1334,28 +1339,28 @@ function enemyPhase(s: GameState, c: CombatState): void {
   if (hasShield(s) && paraFires(s, "offhand")) {
     const shieldAc = GEAR[s.gear.offhand!].bonus.ac ?? 0;
     ac -= shieldAc;
-    if (shieldAc > 0) log(s, "왼손이 저려 방패가 처진다.", "miss");
+    if (shieldAc > 0) log(s, t("왼손이 저려 방패가 처진다."), "miss");
   }
   for (const e of attackers) {
     const def = MONSTERS[e.defId];
     if (def.dummy) continue;
     if (def.slow && c.round % 2 === 0) {
-      log(s, `${josa(def.name, "이")} 느릿느릿 기어 온다.`, "miss");
+      log(s, t("{name|이} 느릿느릿 기어 온다.", { name: t(def.name) }), "miss");
       continue;
     }
     if (def.plaguePeace && c.round === 1 && power(s, "plague", 2)) {
-      log(s, `${josa(def.name, "이")} 당신에게서 같은 신의 냄새를 맡았다. 잠시 공격하지 않는다.`, "story");
+      log(s, t("{name|이} 당신에게서 같은 신의 냄새를 맡았다. 잠시 공격하지 않는다.", { name: t(def.name) }), "story");
       continue;
     }
     if (e.stun && e.stun > 0) {
       e.stun -= 1;
-      log(s, `${josa(def.name, "이")} 비틀거리며 공격하지 못한다.`, "miss");
+      log(s, t("{name|이} 비틀거리며 공격하지 못한다.", { name: t(def.name) }), "miss");
       continue;
     }
     if (e.shock && e.shock > 0) {
       e.shock -= 1;
       if (r.chance(0.5)) {
-        log(s, `${josa(def.name, "이")} 감전돼 몸이 말을 듣지 않는다.`, "miss");
+        log(s, t("{name|이} 감전돼 몸이 말을 듣지 않는다.", { name: t(def.name) }), "miss");
         continue;
       }
     }
@@ -1363,7 +1368,7 @@ function enemyPhase(s: GameState, c: CombatState): void {
     if (has(s, "rgShadowBody") && !c.shadowDodged) {
       c.shadowDodged = true;
       if (r.chance(0.5)) {
-        log(s, `【그림자의 몸】 ${josa(def.name, "이")} 그림자를 베었다.`, "miss");
+        log(s, t("【{skill}】 {name|이} 그림자를 베었다.", { skill: t("그림자의 몸"), name: t(def.name) }), "miss");
         continue;
       }
     }
@@ -1371,12 +1376,12 @@ function enemyPhase(s: GameState, c: CombatState): void {
     const atk = def.atk + (e.atkUp ?? 0) + enemyHitBonus(s, c, e) - (e.hitDown?.n ?? 0);
     if (!c.frenzy && (roll === 1 || (roll !== 20 && roll + atk - (c.cow ? 2 : 0) < ac))) {
       note(s, "dex");
-      log(s, `${def.name}의 공격을 피했다.`, "miss");
+      log(s, t("{name}의 공격을 피했다.", { name: t(def.name) }), "miss");
       c.streak = 0;
       // 흘려내기(빗나가면 반격), 방패 반격(30%)
-      if (c.guard?.counter) counter(s, c, e, null, "【흘려내기】 흘려낸 칼끝이 그대로 파고든다");
-      else if (activeSkills(s).some((k) => k.id === "shieldCounter") && canUse(s, c, SKILLS.shieldCounter) && r.chance(0.3)) counter(s, c, e, "shieldCounter", "방패로 받아내고 되받아친다");
-      else if (has(s, "flowWater") && r.chance(0.2)) counter(s, c, e, null, "【물 흐르듯】 흘려보낸 칼끝이 되돌아온다");
+      if (c.guard?.counter) counter(s, c, e, null, `【${t("흘려내기")}】 ${t("흘려낸 칼끝이 그대로 파고든다")}`);
+      else if (activeSkills(s).some((k) => k.id === "shieldCounter") && canUse(s, c, SKILLS.shieldCounter) && r.chance(0.3)) counter(s, c, e, "shieldCounter", t("방패로 받아내고 되받아친다"));
+      else if (has(s, "flowWater") && r.chance(0.2)) counter(s, c, e, null, `【${t("물 흐르듯")}】 ${t("흘려보낸 칼끝이 되돌아온다")}`);
       if (alive(c).length === 0) return;
       continue;
     }
@@ -1407,13 +1412,16 @@ function enemyPhase(s: GameState, c: CombatState): void {
     if (has(s, "boltReflect") && r.chance(0.25)) {
       const back = r.dice(1, 6);
       dealt(s, c, e, back, "boltReflect");
-      log(s, `【번개 반사】 ${MONSTERS[e.defId].name}에게 번개가 되튄다. ${back} 피해`, "skill");
+      log(s, t("【{skill}】 {name}에게 번개가 되튄다. {dmg} 피해", { skill: t("번개 반사"), name: nm(e), dmg: back }), "skill");
       if (e.hp <= 0) killed(s, c, e);
     }
     // 얼음 갑옷(때린 적을 얼림), 정전기(때린 적 명중 −2)
     if (c.guard?.freeze && r.chance(freezeChance(s, c.guard.freeze))) freeze(e);
     if (has(s, "boltStatic") && r.chance(0.25)) e.hitDown = { n: 2, rounds: 2 }; // 이번 라운드 끝에 1 줄어 다음 라운드에 적용
-    log(s, `${josa(def.name, "이")} ${charge ? "돌진해 " : ""}${def.attackText}! ${dmg} 피해${crit ? " (치명타!)" : ""}`, "hurt");
+    const av = { name: t(def.name), attack: t(def.attackText), dmg };
+    log(s, charge
+      ? crit ? t("{name|이} 돌진해 {attack}! {dmg} 피해 (치명타!)", av) : t("{name|이} 돌진해 {attack}! {dmg} 피해", av)
+      : crit ? t("{name|이} {attack}! {dmg} 피해 (치명타!)", av) : t("{name|이} {attack}! {dmg} 피해", av), "hurt");
     if (s.hero.hp > 0) {
       hitInjury(s, def.id, dmg, crit, e);
       if (isDead(s)) return;
@@ -1424,17 +1432,17 @@ function enemyPhase(s: GameState, c: CombatState): void {
       if (def.purge) purge(s, def.purge, def.name);
       if (def.fleeLock) c.fleeLock = Math.max(c.fleeLock ?? 0, def.fleeLock);
       // 비명(혼란)·함성(공포)
-      if (def.scream) afflict(s, "confusion", def.scream, `${def.name}의 비명이 머릿속을 긁고 지나간다.`);
-      if (def.fearHit) afflict(s, "fear", def.fearHit, `${def.name}의 함성이 등골을 얼린다.`);
+      if (def.scream) afflict(s, "confusion", def.scream, t("{name}의 비명이 머릿속을 긁고 지나간다.", { name: t(def.name) }));
+      if (def.fearHit) afflict(s, "fear", def.fearHit, t("{name}의 함성이 등골을 얼린다.", { name: t(def.name) }));
       // 분노(연속으로 맞음), 공포(HP 20% 이하)
-      if (c.streak >= MIND.rageStreakHits) afflict(s, "rage", MIND.rageStreak, "이를 악물었다. 머리끝까지 피가 몰린다.");
+      if (c.streak >= MIND.rageStreakHits) afflict(s, "rage", MIND.rageStreak, t("이를 악물었다. 머리끝까지 피가 몰린다."));
       if (!c.fearRolled && s.hero.hp <= maxHp(s) * 0.2) {
         c.fearRolled = true;
-        afflict(s, "fear", MIND.fearLowHp, "죽음이 바로 옆에 와 있다는 걸 알았다.");
+        afflict(s, "fear", MIND.fearLowHp, t("죽음이 바로 옆에 와 있다는 걸 알았다."));
       }
       // 맞받아치기: 치명타를 맞으면 즉시 반격
       if (crit && has(s, "riposte") && canUse(s, c, SKILLS.riposte)) {
-        counter(s, c, e, "riposte", "이를 악물고 되받아친다", 2);
+        counter(s, c, e, "riposte", t("이를 악물고 되받아친다"), 2);
         if (alive(c).length === 0) return;
       }
     }
@@ -1443,7 +1451,7 @@ function enemyPhase(s: GameState, c: CombatState): void {
       if (def.trial && c.context === "dungeon") {
         s.hero.hp = 1;
         c.ejected = true;
-        log(s, `${josa(def.name, "이")} 쓰러진 당신을 들어 문 밖에 내려놓는다. "아직이다." (HP 1)`, "hurt");
+        log(s, t("{name|이} 쓰러진 당신을 들어 문 밖에 내려놓는다. \"아직이다.\" (HP 1)", { name: t(def.name) }), "hurt");
         return;
       }
       // ★5 화신전 특례(탐욕·시와 노래): 한 번 버틴다
@@ -1453,13 +1461,13 @@ function enemyPhase(s: GameState, c: CombatState): void {
         s.tripUsed.push("heroSong");
         s.hero.hp = maxHp(s);
         c.heroSong = true;
-        log(s, "【영웅의 노래】 쓰러지는 순간, 이 이야기의 다음 소절이 들려온다. 다시 일어섰다. (HP 가득, 이 전투 동안 명중 +3·피해 +3)", "skill");
+        log(s, t("【{skill}】 쓰러지는 순간, 이 이야기의 다음 소절이 들려온다. 다시 일어섰다. (HP 가득, 이 전투 동안 명중 +3·피해 +3)", { skill: t("영웅의 노래") }), "skill");
         continue;
       }
       // 녹아내림(밀랍 신도의 편린): 10%로 버틴다
       if (has2(s, "fragMelt") && rngOf(s).chance(0.1)) {
         s.hero.hp = 1;
-        log(s, "【녹아내림】 몸이 밀랍처럼 녹아내리며 일격을 흘려보냈다. (HP 1)", "skill");
+        log(s, t("【{skill}】 몸이 밀랍처럼 녹아내리며 일격을 흘려보냈다. (HP 1)", { skill: t("녹아내림") }), "skill");
         continue;
       }
       // 불사조의 숨(미궁 1회): 최대 HP 30%로 일어나며 적 전원 화염
@@ -1468,11 +1476,11 @@ function enemyPhase(s: GameState, c: CombatState): void {
         const ef = phoenix.effect as Extract<SkillDef["effect"], { type: "phoenix" }>;
         s.tripUsed.push(phoenix.id);
         s.hero.hp = Math.max(1, Math.round((maxHp(s) * ef.pct) / 100));
-        log(s, `【${phoenix.name}】 ${ef.text} (HP ${s.hero.hp})`, "skill");
+        log(s, `【${t(phoenix.name)}】 ${t(ef.text)} (HP ${s.hero.hp})`, "skill");
         for (const foe of alive(c)) {
           const d = rngOf(s).dice(ef.dice[0], ef.dice[1]);
           dealt(s, c, foe, d, phoenix.id);
-          log(s, `${MONSTERS[foe.defId].name}에게 ${d} 피해`, "hit");
+          log(s, t("{name}에게 {dmg} 피해", { name: nm(foe), dmg: d }), "hit");
           if (foe.hp <= 0) killed(s, c, foe);
         }
         if (alive(c).length === 0) return;
@@ -1488,31 +1496,31 @@ function enemyPhase(s: GameState, c: CombatState): void {
         const paid = Math.ceil(s.dungeon!.mana / 2);
         s.dungeon!.mana -= paid;
         s.hero.hp = 1;
-        log(s, `【${GODS.greed.name}】 목숨값 — 마석 ${paid}G 어치가 손에서 녹아 사라지고, 숨이 붙어 있다. (HP 1)`, "skill");
+        log(s, t("【{god}】 목숨값 — 마석 {paid}G 어치가 손에서 녹아 사라지고, 숨이 붙어 있다. (HP 1)", { god: t(GODS.greed.name), paid }), "skill");
         continue;
       }
       if (!grit && power(s, "song", 3) && !s.tripUsed.includes("faithSong")) {
         s.tripUsed.push("faithSong");
         s.hero.hp = 1;
-        log(s, `【${GODS.song.name}】 끝나지 않은 노래 — 아직 이 이야기는 끝나지 않았다. (HP 1)`, "skill");
+        log(s, t("【{god}】 끝나지 않은 노래 — 아직 이 이야기는 끝나지 않았다. (HP 1)", { god: t(GODS.song.name) }), "skill");
         continue;
       }
       if (grit) {
         s.tripUsed.push("grit");
         s.hero.hp = 1;
-        log(s, `【${SKILLS.grit.name}】 무릎이 꺾이기 직전, 이를 악물고 버텼다. (HP 1)`, "skill");
+        log(s, t("【{skill}】 무릎이 꺾이기 직전, 이를 악물고 버텼다. (HP 1)", { skill: t(SKILLS.grit.name) }), "skill");
         if (has(s, "lastGuard")) {
           c.guard = { ac: 5, rounds: 3 };
-          log(s, "【최후의 방어】 버틴 자리에서 방패를 세운다 (3라운드 AC +5)", "skill");
+          log(s, t("【{skill}】 버틴 자리에서 방패를 세운다 (3라운드 AC +5)", { skill: t("최후의 방어") }), "skill");
         }
         continue;
       }
       s.hero.hp = 0;
       const cause = new Set(attackers).size >= 2 ? "mob" : "single";
-      if (attackers.some((x) => MONSTERS[x.defId].avatar)) kill(s, cause, "빛에 삼켜졌다");
-      else if (c.context === "final") kill(s, cause, "영주에게 맞서다 쓰러졌다");
-      else if (c.context === "chase") kill(s, cause, CHASE_DEATH);
-      else kill(s, cause, cause === "mob" ? `${describeGroup([...new Set(attackers)])}에게 둘러싸여 쓰러졌다` : `${def.name}에게 쓰러졌다`);
+      if (attackers.some((x) => MONSTERS[x.defId].avatar)) kill(s, cause, t("빛에 삼켜졌다"));
+      else if (c.context === "final") kill(s, cause, t("영주에게 맞서다 쓰러졌다"));
+      else if (c.context === "chase") kill(s, cause, t(CHASE_DEATH));
+      else kill(s, cause, cause === "mob" ? t("{group}에게 둘러싸여 쓰러졌다", { group: describeGroup([...new Set(attackers)]) }) : t("{name}에게 쓰러졌다", { name: t(def.name) }));
       return;
     }
     note(s, "con");
@@ -1527,7 +1535,7 @@ function finish(s: GameState, outcome: "win" | "fled"): void {
   const back = outcome === "win" ? Math.floor((c.boltsShot ?? 0) / 2) : 0;
   if (back > 0) {
     s.inventory.bolt += back;
-    log(s, `쏜 볼트 ${back}발을 주워 담았다. (남은 볼트 ${s.inventory.bolt})`, "system");
+    log(s, t("쏜 볼트 {n}발을 주워 담았다. (남은 볼트 {left})", { n: back, left: s.inventory.bolt }), "system");
   }
   if (outcome === "win") foldEasyFight(s, c);
   // 신앙심: 전쟁의 신은 여럿과 싸워 이기는 것을 좋아하고 도주를 싫어한다
@@ -1537,7 +1545,7 @@ function finish(s: GameState, outcome: "win" | "fled"): void {
   if (outcome === "win" && s.hero.satiety <= 30 && power(s, "hunger", 3)) {
     s.hero.satiety = Math.min(100, s.hero.satiety + 25);
     s.hero.hp = Math.min(maxHp(s), s.hero.hp + 5);
-    log(s, `【${GODS.hunger.name}】 굶주림이 풍요로 뒤집힌다 — 포만감 +25, HP +5`, "skill");
+    log(s, t("【{god}】 굶주림이 풍요로 뒤집힌다 — 포만감 +25, HP +5", { god: t(GODS.hunger.name) }), "skill");
   }
   // 두 얼굴의 첫 접시(기아/풍요의 신 유물): 이기면 HP +4
   if (outcome === "win" && relicOn(s, "hunger")) s.hero.hp = Math.min(maxHp(s), s.hero.hp + 4);
@@ -1545,7 +1553,7 @@ function finish(s: GameState, outcome: "win" | "fled"): void {
   else if (c.context === "final") afterFinalCombat(s, outcome, c);
   else if (c.context === "chase") {
     // 결판이 나지 않았다(라운드 한도) — 끝내 붙잡혔다
-    if (!afterChaseCombat(s, outcome, c)) kill(s, "mob", CHASE_DEATH);
+    if (!afterChaseCombat(s, outcome, c)) kill(s, "mob", t(CHASE_DEATH));
   }
   else afterDungeonCombat(s, outcome, c);
 }
@@ -1582,32 +1590,32 @@ function teachFinalOpening(s: GameState, c: CombatState): boolean {
   if (key === "war" && (alive(c).length >= 3 || alive(c).some(bossy))) {
     c.finalUsed = true;
     c.legion = 3;
-    log(s, `【${name}】 등 뒤에서 함성이 일어난다 — 끝나지 않은 전쟁의 망령 군세가 함께 진군한다! (3라운드, 적 명중 −2)`, "skill");
+    log(s, t("【{skill}】 등 뒤에서 함성이 일어난다 — 끝나지 않은 전쟁의 망령 군세가 함께 진군한다! (3라운드, 적 명중 −2)", { skill: t(name) }), "skill");
   } else if (key === "trap") {
     c.finalUsed = true;
-    log(s, `【${name}】 적들의 발밑이 한꺼번에 무너진다!`, "skill");
+    log(s, t("【{skill}】 적들의 발밑이 한꺼번에 무너진다!", { skill: t(name) }), "skill");
     for (const e of alive(c)) {
       const dmg = r.dice(2, 10);
       dealt(s, c, e, dmg, "teach");
       e.stun = Math.max(e.stun ?? 0, 1);
-      log(s, `${MONSTERS[e.defId].name}에게 ${dmg} 피해 — 함정에 걸려 움직이지 못한다`, "hit");
+      log(s, t("{name}에게 {dmg} 피해 — 함정에 걸려 움직이지 못한다", { name: nm(e), dmg }), "hit");
       if (e.hp <= 0) killed(s, c, e);
     }
   } else if (key === "greed") {
     c.finalUsed = true;
-    const t = strongest(c);
-    t.debt = 3;
-    log(s, `【${name}】 ${MONSTERS[t.defId].name}에게 빚 문서를 들이민다. 3라운드 안에 갚아라 — 받는 피해 2배, 쓰러지면 마석 ×3.`, "skill");
+    const tg = strongest(c);
+    tg.debt = 3;
+    log(s, t("【{skill}】 {name}에게 빚 문서를 들이민다. 3라운드 안에 갚아라 — 받는 피해 2배, 쓰러지면 마석 ×3.", { skill: t(name), name: nm(tg) }), "skill");
   } else if (key === "plague") {
     c.finalUsed = true;
     for (const e of alive(c)) e.venom = { rounds: 5, dice: [2, 8] };
-    log(s, `【${name}】 숨결에서 병이 번져 나간다 — 적 전원 5라운드 중독(라운드마다 2d8).`, "skill");
+    log(s, t("【{skill}】 숨결에서 병이 번져 나간다 — 적 전원 5라운드 중독(라운드마다 2d8).", { skill: t(name) }), "skill");
   } else if (key === "oblivion") {
     c.finalUsed = true;
-    const t = strongest(c);
-    t.stun = Math.max(t.stun ?? 0, bossy(t) ? 2 : 3);
-    t.forgotten = true;
-    log(s, `【${name}】 ${josa(MONSTERS[t.defId].name, "이")} 당신이 누구인지 잊었다. (${bossy(t) ? 2 : 3}라운드 행동 불가, 그동안 모든 공격이 치명타)`, "skill");
+    const tg = strongest(c);
+    tg.stun = Math.max(tg.stun ?? 0, bossy(tg) ? 2 : 3);
+    tg.forgotten = true;
+    log(s, t("【{skill}】 {name|이} 당신이 누구인지 잊었다. ({n}라운드 행동 불가, 그동안 모든 공격이 치명타)", { skill: t(name), name: nm(tg), n: bossy(tg) ? 2 : 3 }), "skill");
   }
   return isDead(s);
 }
@@ -1618,21 +1626,21 @@ function teachFinalMidFight(s: GameState, c: CombatState): boolean {
   const lost = maxHp(s) - s.hero.hp;
   if (teachOn(s, "hunger") && hpPct(s) <= 40) {
     c.finalUsed = true;
-    const t = strongest(c);
-    const take = Math.min(t.hp, rngOf(s).dice(4, 10));
-    dealt(s, c, t, take, "teach");
+    const tg = strongest(c);
+    const take = Math.min(tg.hp, rngOf(s).dice(4, 10));
+    dealt(s, c, tg, take, "teach");
     s.hero.hp = Math.min(maxHp(s), s.hero.hp + take);
     s.hero.satiety = 100;
-    log(s, `【${TEACHINGS.hunger.final}】 ${MONSTERS[t.defId].name}의 몫을 내 접시로 옮겼다. ${take} 피해, HP +${take}, 포만감 100`, "skill");
-    if (t.hp <= 0) killed(s, c, t);
+    log(s, t("【{skill}】 {name}의 몫을 내 접시로 옮겼다. {dmg} 피해, HP +{dmg}, 포만감 100", { skill: t(TEACHINGS.hunger.final), name: nm(tg), dmg: take }), "skill");
+    if (tg.hp <= 0) killed(s, c, tg);
     return true;
   }
   if (teachOn(s, "abyss") && lost >= maxHp(s) * 0.4) {
     c.finalUsed = true;
-    const t = strongest(c);
-    dealt(s, c, t, lost, "teach");
-    log(s, `【${TEACHINGS.abyss.final}】 떨어진 만큼의 무게를 실어 ${josa(MONSTERS[t.defId].name, "을")} 내리찍는다. ${lost} 피해`, "skill");
-    if (t.hp <= 0) killed(s, c, t);
+    const tg = strongest(c);
+    dealt(s, c, tg, lost, "teach");
+    log(s, t("【{skill}】 떨어진 만큼의 무게를 실어 {name|을} 내리찍는다. {dmg} 피해", { skill: t(TEACHINGS.abyss.final), name: nm(tg), dmg: lost }), "skill");
+    if (tg.hp <= 0) killed(s, c, tg);
     return true;
   }
   return false;
@@ -1666,7 +1674,7 @@ function rogueToxTick(s: GameState, c: CombatState): void {
     const dmg = toxDmg(s, e);
     dealt(s, c, e, dmg, "rgTox");
     e.tox.rounds -= 1;
-    log(s, `${josa(MONSTERS[e.defId].name, "이")} 독에 썩어 든다. ${dmg} 피해${e.tox.n > 1 ? ` (${e.tox.n}겹)` : ""}`, "hit");
+    log(s, e.tox.n > 1 ? t("{name|이} 독에 썩어 든다. {dmg} 피해 ({n}겹)", { name: nm(e), dmg, n: e.tox.n }) : t("{name|이} 독에 썩어 든다. {dmg} 피해", { name: nm(e), dmg }), "hit");
     if (e.hp <= 0) killed(s, c, e);
     else if (e.tox.rounds <= 0) e.tox = undefined;
   }
@@ -1674,7 +1682,7 @@ function rogueToxTick(s: GameState, c: CombatState): void {
   const rot = SKILLS.rgRot;
   if (has(s, "rgRot") && canUse(s, c, rot) && (poisoned.length >= 3 || poisoned.some(bossy))) {
     for (const e of poisoned) e.rot = 2;
-    useSkill(s, c, rot, "독이 살을 무르게 한다 — 중독된 적이 받는 피해 ×1.2 (2라운드)");
+    useSkill(s, c, rot, t("독이 살을 무르게 한다 — 중독된 적이 받는 피해 ×1.2 (2라운드)"));
   }
   const burst = SKILLS.rgToxBurst;
   for (const e of alive(c).filter((x) => (x.tox?.n ?? 0) >= 2 && (x.tox?.rounds ?? 0) >= 2)) {
@@ -1682,33 +1690,37 @@ function rogueToxTick(s: GameState, c: CombatState): void {
     let dmg = 0;
     for (let k = 0; k < e.tox!.rounds; k++) dmg += toxDmg(s, e);
     e.tox = undefined;
-    useSkill(s, c, burst, `${MONSTERS[e.defId].name}의 몸속 독이 한꺼번에 터졌다. ${dmg} 피해`);
+    useSkill(s, c, burst, t("{name}의 몸속 독이 한꺼번에 터졌다. {dmg} 피해", { name: nm(e), dmg }));
     dealt(s, c, e, dmg, "rgToxBurst");
     if (e.hp <= 0) killed(s, c, e);
   }
 }
 
 /** 손쇠뇌 한 발. 볼트가 없으면 false */
-function boltShot(s: GameState, c: CombatState, t: Enemy, o: { mult?: number; crit?: boolean; auto?: boolean; src?: string } = {}): boolean {
+function boltShot(s: GameState, c: CombatState, tg: Enemy, o: { mult?: number; crit?: boolean; auto?: boolean; src?: string } = {}): boolean {
   if (s.inventory.bolt <= 0) return false;
   s.inventory.bolt -= 1;
   c.boltsShot = (c.boltsShot ?? 0) + 1;
-  const def = MONSTERS[t.defId];
+  const def = MONSTERS[tg.defId];
   const r = rngOf(s);
   const roll = r.die(20);
-  const ac = def.ac + (t.acUp ?? 0) - (t.acDown ?? 0) - (t.marked ? markN(s) : 0) - 2; // 관통
+  const ac = def.ac + (tg.acUp ?? 0) - (tg.acDown ?? 0) - (tg.marked ? markN(s) : 0) - 2; // 관통
   const bonus = smod(s, "dex") + BAL.proficiency + passive(s, "hit") + rollPenalty(s) + injuryHit(s) + (has(s, "rgWind") ? 2 : 0) + (def.flying && has(s, "rgXbowMark") ? 2 : 0);
   if (!o.auto && (roll === 1 || (roll !== 20 && roll + bonus < ac))) {
-    log(s, `볼트가 ${josa(def.name, "을")} 스쳐 지나갔다. (${roll}+${bonus} vs AC ${ac})`, "miss");
+    log(s, t("볼트가 {name|을} 스쳐 지나갔다. ({roll}+{bonus} vs AC {ac})", { name: t(def.name), roll, bonus, ac }), "miss");
     return true;
   }
   const crit = !noCrit(s) && (!!o.crit || roll === 20 || r.float() * 100 < 5 + smod(s, "luk") + passive(s, "crit"));
   const base = r.dice(crit ? critMult(s) : 1, 6) + (has(s, "rgXbowMark") ? 1 : 0) + (has(s, "rgXbowSeal") ? 3 : 0) + (def.flying && has(s, "rgWind") ? 3 : 0);
   const dmg = Math.max(1, Math.round(base * (o.mult ?? 1)));
-  dealt(s, c, t, dmg, o.src ?? "rgBolt");
-  if (has(s, "rgXbowMark") && t.hp > 0 && !t.marked) t.marked = true;
-  log(s, `${def.name}에게 볼트가 꽂혔다! ${dmg} 피해${crit ? " (치명타!)" : ""}${t.marked && t.hp > 0 ? " · 표식" : ""}`, crit ? "crit" : "hit");
-  if (t.hp <= 0) killed(s, c, t);
+  dealt(s, c, tg, dmg, o.src ?? "rgBolt");
+  if (has(s, "rgXbowMark") && tg.hp > 0 && !tg.marked) tg.marked = true;
+  const bv = { name: t(def.name), dmg };
+  const mk = !!tg.marked && tg.hp > 0;
+  log(s, crit
+    ? mk ? t("{name}에게 볼트가 꽂혔다! {dmg} 피해 (치명타!) · 표식", bv) : t("{name}에게 볼트가 꽂혔다! {dmg} 피해 (치명타!)", bv)
+    : mk ? t("{name}에게 볼트가 꽂혔다! {dmg} 피해 · 표식", bv) : t("{name}에게 볼트가 꽂혔다! {dmg} 피해", bv), crit ? "crit" : "hit");
+  if (tg.hp <= 0) killed(s, c, tg);
   return true;
 }
 
@@ -1716,9 +1728,9 @@ function boltShot(s: GameState, c: CombatState, t: Enemy, o: { mult?: number; cr
 function xbowVolley(s: GameState, c: CombatState): void {
   const shots = has(s, "rgXbowAvatar") ? 2 : 1;
   for (let k = 0; k < shots && alive(c).length; k++) {
-    const t = strongestUnmarked(c);
-    if (!boltShot(s, c, t)) {
-      if (k === 0 && !c.boltsShot) log(s, "손쇠뇌에 걸 볼트가 없다.", "miss");
+    const tg = strongestUnmarked(c);
+    if (!boltShot(s, c, tg)) {
+      if (k === 0 && !c.boltsShot) log(s, t("손쇠뇌에 걸 볼트가 없다."), "miss");
       break;
     }
   }
@@ -1750,7 +1762,7 @@ function rogueOffhand(s: GameState, c: CombatState): void {
       addTox(s, e, 1, 2);
       e.hitDown = { n: Math.max(1, e.hitDown?.n ?? 0), rounds: Math.max(1, e.hitDown?.rounds ?? 0) };
     }
-    log(s, "왼손의 독병을 던졌다 — 깨진 병에서 독기가 번진다. (적 전원 독 1겹, 명중 −1)", "skill");
+    log(s, t("왼손의 독병을 던졌다 — 깨진 병에서 독기가 번진다. (적 전원 독 1겹, 명중 −1)"), "skill");
     c.flaskCd = has(s, "rgVenomAvatar") ? 1 : 3;
   } else if (off === "xbow") {
     if (c.xbowReady) xbowVolley(s, c);
@@ -1764,41 +1776,41 @@ function rogueEffect(s: GameState, c: CombatState, sk: SkillDef): void {
   if (!alive(c).length) return;
   if (e.type === "tox") {
     const targets = e.to === "all" ? alive(c) : e.to === "two" ? [...alive(c)].sort((a, b) => a.hp - b.hp).slice(0, 2) : [strongest(c)];
-    for (const t of targets) {
-      addTox(s, t, e.n, e.rounds);
-      if (e.hitDown) t.hitDown = { n: Math.max(e.hitDown, t.hitDown?.n ?? 0), rounds: Math.max(e.rounds, t.hitDown?.rounds ?? 0) };
+    for (const tg of targets) {
+      addTox(s, tg, e.n, e.rounds);
+      if (e.hitDown) tg.hitDown = { n: Math.max(e.hitDown, tg.hitDown?.n ?? 0), rounds: Math.max(e.rounds, tg.hitDown?.rounds ?? 0) };
     }
-    useSkill(s, c, sk, `${e.text} (독 ${e.n}겹${e.hitDown ? `, 명중 −${e.hitDown}` : ""})`);
+    useSkill(s, c, sk, e.hitDown ? t("{text} (독 {n}겹, 명중 −{hit})", { text: t(e.text), n: e.n, hit: e.hitDown }) : t("{text} (독 {n}겹)", { text: t(e.text), n: e.n }));
   } else if (e.type === "cripple") {
-    const t = strongest(c);
-    t.cripple = { n: e.n, rounds: bossy(t) && e.bossRounds ? e.bossRounds : e.rounds };
-    useSkill(s, c, sk, `${e.text} — ${josa(MONSTERS[t.defId].name, "이")} 주는 피해 −${e.n} (${t.cripple.rounds}라운드)`);
+    const tg = strongest(c);
+    tg.cripple = { n: e.n, rounds: bossy(tg) && e.bossRounds ? e.bossRounds : e.rounds };
+    useSkill(s, c, sk, t("{text} — {name|이} 주는 피해 −{n} ({rounds}라운드)", { text: t(e.text), name: nm(tg), n: e.n, rounds: tg.cripple.rounds }));
   } else if (e.type === "throw") {
-    const t = [...alive(c)].sort((a, b) => a.hp - b.hp)[0];
+    const tg = [...alive(c)].sort((a, b) => a.hp - b.hp)[0];
     const dmg = Math.max(1, rngOf(s).dice(e.dice[0], e.dice[1]) + Math.max(0, smod(s, "dex")));
-    useSkill(s, c, sk, e.text);
-    dealt(s, c, t, dmg, sk.id);
-    log(s, `${MONSTERS[t.defId].name}에게 ${dmg} 피해`, "hit");
-    if (has(s, "rgToxEdge") && t.hp > 0) addTox(s, t, 1, 3);
-    if (t.hp <= 0) killed(s, c, t);
+    useSkill(s, c, sk, t(e.text));
+    dealt(s, c, tg, dmg, sk.id);
+    log(s, t("{name}에게 {dmg} 피해", { name: nm(tg), dmg }), "hit");
+    if (has(s, "rgToxEdge") && tg.hp > 0) addTox(s, tg, 1, 3);
+    if (tg.hp <= 0) killed(s, c, tg);
   } else if (e.type === "bolt") {
     if (s.inventory.bolt <= 0) return; // 볼트가 없으면 쓰지 않는다
     const targets = e.to === "two" ? [...alive(c)].sort((a, b) => MONSTERS[b.defId].atk * MONSTERS[b.defId].dice[1] - MONSTERS[a.defId].atk * MONSTERS[a.defId].dice[1]).slice(0, 2) : [strongest(c)];
-    useSkill(s, c, sk, e.text);
+    useSkill(s, c, sk, t(e.text));
     let first = true;
-    for (const t of targets) {
+    for (const tg of targets) {
       if (first) {
-        if (!boltShot(s, c, t, { mult: e.mult, crit: e.crit, auto: true, src: sk.id })) return;
+        if (!boltShot(s, c, tg, { mult: e.mult, crit: e.crit, auto: true, src: sk.id })) return;
         first = false;
       } else {
         // 꿰뚫은 볼트: 같은 볼트가 둘째도 맞힌다(볼트를 더 쓰지 않는다)
         s.inventory.bolt += 1;
         c.boltsShot = (c.boltsShot ?? 1) - 1;
-        boltShot(s, c, t, { mult: e.mult, crit: e.crit, auto: true, src: sk.id });
+        boltShot(s, c, tg, { mult: e.mult, crit: e.crit, auto: true, src: sk.id });
       }
-      if (t.hp <= 0) continue;
-      if (e.stun) t.stun = Math.max(t.stun ?? 0, bossy(t) ? (e.bossStun ?? 0) : e.stun);
-      if (e.cripple) t.cripple = { n: e.cripple.n, rounds: bossy(t) ? e.cripple.bossRounds : e.cripple.rounds };
+      if (tg.hp <= 0) continue;
+      if (e.stun) tg.stun = Math.max(tg.stun ?? 0, bossy(tg) ? (e.bossStun ?? 0) : e.stun);
+      if (e.cripple) tg.cripple = { n: e.cripple.n, rounds: bossy(tg) ? e.cripple.bossRounds : e.cripple.rounds };
     }
     if (e.flee) c.smoke = Math.max(c.smoke ?? 0, e.flee);
   }
