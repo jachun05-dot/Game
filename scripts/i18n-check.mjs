@@ -62,6 +62,11 @@ for (const f of walk(SRC)) {
   if (n) unwrapped.push({ rel, n });
 }
 
+// 게임 데이터 표의 원문(bun scripts/i18n-keys.ts가 만든다)
+try {
+  for (const [k, origin] of Object.entries(JSON.parse(readFileSync(join(SRC, "i18n", "keys", "game.json"), "utf8")))) if (!keys.has(k)) keys.set(k, `src/game/${origin}`);
+} catch {}
+
 const slots = (s) => [...s.matchAll(/\{(\w+)(?:\|[^}]*)?\}/g)].map((m) => m[1]).sort().join(",");
 
 let bad = 0;

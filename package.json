@@ -17,6 +17,7 @@
     "release:pages": "npm run build && scripts/release/pages.sh",
     "release:artifact": "npm run build && node scripts/release/stage-artifact.mjs",
     "check": "tsc -b && vitest run",
+    "i18n:keys": "bun scripts/i18n-keys.ts",
     "i18n:check": "node scripts/i18n-check.mjs --strict src/ui"
   },
   "dependencies": {
