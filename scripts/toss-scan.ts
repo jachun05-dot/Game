@@ -17,11 +17,14 @@ const langs: Lang[] = which === "all" ? ["ko", "en", "ja", "zh"] : [which as Lan
 
 /** 토스판에 남으면 안 되는 표현(언어별). 메커니즘 이름(피로도·출혈 등)은 예외로 둔다 */
 export const SENSITIVE: Record<Lang, RegExp> = {
-  ko: /열여섯|열일곱|열여덟|1[678] ?세|1[678] ?살|\d+번째 생일|소년|소녀|아이들|어린|아동|미성년|처형|(?<![법전])사형|참수|교수형|목을 베|머리를 잃|몸통을 꿰뚫|피를 너무|피투성|유혈|선혈|내장|시체|학살|고문|살해|화형/,
-  en: /sixteen|seventeen|eighteen|\bage[ds]? \d|birthday|\bboys?\b|\bgirls?\b|\bchild|\bkids?\b|\bminors?\b|\bteens?\b|teenager|execut|behead|hang(ed|ing)\b|lost (a|his) head|run through the torso|gore|corpse|torture|slaughter|murder|burned at the stake/i,
-  ja: /十六|十七|十八|1[678]歳|誕生日|少年|少女|子ども|子供|未成年|処刑|斬首|絞首|首を刎|頭を失|胴を貫|血まみれ|死体|拷問|虐殺|殺害|火刑/,
-  zh: /十六|十七|十八|1[678]岁|生日|少年|少女|孩子|儿童|未成年|处刑|处决|斩首|绞刑|砍头|失去了头|贯穿躯干|血淋淋|尸体|酷刑|屠杀|谋杀|火刑/,
+  ko: /열여섯|열일곱|열여덟|1[678] ?세|1[678] ?살|\d+번째 생일|소년|소녀|아이들|어린|아동|미성년|꼬마|처형|(?<![법전])사형|참수|교수형|목을 베|머리를 잃|몸통을 꿰뚫|피를 너무|피투성|유혈|선혈|내장|시체|학살|고문|살해|화형/,
+  en: /sixteen|seventeen|eighteen|\bage[ds]? \d|birthday|\bboys?\b|\bgirls?\b|\bchild|\bkids?\b|\bminors?\b|\bteens?\b|teenager|execut|behead|\bhanged\b|gallows|lost (a|his) head|run through the torso|gore|corpse|torture|slaughter|murder|burned at the stake/i,
+  ja: /十六|十七|十八|1[678]歳|誕生日|少年|少女|子ども|子供|ガキ|未成年|処刑|斬首|絞首|首を刎|頭を失|胴を貫|血まみれ|死体|拷問|虐殺|殺害|火刑/,
+  zh: /十六|十七|十八|1[678]岁|生日|少年|少女|孩子|小鬼|儿童|未成年|处刑|处决|斩首|绞刑|砍头|失去了头|贯穿躯干|血淋淋|尸体|酷刑|屠杀|谋杀|火刑/,
 };
+
+/** 웹판에서만 쓰는 키(토스판 코드는 isToss()로 다른 키를 쓴다) — 점검에서 뺀다 */
+const WEB_ONLY = new Set(["— {age}번째 생일. 미궁이 문을 열어 주는 것도 이제 1년 남았다.", "{n}세"]);
 
 function loadDir(dir: string): Record<string, string> {
   const d: Record<string, string> = {};
@@ -58,6 +61,7 @@ for (const lang of langs) {
   const hits = new Map<string, string>();
   // 1) 사전 전체(화면 글·데이터 글)
   for (const k of keys) {
+    if (WEB_ONLY.has(k)) continue;
     const v = t(k);
     if (rx.test(v)) hits.set(k, v);
   }
