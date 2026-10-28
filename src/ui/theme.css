@@ -708,3 +708,10 @@ body {
 .class-row { grid-template-columns: repeat(2, 1fr); }
 @media (min-width: 520px) { .class-row { grid-template-columns: repeat(4, 1fr); } }
 .lang-picker { justify-content: center; flex-wrap: wrap; margin: 4px 0 8px; }
+
+/* 토스판 종료 확인 창 */
+.exit-backdrop { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(0, 0, 0, 0.6); }
+.exit-card { width: 100%; max-width: 320px; padding: 18px 16px 14px; border-radius: var(--radius); border: 1px solid var(--border-hi); background: linear-gradient(180deg, #241b12, #19130d); box-shadow: var(--shadow); }
+.exit-card .exit-title { margin: 0 0 6px; font-family: var(--serif); font-size: 17px; color: var(--bright); }
+.exit-card .row { display: flex; gap: 8px; margin-top: 14px; }
+.exit-card .row .btn { flex: 1; }

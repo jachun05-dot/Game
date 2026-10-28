@@ -22,6 +22,7 @@
     "build:toss": "tsc -b && VITE_TARGET=toss vite build"
   },
   "dependencies": {
+    "@apps-in-toss/web-framework": "^3.9.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

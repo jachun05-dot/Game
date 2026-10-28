@@ -19,6 +19,7 @@ import { mergeCodex } from "../game/fragments";
 import { FAITH } from "../game/data";
 import { GameScreen, HeroHeader, LogView } from "./components";
 import { t, useLang } from "../i18n";
+import { exitAsking, getCloser, setExitAsk, useExitAsk } from "../platform/exit";
 import { ALL_ENDINGS, ALL_FAITHS, META_CLUES, fullCodex, isUnlockTester } from "../game/tester";
 
 export type Speed = 1 | 2 | 4 | 8 | 0; // 0 = 즉시
@@ -55,7 +56,31 @@ export function App() {
     <>
       {newer && <UpdateBanner />}
       <Game />
+      <ExitConfirm />
     </>
+  );
+}
+
+/** 토스판 종료 확인 창(뒤로가기로 더 닫을 화면이 없을 때). 진행은 상태가 바뀔 때마다 저장된다 */
+function ExitConfirm() {
+  const open = useExitAsk();
+  const close = getCloser();
+  if (!open || !close) return null;
+  return (
+    <div className="exit-backdrop" role="dialog" aria-modal="true" aria-label={t("게임을 종료할까요?")}>
+      <div className="exit-card">
+        <p className="exit-title">{t("게임을 종료할까요?")}</p>
+        <p className="dim small">{t("진행은 저장돼요. 다음에 이어서 할 수 있어요.")}</p>
+        <div className="row">
+          <button className="btn" onClick={() => setExitAsk(false)}>
+            {t("계속하기")}
+          </button>
+          <button className="btn primary" onClick={close}>
+            {t("종료")}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -84,6 +109,21 @@ function Game() {
   const [sheet, setSheet] = useState(false);
   const autoTimer = useRef<number | null>(null);
   const codexFrom = useRef<"title" | "game">("title");
+
+  // 토스판: 안드로이드 뒤로가기 — 열린 화면을 닫고, 더 닫을 게 없으면 종료 확인 창(src/platform/toss.ts)
+  const backState = useRef({ view, sheet });
+  backState.current = { view, sheet };
+  useEffect(() => {
+    const onBack = () => {
+      const b = backState.current;
+      if (exitAsking()) setExitAsk(false);
+      else if (b.sheet) setSheet(false);
+      else if (b.view === "codex" || b.view === "graveyard") setView(s && s.phase !== "dead" && s.phase !== "create" ? "game" : "title");
+      else if (getCloser()) setExitAsk(true);
+    };
+    window.addEventListener("ddd:back", onBack);
+    return () => window.removeEventListener("ddd:back", onBack);
+  }, [s]);
 
   useEffect(() => saveRun(s), [s]);
   useEffect(() => saveMeta(meta), [meta]);

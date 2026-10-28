@@ -1,4 +1,8 @@
 {
   "수습 {n}년차": "Apprentice Yr {n}",
-  "— 수습 {n}년차가 시작됐다. 미궁이 문을 열어 주는 것도 이제 1년 남았다.": "— Year {n} of your apprenticeship begins. Only one more year before the Labyrinth stops opening its doors to you."
+  "— 수습 {n}년차가 시작됐다. 미궁이 문을 열어 주는 것도 이제 1년 남았다.": "— Year {n} of your apprenticeship begins. Only one more year before the Labyrinth stops opening its doors to you.",
+  "게임을 종료할까요?": "Quit the game?",
+  "진행은 저장돼요. 다음에 이어서 할 수 있어요.": "Your progress is saved. You can continue next time.",
+  "계속하기": "Keep playing",
+  "종료": "Quit"
 }

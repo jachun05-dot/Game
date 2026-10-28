@@ -17,6 +17,16 @@ describe("i18n t()", () => {
     expect(t("없는 문장 {n}", { n: 1 })).toBe("없는 문장 1");
   });
 
+  it("판본 덮어쓰기(토스판)가 사전보다 먼저, 한국어에도 적용된다", () => {
+    _setDict("ko", {}, { "세금을 내지 못해 처형당했다": "세금을 내지 못해 섬에서 추방당했다", "{name|이} 왔다": "{name|이} 다가왔다" });
+    expect(t("세금을 내지 못해 처형당했다")).toBe("세금을 내지 못해 섬에서 추방당했다");
+    expect(t("{name|이} 왔다", { name: "쥐" })).toBe("쥐가 다가왔다");
+    expect(t("묘지")).toBe("묘지");
+    _setDict("en", { "묘지": "Graveyard", "처형": "Execution" }, { "처형": "Decisive Blow" });
+    expect(t("처형")).toBe("Decisive Blow");
+    expect(t("묘지")).toBe("Graveyard");
+  });
+
   it("tk는 표시만 한다", () => {
     expect(tk("구석구석 탐험")).toBe("구석구석 탐험");
   });

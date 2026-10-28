@@ -3,3 +3,6 @@ dist
 *.tsbuildinfo
 shots/
 dist-toss
+toss/node_modules
+toss/*.ait
+toss/.granite

@@ -1,0 +1,11 @@
+{
+  "name": "ddd-toss",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "npm --prefix .. run build:toss && ait build"
+  },
+  "dependencies": {
+    "@apps-in-toss/web-framework": "3.9.0"
+  }
+}

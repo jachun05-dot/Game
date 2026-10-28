@@ -14,7 +14,8 @@ export interface VersionInfo {
 }
 
 export function updateCheckEnabled(): boolean {
-  return HOST !== "artifact" && typeof fetch === "function" && BUILD.builtAt !== "";
+  // 토스판은 콘솔에서 올린 묶음(.ait) 단위로 바뀌므로 새 버전 알림을 쓰지 않는다
+  return HOST !== "artifact" && BUILD.target !== "toss" && typeof fetch === "function" && BUILD.builtAt !== "";
 }
 
 /** 서버에 올라간 빌드가 지금 빌드와 다르면 그 정보를, 같거나 확인할 수 없으면 null */
