@@ -39,8 +39,22 @@ function versionFile(): Plugin {
   };
 }
 
+/** 토스판: 바깥(구글) 글꼴을 빼고 기기 글꼴을 쓴다(토스 도메인 밖 리소스를 줄인다) */
+function tossHtml(): Plugin {
+  return {
+    name: "ddd-toss-html",
+    transformIndexHtml(html) {
+      if (info.target !== "toss") return html;
+      return html
+        .replace(/\s*<link[^>]*fonts\.(googleapis|gstatic)\.com[^>]*>/g, "")
+        .replaceAll("열여섯 살, 미궁으로", "수습 모험가, 미궁으로")
+        .replaceAll("열여섯 살 모험가의", "수습 모험가의");
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react(), versionFile()],
+  plugins: [react(), versionFile(), tossHtml()],
   base: "./",
   // 에이전트 작업 폴더(.claude/worktrees)의 사본 테스트는 돌리지 않는다
   test: { exclude: ["**/node_modules/**", "**/dist/**", ".claude/**"] },
@@ -51,6 +65,8 @@ export default defineConfig({
     __APP_TARGET__: JSON.stringify(info.target),
   },
   build: {
+    // 토스판은 따로 낸다(앱인토스 .ait 묶음의 재료, toss/apps-in-toss.config.ts)
+    outDir: info.target === "toss" ? "dist-toss" : "dist",
     rollupOptions: {
       output: {
         manualChunks(path) {

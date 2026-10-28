@@ -29,6 +29,7 @@ import { CLASS_ART, FRAG_ICON, GEAR_ICON, LINE_ICON, MONSTER_ART, SCENE_ART } fr
 import { TIPS, currentTip } from "./tips";
 import { Icon } from "./icons";
 import { AGE, ageOf, monthsLeft } from "../game/age";
+import { isToss } from "../platform/variant";
 
 export function Shell({ children, wide }: { children: ReactNode; wide?: boolean }) {
   return <main className={`shell${wide ? " wide" : ""}`}>{children}</main>;
@@ -114,7 +115,7 @@ export function AgePill({ month }: { month: number }) {
   return (
     <span className={`stat-pill age${warn ? " warn" : ""}`} title={t("미궁은 열일곱 살이 끝날 때까지만 들어갈 수 있다 — 남은 {n}개월", { n: left })}>
       <Icon name="clock" />
-      {t("{n}세", { n: ageOf(month) })}{warn ? ` · ${t("{n}개월", { n: left })}` : ""}
+      {isToss() ? t("수습 {n}년차", { n: ageOf(month) - AGE.start + 1 }) : t("{n}세", { n: ageOf(month) })}{warn ? ` · ${t("{n}개월", { n: left })}` : ""}
     </span>
   );
 }

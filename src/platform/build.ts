@@ -4,8 +4,8 @@ declare const __APP_COMMIT__: string;
 declare const __APP_BUILT_AT__: string;
 declare const __APP_TARGET__: string;
 
-/** 배포 대상: web(GitHub Pages 등 정적 호스팅) · artifact(claude.ai 아티팩트) · app(웹뷰 앱 포장) */
-export type Target = "web" | "artifact" | "app";
+/** 배포 대상: web(GitHub Pages 등 정적 호스팅) · artifact(claude.ai 아티팩트) · app(웹뷰 앱 포장) · toss(앱인토스 미니앱 — 표현을 바꾼 토스판, docs/APPS_IN_TOSS.md) */
+export type Target = "web" | "artifact" | "app" | "toss";
 
 export const BUILD = {
   /** package.json version */

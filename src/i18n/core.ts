@@ -1,5 +1,6 @@
 import { josa } from "../game/josa";
 import { kv } from "../platform/kv";
+import { getVariant, isToss } from "../platform/variant";
 
 // 다국어 핵심(React 없음 — src/game도 쓴다). 화면 훅은 index.ts.
 // 다국어(2026-10-20, 사용자 요청: 영어·일본어·간체 중국어).
@@ -22,6 +23,8 @@ const KEY = "ddd-lang";
 
 let lang: Lang = "ko";
 let dict: Record<string, string> = {};
+/** 판본 덮어쓰기(토스판): 원문 키 → 그 판본·그 언어의 글. 한국어에도 적용된다 */
+let over: Record<string, string> = {};
 const listeners = new Set<() => void>();
 
 // vite가 빌드 때 바꿔 넣는다. bun으로 도는 시뮬레이션에는 없으므로(한국어만 쓴다) 감싼다
@@ -30,6 +33,23 @@ try {
   loaders = import.meta.glob<Record<string, string>>("./locales/*/*.json", { import: "default" });
 } catch {
   /* bun 등 vite 밖 */
+}
+let variantLoaders: Record<string, () => Promise<Record<string, string>>> = {};
+try {
+  variantLoaders = import.meta.glob<Record<string, string>>("./variants/*/*/*.json", { import: "default" });
+} catch {
+  /* bun 등 vite 밖 */
+}
+
+async function loadOver(l: Lang): Promise<Record<string, string>> {
+  const v = getVariant();
+  if (v === "web") return {};
+  const parts = await Promise.all(
+    Object.entries(variantLoaders)
+      .filter(([p]) => p.startsWith(`./variants/${v}/${l}/`))
+      .map(([, f]) => f()),
+  );
+  return Object.assign({}, ...parts);
 }
 
 function isLang(v: unknown): v is Lang {
@@ -68,7 +88,7 @@ function applyDocument(l: Lang): void {
   if (typeof document === "undefined") return;
   document.documentElement.lang = l === "zh" ? "zh-Hans" : l;
   document.title = `DDD — ${t("열여섯 살, 미궁으로")}`;
-  const f = FONTS[l];
+  const f = isToss() ? undefined : FONTS[l]; // 토스판은 바깥 글꼴을 받지 않는다(기기 글꼴)
   if (f && !document.getElementById(`font-${l}`)) {
     const link = document.createElement("link");
     link.id = `font-${l}`;
@@ -81,10 +101,11 @@ function applyDocument(l: Lang): void {
 /** 언어 바꾸기(번역을 내려받은 뒤 화면을 다시 그린다). 실패하면 한국어로 */
 export async function setLang(l: Lang): Promise<void> {
   try {
-    dict = await load(l);
+    [dict, over] = await Promise.all([load(l), loadOver(l)]);
     lang = l;
   } catch {
     dict = {};
+    over = {};
     lang = "ko";
   }
   kv().set(KEY, lang);
@@ -96,10 +117,11 @@ export async function setLang(l: Lang): Promise<void> {
 export async function initLang(): Promise<void> {
   const l = detectLang();
   try {
-    dict = await load(l);
+    [dict, over] = await Promise.all([load(l), loadOver(l)]);
     lang = l;
   } catch {
     dict = {};
+    over = {};
     lang = "ko";
   }
   applyDocument(lang);
@@ -130,6 +152,8 @@ function fill(text: string, vars: Vars | undefined, korean: boolean): string {
 
 /** 번역. src는 한국어 원문(정적 문자열이어야 i18n:check가 찾는다) */
 export function t(src: string, vars?: Vars): string {
+  const o = over[src];
+  if (o !== undefined) return fill(o, vars, lang === "ko");
   const tr = lang === "ko" ? undefined : dict[src];
   return tr === undefined ? fill(src, vars, true) : fill(tr, vars, false);
 }
@@ -139,8 +163,9 @@ export function tk<T extends string>(src: T): T {
   return src;
 }
 
-/** 테스트용: 사전을 직접 넣는다 */
-export function _setDict(l: Lang, d: Record<string, string>): void {
+/** 테스트·점검용: 사전(과 판본 덮어쓰기)을 직접 넣는다 */
+export function _setDict(l: Lang, d: Record<string, string>, o: Record<string, string> = {}): void {
   lang = l;
   dict = d;
+  over = o;
 }

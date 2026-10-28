@@ -1,4 +1,5 @@
 import { MONSTERS } from "./data";
+import { isToss } from "../platform/variant";
 import { log, maxHp } from "./core";
 import { makeEnemies, startCombat } from "./combat";
 import { endLife } from "./truth";
@@ -32,7 +33,8 @@ export function monthsLeft(month: number): number {
 /** 새 달이 시작될 때(정산 뒤): 생일·남은 달 알림. 18세가 되면 true(추적이 시작된다) */
 export function ageMonthStart(s: GameState): boolean {
   if (s.month > AGE.lastMonth) return true;
-  if (s.month > 1 && (s.month - 1) % 12 === 0) log(s, t("— {age}번째 생일. 미궁이 문을 열어 주는 것도 이제 1년 남았다.", { age: ageOf(s.month) }), "story");
+  if (s.month > 1 && (s.month - 1) % 12 === 0)
+    log(s, isToss() ? t("— 수습 {n}년차가 시작됐다. 미궁이 문을 열어 주는 것도 이제 1년 남았다.", { n: ageOf(s.month) - AGE.start + 1 }) : t("— {age}번째 생일. 미궁이 문을 열어 주는 것도 이제 1년 남았다.", { age: ageOf(s.month) }), "story");
   const left = monthsLeft(s.month);
   if (AGE.warnAt.includes(left))
     log(s, left === 1 ? t("— 이번 달이 마지막이다. 다음 달이면 열여덟, 미궁은 문을 닫고 영주는 쓸모없어진 모험가를 살려 두지 않는다.") : t("— 열여덟까지 {left}개월. 미궁이 문을 닫기 전에 셉터에 닿아야 한다.", { left }), "hurt");

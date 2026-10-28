@@ -116,6 +116,43 @@ for (const lang of LANGS) {
   report.push(`${lang}: 원문 ${keys.size}개 중 번역 ${keys.size - missing.length}개, 안 쓰는 번역 ${unused.length}개`);
 }
 
+// 판본 덮어쓰기(src/i18n/variants/<판본>/<언어>/*.json): 원문 키가 실제로 있고 {자리}가 같아야 한다
+const VAR = join(SRC, "i18n", "variants");
+let variants = [];
+try {
+  variants = readdirSync(VAR);
+} catch {}
+for (const v of variants) {
+  for (const lang of ["ko", ...LANGS]) {
+    let files = [];
+    try {
+      files = readdirSync(join(VAR, v, lang)).filter((f) => f.endsWith(".json"));
+    } catch {}
+    let n = 0;
+    for (const f of files) {
+      let d;
+      try {
+        d = JSON.parse(readFileSync(join(VAR, v, lang, f), "utf8"));
+      } catch (e) {
+        report.push(`✗ ${v}/${lang}/${f}: JSON 오류 ${e.message}`);
+        bad++;
+        continue;
+      }
+      for (const [k, val] of Object.entries(d)) {
+        n++;
+        if (!keys.has(k)) {
+          report.push(`✗ ${v}/${lang}/${f}: 코드에 없는 원문: ${k.slice(0, 60)}`);
+          bad++;
+        } else if (slots(k) !== slots(val)) {
+          report.push(`✗ ${v}/${lang}/${f}: 끼워 넣기가 다름 {${slots(k)}} → {${slots(val)}}: ${k.slice(0, 60)}`);
+          bad++;
+        }
+      }
+    }
+    if (files.length) report.push(`${v}/${lang}: 덮어쓰기 ${n}개`);
+  }
+}
+
 const counts = unwrapped.filter((u) => typeof u === "object");
 const lines = unwrapped.filter((u) => typeof u === "string");
 console.log(report.join("\n"));

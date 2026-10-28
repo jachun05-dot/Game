@@ -18,7 +18,8 @@
     "release:artifact": "npm run build && node scripts/release/stage-artifact.mjs",
     "check": "tsc -b && vitest run",
     "i18n:keys": "bun scripts/i18n-keys.ts",
-    "i18n:check": "node scripts/i18n-check.mjs --strict src/ui"
+    "i18n:check": "node scripts/i18n-check.mjs --strict src/ui",
+    "build:toss": "tsc -b && VITE_TARGET=toss vite build"
   },
   "dependencies": {
     "react": "^18.3.1",
