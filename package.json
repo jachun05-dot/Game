@@ -19,14 +19,19 @@
     "check": "tsc -b && vitest run",
     "i18n:keys": "bun scripts/i18n-keys.ts",
     "i18n:check": "node scripts/i18n-check.mjs --strict src/ui",
-    "build:toss": "tsc -b && VITE_TARGET=toss vite build"
+    "build:toss": "tsc -b && VITE_TARGET=toss vite build",
+    "build:android": "npm run build:app && cap sync android && cd android && ./gradlew bundleRelease"
   },
   "dependencies": {
     "@apps-in-toss/web-framework": "^3.9.0",
+    "@capacitor/android": "^8.6.0",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/core": "^8.6.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.6.0",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
