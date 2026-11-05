@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>DDD trailer renderer</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Gowun+Batang:wght@400;700&display=swap" />
+<style>
+  html, body { margin: 0; background: #000; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script>
+// 30초 웹판 트레일러(docs/TRAILER.md). render(t)는 시각 t(초)의 한 프레임을 그린다 — 같은 t면 항상 같은 그림(녹화 스크립트가 한 장씩 캡처).
+const W = 1920, H = 1080, FPS = 30, DURATION = 30;
+const cv = document.getElementById("c");
+const g = cv.getContext("2d");
+
+const SRC = {
+  title: "scene-title", office: "scene-office", grave: "scene-grave",
+  d1: "scene-dungeon1", d2: "scene-dungeon2", d3: "scene-dungeon3", d4: "scene-dungeon4", d5: "scene-dungeon5",
+  hero: "hero", rat: "mon-rat", boss: "mon-boss", general: "mon-general", myco: "mon-mycomother",
+  furnace: "mon-furnacemother", tendril: "mon-tendril", voideye: "mon-voideye", wraith: "mon-wraith",
+};
+const IMG = {};
+
+// ── 결정적 난수(프레임마다 같은 결과) ──
+function rng(seed) {
+  let s = seed | 0;
+  return () => {
+    s = (s + 0x6d2b79f5) | 0;
+    let t = s;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const ease = (x) => { x = clamp(x); return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2; };
+const lerp = (a, b, x) => a + (b - a) * x;
+
+// ── 안개 텍스처(값 노이즈, 한 번 만든다) ──
+const fog = document.createElement("canvas");
+fog.width = 512; fog.height = 256;
+(function makeFog() {
+  const c = fog.getContext("2d");
+  const r = rng(7);
+  // 가로로 이어 붙여도 이음매가 없게 격자를 가로 방향으로 감는다
+  const N = 16, ROWS = 40, grid = [];
+  for (let i = 0; i < N * ROWS; i++) grid.push(r());
+  const at = (x, y) => grid[(y % ROWS) * N + (((x % N) + N) % N)];
+  const img = c.createImageData(512, 256);
+  for (let y = 0; y < 256; y++) for (let x = 0; x < 512; x++) {
+    let v = 0, amp = 0.55, f = 1;
+    for (let o = 0; o < 3; o++) {
+      const gx = (x / 512) * N * f, gy = (y / 256) * (N / 2) * f;
+      const ix = Math.floor(gx), iy = Math.floor(gy), fx = gx - ix, fy = gy - iy;
+      const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+      const a = at(ix, iy), b = at(ix + 1, iy), cc = at(ix, iy + 1), d = at(ix + 1, iy + 1);
+      v += amp * lerp(lerp(a, b, sx), lerp(cc, d, sx), sy);
+      amp *= 0.5; f *= 2;
+    }
+    const i = (y * 512 + x) * 4;
+    img.data[i] = img.data[i + 1] = img.data[i + 2] = 220;
+    // 위아래 가장자리는 부드럽게 사라지게(띠 모양 경계가 보이지 않게)
+    const edge = Math.sin((y / 255) * Math.PI);
+    img.data[i + 3] = Math.max(0, (v - 0.35) * 255 * 1.6) * edge * edge;
+  }
+  c.putImageData(img, 0, 0);
+})();
+
+// ── 그리기 도구 ──
+/** 도트 그림을 화면에 꽉 차게(넘치는 쪽은 잘라) 그린다. fy: 세로 초점(0 위 ~ 1 아래), zoom: 추가 확대 */
+function cover(img, fx = 0.5, fy = 0.5, zoom = 1, dx = 0, dy = 0) {
+  const s = Math.max(W / img.width, H / img.height) * zoom;
+  const w = img.width * s, h = img.height * s;
+  const x = (W - w) * fx + dx, y = (H - h) * fy + dy;
+  g.imageSmoothingEnabled = false;
+  g.drawImage(img, Math.round(x), Math.round(y), Math.round(w), Math.round(h));
+}
+function sprite(img, cx, bottom, height, alpha = 1, bright = 1) {
+  const s = height / img.height;
+  const w = img.width * s, h = img.height * s;
+  g.save();
+  g.globalAlpha = alpha;
+  if (bright < 1) g.filter = `brightness(${bright})`;
+  g.imageSmoothingEnabled = false;
+  g.drawImage(img, Math.round(cx - w / 2), Math.round(bottom - h), Math.round(w), Math.round(h));
+  g.restore();
+}
+function fogLayer(t, alpha, speed = 30, y = 0.55, scale = 3) {
+  g.save();
+  g.globalAlpha = alpha;
+  g.imageSmoothingEnabled = true;
+  const fw = fog.width * scale, fh = fog.height * scale;
+  let x = -((t * speed) % fw);
+  for (; x < W; x += fw) g.drawImage(fog, x, H * y - fh / 2, fw, fh);
+  g.restore();
+}
+function vignette(strength = 0.75) {
+  const v = g.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.95);
+  v.addColorStop(0, "rgba(0,0,0,0)");
+  v.addColorStop(1, `rgba(0,0,0,${strength})`);
+  g.fillStyle = v;
+  g.fillRect(0, 0, W, H);
+}
+function grain(frame) {
+  const r = rng(frame * 977 + 13);
+  g.save();
+  g.globalAlpha = 0.06;
+  for (let i = 0; i < 1400; i++) {
+    const x = r() * W, y = r() * H, v = r() > 0.5 ? 255 : 0;
+    g.fillStyle = `rgb(${v},${v},${v})`;
+    g.fillRect(x, y, 2, 2);
+  }
+  g.restore();
+}
+function black(a) {
+  if (a <= 0) return;
+  g.fillStyle = `rgba(0,0,0,${clamp(a)})`;
+  g.fillRect(0, 0, W, H);
+}
+function flash(a) {
+  if (a <= 0) return;
+  g.fillStyle = `rgba(255,236,200,${clamp(a)})`;
+  g.fillRect(0, 0, W, H);
+}
+/** 자막: 아래쪽 가운데, 들어오고 나가는 페이드 */
+function caption(text, lt, inAt, outAt, opts = {}) {
+  const a = clamp((lt - inAt) / 0.45) * clamp((outAt - lt) / 0.45);
+  if (a <= 0) return;
+  const size = opts.size ?? 58;
+  const y = opts.y ?? H * 0.82;
+  g.save();
+  g.globalAlpha = a;
+  g.font = `${opts.weight ?? 400} ${size}px "Gowun Batang", serif`;
+  g.textAlign = "center";
+  g.textBaseline = "middle";
+  g.letterSpacing = "0.08em";
+  g.shadowColor = "rgba(0,0,0,0.9)";
+  g.shadowBlur = 24;
+  g.fillStyle = opts.color ?? "#efe3c8";
+  g.fillText(text, W / 2 + (opts.dx ?? 0), y + (1 - a) * 8);
+  g.restore();
+}
+function label(text, x, y, a, size = 30, color = "#d6b06a") {
+  if (a <= 0) return;
+  g.save();
+  g.globalAlpha = a;
+  g.font = `700 ${size}px "Gowun Batang", serif`;
+  g.letterSpacing = "0.18em";
+  g.textBaseline = "top";
+  g.shadowColor = "rgba(0,0,0,0.9)";
+  g.shadowBlur = 16;
+  g.fillStyle = color;
+  g.fillText(text, x, y);
+  g.restore();
+}
+function embers(t, seed, color = "255,150,60", n = 70) {
+  const r = rng(seed);
+  g.save();
+  for (let i = 0; i < n; i++) {
+    const x0 = r() * W, sp = 60 + r() * 140, ph = r() * 10, sz = 2 + r() * 4;
+    const y = H - ((t * sp + ph * 100) % (H + 100));
+    const x = x0 + Math.sin(t * 1.5 + ph) * 30;
+    g.fillStyle = `rgba(${color},${0.35 + 0.5 * r()})`;
+    g.fillRect(Math.round(x), Math.round(y), sz, sz);
+  }
+  g.restore();
+}
+function torchGlow(x, y, t, radius = 420) {
+  const flick = 1 + Math.sin(t * 13) * 0.04 + Math.sin(t * 7.3) * 0.05;
+  const r = radius * flick;
+  const gr = g.createRadialGradient(x, y, 0, x, y, r);
+  gr.addColorStop(0, "rgba(255,190,110,0.55)");
+  gr.addColorStop(0.4, "rgba(220,120,50,0.18)");
+  gr.addColorStop(1, "rgba(0,0,0,0)");
+  g.save();
+  g.globalCompositeOperation = "lighter";
+  g.fillStyle = gr;
+  g.fillRect(x - r, y - r, r * 2, r * 2);
+  g.restore();
+}
+
+// ── 장면 ──
+const SECTORS = [
+  { bg: "d1", name: "1섹터 · 지하 감옥", mon: "boss", h: 560, side: 0.7, tint: null },
+  { bg: "d2", name: "2섹터 · 잊힌 전쟁터의 초원", mon: "general", h: 700, side: 0.72, tint: null },
+  { bg: "d3", name: "3섹터 · 물에 잠긴 사원", mon: "myco", h: 680, side: 0.3, tint: "rgba(40,90,70,0.18)" },
+  { bg: "d4", name: "4섹터 · 불타는 광산 갱도", mon: "furnace", h: 600, side: 0.32, tint: "rgba(120,40,10,0.18)", embers: true },
+  { bg: "d5", name: "5섹터 · 바닥없는 균열", mon: "tendril", h: 640, side: 0.62, tint: "rgba(60,30,110,0.22)" },
+];
+
+const SHOTS = [
+  { at: 0, dur: 5.0, draw(lt, d) {
+    // 섬 전경: 성에서 미궁 구덩이로 내려간다
+    const p = ease(lt / d);
+    cover(IMG.title, 0.5, lerp(0.05, 0.75, p), lerp(1.08, 1.0, p));
+    fogLayer(lt, 0.55, 22, 0.62, 3.2);
+    fogLayer(lt + 9, 0.35, 40, 0.8, 4);
+    caption("섬의 영지에는 미궁이 있다.", lt, 0.8, 4.5);
+  } },
+  { at: 5.0, dur: 3.3, draw(lt, d) {
+    const p = ease(lt / d);
+    cover(IMG.office, lerp(0.4, 0.55, p), 0.6, lerp(1.05, 1.22, p));
+    g.fillStyle = "rgba(20,10,0,0.25)"; g.fillRect(0, 0, W, H);
+    caption("매달 세금을 내라.", lt, 0.2, 1.7);
+    caption("못 내면 — 처형이다.", lt, 1.7, 3.3, { color: "#e07a5f" });
+  } },
+  { at: 8.3, dur: 3.0, draw(lt, d) {
+    // 어둠 속 주인공과 횃불
+    g.fillStyle = "#050302"; g.fillRect(0, 0, W, H);
+    const reveal = clamp(lt / 1.2);
+    torchGlow(W / 2 + 110, H * 0.5, lt, 520 * reveal + 1);
+    sprite(IMG.hero, W / 2, H * 0.86, 640, reveal, 0.35 + 0.65 * reveal);
+    embers(lt, 31, "255,170,90", 25);
+    caption("미궁은 열여섯 살만 받아들인다.", lt, 0.7, 3.0, { y: H * 0.93, size: 52 });
+  } },
+  ...SECTORS.map((sc, i) => ({ at: 11.3 + i * 2.0, dur: 2.0, draw(lt, d) {
+    const p = lt / d;
+    cover(IMG[sc.bg], 0.5, 0.5, 1.06 + 0.08 * p, Math.sin(i + p) * 20, 0);
+    if (sc.tint) { g.fillStyle = sc.tint; g.fillRect(0, 0, W, H); }
+    if (sc.embers) embers(lt, 50 + i, "255,140,50", 90);
+    fogLayer(lt + i * 3, 0.25, 50, 0.85, 3);
+    // 몬스터: 그림자에서 밝아지며 다가온다
+    const m = IMG[sc.mon];
+    const appear = ease(clamp((lt - 0.15) / 0.8));
+    const bob = Math.sin(lt * 3) * 6;
+    g.save();
+    g.shadowColor = "rgba(0,0,0,0.8)";
+    g.shadowBlur = 40;
+    sprite(m, W * sc.side + (1 - appear) * (sc.side > 0.5 ? 120 : -120), H * 0.97 + bob, sc.h * lerp(0.92, 1.04, p), 0.2 + 0.8 * appear, 0.25 + 0.75 * appear);
+    g.restore();
+    label(sc.name, 96, 80, clamp((lt - 0.1) / 0.3) * clamp((d - lt) / 0.25), 44, "#f0cf86");
+    flash(1 - lt / 0.18);
+  } })),
+  { at: 21.3, dur: 4.0, draw(lt, d) {
+    const p = ease(lt / d);
+    cover(IMG.grave, 0.5, 0.5, lerp(1.0, 1.1, p));
+    g.fillStyle = "rgba(10,10,25,0.35)"; g.fillRect(0, 0, W, H);
+    fogLayer(lt, 0.5, 25, 0.78, 3.5);
+    caption("죽는 방식이 다음 삶의 신이 된다.", lt, 0.5, 3.8);
+  } },
+  { at: 25.3, dur: 4.7, draw(lt, d) {
+    g.fillStyle = "#070503"; g.fillRect(0, 0, W, H);
+    embers(lt, 77, "230,180,90", 40);
+    const a = clamp((lt - 0.3) / 1.0);
+    g.save();
+    g.globalAlpha = a;
+    g.textAlign = "center";
+    g.textBaseline = "middle";
+    g.font = `700 260px "Cinzel", serif`;
+    g.letterSpacing = "0.12em";
+    const gr = g.createLinearGradient(0, H * 0.32, 0, H * 0.5);
+    gr.addColorStop(0, "#f6d68b"); gr.addColorStop(0.46, "#dcaa52"); gr.addColorStop(1, "#b47f31");
+    g.shadowColor = "rgba(220,170,82,0.35)";
+    g.shadowBlur = 40;
+    g.fillStyle = gr;
+    g.fillText("DDD", W / 2 + 18, H * 0.42 + (1 - a) * 20);
+    g.restore();
+    caption("열여섯 살, 미궁으로", lt, 1.1, 99, { y: H * 0.6, size: 64, color: "#efe3c8" });
+    caption("섬의 영지 · 미궁 · 매달의 세금 · 단 한 번의 삶", lt, 1.8, 99, { y: H * 0.69, size: 32, color: "#b9a888" });
+    caption("jachun05-dot.github.io/Game", lt, 2.6, 99, { y: H * 0.86, size: 30, color: "#d6b06a" });
+  } },
+];
+
+function render(t) {
+  const frame = Math.round(t * FPS);
+  g.save();
+  g.clearRect(0, 0, W, H);
+  g.fillStyle = "#000"; g.fillRect(0, 0, W, H);
+  const shot = SHOTS.find((s) => t >= s.at && t < s.at + s.dur) ?? SHOTS[SHOTS.length - 1];
+  const lt = t - shot.at;
+  shot.draw(lt, shot.dur);
+  vignette(0.8);
+  grain(frame);
+  // 장면 경계: 몽타주 밖은 검게 넘어간다
+  const inMontage = shot.at >= 11.3 && shot.at < 21.3;
+  if (!inMontage) black(Math.max(1 - lt / 0.35, 1 - (shot.dur - lt) / 0.35));
+  else if (shot.at === 11.3) black(1 - lt / 0.25);
+  if (shot.at === 19.3) black(1 - (shot.dur - lt) / 0.3);
+  black(1 - t / 0.5); // 첫 페이드 인
+  black(1 - (DURATION - t) / 0.6); // 끝 페이드 아웃
+  g.restore();
+}
+
+async function ready() {
+  await Promise.all(Object.entries(SRC).map(([k, f]) => new Promise((res, rej) => {
+    const im = new Image();
+    im.onload = () => { IMG[k] = im; res(); };
+    im.onerror = rej;
+    im.src = `../public/${f}.png`;
+  })));
+  await document.fonts.load('700 260px "Cinzel"');
+  await document.fonts.load('400 58px "Gowun Batang"');
+  await document.fonts.load('700 34px "Gowun Batang"');
+  await document.fonts.ready;
+}
+window.TRAILER = { W, H, FPS, DURATION, render, ready: ready() };
+
+// 브라우저에서 그냥 열면 재생해서 미리 본다
+if (!location.search.includes("record")) {
+  window.TRAILER.ready.then(() => {
+    const t0 = performance.now();
+    const loop = () => { render(((performance.now() - t0) / 1000) % DURATION); requestAnimationFrame(loop); };
+    loop();
+  });
+}
+</script>
+</body>
+</html>
