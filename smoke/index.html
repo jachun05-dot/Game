@@ -728,7 +728,11 @@ body { background: var(--room); color: var(--ink); overflow: hidden; -webkit-use
         if (c.ashU - c.burnU > c.ashMax && c.lift < 0.05) dropAsh(c);
         if (c.burnU <= PAPER0 + 0.03) {
           c.lit = false; c.finished = 0.0001; sfx.burn(false);
-          if (c.drag) { c.drag = false; sfx.inhale(false); }
+          // burned down to the filter while at your lips: take it away and breathe out
+          if (c.drag) {
+            c.drag = false; sfx.inhale(false);
+            if (dragT > 0.25) { exAmt = Math.min(1, dragT / 2.5); exSeq++; startExhale(c, exAmt); }
+          }
         }
       }
       if (c.finished) { c.finished += dt; if (c.finished > 2.6) { addButt(c); resetCig(c); } }
