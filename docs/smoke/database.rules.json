@@ -4,12 +4,24 @@
       ".read": "auth != null",
       "$key": {
         ".write": "auth != null && $key.beginsWith(auth.uid + '_')",
-        "tb": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 4" },
-        "since": { ".validate": "newData.isNumber()" },
-        "q": { ".validate": "newData.isNumber()" },
-        "qs": { ".validate": "newData.isNumber()" },
-        "nick": { ".validate": "newData.isString() && newData.val().length <= 10" },
-        "$other": { ".validate": false }
+        "tb": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 4"
+        },
+        "since": {
+          ".validate": "newData.isNumber()"
+        },
+        "q": {
+          ".validate": "newData.isNumber()"
+        },
+        "qs": {
+          ".validate": "newData.isNumber()"
+        },
+        "nick": {
+          ".validate": "newData.isString() && newData.val().length <= 10"
+        },
+        "$other": {
+          ".validate": false
+        }
       }
     },
     "seats": {
@@ -18,8 +30,40 @@
         ".validate": "$tb.matches(/^[0-4]$/)",
         "$key": {
           ".write": "auth != null && $key.beginsWith(auth.uid + '_')",
-          "msg": { ".validate": "newData.isString() && newData.val().length <= 10" },
-          "$other": { ".validate": "newData.isNumber() || newData.isBoolean()" }
+          "msg": {
+            ".validate": "newData.isString() && newData.val().length <= 10"
+          },
+          "$other": {
+            ".validate": "newData.isNumber() || newData.isBoolean()"
+          }
+        }
+      }
+    },
+    "rtc": {
+      "$tb": {
+        ".validate": "$tb.matches(/^[0-4]$/)",
+        "$to": {
+          ".read": "auth != null && $to.beginsWith(auth.uid + '_')",
+          ".write": "auth != null && $to.beginsWith(auth.uid + '_') && !newData.exists()",
+          "$id": {
+            ".write": "auth != null && ($to.beginsWith(auth.uid + '_') || (!data.exists() && newData.child('from').val().beginsWith(auth.uid + '_')))",
+            ".validate": "newData.hasChildren(['from', 'type'])",
+            "from": {
+              ".validate": "newData.isString() && newData.val().length < 80"
+            },
+            "type": {
+              ".validate": "newData.val() == 'offer' || newData.val() == 'answer' || newData.val() == 'ice'"
+            },
+            "sdp": {
+              ".validate": "newData.isString() && newData.val().length < 20000"
+            },
+            "c": {
+              ".validate": "newData.isString() && newData.val().length < 2000"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
         }
       }
     }

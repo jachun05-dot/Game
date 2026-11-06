@@ -9,6 +9,7 @@
 - `firebase-config.js`가 `null`이면 혼자 모드로 열린다(아래 "연결 안 됨 · 혼자 보는 중")
 
 ## 데이터 구조
+- `rtc/<테이블>/<받는 key>/<메시지>`: 음성 연결 신호(offer·answer·ice). 받는 사람만 읽고 읽으면 지운다
 - `lobby/<key>`: 누가 어디 앉았나 `{tb, since, q, qs, nick}` — 모두가 읽는다(테이블 인원, 대기 줄)
 - `seats/<테이블>/<key>`: 그 테이블 사람들의 담배 상태 `{lit, d, b, a, lt, ex, exA, mid, msg, v}` — 같은 테이블만 듣는다
 - `<key>` = `<익명 uid>_<탭 id>`. 규칙상 자기 줄만 쓸 수 있다. 창을 닫으면 서버가 지운다(onDisconnect)
@@ -26,3 +27,9 @@
 
 ## 로컬 시험
 Firebase 에뮬레이터(`firebase emulators:start --project demo-smoke --only auth,database`)를 띄우고 설정에 `emulator: true`, `databaseURL: "http://127.0.0.1:9000?ns=demo-smoke"`를 주면 브라우저 여러 개로 시험할 수 있다.
+
+## 음성대화
+- 같은 테이블 사람끼리 브라우저 대 브라우저(WebRTC, 그물형). key가 작은 쪽이 먼저 건다. 끊기면 8초 뒤 다시 건다
+- 듣기는 권한이 필요 없고, 마이크는 켤 때만 브라우저 권한을 묻는다. 끄면 마이크 장치를 놓는다
+- 오른쪽 위 버튼: 소리(효과음) / 마이크 / 음성 소리. 이름 앞 점 = 마이크 켬, 초록으로 빛나면 말하는 중
+- STUN만 쓴다(구글 공개 서버). 회사·학교 망이나 일부 모바일 망에서는 연결이 안 될 수 있다 — 필요하면 TURN 서버를 ICE 목록에 더한다

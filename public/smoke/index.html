@@ -26,7 +26,7 @@ body { margin: 0; font: 14px system-ui, sans-serif; }
 [hidden] { display: none !important; }
 body { background: var(--room); color: var(--ink); overflow: hidden; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
 #room { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
-#mute {
+#mute, .tool {
   position: fixed;
   top: calc(env(safe-area-inset-top, 0px) + 14px);
   right: max(14px, env(safe-area-inset-right, 0px));
@@ -34,9 +34,15 @@ body { background: var(--room); color: var(--ink); overflow: hidden; -webkit-use
   border: 1px solid var(--line); background: rgba(8, 7, 12, 0.35); color: var(--ink);
   display: grid; place-items: center; cursor: pointer; padding: 0; opacity: 0.6;
 }
-#mute:focus-visible { outline: 2px solid var(--neon); outline-offset: 2px; }
-#mute svg { width: 18px; height: 18px; }
-#mute .off { display: none; }
+#mute:focus-visible, .tool:focus-visible { outline: 2px solid var(--neon); outline-offset: 2px; }
+#mute svg, .tool svg { width: 18px; height: 18px; }
+#mute .off, .tool .off { display: none; }
+#micBtn { top: calc(env(safe-area-inset-top, 0px) + 58px); }
+#voiceBtn { top: calc(env(safe-area-inset-top, 0px) + 102px); }
+.tool[hidden] { display: none; }
+#micBtn[aria-pressed="true"] { color: var(--neon); border-color: var(--neon); opacity: 1; box-shadow: 0 0 10px rgba(255, 79, 163, 0.5); }
+#micBtn[aria-pressed="true"] .on, #voiceBtn[aria-pressed="true"] .on { display: none; }
+#micBtn[aria-pressed="true"] .off, #voiceBtn[aria-pressed="true"] .off { display: block; }
 #nick {
   position: fixed; inset: 0; display: grid; place-items: center; z-index: 5;
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
@@ -131,6 +137,14 @@ body { background: var(--room); color: var(--ink); overflow: hidden; -webkit-use
     <p>자리가 나면 순서대로 바로 들어가요</p>
   </div>
 </div>
+<button id="micBtn" class="tool" hidden aria-label="마이크 켜기" aria-pressed="false">
+  <svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/><path d="M4 4l16 16"/></svg>
+  <svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>
+</button>
+<button id="voiceBtn" class="tool" hidden aria-label="음성 소리 끄기" aria-pressed="false">
+  <svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="14" width="4" height="6" rx="1.5"/><rect x="17" y="14" width="4" height="6" rx="1.5"/></svg>
+  <svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="14" width="4" height="6" rx="1.5"/><rect x="17" y="14" width="4" height="6" rx="1.5"/><path d="M4 4l16 16"/></svg>
+</button>
 <button id="mute" aria-label="소리 끄기" aria-pressed="false">
   <svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a8.5 8.5 0 0 1 0 12"/></svg>
   <svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M17 9l5 6M22 9l-5 6"/></svg>
@@ -610,6 +624,16 @@ body { background: var(--room); color: var(--ink); overflow: hidden; -webkit-use
     ctx.font = '12px "Do Hyeon", "Apple SD Gothic Neo", sans-serif';
     ctx.textAlign = "center"; ctx.textBaseline = "top";
     const label = c.mine ? `${myNick} (나)` : (c.name || "누군가");
+    const micLive = c.mine ? voice.micOn : c.mic;
+    if (micLive) {
+      const w = ctx.measureText(label).width;
+      const dx = p.x - w / 2 - 8, dy = p.y + 7, sp = Math.min(1, (c.speak || 0) * 12);
+      ctx.save(); ctx.globalAlpha = c.alpha * (1 - c.lift);
+      if (sp > 0.05) { ctx.fillStyle = `rgba(80,255,190,${0.25 * sp})`; ctx.beginPath(); ctx.arc(dx, dy, 4 + sp * 5, 0, Math.PI * 2); ctx.fill(); }
+      ctx.fillStyle = sp > 0.05 ? "#5cffbe" : "rgba(207,234,242,0.6)";
+      ctx.beginPath(); ctx.arc(dx, dy, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
     ctx.fillStyle = c.mine ? "#ff9ccc" : "#cfeaf2";
     ctx.fillText(label, p.x, p.y);
     ctx.restore();
@@ -931,9 +955,143 @@ body { background: var(--room); color: var(--ink); overflow: hidden; -webkit-use
     return {
       presence(pr) { mine = pr; write(pr); return Promise.resolve(); },
       onPeers(fn) { peersFns.push(fn); setTimeout(emit, 0); return () => {}; },
-      onConnection(fn) { connFns.push(fn); return () => {}; }
+      onConnection(fn) { connFns.push(fn); return () => {}; },
+      db, key
     };
   }
+  // ---------- voice: everyone at your table, browser to browser ----------
+  // Each pair at a table opens one WebRTC audio link; the one with the smaller key calls.
+  // Offers, answers and network candidates travel through rtc/<table>/<to>/<msg> in the database.
+  // Listening needs no permission; the microphone is asked for only when you turn it on.
+  const voice = (() => {
+    const ICE = [{ urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] }];
+    let db = null, key = "", tb = -1, inbox = null, mic = null, actx = null, soundOn = true, localAn = null;
+    const conns = new Map(), lastTry = new Map();
+    function analyser(stream) {
+      try {
+        actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+        if (actx.state === "suspended") actx.resume();
+        const an = actx.createAnalyser(); an.fftSize = 512;
+        actx.createMediaStreamSource(stream).connect(an);
+        return { an, buf: new Float32Array(an.fftSize) };
+      } catch (e) { return null; }
+    }
+    function level(a) {
+      if (!a) return 0;
+      a.an.getFloatTimeDomainData(a.buf);
+      let sum = 0; for (const v of a.buf) sum += v * v;
+      return Math.sqrt(sum / a.buf.length);
+    }
+    const micTrack = () => (mic ? mic.getAudioTracks()[0] : null);
+    function send(to, m) { if (db && tb >= 0) db.ref(`rtc/${tb}/${to}`).push({ from: key, ...m }).catch(() => {}); }
+    function close(k) {
+      const c = conns.get(k); if (!c) return;
+      conns.delete(k);
+      try { c.pc.close(); } catch (e) {}
+      if (c.audio) { c.audio.srcObject = null; c.audio.remove(); }
+    }
+    function open(k, calling) {
+      const pc = new RTCPeerConnection({ iceServers: ICE });
+      const c = { pc, k, queue: [], audio: null, an: null };
+      conns.set(k, c); lastTry.set(k, Date.now());
+      pc.onicecandidate = (e) => { if (e.candidate) send(k, { type: "ice", c: JSON.stringify(e.candidate.toJSON()) }); };
+      pc.ontrack = (e) => {
+        const stream = e.streams[0] || new MediaStream([e.track]);
+        if (!c.audio) { c.audio = document.createElement("audio"); c.audio.autoplay = true; c.audio.setAttribute("playsinline", ""); c.audio.hidden = true; document.body.appendChild(c.audio); }
+        c.audio.srcObject = stream; c.audio.muted = !soundOn;
+        c.audio.play().catch(() => {});
+        c.an = analyser(stream);
+      };
+      pc.onconnectionstatechange = () => { if (pc.connectionState === "failed" || pc.connectionState === "closed") close(k); };
+      if (calling) {
+        const tr = pc.addTransceiver("audio", { direction: "sendrecv" });
+        if (micTrack()) tr.sender.replaceTrack(micTrack()).catch(() => {});
+        pc.createOffer().then((o) => pc.setLocalDescription(o))
+          .then(() => send(k, { type: "offer", sdp: pc.localDescription.sdp })).catch(() => close(k));
+      }
+      return c;
+    }
+    async function flush(c) { for (const cand of c.queue.splice(0)) { try { await c.pc.addIceCandidate(cand); } catch (e) {} } }
+    async function onMsg(m) {
+      if (!m || typeof m.from !== "string" || m.from === key) return;
+      let c = conns.get(m.from);
+      try {
+        if (m.type === "offer" && typeof m.sdp === "string") {
+          if (c) close(m.from);
+          c = open(m.from, false);
+          await c.pc.setRemoteDescription({ type: "offer", sdp: m.sdp });
+          for (const tr of c.pc.getTransceivers()) { tr.direction = "sendrecv"; if (micTrack()) await tr.sender.replaceTrack(micTrack()); }
+          await c.pc.setLocalDescription(await c.pc.createAnswer());
+          send(m.from, { type: "answer", sdp: c.pc.localDescription.sdp });
+          flush(c);
+        } else if (m.type === "answer" && c && typeof m.sdp === "string") {
+          await c.pc.setRemoteDescription({ type: "answer", sdp: m.sdp });
+          flush(c);
+        } else if (m.type === "ice" && c && typeof m.c === "string") {
+          const cand = JSON.parse(m.c);
+          if (c.pc.remoteDescription) await c.pc.addIceCandidate(cand); else c.queue.push(cand);
+        }
+      } catch (e) {}
+    }
+    return {
+      get micOn() { return !!mic; },
+      attach(r) { if (r && r.db && window.RTCPeerConnection) { db = r.db; key = r.key; } },
+      setTable(t) {
+        if (!db || t === tb) return;
+        for (const k of [...conns.keys()]) close(k);
+        if (inbox) { inbox.off(); inbox.onDisconnect().cancel(); inbox.remove().catch(() => {}); inbox = null; }
+        tb = t;
+        if (t < 0) return;
+        inbox = db.ref(`rtc/${t}/${key}`);
+        inbox.onDisconnect().remove();
+        inbox.on("child_added", (s) => { const m = s.val(); s.ref.remove().catch(() => {}); onMsg(m); });
+      },
+      // keep one link to each person listed; retry a dropped link after 8 seconds
+      sync(keys) {
+        if (!db || tb < 0) return;
+        const want = new Set(keys);
+        for (const k of [...conns.keys()]) if (!want.has(k)) close(k);
+        for (const k of keys) if (!conns.has(k) && key < k && Date.now() - (lastTry.get(k) || 0) > 8000) open(k, true);
+      },
+      async setMic(on) {
+        if (on && !mic) {
+          try { mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); }
+          catch (e) { mic = null; return false; }
+          localAn = analyser(mic);
+        } else if (!on && mic) { mic.getTracks().forEach((t) => t.stop()); mic = null; localAn = null; }
+        for (const c of conns.values()) for (const tr of c.pc.getTransceivers()) tr.sender.replaceTrack(micTrack()).catch(() => {});
+        return true;
+      },
+      setSound(on) { soundOn = on; for (const c of conns.values()) if (c.audio) { c.audio.muted = !on; if (on) c.audio.play().catch(() => {}); } },
+      levels() { const out = new Map(); for (const c of conns.values()) out.set(c.k, level(c.an)); return { mine: level(localAn), peers: out }; }
+    };
+  })();
+  function stepVoice(dt) {
+    const lv = voice.levels(), k = Math.min(1, dt * 12);
+    me.speak = (me.speak || 0) + (lv.mine - (me.speak || 0)) * k;
+    for (const [id, c] of others) { const v = lv.peers.get(id) || 0; c.speak = (c.speak || 0) + (v - (c.speak || 0)) * k; }
+  }
+  const micBtn = document.getElementById("micBtn"), voiceBtn = document.getElementById("voiceBtn");
+  function flashLabel(text) {
+    warnUntil = Date.now() + 2200;
+    tableLabel.textContent = text; tableLabel.classList.add("warn");
+    setTimeout(renderTableLabel, 2250);
+  }
+  micBtn.addEventListener("click", async () => {
+    const want = !voice.micOn;
+    const ok = await voice.setMic(want);
+    if (!ok) { flashLabel("마이크를 쓸 수 없어요 · 브라우저 권한을 확인해 주세요"); return; }
+    micBtn.setAttribute("aria-pressed", String(voice.micOn));
+    micBtn.setAttribute("aria-label", voice.micOn ? "마이크 끄기" : "마이크 켜기");
+    lastSent = ""; sendT = 0;
+  });
+  let voiceOn = true;
+  voiceBtn.addEventListener("click", () => {
+    voiceOn = !voiceOn; voice.setSound(voiceOn);
+    voiceBtn.setAttribute("aria-pressed", String(!voiceOn));
+    voiceBtn.setAttribute("aria-label", voiceOn ? "음성 소리 끄기" : "음성 소리 켜기");
+  });
+
   let room = null, lastSent = "", sendT = 0, linked = true;
   const num = (v, lo, hi, dflt) => (typeof v === "number" && isFinite(v)) ? Math.max(lo, Math.min(hi, v)) : dflt;
   function applyRemote(c, pr) {
@@ -950,7 +1108,7 @@ body { background: var(--room); color: var(--ink); overflow: hidden; -webkit-use
       c.tBurn = b; c.tAsh = a;
     }
     if (pr.lit && c.finished) c.finished = 0;
-    c.lit = !!pr.lit; c.drag = !!pr.d && c.lit;
+    c.lit = !!pr.lit; c.drag = !!pr.d && c.lit; c.mic = !!pr.mic;
   }
   const PER = SEATS.length;
   let lastPeers = [], myPeer = "", roomReady = false, warnUntil = 0;
@@ -1027,10 +1185,12 @@ body { background: var(--room); color: var(--ink); overflow: hidden; -webkit-use
     queueEl.hidden = !waiting;
     if (waiting) queueRank.textContent = `대기 ${qRank}번째`;
     for (const a of arrows) a.hidden = myTable < 0;
+    micBtn.hidden = voiceBtn.hidden = myTable < 0 || !room || !room.db;
     chatForm.hidden = myTable < 0;
   }
   function refresh() {
     if (myTable < 0) {
+      voice.setTable(-1);
       if (!roomReady || !myNick) { renderTableLabel(); renderQueue(); return; }
       if (!qSince) { qSince = now(); lastSent = ""; sendT = 0; }
       const n = counts(), free = TABLES * PER - n.reduce((a, b) => a + b, 0);
@@ -1060,6 +1220,7 @@ body { background: var(--room); color: var(--ink); overflow: hidden; -webkit-use
       refresh(); return;
     }
     const list = here.slice(0, PER - 1);
+    voice.setTable(myTable); voice.sync(list.map(p => p.peer));
     const keep = new Set(list.map(p => p.peer));
     for (const id of [...others.keys()]) if (!keep.has(id)) others.delete(id);
     list.forEach((p, i) => {
@@ -1100,6 +1261,7 @@ body { background: var(--room); color: var(--ink); overflow: hidden; -webkit-use
     sendT = 0.25;
     const pr = { v: 1, lit: me.lit, d: me.drag, b: Math.round(me.burnU * 100) / 100, a: Math.round(me.ashU * 100) / 100, lt: lightSeq, ex: exSeq, exA: Math.round(exAmt * 100) / 100 };
     if (myNick) pr.nick = myNick;
+    if (voice.micOn) pr.mic = true;
     if (myMid) { pr.mid = myMid; pr.msg = me.sayT > 0 ? me.say : ""; }
     if (myTable >= 0) { pr.tb = myTable; pr.since = mySince; }
     else if (qSince) { pr.q = 1; pr.qs = qSince; }
@@ -1111,6 +1273,7 @@ body { background: var(--room); color: var(--ink); overflow: hidden; -webkit-use
   (async () => {
     await Promise.resolve();
     try { room = await makeFirebaseRoom(window.SMOKE_FIREBASE); } catch (e) { room = null; }
+    voice.attach(room);
     if (!room) { roomReady = true; refresh(); return; }
     room.onPeers((ch) => syncPeers(ch.peers), () => {});
     let downT = null;
@@ -1165,6 +1328,7 @@ body { background: var(--room); color: var(--ink); overflow: hidden; -webkit-use
     stepRain(dt);
     if (R() < dt * 6) sfx.rainTick();
     stepChat(dt);
+    stepVoice(dt);
     pushPresence(dt);
   }
 
