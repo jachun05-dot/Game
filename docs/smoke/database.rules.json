@@ -1,0 +1,27 @@
+{
+  "rules": {
+    "lobby": {
+      ".read": "auth != null",
+      "$key": {
+        ".write": "auth != null && $key.beginsWith(auth.uid + '_')",
+        "tb": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 4" },
+        "since": { ".validate": "newData.isNumber()" },
+        "q": { ".validate": "newData.isNumber()" },
+        "qs": { ".validate": "newData.isNumber()" },
+        "nick": { ".validate": "newData.isString() && newData.val().length <= 10" },
+        "$other": { ".validate": false }
+      }
+    },
+    "seats": {
+      "$tb": {
+        ".read": "auth != null",
+        ".validate": "$tb.matches(/^[0-4]$/)",
+        "$key": {
+          ".write": "auth != null && $key.beginsWith(auth.uid + '_')",
+          "msg": { ".validate": "newData.isString() && newData.val().length <= 10" },
+          "$other": { ".validate": "newData.isNumber() || newData.isBoolean()" }
+        }
+      }
+    }
+  }
+}

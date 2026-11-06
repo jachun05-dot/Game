@@ -1,0 +1,1246 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#08070c">
+<title>사이버 흡연실</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="./firebase-config.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&display=swap">
+<style>
+/* Layout: one full-bleed night room on canvas — neon sign, rainy window, a table with an ashtray. No interface beyond a mute toggle. */
+:root {
+  padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+  --room: #08070c;
+  --ink: #e9e4f2;
+  --neon: #ff4fa3;
+  --line: rgba(233, 228, 242, 0.18);
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { margin: 0; font: 14px system-ui, sans-serif; }
+[hidden] { display: none !important; }
+body { background: var(--room); color: var(--ink); overflow: hidden; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+#room { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+#mute {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 14px);
+  right: max(14px, env(safe-area-inset-right, 0px));
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 1px solid var(--line); background: rgba(8, 7, 12, 0.35); color: var(--ink);
+  display: grid; place-items: center; cursor: pointer; padding: 0; opacity: 0.6;
+}
+#mute:focus-visible { outline: 2px solid var(--neon); outline-offset: 2px; }
+#mute svg { width: 18px; height: 18px; }
+#mute .off { display: none; }
+#nick {
+  position: fixed; inset: 0; display: grid; place-items: center; z-index: 5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  background: rgba(8, 7, 12, 0.55);
+}
+#nick[hidden] { display: none; }
+.arrow {
+  position: fixed; top: 63%; transform: translateY(-50%);
+  width: 40px; height: 56px; border-radius: 12px; padding: 0; cursor: pointer;
+  border: 1px solid var(--line); background: rgba(8, 7, 12, 0.35); color: var(--ink);
+  display: grid; place-items: center; opacity: 0.7;
+}
+.arrow svg { width: 20px; height: 20px; }
+.arrow.left { left: max(10px, env(safe-area-inset-left, 0px)); }
+.arrow.right { right: max(10px, env(safe-area-inset-right, 0px)); }
+.arrow:focus-visible { outline: 2px solid var(--neon); outline-offset: 2px; }
+#tableLabel {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
+  font: 15px "Do Hyeon", "Apple SD Gothic Neo", sans-serif; letter-spacing: 0.04em;
+  color: var(--ink); opacity: 0.75; white-space: nowrap; pointer-events: none;
+  font-variant-numeric: tabular-nums;
+}
+#tableLabel.warn { color: var(--neon); opacity: 1; }
+.arrow[hidden] { display: none; }
+#queue {
+  position: fixed; inset: 0; display: grid; place-items: center; z-index: 4; text-align: center;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  background: rgba(8, 7, 12, 0.6);
+  font-family: "Do Hyeon", "Apple SD Gothic Neo", sans-serif;
+}
+#queue[hidden] { display: none; }
+#chat {
+  position: fixed; left: 50%; transform: translateX(-50%); z-index: 3;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 48px);
+  display: flex; gap: 6px; width: min(calc(100% - 32px), 300px);
+}
+#chat[hidden] { display: none; }
+#chat input {
+  flex: 1; min-width: 0; font: 16px "Do Hyeon", "Apple SD Gothic Neo", sans-serif; color: var(--ink);
+  background: rgba(20, 16, 30, 0.7); border: 1px solid var(--line); border-radius: 999px; padding: 9px 14px;
+  -webkit-user-select: text; user-select: text;
+}
+#chat input:focus { outline: none; border-color: var(--neon); }
+#chat button {
+  position: relative; overflow: hidden; flex: none; width: 64px;
+  font: 15px "Do Hyeon", "Apple SD Gothic Neo", sans-serif; color: #08070c; background: var(--neon);
+  border: 0; border-radius: 999px; cursor: pointer;
+}
+#chat button:disabled { background: rgba(255, 79, 163, 0.25); color: var(--ink); cursor: default; }
+#chat button i { position: absolute; left: 0; bottom: 0; height: 3px; width: 0; background: var(--neon); }
+#chat button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+#queue .card { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+#queue h2 { margin: 0; font-weight: 400; font-size: 26px; color: var(--neon); text-shadow: 0 0 14px rgba(255, 79, 163, 0.7); }
+#queue .rank { font-size: 44px; color: var(--ink); font-variant-numeric: tabular-nums; }
+#queue p { margin: 0; font-size: 15px; color: var(--ink); opacity: 0.7; }
+#nick .card { display: flex; flex-direction: column; gap: 12px; width: min(100%, 300px); }
+#nick label { font: 20px "Do Hyeon", "Apple SD Gothic Neo", sans-serif; color: var(--neon); text-shadow: 0 0 12px rgba(255, 79, 163, 0.7); text-align: center; letter-spacing: 0.04em; }
+#nick input {
+  font: 18px "Do Hyeon", "Apple SD Gothic Neo", sans-serif; color: var(--ink); text-align: center;
+  background: rgba(20, 16, 30, 0.85); border: 1px solid rgba(255, 79, 163, 0.5); border-radius: 10px; padding: 12px;
+  -webkit-user-select: text; user-select: text;
+}
+#nick input:focus { outline: none; border-color: var(--neon); box-shadow: 0 0 0 3px rgba(255, 79, 163, 0.2); }
+#nick button { font: 17px "Do Hyeon", "Apple SD Gothic Neo", sans-serif; color: #08070c; background: var(--neon); border: 0; border-radius: 10px; padding: 11px; cursor: pointer; }
+#nick button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+#mute[aria-pressed="true"] .on { display: none; }
+#mute[aria-pressed="true"] .off { display: block; }
+</style>
+</head>
+<body>
+
+<canvas id="room" aria-label="비 오는 밤, 네온 간판 아래 재떨이와 담배 한 개비"></canvas>
+<form id="nick" hidden>
+  <div class="card">
+    <label for="nickInput">닉네임</label>
+    <input id="nickInput" maxlength="10" autocomplete="off" enterkeyhint="go">
+    <button type="submit">들어가기</button>
+  </div>
+</form>
+<button id="prevT" class="arrow left" aria-label="이전 테이블"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+<button id="nextT" class="arrow right" aria-label="다음 테이블"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+<div id="tableLabel" aria-live="polite"></div>
+<form id="chat" hidden autocomplete="off">
+  <input id="chatInput" maxlength="10" enterkeyhint="send" aria-label="한마디 (10글자)">
+  <button type="submit" id="chatSend">보내기<i id="chatBar"></i></button>
+</form>
+<div id="queue" hidden aria-live="polite">
+  <div class="card">
+    <h2>자리가 다 찼어요</h2>
+    <div class="rank" id="queueRank">대기 1번째</div>
+    <p>자리가 나면 순서대로 바로 들어가요</p>
+  </div>
+</div>
+<button id="mute" aria-label="소리 끄기" aria-pressed="false">
+  <svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a8.5 8.5 0 0 1 0 12"/></svg>
+  <svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M17 9l5 6M22 9l-5 6"/></svg>
+</button>
+
+<script>
+(() => {
+  const cv = document.getElementById("room"), ctx = cv.getContext("2d");
+  const off = () => { const c = document.createElement("canvas"); return [c, c.getContext("2d")]; };
+  const [bg, bgx] = off(), [sign, sgx] = off(), [puff, pfx] = off();
+  const R = Math.random;
+  const gauss = () => { let u = 0, v = 0; while (!u) u = R(); while (!v) v = R(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+  function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+
+  // soft smoke sprite
+  puff.width = puff.height = 64;
+  { const g = pfx.createRadialGradient(32, 32, 0, 32, 32, 32);
+    g.addColorStop(0, "rgba(255,255,255,1)"); g.addColorStop(0.4, "rgba(255,255,255,0.55)"); g.addColorStop(1, "rgba(255,255,255,0)");
+    pfx.fillStyle = g; pfx.fillRect(0, 0, 64, 64); }
+
+  // ---------- layout ----------
+  // Seats around the one shared ashtray, as angles on its rim. You always sit front-left;
+  // everyone else in the room takes the next free seat.
+  const SEATS = [Math.PI * 0.9, Math.PI * 0.1, Math.PI * 1.28, Math.PI * 1.72, Math.PI * 1.5, Math.PI * 0.55];
+  const FILTER0 = -0.55, PAPER0 = -0.25, FULL = 0.78;
+  let W, H, dpr, tableY, win, A, D, signY, signSize;
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = cv.clientWidth; H = cv.clientHeight;
+    for (const c of [cv, bg]) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
+    tableY = H * 0.6;
+    signY = Math.max(H * 0.085, 58);
+    signSize = Math.min(W * 0.13, 70);
+    const top = signY + signSize * 0.85;
+    win = { x: W * 0.08, y: top, w: W * 0.84, h: tableY - top - H * 0.04 };
+    const rx = Math.min(W * 0.3, 180, (H - tableY) * 0.55);
+    A = { cx: W * 0.5, cy: tableY + (H - tableY) * 0.42, rx, ry: rx * 0.33 };
+    D = rx * 0.085;
+    paintBg(); paintSign();
+    drops = []; for (let i = 0; i < 90; i++) drops.push(newGlassDrop(true));
+    for (const c of allCigs()) geo(c);
+  }
+  // place a cigarette on its seat: resting on the rim, tip pointing at the middle
+  function geo(c) {
+    const th = c.th, dx = -Math.cos(th), dy = -Math.sin(th) * A.ry / A.rx;
+    c.k = Math.hypot(dx, dy); c.ang = Math.atan2(dy, dx); c.cs = Math.cos(c.ang); c.sn = Math.sin(c.ang);
+    c.rest = { x: A.cx + Math.cos(th) * A.rx * 0.9, y: A.cy + Math.sin(th) * A.ry * 0.9 - D * 0.55 };
+  }
+  // where a cigarette is right now: resting on the rim, or lifted (yours to your lips at the bottom of the
+  // screen, other people's up toward where they sit), blended by c.lift.
+  // Yours goes in two beats: your hand reaches in and takes it (first 30% of lift), then brings it up.
+  const GRIP = FILTER0 + 0.16;
+  const smooth = (x) => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
+  const lerpAng = (a, b, t) => { let d = b - a; d = Math.atan2(Math.sin(d), Math.cos(d)); return a + d * t; };
+  function computePose(c) {
+    const rest = { x: c.rest.x, y: c.rest.y, ang: c.ang, k: c.k, s: 1 };
+    const t = smooth(c.lift);
+    let m;
+    if (c.mine) {
+      // seen from your own eyes: filter at your lips just below the screen, the rest pointing
+      // away from you, so it looks short, a little tilted, and thick at the near end
+      const sc = 2.1, ang = -1.78, k = 0.52;
+      const fx = W * 0.47, fy = H + D * sc * 0.6;
+      m = { ang, k, s: sc, x: fx - FILTER0 * A.rx * k * sc * Math.cos(ang), y: fy - FILTER0 * A.rx * k * sc * Math.sin(ang) };
+    } else {
+      const ox = Math.cos(c.th), oy = Math.sin(c.th);
+      const fx = A.cx + ox * A.rx * 1.5, fy = A.cy + oy * A.ry * 1.5 - A.rx * 0.6;
+      const ang = Math.atan2(-0.55, -ox * 0.9 || 0.01);
+      m = { ang, k: 1, s: 1, x: fx - FILTER0 * A.rx * Math.cos(ang), y: fy - FILTER0 * A.rx * Math.sin(ang) };
+    }
+    const lerp = (a, b) => a + (b - a) * t;
+    c.pose = t < 0.001 ? rest : { x: lerp(rest.x, m.x), y: lerp(rest.y, m.y) - Math.sin(Math.PI * t) * A.rx * 0.3,
+               ang: lerpAng(rest.ang, m.ang, t), k: lerp(rest.k, m.k), s: lerp(1, m.s) };
+    if (c.mine) {
+      if (c.lift <= 0.001) { c.hand = null; return; }
+      const g = P(c, GRIP);
+      const held = { x: g.x, y: g.y, ang: c.pose.ang, s: 0.85 + (c.pose.s - 1) / 1.1 * 0.35 };
+      if (c.lift >= 0.3) c.hand = held;
+      else {
+        const h = smooth(c.lift / 0.3), away = { x: W * 0.8, y: H + D * 26, ang: -1.5, s: 1.2 };
+        c.hand = { x: away.x + (held.x - away.x) * h, y: away.y + (held.y - away.y) * h, ang: lerpAng(away.ang, held.ang, h), s: away.s + (held.s - away.s) * h };
+      }
+    }
+  }
+
+  // ---------- your hand ----------
+  // a right hand seen from behind: cigarette between index and middle finger, ring and little
+  // finger curled, thumb tucked under. Drawn in a frame laid along the cigarette at the grip.
+  function drawHand(c, layer) {
+    const h = c.hand; if (!h) return;
+    const F = D * 9;
+    ctx.save();
+    ctx.translate(h.x, h.y); ctx.rotate(h.ang); ctx.scale(h.s, h.s);
+    // a dark silhouette against the room, only its edges catching the neon
+    const fill = ctx.createLinearGradient(0, -F * 0.4, 0, F * 2);
+    fill.addColorStop(0, "#1c1622"); fill.addColorStop(1, "#08060b");
+    const finger = (x0, y0, x1, y1, w, bend) => {
+      const mx = (x0 + x1) / 2 + bend * (y1 - y0), my = (y0 + y1) / 2 - bend * (x1 - x0);
+      ctx.lineCap = "round";
+      ctx.strokeStyle = "rgba(255,79,163,0.45)"; ctx.lineWidth = w + 1.6;
+      ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo(mx, my, x1, y1); ctx.stroke();
+      ctx.strokeStyle = fill; ctx.lineWidth = w;
+      ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo(mx, my, x1, y1); ctx.stroke();
+    };
+    if (layer === "back") {
+      ctx.fillStyle = fill; ctx.strokeStyle = "rgba(64,224,255,0.3)"; ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(-F * 0.1, F * 0.6);
+      ctx.quadraticCurveTo(-F * 0.55, F * 0.6, -F * 0.85, F * 1.05);
+      ctx.quadraticCurveTo(-F * 0.95, F * 1.35, -F * 0.8, F * 1.6);
+      ctx.lineTo(-F * 0.55, F * 2.6);
+      ctx.lineTo(F * 0.75, F * 2.4);
+      ctx.quadraticCurveTo(F * 0.45, F * 1.4, F * 0.28, F * 1.0);
+      ctx.quadraticCurveTo(F * 0.12, F * 0.62, -F * 0.1, F * 0.6);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      finger(F * 0.3, F * 1.15, F * 0.18, F * 0.42, D * 2.4, 0.12);
+      finger(-F * 0.45, F * 0.82, F * 0.02, -F * 0.42, D * 2.2, -0.08);
+    } else {
+      finger(-F * 0.18, F * 0.75, F * 0.28, -F * 0.36, D * 2.1, -0.08);
+    }
+    ctx.restore();
+  }
+
+  const P = (c, u) => { const q = c.pose || { x: c.rest.x, y: c.rest.y, ang: c.ang, k: c.k, s: 1 }, l = u * A.rx * q.k * q.s;
+    return { x: q.x + l * Math.cos(q.ang), y: q.y + l * Math.sin(q.ang) }; };
+
+  // ---------- static room ----------
+  function paintBg() {
+    const c = bgx, r = rng(3);
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // wall
+    const wall = c.createLinearGradient(0, 0, 0, tableY);
+    wall.addColorStop(0, "#0d0a14"); wall.addColorStop(1, "#130f1c");
+    c.fillStyle = wall; c.fillRect(0, 0, W, tableY);
+    // window: out-of-focus city at night
+    c.save();
+    c.beginPath(); c.rect(win.x, win.y, win.w, win.h); c.clip();
+    const sky = c.createLinearGradient(0, win.y, 0, win.y + win.h);
+    sky.addColorStop(0, "#0a0b22"); sky.addColorStop(0.55, "#1b1035"); sky.addColorStop(1, "#2a1230");
+    c.fillStyle = sky; c.fillRect(win.x, win.y, win.w, win.h);
+    // big soft glows of billboards behind the rain
+    for (const [col, fx, fy, fr] of [["255,60,160", 0.2, 0.55, 0.5], ["40,220,255", 0.78, 0.45, 0.45], ["255,170,60", 0.55, 0.85, 0.35], ["130,80,255", 0.4, 0.3, 0.4]]) {
+      const x = win.x + win.w * fx, y = win.y + win.h * fy, rad = win.w * fr;
+      const g = c.createRadialGradient(x, y, 0, x, y, rad);
+      g.addColorStop(0, `rgba(${col},0.28)`); g.addColorStop(1, `rgba(${col},0)`);
+      c.fillStyle = g; c.fillRect(win.x, win.y, win.w, win.h);
+    }
+    // blurry building masses
+    for (let i = 0; i < 9; i++) {
+      const bw = win.w * (0.08 + r() * 0.16), bx = win.x + r() * win.w - bw / 2, bh = win.h * (0.3 + r() * 0.6);
+      const g = c.createLinearGradient(0, win.y + win.h - bh, 0, win.y + win.h);
+      g.addColorStop(0, "rgba(6,6,16,0)"); g.addColorStop(0.15, "rgba(6,6,16,0.55)"); g.addColorStop(1, "rgba(6,6,16,0.85)");
+      c.fillStyle = g; c.fillRect(bx, win.y + win.h - bh, bw, bh);
+    }
+    // bokeh: city lights out of focus
+    const cols = ["255,79,163", "64,224,255", "255,190,90", "170,120,255", "255,255,255"];
+    for (let i = 0; i < 70; i++) {
+      const x = win.x + r() * win.w, y = win.y + win.h * (0.2 + r() * 0.8), rad = 3 + r() * win.w * 0.045;
+      const col = cols[(r() * cols.length) | 0], a = 0.08 + r() * 0.25;
+      const g = c.createRadialGradient(x, y, rad * 0.2, x, y, rad);
+      g.addColorStop(0, `rgba(${col},${a})`); g.addColorStop(0.85, `rgba(${col},${a * 0.6})`); g.addColorStop(1, `rgba(${col},0)`);
+      c.fillStyle = g; c.beginPath(); c.arc(x, y, rad, 0, Math.PI * 2); c.fill();
+    }
+    // glass haze
+    c.fillStyle = "rgba(120,110,160,0.06)"; c.fillRect(win.x, win.y, win.w, win.h);
+    c.restore();
+    // frame and mullion
+    c.strokeStyle = "#05040a"; c.lineWidth = 10; c.strokeRect(win.x, win.y, win.w, win.h);
+    c.lineWidth = 6; c.beginPath(); c.moveTo(win.x + win.w / 2, win.y); c.lineTo(win.x + win.w / 2, win.y + win.h); c.stroke();
+    c.strokeStyle = "rgba(255,79,163,0.18)"; c.lineWidth = 1; c.strokeRect(win.x - 5, win.y - 5, win.w + 10, win.h + 10);
+    // sill
+    c.fillStyle = "#07060c"; c.fillRect(win.x - 14, win.y + win.h + 4, win.w + 28, 8);
+    // pink spill from the sign on the wall
+    const spill = c.createRadialGradient(W / 2, signY, 0, W / 2, signY, W * 0.7);
+    spill.addColorStop(0, "rgba(255,79,163,0.14)"); spill.addColorStop(1, "rgba(255,79,163,0)");
+    c.fillStyle = spill; c.fillRect(0, 0, W, tableY);
+    // table
+    const tb = c.createLinearGradient(0, tableY, 0, H);
+    tb.addColorStop(0, "#1a1424"); tb.addColorStop(0.25, "#100c17"); tb.addColorStop(1, "#060509");
+    c.fillStyle = tb; c.fillRect(0, tableY, W, H - tableY);
+    c.fillStyle = "rgba(255,255,255,0.05)"; c.fillRect(0, tableY, W, 1);
+    // window reflected in the glossy table
+    c.save(); c.globalCompositeOperation = "lighter";
+    for (const [col, fx] of [["255,79,163", 0.25], ["64,224,255", 0.75]]) {
+      const x = win.x + win.w * fx;
+      const g = c.createLinearGradient(0, tableY, 0, tableY + (H - tableY) * 0.8);
+      g.addColorStop(0, `rgba(${col},0.12)`); g.addColorStop(1, `rgba(${col},0)`);
+      c.fillStyle = g; c.fillRect(x - win.w * 0.18, tableY, win.w * 0.36, H - tableY);
+    }
+    c.restore();
+    // ashtray shadow
+    const sh = c.createRadialGradient(A.cx, A.cy + A.ry * 1.05, 0, A.cx, A.cy + A.ry * 1.05, A.rx * 1.25);
+    sh.addColorStop(0, "rgba(0,0,0,0.7)"); sh.addColorStop(1, "rgba(0,0,0,0)");
+    c.fillStyle = sh; c.beginPath(); c.ellipse(A.cx, A.cy + A.ry * 1.05, A.rx * 1.25, A.ry * 0.7, 0, 0, Math.PI * 2); c.fill();
+    paintAshtrayBody(c);
+    // vignette
+    const v = c.createRadialGradient(W / 2, H * 0.55, Math.min(W, H) * 0.35, W / 2, H * 0.55, Math.max(W, H) * 0.8);
+    v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, "rgba(0,0,0,0.65)");
+    c.fillStyle = v; c.fillRect(0, 0, W, H);
+  }
+
+  function paintAshtrayBody(c) {
+    const { cx, cy, rx, ry } = A, hgt = ry * 0.85;
+    // side wall
+    c.beginPath();
+    c.ellipse(cx, cy, rx, ry, 0, 0, Math.PI);
+    c.lineTo(cx - rx * 0.94, cy + hgt);
+    c.ellipse(cx, cy + hgt, rx * 0.94, ry * 0.94, 0, Math.PI, 0, true);
+    c.closePath();
+    const side = c.createLinearGradient(cx - rx, 0, cx + rx, 0);
+    side.addColorStop(0, "#2b2633"); side.addColorStop(0.18, "#8c879a"); side.addColorStop(0.32, "#3a3442");
+    side.addColorStop(0.62, "#24202b"); side.addColorStop(0.85, "#5b8796"); side.addColorStop(1, "#1c1922");
+    c.fillStyle = side; c.fill();
+    // rim
+    const rim = c.createLinearGradient(cx - rx, cy - ry, cx + rx, cy + ry);
+    rim.addColorStop(0, "#c9c3d6"); rim.addColorStop(0.3, "#5d5768"); rim.addColorStop(0.7, "#3a3542"); rim.addColorStop(1, "#86c9da");
+    c.fillStyle = rim; c.beginPath(); c.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); c.fill();
+    // bowl
+    const bowl = c.createLinearGradient(0, cy - ry * 0.8, 0, cy + ry * 0.8);
+    bowl.addColorStop(0, "#050407"); bowl.addColorStop(1, "#1d1a22");
+    c.fillStyle = bowl; c.beginPath(); c.ellipse(cx, cy, rx * 0.8, ry * 0.8, 0, 0, Math.PI * 2); c.fill();
+    const floor = c.createRadialGradient(cx, cy + ry * 0.25, 0, cx, cy + ry * 0.25, rx * 0.6);
+    floor.addColorStop(0, "#2a2630"); floor.addColorStop(1, "#141217");
+    c.fillStyle = floor; c.beginPath(); c.ellipse(cx, cy + ry * 0.22, rx * 0.62, ry * 0.56, 0, 0, Math.PI * 2); c.fill();
+    // neon glints on the rim
+    c.lineWidth = 1.5;
+    c.strokeStyle = "rgba(255,79,163,0.55)"; c.beginPath(); c.ellipse(cx, cy, rx * 0.99, ry * 0.99, 0, Math.PI * 1.05, Math.PI * 1.35); c.stroke();
+    c.strokeStyle = "rgba(64,224,255,0.5)"; c.beginPath(); c.ellipse(cx, cy, rx * 0.99, ry * 0.99, 0, Math.PI * 1.7, Math.PI * 1.95); c.stroke();
+    // rest notches
+    for (const a of SEATS) {
+      const x = cx + Math.cos(a) * rx * 0.9, y = cy + Math.sin(a) * ry * 0.9;
+      c.fillStyle = "rgba(0,0,0,0.55)"; c.beginPath(); c.ellipse(x, y, rx * 0.06, ry * 0.1, 0, 0, Math.PI * 2); c.fill();
+    }
+  }
+
+  function paintSign() {
+    const s = signSize, w = Math.ceil(s * 4.2), h = Math.ceil(s * 1.7);
+    sign.width = Math.round(w * dpr); sign.height = Math.round(h * dpr);
+    const c = sgx; c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, w, h);
+    c.textAlign = "center"; c.textBaseline = "middle";
+    c.font = `${s}px "Do Hyeon", "Apple SD Gothic Neo", sans-serif`;
+    c.lineJoin = "round";
+    for (const [blur, lw, col] of [[s * 0.5, s * 0.08, "rgba(255,79,163,0.9)"], [s * 0.2, s * 0.06, "rgba(255,79,163,1)"], [0, s * 0.03, "#ffd2ea"]]) {
+      c.shadowColor = "#ff4fa3"; c.shadowBlur = blur; c.strokeStyle = col; c.lineWidth = lw;
+      c.strokeText("흡연실", w / 2, h * 0.42);
+    }
+    c.shadowBlur = s * 0.2; c.shadowColor = "#40e0ff"; c.fillStyle = "#bff6ff";
+    c.font = `500 ${Math.max(9, s * 0.17)}px ui-monospace, "SFMono-Regular", monospace`;
+    c.fillText("S M O K I N G   R O O M", w / 2, h * 0.84);
+  }
+
+  // ---------- state ----------
+  const KEY = "cyber-smoke-v1";
+  // five tables; you sit at one of them. Each table keeps its own butts in your browser.
+  const TABLES = 5;
+  let myTable = -1, mySince = 0;
+  let butts = [], ashPile = [], buttsByTable = {};
+  try {
+    const d = JSON.parse(localStorage.getItem(KEY) || "null");
+    if (d && d.tables && typeof d.tables === "object") buttsByTable = d.tables;
+    else if (d && Array.isArray(d.butts)) buttsByTable = { 0: d.butts };
+  } catch (e) {}
+  const saveButts = () => {
+    buttsByTable[Math.max(0, myTable)] = butts;
+    try { localStorage.setItem(KEY, JSON.stringify({ tables: buttsByTable })); } catch (e) {}
+  };
+  function loadTable(t) {
+    butts = Array.isArray(buttsByTable[t]) ? buttsByTable[t].slice(-30) : [];
+    ashPile = [];
+    for (let i = 0; i < Math.min(40, butts.length * 4); i++) ashPile.push([gauss() * 0.3, gauss() * 0.25, 0.03 + R() * 0.05, R()]);
+  }
+  loadTable(0);
+
+  function makeCig(th, mine) {
+    const c = { th, mine, burnU: FULL, ashU: FULL, tBurn: FULL, tAsh: FULL, lit: false, heat: 0, drag: false,
+                ashMax: 0.2 + R() * 0.1, finished: 0, alpha: mine ? 1 : 0, jiggle: 0, lift: 0, pose: null, lighter: null,
+                seen: false, lastLt: 0, lastEx: 0, lastMid: 0, name: "", say: "", sayT: 0 };
+    if (W) geo(c);
+    return c;
+  }
+  const me = makeCig(SEATS[0], true);
+  const others = new Map();            // peer id -> cigarette
+  const allCigs = () => [me, ...others.values()];
+
+  let pressing = false, pressT = 0, dragT = 0, lightSeq = 0, exSeq = 0, exAmt = 0;
+  let exhales = [];
+  let smoke = [], sparks = [], falling = [], crumbs = [], drops = [], streaks = [];
+  let clock = 0, signA = 1, signFlicker = 0, neonBurst = 0;
+
+  // ---------- smoke ----------
+  function flow(x, y, t) {
+    return Math.sin(y * 0.021 + t * 0.9 + Math.sin(x * 0.013 - t * 0.4) * 1.6) + 0.55 * Math.sin(y * 0.047 - t * 1.7 + x * 0.011);
+  }
+  function emitSide(e, n) {
+    for (let i = 0; i < n; i++) smoke.push({ x: e.x + gauss() * 0.6, y: e.y - 1, vx: gauss() * 2, vy: -14 - R() * 8, r: 0.8 + R() * 0.6, gr: 3 + R() * 3, a: 0.13, age: 0, life: 6 + R() * 3, b: 34, damp: 0.6, turb: 1 });
+  }
+  // your own breath comes from below the screen; other people's from where they sit
+  function emitExhale(c, n, env) {
+    for (let i = 0; i < n; i++) {
+      if (c.mine) {
+        smoke.push({ x: W * 0.5 + gauss() * W * 0.05, y: H + 30, vx: gauss() * 80, vy: -(420 + R() * 160) * env, r: 10 + R() * 10, gr: 38 + R() * 22, a: 0.07, age: 0, life: 4.5 + R() * 2, b: 14, damp: 1.25, turb: 0.6 });
+      } else {
+        const ox = Math.cos(c.th), oy = Math.sin(c.th);
+        const x = A.cx + ox * A.rx * 1.45 + gauss() * 6, y = A.cy + oy * A.ry * 1.4 - A.rx * 0.45 + gauss() * 4;
+        smoke.push({ x, y, vx: (-ox * 150 + gauss() * 40) * env, vy: (-oy * 40 - 60 - R() * 50) * env, r: 5 + R() * 5, gr: 24 + R() * 14, a: 0.075, age: 0, life: 4 + R() * 2, b: 16, damp: 1.4, turb: 0.6 });
+      }
+    }
+  }
+  function stepSmoke(dt) {
+    for (let i = smoke.length - 1; i >= 0; i--) {
+      const p = smoke[i]; p.age += dt;
+      if (p.age > p.life || p.y < -80) { smoke.splice(i, 1); continue; }
+      const t = Math.min(1, p.age / 1.4);
+      const turb = t * t * 70 * p.turb;
+      p.vx += flow(p.x, p.y, clock) * turb * dt;
+      p.vy -= p.b * dt * (1 - p.age / p.life);
+      const k = Math.exp(-p.damp * dt);
+      p.vx *= k; p.vy *= k;
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      p.r += p.gr * dt;
+    }
+    if (smoke.length > 2600) smoke.splice(0, smoke.length - 2600);
+  }
+  function drawSmoke() {
+    for (const p of smoke) {
+      const f = p.age / p.life;
+      const a = p.a * Math.min(1, p.age * 6) * (1 - f) * (1 - f * 0.3);
+      if (a < 0.003) continue;
+      ctx.globalAlpha = a;
+      const s = p.r * 2;
+      ctx.drawImage(puff, p.x - p.r, p.y - p.r, s, s);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // ---------- rain on the glass ----------
+  function newGlassDrop(anywhere) {
+    return { x: win.x + R() * win.w, y: anywhere ? win.y + R() * win.h : win.y - 4, r: 0.8 + Math.pow(R(), 2) * 3.2, slide: R() < 0.12, v: 0, trail: [] };
+  }
+  function stepRain(dt) {
+    if (R() < dt * 14) drops.push(newGlassDrop(true));
+    for (let i = drops.length - 1; i >= 0; i--) {
+      const d = drops[i];
+      if (d.slide || d.r > 3.2) {
+        d.v = Math.min(70, d.v + (R() < 0.05 ? 40 : -8) * dt + 6 * dt);
+        d.y += Math.max(0, d.v) * dt; d.x += gauss() * 0.15;
+        if (R() < 0.3) d.trail.push([d.x, d.y]);
+        if (d.trail.length > 60) d.trail.shift();
+      }
+      if (d.y > win.y + win.h + 4) drops.splice(i, 1);
+    }
+    if (drops.length > 160) drops.splice(0, drops.length - 160);
+    if (R() < dt * 50) streaks.push({ x: win.x + R() * win.w, y: win.y - 20, l: 12 + R() * 18, v: 700 + R() * 300 });
+    for (let i = streaks.length - 1; i >= 0; i--) { const s = streaks[i]; s.y += s.v * dt; if (s.y > win.y + win.h) streaks.splice(i, 1); }
+  }
+  function drawRain() {
+    ctx.save(); ctx.beginPath(); ctx.rect(win.x, win.y, win.w, win.h); ctx.clip();
+    ctx.strokeStyle = "rgba(200,210,255,0.12)"; ctx.lineWidth = 1;
+    ctx.beginPath(); for (const s of streaks) { ctx.moveTo(s.x, s.y); ctx.lineTo(s.x - 2, s.y + s.l); } ctx.stroke();
+    for (const d of drops) {
+      if (d.trail.length > 1) {
+        ctx.strokeStyle = "rgba(190,200,240,0.07)"; ctx.lineWidth = d.r * 0.6;
+        ctx.beginPath(); ctx.moveTo(d.trail[0][0], d.trail[0][1]); for (const [x, y] of d.trail) ctx.lineTo(x, y); ctx.stroke();
+      }
+      ctx.fillStyle = "rgba(20,14,34,0.45)"; ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "rgba(255,170,220,0.35)"; ctx.beginPath(); ctx.arc(d.x - d.r * 0.25, d.y + d.r * 0.35, d.r * 0.45, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.5)"; ctx.beginPath(); ctx.arc(d.x - d.r * 0.35, d.y - d.r * 0.35, Math.max(0.4, d.r * 0.22), 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // ---------- the ashtray contents ----------
+  function drawAshtrayContents() {
+    const { cx, cy, rx, ry } = A;
+    ctx.save();
+    ctx.beginPath(); ctx.ellipse(cx, cy, rx * 0.8, ry * 0.8, 0, 0, Math.PI * 2); ctx.clip();
+    for (const [u, v, s, t] of ashPile) {
+      ctx.fillStyle = t < 0.5 ? "#77726e" : "#4f4b48";
+      ctx.beginPath(); ctx.ellipse(cx + u * rx, cy + ry * 0.25 + v * ry, s * rx, s * rx * 0.4, 0, 0, Math.PI * 2); ctx.fill();
+    }
+    const d = D;
+    for (const b of butts) {
+      const x = cx + b.u * rx * 0.5, y = cy + ry * 0.2 + b.v * ry * 0.45;
+      ctx.save(); ctx.translate(x, y); ctx.rotate(b.a); ctx.scale(1, 0.75);
+      const L = rx * 0.34;
+      ctx.fillStyle = "#b9773e"; ctx.fillRect(-L / 2, -d / 2, L * 0.6, d);
+      ctx.fillStyle = "#d8d2c6"; ctx.fillRect(-L / 2 + L * 0.6, -d / 2, L * 0.25, d);
+      ctx.fillStyle = "#3a3330"; ctx.fillRect(-L / 2 + L * 0.85, -d / 2, L * 0.1, d);
+      ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.fillRect(-L / 2, 0, L * 0.95, d / 2);
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  // ---------- cigarette ----------
+  function drawCigarette(c) {
+    const q = c.pose, d = D, L = A.rx * q.k;
+    ctx.save();
+    // shadow on the rim / table, only while it rests there
+    if (c.lift < 0.5) {
+      ctx.globalAlpha = c.alpha * (1 - c.lift * 2);
+      ctx.strokeStyle = "rgba(0,0,0,0.35)"; ctx.lineWidth = d * 1.3; ctx.lineCap = "round";
+      const a0 = P(c, FILTER0), a1 = P(c, Math.max(c.burnU, c.ashU));
+      ctx.beginPath(); ctx.moveTo(a0.x + 2, a0.y + d * 1.6); ctx.lineTo(a1.x + 2, a1.y + d * 1.6); ctx.stroke();
+    }
+    ctx.globalAlpha = c.alpha;
+    ctx.translate(q.x, q.y);
+    ctx.rotate(q.ang + Math.sin(c.jiggle * 40) * c.jiggle * 0.06);
+    ctx.scale(q.s, q.s);
+    const x = (u) => u * L;
+    const shade = (c0, c1, c2) => { const g = ctx.createLinearGradient(0, -d / 2, 0, d / 2); g.addColorStop(0, c0); g.addColorStop(0.45, c1); g.addColorStop(1, c2); return g; };
+    // filter
+    ctx.fillStyle = shade("#e6a868", "#c98a4b", "#7b4f26");
+    ctx.beginPath(); ctx.roundRect(x(FILTER0), -d / 2, x(PAPER0 - FILTER0), d, [d * 0.25, 0, 0, d * 0.25]); ctx.fill();
+    const fr = rng(9); ctx.fillStyle = "rgba(120,70,30,0.45)";
+    for (let i = 0; i < 30; i++) ctx.fillRect(x(FILTER0) + fr() * x(PAPER0 - FILTER0), -d / 2 + fr() * d, 1, 1);
+    ctx.fillStyle = "#d9b25c"; ctx.fillRect(x(PAPER0) - 1.5, -d / 2, 1.5, d);
+    // paper
+    if (c.burnU > PAPER0) {
+      ctx.fillStyle = shade("#ffffff", "#ece8df", "#a9a49c");
+      ctx.fillRect(x(PAPER0), -d / 2, x(c.burnU - PAPER0), d);
+      if (c.lit || c.finished || c.ashU > c.burnU + 0.001 || c.burnU < FULL - 0.005) {
+        const sc = ctx.createLinearGradient(x(c.burnU) - d * 0.9, 0, x(c.burnU), 0);
+        sc.addColorStop(0, "rgba(90,60,30,0)"); sc.addColorStop(0.7, "rgba(90,60,30,0.55)"); sc.addColorStop(1, "rgba(30,20,15,0.95)");
+        ctx.fillStyle = sc; ctx.fillRect(x(c.burnU) - d * 0.9, -d / 2, d * 0.9, d);
+      }
+    }
+    // ash still attached
+    if (c.ashU > c.burnU + 0.002) {
+      const len = x(c.ashU - c.burnU), ar = rng(Math.floor(c.ashU * 1000));
+      ctx.fillStyle = shade("#b7b2ab", "#8f8a84", "#55514d");
+      ctx.beginPath();
+      ctx.moveTo(x(c.burnU), -d / 2 * 0.96);
+      ctx.lineTo(x(c.burnU) + len, -d / 2 * (0.9 + ar() * 0.1));
+      ctx.lineTo(x(c.burnU) + len + d * 0.12, -d * 0.1);
+      ctx.lineTo(x(c.burnU) + len, d / 2 * (0.88 + ar() * 0.1));
+      ctx.lineTo(x(c.burnU), d / 2 * 0.96);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = "rgba(60,56,52,0.5)"; ctx.lineWidth = 0.8;
+      for (let s = d * 0.35; s < len; s += d * (0.3 + ar() * 0.3)) { ctx.beginPath(); ctx.moveTo(x(c.burnU) + s, -d / 2 * 0.9); ctx.lineTo(x(c.burnU) + s + (ar() - 0.5) * 2, d / 2 * 0.9); ctx.stroke(); }
+    }
+    // ember
+    if (c.lit || c.heat > 0.02) {
+      const e = x(c.burnU), hh = Math.min(1, c.heat);
+      const g = ctx.createRadialGradient(e, 0, 0, e, 0, d * 0.75);
+      g.addColorStop(0, `rgba(255,${200 + 50 * hh},${120 + 100 * hh},${0.6 + 0.4 * hh})`);
+      g.addColorStop(0.45, `rgba(255,${80 + 60 * hh},20,${0.5 + 0.4 * hh})`);
+      g.addColorStop(1, "rgba(120,20,5,0)");
+      ctx.fillStyle = g; ctx.fillRect(e - d * 0.8, -d * 0.6, d * 1.6, d * 1.2);
+    }
+    ctx.restore();
+  }
+
+  function drawLightGlow(c) {
+    if (c.heat < 0.02) return;
+    const e = P(c, c.burnU);
+    ctx.save(); ctx.globalCompositeOperation = "lighter";
+    const rad = A.rx * (0.6 + c.heat * 0.8);
+    const g = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, rad);
+    g.addColorStop(0, `rgba(255,110,40,${0.2 * c.heat})`); g.addColorStop(1, "rgba(255,110,40,0)");
+    ctx.fillStyle = g; ctx.fillRect(e.x - rad, e.y - rad, rad * 2, rad * 2);
+    ctx.restore();
+  }
+
+  // everyone's nickname under their cigarette; yours is marked (나) and can be tapped to change
+  function labelPos(c) {
+    const p = P(c, FILTER0 + 0.12);
+    p.x = Math.max(40, Math.min(W - 40, p.x));
+    p.y += D * 1.4;
+    return p;
+  }
+  function drawLabel(c) {
+    if ((c.mine && !myNick) || c.lift > 0.02) return;
+    const p = labelPos(c);
+    ctx.save();
+    ctx.globalAlpha = 0.75 * c.alpha * (1 - c.lift);
+    ctx.font = '12px "Do Hyeon", "Apple SD Gothic Neo", sans-serif';
+    ctx.textAlign = "center"; ctx.textBaseline = "top";
+    const label = c.mine ? `${myNick} (나)` : (c.name || "누군가");
+    ctx.fillStyle = c.mine ? "#ff9ccc" : "#cfeaf2";
+    ctx.fillText(label, p.x, p.y);
+    ctx.restore();
+  }
+
+  // ---------- lighter ----------
+  function drawLighter(c) {
+    const L0 = c.lighter;
+    if (!L0) return;
+    const t = L0.t, e = P(c, c.burnU), s = A.rx;
+    let k;
+    if (t < 0.35) k = 1 - Math.pow(1 - t / 0.35, 3);
+    else if (t < 1.35) k = 1;
+    else k = Math.max(0, 1 - Math.pow((t - 1.35) / 0.35, 2));
+    const bw = s * 0.26, bh = s * 0.4;
+    const fx = e.x + s * 0.02, fy = e.y + D * 0.6;
+    const side = c.mine ? 1 : Math.sign(Math.cos(c.th)) || 1;
+    const lx = fx - bw * 0.5 + (1 - k) * s * 1.2 * side, ly = fy + s * 0.05 + (1 - k) * s * 0.6;
+    ctx.save();
+    if (L0.flame > 0) {
+      const fh = s * 0.2 * L0.flame * (0.9 + Math.sin(clock * 31) * 0.05 + Math.sin(clock * 17) * 0.05);
+      const bx = lx + bw * 0.5, by = ly - 2;
+      ctx.globalCompositeOperation = "lighter";
+      const glow = ctx.createRadialGradient(bx, by - fh * 0.5, 0, bx, by - fh * 0.5, s * 0.9);
+      glow.addColorStop(0, `rgba(255,170,70,${0.35 * L0.flame})`); glow.addColorStop(1, "rgba(255,170,70,0)");
+      ctx.fillStyle = glow; ctx.fillRect(bx - s, by - s, s * 2, s * 2);
+      ctx.globalCompositeOperation = "source-over";
+      const sway = Math.sin(clock * 9) * fh * 0.06;
+      const fg = ctx.createLinearGradient(0, by, 0, by - fh);
+      fg.addColorStop(0, "rgba(80,140,255,0.9)"); fg.addColorStop(0.18, "rgba(255,240,200,0.95)"); fg.addColorStop(0.6, "rgba(255,160,50,0.9)"); fg.addColorStop(1, "rgba(255,90,20,0)");
+      ctx.fillStyle = fg;
+      ctx.beginPath(); ctx.moveTo(bx - fh * 0.16, by);
+      ctx.quadraticCurveTo(bx - fh * 0.2, by - fh * 0.5, bx + sway, by - fh);
+      ctx.quadraticCurveTo(bx + fh * 0.2, by - fh * 0.5, bx + fh * 0.16, by); ctx.closePath(); ctx.fill();
+    }
+    const body = ctx.createLinearGradient(lx, 0, lx + bw, 0);
+    body.addColorStop(0, "#5a5866"); body.addColorStop(0.3, "#d9d6e2"); body.addColorStop(0.5, "#8e8b98"); body.addColorStop(0.8, "#c9f0f8"); body.addColorStop(1, "#4a4855");
+    ctx.fillStyle = body; ctx.beginPath(); ctx.roundRect(lx, ly + bh * 0.18, bw, bh * 0.82, bw * 0.12); ctx.fill();
+    ctx.fillStyle = "#9a97a6"; ctx.fillRect(lx + bw * 0.22, ly - bh * 0.02, bw * 0.56, bh * 0.2);
+    ctx.fillStyle = "rgba(0,0,0,0.5)"; for (let i = 0; i < 3; i++) ctx.fillRect(lx + bw * (0.3 + i * 0.16), ly + bh * 0.04, bw * 0.08, bh * 0.05);
+    ctx.save(); ctx.translate(lx + bw, ly + bh * 0.18); ctx.rotate(L0.lid * 1.9);
+    ctx.fillStyle = body; ctx.beginPath(); ctx.roundRect(-bw, -bh * 0.34, bw, bh * 0.34, [bw * 0.12, bw * 0.12, 0, 0]); ctx.fill();
+    ctx.restore();
+    ctx.fillStyle = "rgba(255,79,163,0.35)"; ctx.fillRect(lx + 1, ly + bh * 0.25, 1.5, bh * 0.7);
+    ctx.restore();
+  }
+
+  // ---------- actions ----------
+  const vol = (c) => c.mine ? 1 : 0.45;
+  function startLighter(c) { c.lighter = { t: 0, flame: 0, lid: 0, struck: false, closed: false, opened: false, h: null }; }
+  function stepLighter(c, dt) {
+    const L = c.lighter; if (!L) return;
+    L.t += dt;
+    const v = vol(c);
+    if (!L.opened && L.t > 0.12) { L.opened = true; sfx.at(v, () => sfx.open()); }
+    L.lid = Math.min(1, L.t / 0.15);
+    if (!L.struck && L.t > 0.4) { L.struck = true; sfx.at(v, () => { sfx.strike(); L.h = sfx.flame(); }); }
+    if (L.struck && L.t < 1.25) L.flame = Math.min(1, L.flame + dt * 8);
+    if (L.t > 0.75 && L.t < 1.25) { c.heat = Math.max(c.heat, (L.t - 0.75) * 1.6); if (R() < dt * 25) sfx.at(v, () => sfx.crackle(0.08)); }
+    if (c.mine && L.t > 0.95 && !c.lit && !c.finished) c.lit = true;
+    if (L.t > 1.25 && L.flame > 0) { L.flame = Math.max(0, L.flame - dt * 10); if (L.flame === 0) { sfx.flameOff(L.h); L.h = null; } }
+    if (L.t > 1.32 && !L.closed) { L.closed = true; sfx.at(v, () => sfx.close()); }
+    if (L.t > 1.3) L.lid = Math.max(0, 1 - (L.t - 1.3) / 0.06);
+    if (L.t > 1.7) { if (L.h) sfx.flameOff(L.h); c.lighter = null; }
+  }
+  function dropAsh(c) {
+    const a = P(c, c.burnU), b = P(c, c.ashU);
+    falling.push({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, vy: 0, vx: (R() - 0.5) * 10, rot: c.ang, vr: (R() - 0.5) * 3, len: (c.ashU - c.burnU) * A.rx * c.k, v: vol(c) });
+    c.ashU = c.burnU; c.tAsh = c.burnU; c.ashMax = 0.16 + R() * 0.12;
+  }
+  function addButt(c) {
+    butts.push({ u: (R() - 0.5) * 1.4, v: (R() - 0.5) * 1.2, a: R() * Math.PI * 2 });
+    if (butts.length > 30) butts.shift();
+    saveButts();
+    sfx.at(vol(c), () => sfx.buttDrop());
+  }
+  function resetCig(c) {
+    if (c.ashU > c.burnU + 0.01) dropAsh(c);
+    c.burnU = c.tBurn = FULL; c.ashU = c.tAsh = FULL; c.heat = 0; c.finished = 0; c.alpha = 0; c.lit = false;
+    c.ashMax = 0.2 + R() * 0.1;
+  }
+  function startExhale(c, amount) {
+    exhales.push({ c, t: 0, amount });
+    sfx.at(c.mine ? 1 : 0.5, () => sfx.exhale(amount));
+  }
+
+  // burning, smoke and ember for any cigarette, yours or someone else's
+  function stepCig(c, dt) {
+    if (c.mine) {
+      if (c.lit) {
+        c.burnU -= (FULL - PAPER0) / 360 * (c.drag && c.lift > 0.85 ? 5 : 1) * dt;
+        if (c.ashU - c.burnU > c.ashMax && c.lift < 0.05) dropAsh(c);
+        if (c.burnU <= PAPER0 + 0.03) {
+          c.lit = false; c.finished = 0.0001; sfx.burn(false);
+          if (c.drag) { c.drag = false; sfx.inhale(false); }
+        }
+      }
+      if (c.finished) { c.finished += dt; if (c.finished > 2.6) { addButt(c); resetCig(c); } }
+    } else {
+      c.burnU += (c.tBurn - c.burnU) * Math.min(1, dt * 2);
+      c.ashU = Math.max(c.burnU, c.tAsh);
+      if (!c.lit && c.burnU <= PAPER0 + 0.05 && !c.finished) c.finished = 0.0001;
+      if (c.finished) c.finished += dt;
+    }
+    c.lift = c.drag ? Math.min(1, c.lift + dt * (c.mine ? 2 : 2.4)) : Math.max(0, c.lift - dt * (c.mine ? 2 : 2.2));
+    computePose(c);
+    const drawing = c.drag && c.lift > 0.85;
+    const target = c.lit ? (drawing ? 1 : 0.33 + 0.07 * Math.sin(clock * 2.3 + c.th * 5) + 0.04 * Math.sin(clock * 7.1 + c.th)) : 0;
+    c.heat += (target - c.heat) * Math.min(1, dt * (drawing ? 4 : 2));
+    const e = P(c, c.burnU);
+    if (c.lit) {
+      const emit = (drawing ? 6 : 40) * dt;
+      emitSide(e, Math.floor(emit) + (R() < emit % 1 ? 1 : 0));
+      const v = vol(c);
+      if (drawing && R() < dt * 30) sfx.at(v, () => sfx.crackle(0.05 + R() * 0.12));
+      if (!drawing && R() < dt * 0.8) sfx.at(v, () => sfx.crackle(0.03 + R() * 0.04));
+      if (drawing && R() < dt * 4) sparks.push({ x: e.x, y: e.y, vx: gauss() * 20, vy: -20 - R() * 30, t: 0, life: 0.3 + R() * 0.4 });
+    } else if (c.finished && c.finished < 2.2 && R() < dt * 18 * (1 - c.finished / 2.2)) emitSide(e, 1);
+    if (c.alpha < 1) c.alpha = Math.min(1, c.alpha + dt * 1.2);
+    c.jiggle = Math.max(0, c.jiggle - dt);
+    stepLighter(c, dt);
+  }
+
+  // ---------- sound ----------
+  const sfx = (() => {
+    let mul = 1, ac = null, master, room, noise, brown, inh = null, hiss = null, buzzGain = null, rainGain = null;
+    function makeNoise(sec, brownish) {
+      const b = ac.createBuffer(1, Math.floor(ac.sampleRate * sec), ac.sampleRate), d = b.getChannelData(0);
+      let last = 0;
+      for (let i = 0; i < d.length; i++) { const w = R() * 2 - 1; if (brownish) { last = (last + 0.02 * w) / 1.02; d[i] = last * 3.5; } else d[i] = w; }
+      return b;
+    }
+    function makeIR(sec) {
+      const len = Math.floor(ac.sampleRate * sec), ir = ac.createBuffer(2, len, ac.sampleRate);
+      for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); let lp = 0;
+        for (let i = 0; i < len; i++) { const t = i / ac.sampleRate; lp += (0.5 * Math.exp(-t * 4) + 0.05) * ((R() * 2 - 1) - lp); d[i] = lp * Math.exp(-t / 0.18); } }
+      return ir;
+    }
+    function init() {
+      if (ac) return;
+      try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
+      const comp = ac.createDynamicsCompressor(); comp.threshold.value = -16; comp.ratio.value = 3;
+      master = ac.createGain(); master.gain.value = muted ? 0 : 1; master.connect(comp); comp.connect(ac.destination);
+      const conv = ac.createConvolver(); conv.buffer = makeIR(0.9);
+      const wet = ac.createGain(); wet.gain.value = 0.35; room = ac.createGain(); room.connect(conv); conv.connect(wet); wet.connect(master);
+      noise = makeNoise(2, false); brown = makeNoise(4, true);
+      // rain against the glass
+      const rn = loop(noise), rbp = ac.createBiquadFilter(); rbp.type = "bandpass"; rbp.frequency.value = 2200; rbp.Q.value = 0.35;
+      const rlp = ac.createBiquadFilter(); rlp.type = "lowpass"; rlp.frequency.value = 5000;
+      rainGain = ac.createGain(); rainGain.gain.value = 0.045; rn.connect(rbp); rbp.connect(rlp); rlp.connect(rainGain); rainGain.connect(master);
+      // room tone and the city outside
+      const rt = loop(brown), rtl = ac.createBiquadFilter(); rtl.type = "lowpass"; rtl.frequency.value = 180;
+      const rtg = ac.createGain(); rtg.gain.value = 0.11; rt.connect(rtl); rtl.connect(rtg); rtg.connect(master);
+      // neon transformer hum
+      const hum = ac.createOscillator(); hum.type = "sawtooth"; hum.frequency.value = 120;
+      const hbp = ac.createBiquadFilter(); hbp.type = "bandpass"; hbp.frequency.value = 360; hbp.Q.value = 3;
+      buzzGain = ac.createGain(); buzzGain.gain.value = 0.004; hum.connect(hbp); hbp.connect(buzzGain); buzzGain.connect(master); hum.start();
+    }
+    function loop(buf) { const s = ac.createBufferSource(); s.buffer = buf; s.loop = true; s.start(0, R() * buf.duration); return s; }
+    function out(wetAmt) { const g = ac.createGain(); g.gain.value = mul; g.connect(master); if (wetAmt) { const s = ac.createGain(); s.gain.value = wetAmt; g.connect(s); s.connect(room); } return g; }
+    function burst(dest, t, dur, vol, type, f, q) {
+      const s = ac.createBufferSource(); s.buffer = noise;
+      const fl = ac.createBiquadFilter(); fl.type = type; fl.frequency.value = f; fl.Q.value = q || 0.7;
+      const g = ac.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + Math.min(0.002, dur * 0.2)); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      s.connect(fl); fl.connect(g); g.connect(dest); s.start(t, R() * 1.5, dur + 0.02);
+    }
+    function ping(dest, t, f, tau, vol) {
+      const o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + 0.001); g.gain.setTargetAtTime(0.0001, t + 0.001, tau);
+      o.connect(g); g.connect(dest); o.start(t); o.stop(t + tau * 8);
+    }
+    const ok = () => ac && ac.state !== "closed";
+    return {
+      init, get ready() { return !!ac; },
+      resume() { if (ac && ac.state === "suspended") ac.resume(); },
+      setMuted(m) { if (master) master.gain.setTargetAtTime(m ? 0 : 1, ac.currentTime, 0.05); },
+      neon(a) { if (buzzGain) buzzGain.gain.setTargetAtTime(0.004 * a, ac.currentTime, 0.01); },
+      // zippo: lid flips open with a bright clink
+      open() { if (!ok()) return; const t = ac.currentTime + 0.01, o = out(0.3);
+        burst(o, t, 0.006, 0.25, "highpass", 3000);
+        for (const [f, v] of [[2870, 0.06], [4130, 0.05], [5410, 0.035], [7620, 0.02]]) ping(o, t, f * (0.98 + R() * 0.04), 0.03 + R() * 0.03, v); },
+      // flint wheel rasp, then the flame catching
+      strike() { if (!ok()) return; const t = ac.currentTime + 0.01, o = out(0.3);
+        for (let i = 0; i < 7; i++) burst(o, t + i * 0.006 + R() * 0.003, 0.008, 0.18 * (1 - i / 9), "bandpass", 3200 + R() * 1500, 2);
+        burst(o, t + 0.03, 0.25, 0.09, "lowpass", 700, 0.7); },
+      flame() { if (!ok()) return null;
+        const s = loop(noise), lp = ac.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 520;
+        const g = ac.createGain(); g.gain.value = 0.0001; g.gain.setTargetAtTime(0.05, ac.currentTime, 0.04);
+        s.connect(lp); lp.connect(g); g.connect(out(0)); return [s, g]; },
+      flameOff(h) { if (!h || !ok()) return; const [s, g] = h; g.gain.setTargetAtTime(0.0001, ac.currentTime, 0.03); s.stop(ac.currentTime + 0.3); },
+      at(v, fn) { const m = mul; mul = v; try { return fn(); } finally { mul = m; } },
+      // lid snapped shut: a lower, duller clunk
+      close() { if (!ok()) return; const t = ac.currentTime + 0.01, o = out(0.3);
+        burst(o, t, 0.02, 0.22, "lowpass", 1400); ping(o, t, 1760, 0.02, 0.05); ping(o, t, 2590, 0.015, 0.03); },
+      // one crackle of tobacco burning
+      crackle(v) { if (!ok()) return; const t = ac.currentTime + R() * 0.01, o = out(0.15);
+        burst(o, t, 0.0008 + R() * 0.0015, v, "highpass", 2200 + R() * 3000); },
+      // the soft hiss while paper and tobacco burn hard
+      burn(on) { if (!ok()) return;
+        if (on && !hiss) { const s = loop(noise), bp = ac.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 5200; bp.Q.value = 0.9;
+          const g = ac.createGain(); g.gain.value = 0.0001; g.gain.setTargetAtTime(0.012, ac.currentTime, 0.2); s.connect(bp); bp.connect(g); g.connect(master); hiss = [s, g]; }
+        else if (!on && hiss) { hiss[1].gain.setTargetAtTime(0.0001, ac.currentTime, 0.1); hiss[0].stop(ac.currentTime + 0.6); hiss = null; } },
+      // drawing air through the cigarette
+      inhale(on) { if (!ok()) return;
+        if (on && !inh) { const s = loop(noise), bp = ac.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 900; bp.Q.value = 0.9;
+          bp.frequency.setTargetAtTime(1500, ac.currentTime, 0.8);
+          const g = ac.createGain(); g.gain.value = 0.0001; g.gain.setTargetAtTime(0.035, ac.currentTime, 0.25);
+          s.connect(bp); bp.connect(g); g.connect(master); inh = [s, g]; }
+        else if (!on && inh) { inh[1].gain.setTargetAtTime(0.0001, ac.currentTime, 0.06); inh[0].stop(ac.currentTime + 0.4); inh = null; } },
+      // a long breath out, lower and softer than the drag
+      exhale(amount) { if (!ok()) return; const t = ac.currentTime + 0.18, dur = 1.2 + amount * 1.6;
+        const s = ac.createBufferSource(); s.buffer = noise; s.loop = true;
+        const bp = ac.createBiquadFilter(); bp.type = "bandpass"; bp.Q.value = 0.6; bp.frequency.setValueAtTime(700, t); bp.frequency.linearRampToValueAtTime(420, t + dur);
+        const lp = ac.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 2200;
+        const g = ac.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.06 + amount * 0.04, t + 0.18);
+        g.gain.setTargetAtTime(0.0001, t + dur * 0.45, dur * 0.25);
+        s.connect(bp); bp.connect(lp); lp.connect(g); g.connect(out(0.3));
+        s.start(t); s.stop(t + dur + 0.6); },
+      // finger tapping the cigarette
+      tap() { if (!ok()) return; const t = ac.currentTime + 0.005, o = out(0.2); burst(o, t, 0.012, 0.12, "bandpass", 900, 1.2); },
+      // a clump of ash landing in the tray
+      ash(size) { if (!ok()) return; const t = ac.currentTime + 0.005, o = out(0.2);
+        burst(o, t, 0.03, 0.05 + size * 0.1, "lowpass", 700); for (let i = 0; i < 4; i++) burst(o, t + R() * 0.04, 0.002, 0.03, "highpass", 2500); },
+      // the butt pressed into the metal tray
+      buttDrop() { if (!ok()) return; const t = ac.currentTime + 0.01, o = out(0.3);
+        burst(o, t, 0.05, 0.08, "lowpass", 900); ping(o, t, 3150, 0.025, 0.04); ping(o, t, 4720, 0.018, 0.025);
+        for (let i = 0; i < 6; i++) burst(o, t + 0.02 + R() * 0.15, 0.002, 0.05, "highpass", 2500); },
+      // single raindrop tick on the glass
+      rainTick() { if (!ok()) return; const t = ac.currentTime + R() * 0.02, o = out(0.1);
+        burst(o, t, 0.003, 0.02 + R() * 0.03, "bandpass", 3500 + R() * 3000, 1.5); }
+    };
+  })();
+
+  // ---------- the room: everyone who has this page open right now ----------
+  // nicknames: typed by each person, kept in their browser, shared through presence
+  const NICK_KEY = "cyber-smoke-nick";
+  const cleanNick = (v) => typeof v === "string" ? v.replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g, "").trim().slice(0, 10) : "";
+  let myNick = "";
+  try { myNick = cleanNick(localStorage.getItem(NICK_KEY) || ""); } catch (e) {}
+  const nickForm = document.getElementById("nick"), nickInput = document.getElementById("nickInput");
+  function openNick() { nickInput.value = myNick; nickForm.hidden = false; setTimeout(() => nickInput.focus(), 50); }
+  nickForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const v = cleanNick(nickInput.value);
+    if (!v) { nickInput.focus(); return; }
+    myNick = v; nickForm.hidden = true; nickInput.blur();
+    refresh();
+    try { localStorage.setItem(NICK_KEY, v); } catch (err) {}
+    if (!sfx.ready) sfx.init(); sfx.resume();
+  });
+  if (!myNick) openNick();
+
+  // ---------- the room, over Firebase Realtime Database ----------
+  // lobby/<key>   : who is here and where they sit (table, since, waiting line, nickname) — everyone reads it
+  // seats/<t>/<key>: the cigarette state of everyone at table t — only that table listens
+  // <key> is "<anonymous uid>_<tab id>", so each tab is its own person and can only write its own rows.
+  let clockOffset = 0;
+  const now = () => Date.now() + clockOffset;
+  async function makeFirebaseRoom(cfg) {
+    if (!cfg || !window.firebase) return null;
+    firebase.initializeApp(cfg);
+    if (cfg.emulator) { firebase.auth().useEmulator("http://127.0.0.1:9099"); firebase.database().useEmulator("127.0.0.1", 9000); }
+    await firebase.auth().signInAnonymously();
+    const uid = firebase.auth().currentUser.uid;
+    const key = uid + "_" + Math.random().toString(36).slice(2, 8);
+    const db = firebase.database();
+    db.ref(".info/serverTimeOffset").on("value", (s) => { clockOffset = s.val() || 0; });
+    const LOBBY = ["tb", "since", "q", "qs", "nick"];
+    const peersFns = [], connFns = [];
+    let lobby = {}, seats = {}, seatTb = -1, seatRef = null, seatsRef = null;
+    let mine = {}, lastLobby = "", lastSeat = {};
+    const lobbyRef = db.ref("lobby/" + key);
+    function emit() {
+      const peers = [{ peer: key, isMe: true, sameTab: true, kind: "viewer", presence: mine }];
+      for (const k in lobby) {
+        if (k === key) continue;
+        const l = lobby[k] || {};
+        const extra = seatTb >= 0 && l.tb === seatTb && seats[k] ? seats[k] : {};
+        peers.push({ peer: k, isMe: false, sameTab: false, kind: "viewer", presence: { ...extra, ...l } });
+      }
+      for (const f of peersFns) f({ peers });
+    }
+    function moveSeat(tb) {
+      if (seatRef) { seatRef.onDisconnect().cancel(); seatRef.remove(); }
+      if (seatsRef) seatsRef.off();
+      seats = {}; seatTb = tb; seatRef = null; seatsRef = null; lastSeat = {};
+      if (tb >= 0) {
+        seatRef = db.ref(`seats/${tb}/${key}`);
+        seatRef.onDisconnect().remove();
+        seatsRef = db.ref(`seats/${tb}`);
+        seatsRef.on("value", (s) => { seats = s.val() || {}; emit(); });
+      }
+    }
+    function write(pr) {
+      const l = {};
+      for (const f of LOBBY) if (pr[f] !== undefined) l[f] = pr[f];
+      const ls = JSON.stringify(l);
+      if (ls !== lastLobby) { lastLobby = ls; lobbyRef.set(l).catch(() => {}); }
+      const tb = Number.isInteger(pr.tb) ? pr.tb : -1;
+      if (tb !== seatTb) moveSeat(tb);
+      if (seatRef) {
+        const upd = {}; let n = 0;
+        for (const f in pr) if (!LOBBY.includes(f) && lastSeat[f] !== pr[f]) { upd[f] = pr[f]; n++; }
+        if (n) { lastSeat = { ...lastSeat, ...upd }; seatRef.update(upd).catch(() => {}); }
+      }
+    }
+    lobbyRef.onDisconnect().remove();
+    db.ref("lobby").on("value", (s) => { lobby = s.val() || {}; emit(); });
+    db.ref(".info/connected").on("value", (s) => {
+      const on = !!s.val();
+      if (on) {
+        // after a dropped connection the server has already removed our rows: write them again
+        lobbyRef.onDisconnect().remove();
+        lastLobby = ""; lastSeat = {};
+        const tb = seatTb; seatTb = -2; if (tb >= 0 || tb === -1) write(mine);
+      }
+      for (const f of connFns) f(on);
+    });
+    return {
+      presence(pr) { mine = pr; write(pr); return Promise.resolve(); },
+      onPeers(fn) { peersFns.push(fn); setTimeout(emit, 0); return () => {}; },
+      onConnection(fn) { connFns.push(fn); return () => {}; }
+    };
+  }
+  let room = null, lastSent = "", sendT = 0, linked = true;
+  const num = (v, lo, hi, dflt) => (typeof v === "number" && isFinite(v)) ? Math.max(lo, Math.min(hi, v)) : dflt;
+  function applyRemote(c, pr) {
+    if (!pr || typeof pr.b !== "number") return;
+    const b = num(pr.b, PAPER0, FULL, FULL), a = num(pr.a, b, FULL + 0.4, b);
+    const lt = num(pr.lt, 0, 1e9, 0), ex = num(pr.ex, 0, 1e9, 0);
+    if (!c.seen) {                       // first look: take their state as it is, play nothing
+      c.seen = true; c.burnU = c.tBurn = b; c.ashU = c.tAsh = a; c.lastLt = lt; c.lastEx = ex;
+    } else {
+      if (b > c.burnU + 0.25 && c.burnU < FULL - 0.05) { addButt(c); resetCig(c); }
+      if (a < c.ashU - 0.01 && c.ashU > c.burnU + 0.015) dropAsh(c);
+      if (lt !== c.lastLt) { c.lastLt = lt; if (!c.lighter) startLighter(c); }
+      if (ex !== c.lastEx) { c.lastEx = ex; startExhale(c, num(pr.exA, 0, 1, 0.5)); }
+      c.tBurn = b; c.tAsh = a;
+    }
+    if (pr.lit && c.finished) c.finished = 0;
+    c.lit = !!pr.lit; c.drag = !!pr.d && c.lit;
+  }
+  const PER = SEATS.length;
+  let lastPeers = [], myPeer = "", roomReady = false, warnUntil = 0;
+  const tableOf = (p) => { const t = p.presence && p.presence.tb; return Number.isInteger(t) && t >= 0 && t < TABLES ? t : -1; };
+  const sinceOf = (p) => num(p.presence && p.presence.since, 0, 1e15, 1e15);
+  function counts() { const n = new Array(TABLES).fill(0); for (const p of lastPeers) { const t = tableOf(p); if (t >= 0) n[t]++; } return n; }
+  // next table in that direction with a free seat, or -1
+  function freeTable(dir) {
+    const n = counts(), from = Math.max(0, myTable);
+    for (let i = 1; i < TABLES; i++) { const t = ((from + dir * i) % TABLES + TABLES) % TABLES; if (n[t] < PER) return t; }
+    return -1;
+  }
+  function switchTable(t) {
+    if (t === myTable) return;
+    if (me.drag) { me.drag = false; pressing = false; sfx.inhale(false); sfx.burn(false); }
+    myTable = t; mySince = now();
+    others.clear(); exhales = exhales.filter(e => e.c.mine);
+    loadTable(t);
+    lastSent = ""; sendT = 0;
+    refresh();
+  }
+  function syncPeers(peers) {
+    const mine = peers.find(p => p.isMe && p.sameTab); if (mine) myPeer = mine.peer;
+    // your own other tabs and devices count as other people here, so you can test with two of them
+    lastPeers = peers.filter(p => !(p.isMe && p.sameTab) && p.kind === "viewer");
+    refresh();
+  }
+  // everyone without a seat waits in one line, ordered by when they started waiting;
+  // you sit once fewer people are ahead of you than there are free seats
+  let qSince = 0, qRank = 0;
+  const qOf = (p) => num(p.presence && p.presence.qs, 0, 1e15, 1e15);
+  const queueEl = document.getElementById("queue"), queueRank = document.getElementById("queueRank");
+  const arrows = [document.getElementById("prevT"), document.getElementById("nextT")];
+  // ---------- one-line chat: ten characters, two seconds, one at a time ----------
+  const SAY_TIME = 2;
+  let myMid = 0;
+  const chatForm = document.getElementById("chat"), chatInput = document.getElementById("chatInput");
+  const chatSend = document.getElementById("chatSend"), chatBar = document.getElementById("chatBar");
+  chatForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (me.sayT > 0 || myTable < 0) return;
+    const v = cleanNick(chatInput.value);
+    if (!v) return;
+    me.say = v; me.sayT = SAY_TIME; myMid++;
+    chatInput.value = "";
+    lastSent = ""; sendT = 0;
+  });
+  function stepChat(dt) {
+    for (const c of allCigs()) if (c.sayT > 0) c.sayT = Math.max(0, c.sayT - dt);
+    const busy = me.sayT > 0;
+    if (chatSend.disabled !== busy) chatSend.disabled = busy;
+    chatBar.style.width = busy ? `${(me.sayT / SAY_TIME) * 100}%` : "0";
+  }
+  function drawBubble(c) {
+    if (!(c.sayT > 0) || !c.say) return;
+    const k = c.sayT, a = Math.min(1, k / 0.25, (SAY_TIME - k) / 0.15 + 0.2) * c.alpha;
+    const p = labelPos(c);
+    const y = p.y - D * 1.4 - A.rx * 0.32 - (SAY_TIME - k) * 6;
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, a);
+    ctx.font = '15px "Do Hyeon", "Apple SD Gothic Neo", sans-serif';
+    const w = ctx.measureText(c.say).width + 20, h = 26;
+    const x = Math.max(w / 2 + 8, Math.min(W - w / 2 - 8, p.x));
+    ctx.fillStyle = "rgba(14,10,22,0.85)";
+    ctx.strokeStyle = c.mine ? "rgba(255,79,163,0.8)" : "rgba(64,224,255,0.7)"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.roundRect(x - w / 2, y - h / 2, w, h, 13); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(p.x - 5, y + h / 2 - 0.5); ctx.lineTo(p.x, y + h / 2 + 6); ctx.lineTo(p.x + 5, y + h / 2 - 0.5); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#efe9f6"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(c.say, x, y + 1);
+    ctx.restore();
+  }
+  function renderQueue() {
+    const waiting = myTable < 0 && qSince > 0 && qRank > 0;
+    queueEl.hidden = !waiting;
+    if (waiting) queueRank.textContent = `대기 ${qRank}번째`;
+    for (const a of arrows) a.hidden = myTable < 0;
+    chatForm.hidden = myTable < 0;
+  }
+  function refresh() {
+    if (myTable < 0) {
+      if (!roomReady || !myNick) { renderTableLabel(); renderQueue(); return; }
+      if (!qSince) { qSince = now(); lastSent = ""; sendT = 0; }
+      const n = counts(), free = TABLES * PER - n.reduce((a, b) => a + b, 0);
+      const ahead = lastPeers.filter(p => tableOf(p) < 0 && p.presence && p.presence.q &&
+        (qOf(p) < qSince || (qOf(p) === qSince && p.peer < myPeer))).length;
+      if (ahead < free) {
+        // sit at the first table that still has a seat
+        qSince = 0; qRank = 0;
+        const t = n.findIndex(v => v < PER);
+        switchTable(t < 0 ? 0 : t);
+        renderQueue();
+        return;
+      }
+      qRank = ahead - free + 1;
+      renderTableLabel(); renderQueue();
+      return;
+    }
+    const here = lastPeers.filter(p => tableOf(p) === myTable)
+      .sort((x, y) => (sinceOf(x) - sinceOf(y)) || (x.peer < y.peer ? -1 : 1));
+    // if two people took the last seat at once, the later one moves on
+    const ahead = here.filter(p => sinceOf(p) < mySince || (sinceOf(p) === mySince && p.peer < myPeer)).length;
+    if (ahead >= PER) {
+      const t = freeTable(1);
+      if (t >= 0) { switchTable(t); return; }
+      // every seat taken after all: back to the front of the line
+      qSince = mySince; myTable = -1; others.clear(); lastSent = ""; sendT = 0;
+      refresh(); return;
+    }
+    const list = here.slice(0, PER - 1);
+    const keep = new Set(list.map(p => p.peer));
+    for (const id of [...others.keys()]) if (!keep.has(id)) others.delete(id);
+    list.forEach((p, i) => {
+      let c = others.get(p.peer);
+      if (!c) { c = makeCig(SEATS[i + 1], false); others.set(p.peer, c); }
+      if (c.th !== SEATS[i + 1]) { c.th = SEATS[i + 1]; geo(c); }
+      c.name = cleanNick(p.presence.nick);
+      const mid = num(p.presence.mid, 0, 1e9, 0);
+      if (mid !== c.lastMid) { if (c.seen) { c.say = cleanNick(p.presence.msg); c.sayT = c.say ? SAY_TIME : 0; } c.lastMid = mid; }
+      applyRemote(c, p.presence);
+    });
+    renderTableLabel();
+  }
+  const tableLabel = document.getElementById("tableLabel");
+  function renderTableLabel() {
+    if (Date.now() < warnUntil) return;
+    tableLabel.classList.remove("warn");
+    if (roomReady && (!room || !linked)) { tableLabel.textContent = "연결 안 됨 · 혼자 보는 중"; return; }
+    tableLabel.textContent = myTable < 0 ? (qRank > 0 ? "대기 중" : "자리 찾는 중") : `${myTable + 1}번 테이블 · ${others.size + 1}/${PER} · 전체 ${lastPeers.length + 1}명`;
+  }
+  function moveTable(dir) {
+    if (!sfx.ready) sfx.init(); sfx.resume();
+    const t = freeTable(dir);
+    if (t < 0) {
+      warnUntil = Date.now() + 1800;
+      tableLabel.textContent = "다른 테이블에 빈자리가 없어요"; tableLabel.classList.add("warn");
+      setTimeout(renderTableLabel, 1850);
+      return;
+    }
+    switchTable(t);
+  }
+  document.getElementById("prevT").addEventListener("click", () => moveTable(-1));
+  document.getElementById("nextT").addEventListener("click", () => moveTable(1));
+  function pushPresence(dt) {
+    if (!room) return;
+    sendT -= dt;
+    if (sendT > 0) return;
+    sendT = 0.25;
+    const pr = { v: 1, lit: me.lit, d: me.drag, b: Math.round(me.burnU * 100) / 100, a: Math.round(me.ashU * 100) / 100, lt: lightSeq, ex: exSeq, exA: Math.round(exAmt * 100) / 100 };
+    if (myNick) pr.nick = myNick;
+    if (myMid) { pr.mid = myMid; pr.msg = me.sayT > 0 ? me.say : ""; }
+    if (myTable >= 0) { pr.tb = myTable; pr.since = mySince; }
+    else if (qSince) { pr.q = 1; pr.qs = qSince; }
+    const s = JSON.stringify(pr);
+    if (s === lastSent) return;
+    lastSent = s;
+    room.presence(pr).catch(() => {});
+  }
+  (async () => {
+    await Promise.resolve();
+    try { room = await makeFirebaseRoom(window.SMOKE_FIREBASE); } catch (e) { room = null; }
+    if (!room) { roomReady = true; refresh(); return; }
+    room.onPeers((ch) => syncPeers(ch.peers), () => {});
+    let downT = null;
+    if (room.onConnection) room.onConnection((on) => {
+      clearTimeout(downT);
+      if (on) { linked = true; renderTableLabel(); }
+      else downT = setTimeout(() => { linked = false; renderTableLabel(); }, 2000);
+    }, () => { linked = false; renderTableLabel(); });
+    setTimeout(() => { roomReady = true; refresh(); }, 1600);   // let everyone already here answer first
+  })();
+
+
+  // ---------- update ----------
+  function step(dt) {
+    clock += dt;
+    signFlicker -= dt;
+    if (signFlicker <= 0) { signFlicker = 4 + R() * 9; neonBurst = 0.35 + R() * 0.4; }
+    if (neonBurst > 0) { neonBurst -= dt; signA = R() < 0.55 ? 0.25 + R() * 0.3 : 1; } else signA = 0.96 + Math.sin(clock * 50) * 0.02;
+    sfx.neon(signA);
+
+    if (pressing && me.lit && !me.drag && clock - pressT > 0.18) { me.drag = true; dragT = 0; sfx.inhale(true); sfx.burn(true); }
+    if (me.drag) dragT += dt;
+
+    for (const c of allCigs()) stepCig(c, dt);
+
+    for (let i = exhales.length - 1; i >= 0; i--) {
+      const ex = exhales[i]; ex.t += dt;
+      const dur = 0.9 + ex.amount * 1.4, k = ex.t - 0.2;
+      if (k > 0 && k < dur) {
+        const env = Math.sin(Math.PI * Math.min(1, k / dur)) * (0.6 + 0.4 * ex.amount);
+        const n = (ex.c.mine ? 70 : 45) * env * dt;
+        emitExhale(ex.c, Math.floor(n) + (R() < n % 1 ? 1 : 0), Math.max(0.4, env));
+      }
+      if (k > dur) exhales.splice(i, 1);
+    }
+
+    const floorY = A.cy + A.ry * 0.3;
+    for (let i = falling.length - 1; i >= 0; i--) {
+      const f = falling[i]; f.vy += 900 * dt; f.y += f.vy * dt; f.x += f.vx * dt; f.rot += f.vr * dt;
+      if (f.y > floorY) {
+        falling.splice(i, 1);
+        const n = 4 + Math.floor(f.len / 4);
+        for (let j = 0; j < n; j++) crumbs.push({ x: f.x + gauss() * 3, y: floorY, vx: gauss() * 30, vy: -R() * 60, t: 0, life: 0.4 + R() * 0.3 });
+        ashPile.push([(f.x - A.cx) / A.rx + gauss() * 0.04, (floorY - A.cy - A.ry * 0.25) / A.ry + gauss() * 0.05, 0.02 + f.len / A.rx * 0.18, R()]);
+        if (ashPile.length > 70) ashPile.shift();
+        sfx.at(f.v, () => sfx.ash(Math.min(1, f.len / 30)));
+      }
+    }
+    for (const arr of [crumbs, sparks]) for (let i = arr.length - 1; i >= 0; i--) { const p = arr[i]; p.t += dt; p.vy += (arr === crumbs ? 400 : 60) * dt; p.x += p.vx * dt; p.y += p.vy * dt; if (p.t > p.life) arr.splice(i, 1); }
+
+    stepSmoke(dt);
+    stepRain(dt);
+    if (R() < dt * 6) sfx.rainTick();
+    stepChat(dt);
+    pushPresence(dt);
+  }
+
+  // ---------- draw ----------
+  function draw() {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.drawImage(bg, 0, 0);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    drawRain();
+    const sw = sign.width / dpr, sh = sign.height / dpr;
+    ctx.globalAlpha = signA; ctx.drawImage(sign, W / 2 - sw / 2, signY - sh * 0.42, sw, sh); ctx.globalAlpha = 1;
+    drawAshtrayContents();
+    for (const f of falling) {
+      ctx.save(); ctx.translate(f.x, f.y); ctx.rotate(f.rot);
+      ctx.fillStyle = "#8f8a84"; ctx.fillRect(-f.len / 2, -D * 0.45, f.len, D * 0.9); ctx.restore();
+    }
+    ctx.fillStyle = "#7d7873";
+    for (const p of crumbs) { ctx.globalAlpha = 1 - p.t / p.life; ctx.fillRect(p.x, p.y, 1.5, 1.5); }
+    ctx.globalAlpha = 1;
+    for (const c of allCigs()) if (!c.pose) computePose(c);
+    const cigs = allCigs().sort((a, b) => (a.lift > 0.01 ? 1e6 + a.lift : a.rest.y) - (b.lift > 0.01 ? 1e6 + b.lift : b.rest.y));
+    for (const c of cigs) drawLightGlow(c);
+    for (const c of cigs) { drawCigarette(c); drawLabel(c); }
+    ctx.fillStyle = "#ffb060";
+    for (const p of sparks) { ctx.globalAlpha = 1 - p.t / p.life; ctx.fillRect(p.x, p.y, 1.2, 1.2); }
+    ctx.globalAlpha = 1;
+    drawSmoke();
+    for (const c of cigs) drawLighter(c);
+    for (const c of cigs) drawBubble(c);
+  }
+
+  // ---------- input ----------
+  let muted = false;
+  try { muted = localStorage.getItem(KEY + "-mute") === "1"; } catch (e) {}
+  const muteBtn = document.getElementById("mute");
+  const paintMute = () => { muteBtn.setAttribute("aria-pressed", String(muted)); muteBtn.setAttribute("aria-label", muted ? "소리 켜기" : "소리 끄기"); };
+  paintMute();
+  muteBtn.addEventListener("click", () => {
+    muted = !muted; paintMute();
+    try { localStorage.setItem(KEY + "-mute", muted ? "1" : "0"); } catch (e) {}
+    if (!sfx.ready) sfx.init(); sfx.resume(); sfx.setMuted(muted);
+  });
+
+  cv.addEventListener("pointerdown", (e) => {
+    if (myTable < 0) return;
+    if (!sfx.ready) sfx.init(); sfx.resume();
+    if (myNick && me.rest) { const lp = labelPos(me); if (Math.abs(e.clientX - lp.x) < 50 && e.clientY > lp.y - 10 && e.clientY < lp.y + 26) { openNick(); return; } }
+    pressing = true; pressT = clock;
+    try { cv.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+  const release = () => {
+    if (!pressing) return;
+    pressing = false;
+    if (me.drag) {
+      me.drag = false; sfx.inhale(false); sfx.burn(false);
+      if (dragT > 0.25) { exAmt = Math.min(1, dragT / 2.5); exSeq++; startExhale(me, exAmt); }
+      return;
+    }
+    if (me.lit && me.lift < 0.1) { me.jiggle = 0.3; if (me.ashU - me.burnU > 0.015) dropAsh(me); sfx.tap(); }
+    else if (!me.lighter && !me.finished && me.alpha >= 1) { lightSeq++; startLighter(me); }
+  };
+  cv.addEventListener("pointerup", release);
+  cv.addEventListener("pointercancel", release);
+  window.addEventListener("resize", resize);
+
+  // ---------- boot ----------
+  resize();
+  if (document.fonts && document.fonts.load) document.fonts.load(`${Math.round(signSize)}px "Do Hyeon"`).then(paintSign).catch(() => {});
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    step(dt); draw();
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame((t) => { last = t; frame(t); });
+})();
+</script>
+</body>
+</html>
