@@ -6,3 +6,7 @@ dist-toss
 toss/node_modules
 toss/*.ait
 toss/.granite
+
+# Firebase CLI
+firebase-debug.log
+.firebase/
