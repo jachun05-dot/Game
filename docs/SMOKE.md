@@ -2,7 +2,8 @@
 
 비 오는 밤 네온 간판 아래, 재떨이 하나를 같이 쓰며 담배를 피우는 웹 페이지. 로그인 없이 링크로 들어온다.
 
-- 주소: https://jachun05-dot.github.io/Game/smoke/
+- 주소: https://jachun05-dot.github.io/Game/smoke/ (GitHub Pages), https://smoke-a96dd.web.app/ (Firebase 호스팅)
+- Firebase 프로젝트: `smoke-a96dd` (`.firebaserc`, `firebase.json`)
 - 코드: `public/smoke/index.html` (한 파일, 빌드 없이 그대로 올라감), 연결 설정: `public/smoke/firebase-config.js`
 - 실시간 연결: Firebase Realtime Database + 익명 로그인. 보안 규칙: `docs/smoke/database.rules.json`
 - `firebase-config.js`가 `null`이면 혼자 모드로 열린다(아래 "연결 안 됨 · 혼자 보는 중")
@@ -19,6 +20,7 @@
 4. 프로젝트 설정 → 내 앱 → 웹 앱 추가 → `firebaseConfig`를 `public/smoke/firebase-config.js`의 `window.SMOKE_FIREBASE`에 넣는다(공개돼도 되는 값)
 
 ## 올리기
+- Firebase 호스팅 + 보안 규칙: 저장소 루트에서 `npx firebase-tools deploy` (처음 한 번 `npx firebase-tools login`)
 - 흡연실만: gh-pages 브랜치의 `smoke/`에 `public/smoke/`를 복사해 커밋·푸시
 - 게임과 같이: `npm run release:pages` (public/ 아래라 dist에 함께 들어간다)
 

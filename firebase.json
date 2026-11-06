@@ -1,0 +1,9 @@
+{
+  "hosting": {
+    "public": "public/smoke",
+    "ignore": ["**/.*"]
+  },
+  "database": {
+    "rules": "docs/smoke/database.rules.json"
+  }
+}
